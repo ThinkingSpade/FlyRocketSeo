@@ -3,6 +3,7 @@ import { getProjects } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "@/client/features/projects/types";
 import { BacklinksCard } from "./BacklinksCard";
 import { DashboardLoadingState } from "./DashboardLoadingState";
+import { GettingStartedCard } from "./GettingStartedCard";
 import { QuickActionsCard } from "./QuickActionsCard";
 import { RankChangesCard } from "./RankChangesCard";
 import { RankTrackingCard } from "./RankTrackingCard";
@@ -39,6 +40,7 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
 
             {/* Each card owns its own query, so one failing source degrades
                 just that card and never blanks the dashboard. */}
+            <GettingStartedCard projectId={projectId} />
             <QuickActionsCard projectId={projectId} />
             <RankTrackingCard projectId={projectId} />
             <RankChangesCard projectId={projectId} />
