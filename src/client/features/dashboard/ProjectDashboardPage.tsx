@@ -4,6 +4,7 @@ import type { ProjectSummary } from "@/client/features/projects/types";
 import { BacklinksCard } from "./BacklinksCard";
 import { DashboardLoadingState } from "./DashboardLoadingState";
 import { QuickActionsCard } from "./QuickActionsCard";
+import { RankChangesCard } from "./RankChangesCard";
 import { RankTrackingCard } from "./RankTrackingCard";
 import { SearchPerformanceCard } from "./SearchPerformanceCard";
 import { SiteAuditCard } from "./SiteAuditCard";
@@ -40,6 +41,7 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
                 just that card and never blanks the dashboard. */}
             <QuickActionsCard projectId={projectId} />
             <RankTrackingCard projectId={projectId} />
+            <RankChangesCard projectId={projectId} />
             <SearchPerformanceCard projectId={projectId} />
             <div className="grid gap-4 lg:grid-cols-2">
               <SiteAuditCard projectId={projectId} />

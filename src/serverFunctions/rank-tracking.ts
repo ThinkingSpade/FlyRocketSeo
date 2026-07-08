@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { waitUntil } from "cloudflare:workers";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { RankTrackingService } from "@/server/features/rank-tracking/services/RankTrackingService";
+import { rankDigestService } from "@/server/features/rank-tracking/services/rankDigest";
 import { getLatestResults } from "@/server/features/rank-tracking/services/rankTrackingResults";
 import { AppError, asAppError } from "@/server/lib/errors";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
@@ -69,6 +70,13 @@ export const getRankTrackingConfigSummaries = createServerFn({ method: "POST" })
   .validator(getConfigsSchema)
   .handler(async ({ context }) => {
     return RankTrackingRepository.getConfigSummaries(context.projectId);
+  });
+
+export const getRankChangeDigest = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(getConfigsSchema)
+  .handler(async ({ context }) => {
+    return rankDigestService.getRankChangeDigest(context.projectId);
   });
 
 export const createRankTrackingConfig = createServerFn({ method: "POST" })
