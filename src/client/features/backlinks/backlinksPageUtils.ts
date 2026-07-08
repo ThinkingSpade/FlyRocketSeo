@@ -8,6 +8,8 @@ export const TAB_DESCRIPTIONS: Record<BacklinksTab, string> = {
     "View the unique domains linking to your target, grouped at the site level instead of by individual link.",
   pages:
     "See which pages on the target site attract the most backlinks and referring domains.",
+  anchors:
+    "See the anchor text used across all links to your target, with how many backlinks and domains use each phrase.",
 };
 
 export function buildSummaryStats(data: BacklinksOverviewData | undefined) {

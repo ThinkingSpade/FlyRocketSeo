@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { buildCsv } from "@/client/lib/csv";
-import type { BacklinksRow, ReferringDomainRow } from "./backlinksPageTypes";
+import type {
+  AnchorRow,
+  BacklinksRow,
+  ReferringDomainRow,
+} from "./backlinksPageTypes";
 import {
   buildBacklinksTabCsvFilename,
   buildBacklinksTabExport,
@@ -44,6 +48,18 @@ function makeReferringDomainRow(
   };
 }
 
+function makeAnchorRow(overrides: Partial<AnchorRow> = {}): AnchorRow {
+  return {
+    anchor: "click here",
+    backlinks: 30,
+    referringDomains: 8,
+    rank: 55,
+    spamScore: 3,
+    firstSeen: "2024-03-01",
+    ...overrides,
+  };
+}
+
 function buildTabCsv(
   ...args: Parameters<typeof buildBacklinksTabExport>
 ): string {
@@ -62,6 +78,9 @@ describe("buildBacklinksTabCsvFilename", () => {
     expect(buildBacklinksTabCsvFilename("pages", "docs.example.com")).toBe(
       "backlinks-top-pages-docs.example.com.csv",
     );
+    expect(buildBacklinksTabCsvFilename("anchors", "Example.com")).toBe(
+      "backlinks-anchors-example.com.csv",
+    );
   });
 });
 
@@ -73,6 +92,7 @@ describe("buildBacklinksTabExport", () => {
         backlinks: [makeBacklinkRow()],
         referringDomains: [],
         topPages: [],
+        anchors: [],
       },
     });
 
@@ -90,6 +110,7 @@ describe("buildBacklinksTabExport", () => {
         backlinks: [],
         referringDomains: [makeReferringDomainRow()],
         topPages: [],
+        anchors: [],
       },
     });
 
@@ -105,6 +126,7 @@ describe("buildBacklinksTabExport", () => {
         backlinks: [makeBacklinkRow({ domainFrom: "www.example.org" })],
         referringDomains: [],
         topPages: [],
+        anchors: [],
       },
     });
 
@@ -119,6 +141,7 @@ describe("buildBacklinksTabExport", () => {
         backlinks: [],
         referringDomains: [makeReferringDomainRow()],
         topPages: [],
+        anchors: [],
       },
     });
 
@@ -141,6 +164,7 @@ describe("buildBacklinksTabExport", () => {
             brokenBacklinks: 0,
           },
         ],
+        anchors: [],
       },
     });
 
@@ -148,6 +172,23 @@ describe("buildBacklinksTabExport", () => {
       '"Page","Backlinks","Referring Domains","Rank","Broken Backlinks"',
     );
     expect(content).toContain('"https://docs.example.com/start"');
+  });
+
+  it("builds anchors csv with anchor-specific columns", () => {
+    const content = buildTabCsv({
+      tab: "anchors",
+      rows: {
+        backlinks: [],
+        referringDomains: [],
+        topPages: [],
+        anchors: [makeAnchorRow()],
+      },
+    });
+
+    expect(content).toContain(
+      '"Anchor","Backlinks","Referring Domains","Rank","Spam Score","First Seen"',
+    );
+    expect(content).toContain('"click here"');
   });
 
   it("sanitizes formula-like cell values to prevent CSV injection", () => {
@@ -166,6 +207,7 @@ describe("buildBacklinksTabExport", () => {
         ],
         referringDomains: [],
         topPages: [],
+        anchors: [],
       },
     });
 

@@ -1,6 +1,7 @@
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
 import type { BacklinksTab } from "@/types/schemas/backlinks";
 import {
+  ANCHORS_FILTER_FIELDS,
   BACKLINKS_FILTER_FIELDS,
   REFERRING_DOMAINS_FILTER_FIELDS,
   TOP_PAGES_FILTER_FIELDS,
@@ -106,6 +107,59 @@ export function BacklinksFilterPanel({
             title: "Backlinks",
             minKey: "minBacklinks",
             maxKey: "maxBacklinks",
+          },
+          { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
+          {
+            title: "Spam Score",
+            minKey: "minSpamScore",
+            maxKey: "maxSpamScore",
+            step: "0.1",
+          },
+        ]}
+        onApply={(values) => {
+          state.apply(values);
+          onApplied();
+        }}
+        onClear={() => {
+          state.reset();
+          onApplied();
+        }}
+      />
+    );
+  }
+
+  if (activeTab === "anchors") {
+    const state = filters.anchors;
+    return (
+      <DomainFilterPanel
+        key="anchors"
+        debugName="AnchorsFilterPanel"
+        appliedFilters={state.values}
+        fields={ANCHORS_FILTER_FIELDS}
+        activeFilterCount={state.activeFilterCount}
+        countConditions={countFilterConditions}
+        textFields={[
+          {
+            key: "include",
+            label: "Anchor Contains",
+            placeholder: "brand name, click here",
+          },
+          {
+            key: "exclude",
+            label: "Anchor Excludes",
+            placeholder: "login, sign in",
+          },
+        ]}
+        rangeFields={[
+          {
+            title: "Backlinks",
+            minKey: "minBacklinks",
+            maxKey: "maxBacklinks",
+          },
+          {
+            title: "Referring Domains",
+            minKey: "minReferringDomains",
+            maxKey: "maxReferringDomains",
           },
           { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
           {

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { BacklinksService } from "@/server/features/backlinks/services/BacklinksService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
+  anchorsPageRequestSchema,
   backlinksOverviewInputSchema,
   backlinksRowsPageRequestSchema,
   referringDomainsPageRequestSchema,
@@ -57,4 +58,13 @@ export const getBacklinksTopPages = createServerFn({
   .validator(topPagesPageRequestSchema)
   .handler(({ data, context }) =>
     BacklinksService.profileTopPagesPage(data, context),
+  );
+
+export const getBacklinksAnchors = createServerFn({
+  method: "POST",
+})
+  .middleware(requireProjectContext)
+  .validator(anchorsPageRequestSchema)
+  .handler(({ data, context }) =>
+    BacklinksService.profileAnchorsPage(data, context),
   );

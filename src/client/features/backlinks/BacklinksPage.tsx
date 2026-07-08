@@ -103,6 +103,7 @@ export function BacklinksPage({
   const {
     activeTabErrorMessage,
     activeTabQuery,
+    anchorsQuery,
     overviewErrorMessage,
     overviewQuery,
     referringDomainsQuery,
@@ -214,6 +215,7 @@ export function BacklinksPage({
           backlinksRowsPage={rowsQuery.data}
           referringDomainsPage={referringDomainsQuery.data}
           topPagesPage={topPagesQuery.data}
+          anchorsPage={anchorsQuery.data}
           searchState={searchState}
           filters={filters}
           sorting={sorting}

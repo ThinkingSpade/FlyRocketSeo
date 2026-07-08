@@ -8,6 +8,8 @@ import {
   type FilterClause,
 } from "@/server/lib/dataforseo/filters";
 import type {
+  AnchorsFilters,
+  AnchorsSortField,
   BacklinksRowsFilters,
   BacklinksRowsSortField,
   BacklinksSortOrder,
@@ -42,6 +44,14 @@ const TOP_PAGES_SORT_FIELDS: Record<TopPagesSortField, string> = {
   brokenBacklinks: "broken_backlinks",
 };
 
+const ANCHORS_SORT_FIELDS: Record<AnchorsSortField, string> = {
+  backlinks: "backlinks",
+  referringDomains: "referring_domains",
+  rank: "rank",
+  spamScore: "backlinks_spam_score",
+  firstSeen: "first_seen",
+};
+
 export function buildBacklinksRowsOrderBy(
   field: BacklinksRowsSortField,
   order: BacklinksSortOrder,
@@ -61,6 +71,13 @@ export function buildTopPagesOrderBy(
   order: BacklinksSortOrder,
 ): string[] {
   return [`${TOP_PAGES_SORT_FIELDS[field]},${order}`];
+}
+
+export function buildAnchorsOrderBy(
+  field: AnchorsSortField,
+  order: BacklinksSortOrder,
+): string[] {
+  return [`${ANCHORS_SORT_FIELDS[field]},${order}`];
 }
 
 /**
@@ -150,6 +167,37 @@ export function buildTopPagesApiFilters(filters: TopPagesFilters): unknown[] {
   collectNumericRange(conditions, "rank", filters.minRank, filters.maxRank);
 
   return finishFilters("url", filters.include, conditions);
+}
+
+/**
+ * Translates the Anchors tab filters into DataForSEO filter expressions.
+ * Include/exclude terms match the anchor text.
+ */
+export function buildAnchorsApiFilters(filters: AnchorsFilters): unknown[] {
+  const conditions: FilterClause[] = [];
+
+  collectExcludeConditions(conditions, "anchor", filters.exclude);
+  collectNumericRange(
+    conditions,
+    "backlinks",
+    filters.minBacklinks,
+    filters.maxBacklinks,
+  );
+  collectNumericRange(
+    conditions,
+    "referring_domains",
+    filters.minReferringDomains,
+    filters.maxReferringDomains,
+  );
+  collectNumericRange(conditions, "rank", filters.minRank, filters.maxRank);
+  collectNumericRange(
+    conditions,
+    "backlinks_spam_score",
+    filters.minSpamScore,
+    filters.maxSpamScore,
+  );
+
+  return finishFilters("anchor", filters.include, conditions);
 }
 
 function collectExcludeConditions(

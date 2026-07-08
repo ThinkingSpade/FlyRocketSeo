@@ -38,6 +38,15 @@ const topPageRowSchema = z.object({
   brokenBacklinks: z.number().nullable(),
 });
 
+const anchorRowSchema = z.object({
+  anchor: z.string().nullable(),
+  backlinks: z.number().nullable(),
+  referringDomains: z.number().nullable(),
+  rank: z.number().nullable(),
+  spamScore: z.number().nullable(),
+  firstSeen: z.string().nullable(),
+});
+
 const backlinksTrendRowSchema = z.object({
   date: z.string(),
   backlinks: z.number().nullable(),
@@ -95,6 +104,7 @@ export const referringDomainsPageResultSchema = buildPageResultSchema(
   referringDomainRowSchema,
 );
 export const topPagesPageResultSchema = buildPageResultSchema(topPageRowSchema);
+export const anchorsPageResultSchema = buildPageResultSchema(anchorRowSchema);
 
 export type BacklinksRowsPageResult = z.infer<
   typeof backlinksRowsPageResultSchema
@@ -103,3 +113,4 @@ export type ReferringDomainsPageResult = z.infer<
   typeof referringDomainsPageResultSchema
 >;
 export type TopPagesPageResult = z.infer<typeof topPagesPageResultSchema>;
+export type AnchorsPageResult = z.infer<typeof anchorsPageResultSchema>;

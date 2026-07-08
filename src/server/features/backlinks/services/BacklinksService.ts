@@ -6,10 +6,12 @@ import {
   type BacklinksSpamFilterOptions,
 } from "@/types/schemas/backlinks";
 import {
+  profileAnchorsPage,
   profileBacklinksOverview,
   profileBacklinksRowsPage,
   profileReferringDomainsPage,
   profileTopPagesPage,
+  type AnchorsPageServiceInput,
   type BacklinksCache,
   type BacklinksRowsPageServiceInput,
   type ReferringDomainsPageServiceInput,
@@ -108,6 +110,18 @@ function createBacklinksService(cache: BacklinksCache = defaultCache) {
       );
 
       return profileTopPagesPage(cache, cacheKey, input, billingCustomer);
+    },
+    async profileAnchorsPage(
+      input: AnchorsPageServiceInput,
+      billingCustomer: BillingCustomerContext,
+    ) {
+      const cacheKey = await buildPageCacheKey(
+        "backlinks:anchors-page",
+        input,
+        billingCustomer,
+      );
+
+      return profileAnchorsPage(cache, cacheKey, input, billingCustomer);
     },
   } as const;
 }

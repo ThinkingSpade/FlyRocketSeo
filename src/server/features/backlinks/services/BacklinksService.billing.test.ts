@@ -5,6 +5,7 @@ const backlinksRowsMock = vi.fn();
 const referringDomainsMock = vi.fn();
 const domainPagesMock = vi.fn();
 const backlinksHistoryMock = vi.fn();
+const anchorsMock = vi.fn();
 
 vi.mock("@/server/lib/r2-cache", () => ({
   buildCacheKey: vi.fn(
@@ -24,6 +25,7 @@ vi.mock("@/server/lib/dataforseo", () => ({
       referringDomains: referringDomainsMock,
       domainPages: domainPagesMock,
       history: backlinksHistoryMock,
+      anchors: anchorsMock,
     },
   })),
 }));
@@ -266,6 +268,46 @@ it("profiles referring domains and top pages pages separately", async () => {
   expect(domains.rows[0]?.spamScore).toBe(2);
   expect(domains.hasMore).toBe(false);
   expect(pages.rows).toHaveLength(1);
+});
+
+it("profiles anchors with anchor-specific fields", async () => {
+  vi.mocked(normalizeBacklinksTarget).mockReturnValue({
+    apiTarget: "example.com",
+    displayTarget: "example.com",
+    scope: "domain",
+  });
+  anchorsMock.mockResolvedValue({
+    items: [
+      {
+        anchor: "click here",
+        backlinks: 40,
+        referring_domains: 12,
+        rank: 55,
+        backlinks_spam_score: 3,
+        first_seen: "2026-01-01",
+      },
+    ],
+    totalCount: 1,
+  });
+
+  const anchors = await service.profileAnchorsPage(
+    {
+      ...pageInputDefaults,
+      target: "example.com",
+      sortField: "backlinks",
+    },
+    billingCustomer,
+  );
+
+  expect(anchorsMock).toHaveBeenCalledTimes(1);
+  expect(anchors.rows).toHaveLength(1);
+  expect(anchors.rows[0]).toMatchObject({
+    anchor: "click here",
+    backlinks: 40,
+    referringDomains: 12,
+    spamScore: 3,
+  });
+  expect(anchors.hasMore).toBe(false);
 });
 
 it("does not fall back to target spam score for referring domains", async () => {

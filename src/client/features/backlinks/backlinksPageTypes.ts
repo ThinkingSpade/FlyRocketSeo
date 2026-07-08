@@ -4,6 +4,7 @@ import type {
   BacklinksTargetScope,
 } from "@/types/schemas/backlinks";
 import type {
+  getBacklinksAnchors,
   getBacklinksOverview,
   getBacklinksReferringDomains,
   getBacklinksRows,
@@ -22,10 +23,14 @@ export type BacklinksReferringDomainsData = Awaited<
 export type BacklinksTopPagesData = Awaited<
   ReturnType<typeof getBacklinksTopPages>
 >;
+export type BacklinksAnchorsData = Awaited<
+  ReturnType<typeof getBacklinksAnchors>
+>;
 
 export type BacklinksRow = BacklinksRowsPageData["rows"][number];
 export type ReferringDomainRow = BacklinksReferringDomainsData["rows"][number];
 export type TopPageRow = BacklinksTopPagesData["rows"][number];
+export type AnchorRow = BacklinksAnchorsData["rows"][number];
 
 export type BacklinksSearchState = {
   target: string;
@@ -51,9 +56,10 @@ export type BacklinksPageProps = {
   navigate: BacklinksNavigate;
 };
 
-/** Page rows for all three tabs; tabs that haven't loaded yet are empty. */
+/** Page rows for all tabs; tabs that haven't loaded yet are empty. */
 export type BacklinksTabRows = {
   backlinks: BacklinksRow[];
   referringDomains: ReferringDomainRow[];
   topPages: TopPageRow[];
+  anchors: AnchorRow[];
 };

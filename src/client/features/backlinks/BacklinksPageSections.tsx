@@ -5,6 +5,7 @@ import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
 import { BacklinksTable } from "./BacklinksTable";
 import { ReferringDomainsTable } from "./ReferringDomainsTable";
 import { TopPagesTable } from "./TopPagesTable";
+import { AnchorsTable } from "./AnchorsTable";
 import type {
   BacklinksSearchState,
   BacklinksTabRows,
@@ -31,6 +32,7 @@ const BACKLINKS_RESULTS_TABS: Array<{
   { tab: "backlinks", label: "Backlinks" },
   { tab: "domains", label: "Referring Domains" },
   { tab: "pages", label: "Top Pages" },
+  { tab: "anchors", label: "Anchors" },
 ];
 
 export function BacklinksResultsCard({
@@ -129,7 +131,7 @@ export function BacklinksResultsCard({
             headers={exportTable.headers}
             rows={exportTable.rows}
           />
-          {activeTab !== "pages" ? (
+          {activeTab !== "pages" && activeTab !== "anchors" ? (
             <BacklinksActionsMenu
               isLoadingRatings={isLoadingRatings}
               loadRatings={loadRatings}
@@ -226,6 +228,13 @@ export function BacklinksResultsCard({
                 onSortingChange={onSortingChange}
               />
             ) : null}
+            {activeTab === "anchors" ? (
+              <AnchorsTable
+                rows={tabRows.anchors}
+                sorting={sorting}
+                onSortingChange={onSortingChange}
+              />
+            ) : null}
           </>
         ) : null}
       </div>
@@ -249,6 +258,7 @@ const TAB_LOADING_LABELS: Record<BacklinksTab, string> = {
   backlinks: "Loading backlinks",
   domains: "Loading referring domains",
   pages: "Loading top pages",
+  anchors: "Loading anchors",
 };
 
 /** Unique domains the DR column keys on, from both the backlinks and referring

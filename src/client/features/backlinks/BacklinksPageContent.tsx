@@ -9,6 +9,7 @@ import {
 import { BacklinksHistorySection } from "./BacklinksHistorySection";
 import type { BacklinksSearchHistoryItem } from "@/client/hooks/useBacklinksSearchHistory";
 import type {
+  BacklinksAnchorsData,
   BacklinksOverviewData,
   BacklinksReferringDomainsData,
   BacklinksRowsPageData,
@@ -34,6 +35,7 @@ type BacklinksBodyProps = {
   backlinksRowsPage: BacklinksRowsPageData | undefined;
   referringDomainsPage: BacklinksReferringDomainsData | undefined;
   topPagesPage: BacklinksTopPagesData | undefined;
+  anchorsPage: BacklinksAnchorsData | undefined;
   searchState: BacklinksSearchState;
   filters: BacklinksFiltersState;
   sorting: SortingState;
@@ -67,6 +69,7 @@ export function BacklinksBody({
   backlinksRowsPage,
   referringDomainsPage,
   topPagesPage,
+  anchorsPage,
   searchState,
   filters,
   sorting,
@@ -88,15 +91,18 @@ export function BacklinksBody({
       backlinks: backlinksRowsPage?.rows ?? [],
       referringDomains: referringDomainsPage?.rows ?? [],
       topPages: topPagesPage?.rows ?? [],
+      anchors: anchorsPage?.rows ?? [],
     }),
-    [backlinksRowsPage, referringDomainsPage, topPagesPage],
+    [backlinksRowsPage, referringDomainsPage, topPagesPage, anchorsPage],
   );
   const activeTabPage =
     searchState.tab === "backlinks"
       ? backlinksRowsPage
       : searchState.tab === "domains"
         ? referringDomainsPage
-        : topPagesPage;
+        : searchState.tab === "anchors"
+          ? anchorsPage
+          : topPagesPage;
   const summaryStats = useMemo(
     () => buildSummaryStats(overviewData),
     [overviewData],

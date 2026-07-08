@@ -4,6 +4,7 @@ import type { CreditFeature } from "@/shared/billing-credit-features";
 import {
   createDataforseoClient,
   normalizeBacklinksTarget,
+  type BacklinksAnchorItem,
   type BacklinksHistoryItem,
   type BacklinksItem,
   type BacklinksSummaryItem,
@@ -11,6 +12,7 @@ import {
   type ReferringDomainItem,
 } from "@/server/lib/dataforseo";
 import type {
+  AnchorsPageInput,
   BacklinksLookupInput,
   BacklinksRowsPageInput,
   BacklinksSpamFilterOptions,
@@ -19,16 +21,20 @@ import type {
 } from "@/types/schemas/backlinks";
 
 import {
+  anchorsPageResultSchema,
   backlinksOverviewSchema,
   backlinksRowsPageResultSchema,
   referringDomainsPageResultSchema,
   topPagesPageResultSchema,
+  type AnchorsPageResult,
   type BacklinksOverviewResult,
   type BacklinksRowsPageResult,
   type ReferringDomainsPageResult,
   type TopPagesPageResult,
 } from "@/server/features/backlinks/services/backlinksOverviewSchema";
 import {
+  buildAnchorsApiFilters,
+  buildAnchorsOrderBy,
   buildBacklinksRowsApiFilters,
   buildBacklinksRowsOrderBy,
   buildReferringDomainsApiFilters,
@@ -48,6 +54,7 @@ export type ReferringDomainsPageServiceInput = Omit<
   "projectId"
 >;
 export type TopPagesPageServiceInput = Omit<TopPagesPageInput, "projectId">;
+export type AnchorsPageServiceInput = Omit<AnchorsPageInput, "projectId">;
 
 const BACKLINKS_OVERVIEW_TTL_SECONDS = 6 * 60 * 60;
 const BACKLINKS_TAB_TTL_SECONDS = 6 * 60 * 60;
@@ -232,6 +239,39 @@ export async function profileTopPagesPage(
   return result;
 }
 
+export async function profileAnchorsPage(
+  cache: BacklinksCache,
+  cacheKey: string,
+  input: AnchorsPageServiceInput,
+  billingCustomer: BillingCustomerContext,
+): Promise<AnchorsPageResult> {
+  const cached = anchorsPageResultSchema.safeParse(await cache.get(cacheKey));
+  if (cached.success) {
+    return cached.data;
+  }
+
+  const dataforseo = createDataforseoClient(billingCustomer);
+  const offset = (input.page - 1) * input.pageSize;
+  const filters = buildAnchorsApiFilters(input.filters);
+
+  const response = await dataforseo.backlinks.anchors({
+    target: normalizeBacklinksTarget(input.target, { scope: input.scope })
+      .apiTarget,
+    limit: input.pageSize,
+    offset,
+    orderBy: buildAnchorsOrderBy(input.sortField, input.sortOrder),
+    filters: filters.length > 0 ? filters : undefined,
+  });
+
+  const result = buildPageResult(input, offset, {
+    rows: mapAnchorsRows(response.items),
+    totalCount: response.totalCount,
+  });
+  await cacheValue(cache, cacheKey, result, BACKLINKS_TAB_TTL_SECONDS);
+
+  return result;
+}
+
 function buildPageResult<TRow>(
   input: { page: number; pageSize: number },
   offset: number,
@@ -381,6 +421,17 @@ function mapTopPagesRows(rows: DomainPageSummaryItem[]) {
     referringDomains: item.referring_domains ?? null,
     rank: item.rank ?? null,
     brokenBacklinks: item.broken_backlinks ?? null,
+  }));
+}
+
+function mapAnchorsRows(rows: BacklinksAnchorItem[]) {
+  return rows.map((item) => ({
+    anchor: item.anchor ?? null,
+    backlinks: item.backlinks ?? null,
+    referringDomains: item.referring_domains ?? null,
+    rank: item.rank ?? null,
+    spamScore: item.backlinks_spam_score ?? null,
+    firstSeen: item.first_seen ?? null,
   }));
 }
 

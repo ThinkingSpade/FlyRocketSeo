@@ -1,4 +1,5 @@
 import type {
+  AnchorsFilters,
   BacklinksRowsFilters,
   ReferringDomainsFilters,
   TopPagesFilters,
@@ -40,6 +41,19 @@ export type TopPagesFilterValues = {
   maxRank: string;
 };
 
+export type AnchorsFilterValues = {
+  include: string;
+  exclude: string;
+  minBacklinks: string;
+  maxBacklinks: string;
+  minReferringDomains: string;
+  maxReferringDomains: string;
+  minRank: string;
+  maxRank: string;
+  minSpamScore: string;
+  maxSpamScore: string;
+};
+
 export const EMPTY_BACKLINKS_FILTERS: BacklinksTabFilterValues = {
   include: "",
   exclude: "",
@@ -76,6 +90,19 @@ export const EMPTY_TOP_PAGES_FILTERS: TopPagesFilterValues = {
   maxRank: "",
 };
 
+export const EMPTY_ANCHORS_FILTERS: AnchorsFilterValues = {
+  include: "",
+  exclude: "",
+  minBacklinks: "",
+  maxBacklinks: "",
+  minReferringDomains: "",
+  maxReferringDomains: "",
+  minRank: "",
+  maxRank: "",
+  minSpamScore: "",
+  maxSpamScore: "",
+};
+
 export const BACKLINKS_FILTER_FIELDS = [
   "include",
   "exclude",
@@ -109,6 +136,18 @@ export const TOP_PAGES_FILTER_FIELDS = [
   "minRank",
   "maxRank",
 ] as const satisfies ReadonlyArray<keyof TopPagesFilterValues>;
+export const ANCHORS_FILTER_FIELDS = [
+  "include",
+  "exclude",
+  "minBacklinks",
+  "maxBacklinks",
+  "minReferringDomains",
+  "maxReferringDomains",
+  "minRank",
+  "maxRank",
+  "minSpamScore",
+  "maxSpamScore",
+] as const satisfies ReadonlyArray<keyof AnchorsFilterValues>;
 
 export function countActiveFilters(values: Record<string, string>): number {
   return Object.values(values).filter((v) => v.trim() !== "").length;
@@ -186,5 +225,22 @@ export function toTopPagesFiltersPayload(
     maxReferringDomains: toNumberOrUndefined(values.maxReferringDomains),
     minRank: toNumberOrUndefined(values.minRank),
     maxRank: toNumberOrUndefined(values.maxRank),
+  };
+}
+
+export function toAnchorsFiltersPayload(
+  values: AnchorsFilterValues,
+): AnchorsFilters {
+  return {
+    include: values.include.trim() || undefined,
+    exclude: values.exclude.trim() || undefined,
+    minBacklinks: toNumberOrUndefined(values.minBacklinks),
+    maxBacklinks: toNumberOrUndefined(values.maxBacklinks),
+    minReferringDomains: toNumberOrUndefined(values.minReferringDomains),
+    maxReferringDomains: toNumberOrUndefined(values.maxReferringDomains),
+    minRank: toNumberOrUndefined(values.minRank),
+    maxRank: toNumberOrUndefined(values.maxRank),
+    minSpamScore: toNumberOrUndefined(values.minSpamScore),
+    maxSpamScore: toNumberOrUndefined(values.maxSpamScore),
   };
 }

@@ -9,12 +9,14 @@ import {
   getStandardErrorMessage,
 } from "@/client/lib/error-messages";
 import {
+  getBacklinksAnchors,
   getBacklinksOverview,
   getBacklinksReferringDomains,
   getBacklinksRows,
   getBacklinksTopPages,
 } from "@/serverFunctions/backlinks";
 import {
+  anchorsSortFieldSchema,
   BACKLINKS_DEFAULT_SORT,
   backlinksRowsSortFieldSchema,
   referringDomainsSortFieldSchema,
@@ -22,6 +24,7 @@ import {
   type BacklinksSortOrder,
 } from "@/types/schemas/backlinks";
 import {
+  toAnchorsFiltersPayload,
   toBacklinksFiltersPayload,
   toReferringDomainsFiltersPayload,
   toTopPagesFiltersPayload,
@@ -196,6 +199,39 @@ export function useBacklinksPageData({
       }),
   });
 
+  const anchorsSort = toSort(
+    sort,
+    order,
+    anchorsSortFieldSchema.options,
+    BACKLINKS_DEFAULT_SORT.anchors,
+  );
+  const anchorsFilters = useMemo(
+    () => toAnchorsFiltersPayload(filters.anchors.values),
+    [filters.anchors.values],
+  );
+  const anchorsQuery = useQuery({
+    queryKey: [
+      "backlinksAnchors",
+      ...baseQueryKeyParts,
+      page,
+      pageSize,
+      anchorsSort.field,
+      anchorsSort.order,
+      anchorsFilters,
+    ],
+    enabled: targetReady && tab === "anchors",
+    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    queryFn: () =>
+      getBacklinksAnchors({
+        data: {
+          ...pageInputBase,
+          sortField: anchorsSort.field,
+          sortOrder: anchorsSort.order,
+          filters: anchorsFilters,
+        },
+      }),
+  });
+
   const overviewErrorMessage = getBacklinksErrorMessage(
     overviewQuery.error,
     "Could not load backlinks data.",
@@ -205,7 +241,9 @@ export function useBacklinksPageData({
       ? rowsQuery
       : tab === "domains"
         ? referringDomainsQuery
-        : topPagesQuery;
+        : tab === "anchors"
+          ? anchorsQuery
+          : topPagesQuery;
   const activeTabErrorMessage = getBacklinksErrorMessage(
     activeTabQuery.error,
     "Could not load this tab.",
@@ -214,6 +252,7 @@ export function useBacklinksPageData({
   return {
     activeTabErrorMessage,
     activeTabQuery,
+    anchorsQuery,
     overviewErrorMessage,
     overviewQuery,
     referringDomainsQuery,

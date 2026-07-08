@@ -91,6 +91,27 @@ export function buildBacklinksTabExport(args: {
     };
   }
 
+  if (tab === "anchors") {
+    return {
+      headers: [
+        "Anchor",
+        "Backlinks",
+        "Referring Domains",
+        "Rank",
+        "Spam Score",
+        "First Seen",
+      ],
+      rows: rows.anchors.map((row) => [
+        row.anchor,
+        row.backlinks,
+        row.referringDomains,
+        row.rank,
+        row.spamScore,
+        row.firstSeen,
+      ]),
+    };
+  }
+
   return {
     headers: [
       "Page",
@@ -130,7 +151,9 @@ export function buildBacklinksTabCsvFilename(
       ? "backlinks"
       : tab === "domains"
         ? "referring-domains"
-        : "top-pages";
+        : tab === "anchors"
+          ? "anchors"
+          : "top-pages";
   const normalizedTarget = target
     .toLowerCase()
     .trim()

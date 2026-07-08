@@ -6,6 +6,7 @@ import {
   EMPTY_BACKLINKS_FILTERS,
 } from "@/client/features/backlinks/backlinksFilterTypes";
 import {
+  buildAnchorsApiFilters,
   buildBacklinksRowsApiFilters,
   buildReferringDomainsApiFilters,
   buildTopPagesApiFilters,
@@ -86,6 +87,27 @@ describe("buildTopPagesApiFilters", () => {
       ["url", "ilike", "%/blog%"],
       "and",
       ["referring_domains", ">=", 2],
+    ]);
+  });
+});
+
+describe("buildAnchorsApiFilters", () => {
+  it("filters on the anchor field and anchor metrics", () => {
+    expect(
+      buildAnchorsApiFilters({
+        include: "brand",
+        exclude: "login",
+        minBacklinks: 10,
+        maxSpamScore: 20,
+      }),
+    ).toEqual([
+      ["anchor", "ilike", "%brand%"],
+      "and",
+      ["anchor", "not_ilike", "%login%"],
+      "and",
+      ["backlinks", ">=", 10],
+      "and",
+      ["backlinks_spam_score", "<=", 20],
     ]);
   });
 });

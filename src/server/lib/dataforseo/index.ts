@@ -36,6 +36,8 @@ export {
   type BacklinksHistoryItem,
 } from "@/server/lib/dataforseo/backlinks";
 
+export type { BacklinksAnchorItem } from "@/server/lib/dataforseo/backlinks-insights";
+
 export {
   buildLlmTarget,
   CHATGPT_LANGUAGE_CODE,

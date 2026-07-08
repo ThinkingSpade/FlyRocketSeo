@@ -1,11 +1,13 @@
 import { useCallback, useState } from "react";
 import { MAX_DATAFORSEO_FILTER_CONDITIONS } from "@/types/schemas/domain";
 import {
+  EMPTY_ANCHORS_FILTERS,
   EMPTY_BACKLINKS_FILTERS,
   EMPTY_REFERRING_DOMAINS_FILTERS,
   EMPTY_TOP_PAGES_FILTERS,
   countActiveFilters,
   countFilterConditions,
+  type AnchorsFilterValues,
   type BacklinksTabFilterValues,
   type ReferringDomainsFilterValues,
   type TopPagesFilterValues,
@@ -102,11 +104,16 @@ export function useBacklinksFilters() {
     "pages",
     EMPTY_TOP_PAGES_FILTERS,
   );
+  const anchors = useTabFilters<AnchorsFilterValues>(
+    "anchors",
+    EMPTY_ANCHORS_FILTERS,
+  );
 
   return {
     backlinks,
     domains,
     pages,
+    anchors,
     showFilters,
     setShowFilters,
   };

@@ -251,6 +251,7 @@ export async function fetchBacklinksNewLostTimeseries(input: {
   };
 }
 
+export type BacklinksAnchorItem = z.infer<typeof backlinksAnchorItemSchema>;
 export type BacklinksIntersectionItem = z.infer<
   typeof backlinksIntersectionItemSchema
 >;
