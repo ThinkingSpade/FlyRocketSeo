@@ -13,6 +13,7 @@ import {
   getLanguageCode,
   isLabsLocationCode,
 } from "@/client/features/keywords/locations";
+import { DataFreshness } from "@/client/components/DataFreshness";
 import { useDomainSearchHistory } from "@/client/hooks/useDomainSearchHistory";
 import type { DomainSearchHistoryItem } from "@/client/hooks/useDomainSearchHistory";
 import {
@@ -386,6 +387,8 @@ function useDomainOverviewState({
     controlsForm,
     isLoading,
     overview,
+    refetchOverview: overviewQuery.refetch,
+    overviewRefreshing: overviewQuery.isFetching && !overviewQuery.isPending,
     canSaveKeywords,
     history,
     historyLoaded,
@@ -532,12 +535,19 @@ export function DomainOverviewPage({
   return (
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto max-w-7xl space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Domain Overview</h1>
-          <p className="text-sm text-base-content/70">
-            Analyze any domain&apos;s SEO profile: traffic, keywords, and
-            backlinks.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-2">
+          <div>
+            <h1 className="text-2xl font-semibold">Domain Overview</h1>
+            <p className="text-sm text-base-content/70">
+              Analyze any domain&apos;s SEO profile: traffic, keywords, and
+              backlinks.
+            </p>
+          </div>
+          <DataFreshness
+            fetchedAt={state.overview?.fetchedAt}
+            onRefresh={() => void state.refetchOverview()}
+            refreshing={state.overviewRefreshing}
+          />
         </div>
 
         <DomainSearchCard

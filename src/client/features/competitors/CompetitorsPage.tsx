@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Search, Users } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
+import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getProjects } from "@/serverFunctions/projects";
@@ -132,7 +133,11 @@ export function CompetitorsPage({
 
   const tabQueries: Record<
     CompetitorsTab,
-    UseQueryResult<{ rows: unknown[]; totalCount: number | null }>
+    UseQueryResult<{
+      rows: unknown[];
+      totalCount: number | null;
+      fetchedAt: string;
+    }>
   > = {
     competitors: competitorsQuery,
     gap: gapQuery,
@@ -150,15 +155,22 @@ export function CompetitorsPage({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Users className="size-5" />
-          Competitor Insights
-        </h1>
-        <p className="text-sm text-base-content/60">
-          Discover who you compete with in organic search and find the keywords
-          and links they have that you don&apos;t.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <Users className="size-5" />
+            Competitor Insights
+          </h1>
+          <p className="text-sm text-base-content/60">
+            Discover who you compete with in organic search and find the
+            keywords and links they have that you don&apos;t.
+          </p>
+        </div>
+        <DataFreshness
+          fetchedAt={activeQuery.data?.fetchedAt}
+          onRefresh={() => void activeQuery.refetch()}
+          refreshing={activeQuery.isFetching && !activeQuery.isPending}
+        />
       </div>
 
       <div className="card border border-base-300 bg-base-100">
