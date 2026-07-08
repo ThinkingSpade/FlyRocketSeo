@@ -4,6 +4,7 @@ import {
   Bot,
   ClipboardCheck,
   Globe,
+  LayoutDashboard,
   Link2,
   MapPin,
   MessageSquare,
@@ -16,6 +17,11 @@ import { linkOptions } from "@tanstack/react-router";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 
 const projectNavItems = [
+  {
+    to: "/p/$projectId" as const,
+    label: "Overview",
+    icon: LayoutDashboard,
+  },
   {
     to: "/p/$projectId/keywords" as const,
     label: "Keyword Research",
@@ -111,6 +117,7 @@ export function getProjectNavGroups(projectId: string) {
     {
       label: "Research",
       items: [
+        byPath("/p/$projectId"),
         byPath("/p/$projectId/keywords"),
         byPath("/p/$projectId/trends"),
         byPath("/p/$projectId/domain"),
