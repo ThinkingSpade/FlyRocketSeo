@@ -193,6 +193,8 @@ Clicking this button opens a page to deploy OpenSEO in your Cloudflare account. 
 
 Reference these docs while deploying since the Cloudflare UI doesn't indicate what steps you need to take: [`docs/SELF_HOSTING_CLOUDFLARE.md`](./docs/SELF_HOSTING_CLOUDFLARE.md).
 
+Putting OpenSEO on the internet behind a login? See [`docs/DEPLOY_INTERNET_FACING.md`](./docs/DEPLOY_INTERNET_FACING.md) for the recommended setup (Cloudflare Access + D1 or Supabase).
+
 [![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/every-app/open-seo)
 
 ## Local Development
