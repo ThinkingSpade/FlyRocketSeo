@@ -116,6 +116,18 @@ vi.mock("@/server/lib/dataforseo/ai", () => ({
   fetchLlmCrossAggregatedMetrics: vi.fn(),
   fetchLlmResponse: vi.fn(),
 }));
+vi.mock("@/server/lib/dataforseo/ai-keyword-data", () => ({
+  fetchAiKeywordVolume: vi.fn(),
+}));
+vi.mock("@/server/lib/dataforseo/content-analysis", () => ({
+  fetchBrandMentions: vi.fn(),
+  fetchBrandMentionsSummary: vi.fn(),
+  fetchBrandMentionTrends: vi.fn(),
+}));
+vi.mock("@/server/lib/dataforseo/domain-analytics", () => ({
+  fetchDomainTechnologies: vi.fn(),
+  fetchDomainWhois: vi.fn(),
+}));
 
 import {
   createDataforseoClient,
@@ -591,6 +603,32 @@ describe("mapDataforseoPathToCreditFeature", () => {
         "live",
       ]),
     ).toBe("domain_overview");
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "content_analysis",
+        "search",
+        "live",
+      ]),
+    ).toBe("brand_monitoring");
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "domain_analytics",
+        "whois",
+        "overview",
+        "live",
+      ]),
+    ).toBe("domain_overview");
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "ai_optimization",
+        "ai_keyword_data",
+        "keywords_search_volume",
+        "live",
+      ]),
+    ).toBe("keyword_research");
     expect(
       mapDataforseoPathToCreditFeature([
         "v3",

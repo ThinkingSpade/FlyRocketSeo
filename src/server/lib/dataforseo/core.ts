@@ -2,7 +2,9 @@ import {
   AiOptimizationApi,
   BacklinksApi,
   BusinessDataApi,
+  ContentAnalysisApi,
   DataforseoLabsApi,
+  DomainAnalyticsApi,
   KeywordsDataApi,
   OnPageApi,
   SerpApi,
@@ -130,3 +132,7 @@ export const backlinksApi = (classify?: DataforseoErrorClassifier) =>
   new BacklinksApi(API_BASE, http(classify));
 export const aiOptimizationApi = (classify?: DataforseoErrorClassifier) =>
   new AiOptimizationApi(API_BASE, http(classify));
+export const contentAnalysisApi = () =>
+  new ContentAnalysisApi(API_BASE, http());
+export const domainAnalyticsApi = () =>
+  new DomainAnalyticsApi(API_BASE, http());

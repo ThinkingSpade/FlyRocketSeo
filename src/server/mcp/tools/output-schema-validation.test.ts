@@ -191,6 +191,7 @@ describe("DataForSEO research tool output schemas", () => {
   it.each([
     ["get_clickstream_search_volume", "volumes"],
     ["get_global_search_volume", "volumes"],
+    ["get_ai_search_volume", "volumes"],
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
@@ -208,6 +209,44 @@ describe("DataForSEO research tool output schemas", () => {
       expect(result.success).toBe(true);
     },
   );
+
+  // Brand-monitoring tools that stream provider rows to structuredContent.
+  it.each([
+    ["search_brand_mentions", "mentions"],
+    ["get_brand_mention_trends", "trends"],
+  ])(
+    "%s accepts typed (non-plain-object) provider rows",
+    async (toolName, field) => {
+      const tools = await import("./brand-monitoring-tools");
+      const tool = Object.values(tools).find((t) => t.name === toolName);
+      if (!tool) throw new Error(`tool ${toolName} not found`);
+
+      const schema = normalizeObjectSchema(tool.config.outputSchema);
+      if (!schema) throw new Error("output schema did not normalize");
+
+      const result = await safeParseAsync(schema, {
+        [field]: [new ProviderRow("example.com", 1)],
+        totalCount: 1,
+      });
+
+      expect(result.success).toBe(true);
+    },
+  );
+
+  it("get_domain_technologies accepts a typed provider result object", async () => {
+    const { getDomainTechnologiesTool } =
+      await import("./domain-analytics-tools");
+    const schema = normalizeObjectSchema(
+      getDomainTechnologiesTool.config.outputSchema,
+    );
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      technologies: new ProviderRow("example.com", 1),
+    });
+
+    expect(result.success).toBe(true);
+  });
 
   it("get_business_reviews accepts typed provider review rows", async () => {
     const { getBusinessReviewsTool } = await import("./local-seo-tools");

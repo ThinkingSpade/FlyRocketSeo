@@ -260,3 +260,72 @@ export const getGlobalVolumeTool = {
     });
   }),
 };
+
+/* ------------------------------------------------------------------ */
+/*  get_ai_search_volume                                                */
+/* ------------------------------------------------------------------ */
+
+const getAiSearchVolumeInputSchema = {
+  projectId: projectIdSchema,
+  keywords: z
+    .array(z.string().min(1).max(100))
+    .min(1)
+    .max(1000)
+    .describe("Keywords to get AI prompt volume for (1-1000)."),
+  locationCode: locationCodeSchema.optional(),
+  languageCode: languageCodeSchema.optional(),
+} as const;
+
+type GetAiSearchVolumeArgs = z.infer<
+  z.ZodObject<typeof getAiSearchVolumeInputSchema>
+>;
+
+const AI_VOLUME_COLUMNS: McpTableColumn<unknown>[] = [
+  { header: "keyword", value: (row) => readPath(row, "keyword") },
+  {
+    header: "ai_search_volume",
+    value: (row) => readPath(row, "ai_search_volume"),
+  },
+] as const;
+
+export const getAiSearchVolumeTool = {
+  name: "get_ai_search_volume",
+  config: {
+    title: "Get AI search volume",
+    description:
+      "Returns the estimated monthly volume of keywords appearing in AI assistant prompts (ChatGPT, Gemini, etc.) for up to 1000 keywords. Use alongside classic search volume to prioritize AI-era topics. Charges credits.",
+    inputSchema: getAiSearchVolumeInputSchema,
+    outputSchema: {
+      volumes: z.array(looseObjectOutputSchema),
+      ...optionalMetaOutputSchema,
+    },
+    annotations: {
+      readOnlyHint: true,
+      openWorldHint: false,
+      destructiveHint: false,
+    },
+  },
+  handler: withMcpProjectAuth(async (args: GetAiSearchVolumeArgs, context) => {
+    const client = createDataforseoClient(context.billing);
+    const items = await client.aiSearch.keywordVolume({
+      keywords: args.keywords,
+      locationCode: args.locationCode ?? 2840,
+      languageCode: args.languageCode ?? DEFAULT_LANGUAGE_CODE,
+      creditFeature: "keyword_research",
+    });
+
+    const text =
+      items.length === 0
+        ? "No AI search volume data returned."
+        : `AI prompt volume for ${items.length} keywords:\n${formatMcpTable(items, AI_VOLUME_COLUMNS)}`;
+    return mcpResponse({
+      text,
+      meta: buildProjectMeta(
+        context,
+        args.projectId,
+        `/p/${args.projectId}/keywords`,
+      ),
+      structuredContent: { volumes: items },
+    });
+  }),
+};

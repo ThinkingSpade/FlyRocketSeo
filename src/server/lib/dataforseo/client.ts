@@ -58,6 +58,16 @@ import {
   fetchGoogleTrendsExplore,
 } from "@/server/lib/dataforseo/trends";
 import {
+  fetchBrandMentions,
+  fetchBrandMentionsSummary,
+  fetchBrandMentionTrends,
+} from "@/server/lib/dataforseo/content-analysis";
+import {
+  fetchDomainTechnologies,
+  fetchDomainWhois,
+} from "@/server/lib/dataforseo/domain-analytics";
+import { fetchAiKeywordVolume } from "@/server/lib/dataforseo/ai-keyword-data";
+import {
   fetchLiveSerp,
   fetchLocalSerp,
   fetchRankCheckSerp,
@@ -181,6 +191,16 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
       topPages: meter(customer, fetchLlmTopPages),
       crossAggregatedMetrics: meter(customer, fetchLlmCrossAggregatedMetrics),
       llmResponse: meter(customer, fetchLlmResponse),
+      keywordVolume: meter(customer, fetchAiKeywordVolume),
+    },
+    brandMonitoring: {
+      mentions: meter(customer, fetchBrandMentions),
+      summary: meter(customer, fetchBrandMentionsSummary),
+      trends: meter(customer, fetchBrandMentionTrends),
+    },
+    domainAnalytics: {
+      technologies: meter(customer, fetchDomainTechnologies),
+      whois: meter(customer, fetchDomainWhois),
     },
   } as const;
 }
