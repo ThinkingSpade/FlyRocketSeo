@@ -163,15 +163,23 @@ DataForSEO, so it costs nothing to run. One-time setup:
    custom domain. A mismatch here is the #1 cause of Google's
    `redirect_uri_mismatch`.
 
-3. Set these Worker **secrets**:
+3. Always set this Worker **secret** (it encrypts the stored OAuth tokens and
+   credentials, and can't live anywhere but env):
 
-   | Secret                 | Value                                                            |
-   | ---------------------- | ---------------------------------------------------------------- |
-   | `GOOGLE_CLIENT_ID`     | from the OAuth client                                            |
-   | `GOOGLE_CLIENT_SECRET` | from the OAuth client                                            |
-   | `BETTER_AUTH_SECRET`   | a random string ≥ 32 chars — it encrypts the stored OAuth tokens |
+   | Secret               | Value                      |
+   | -------------------- | -------------------------- |
+   | `BETTER_AUTH_SECRET` | a random string ≥ 32 chars |
 
-4. If your OAuth consent screen is in **Testing** mode, add each user's Google
+4. Provide the Google client ID/secret **either way** — pick one:
+   - **Env route:** set `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` as Worker
+     secrets too. Available immediately on deploy.
+   - **In-app route:** leave them unset and, after deploying, go to
+     **Settings → Google Search Console** and paste the client ID/secret there.
+     They're encrypted at rest (with `BETTER_AUTH_SECRET`) and can be changed or
+     removed later without a redeploy. Env, when set, is the default; an in-app
+     override takes precedence.
+
+5. If your OAuth consent screen is in **Testing** mode, add each user's Google
    account under **OAuth consent screen → Test users** (or publish the screen).
 
 Then connect it inside the app: open a project → **GSC Insights / Search
