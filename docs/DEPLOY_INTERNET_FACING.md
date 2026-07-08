@@ -143,9 +143,44 @@ workspace. See
 
 These are all off by default and safe to skip.
 
-- **Google Search Console** — set `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, and
-  `BETTER_AUTH_SECRET` (the last encrypts the stored OAuth tokens). See
-  [`SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md`](./SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md).
+### Google Search Console (recommended)
+
+Free, first-party search data (real clicks/impressions/CTR/position +
+striking-distance opportunities), linked **per project** — so each client's
+project connects its own Search Console property. It uses Google's API, not
+DataForSEO, so it costs nothing to run. One-time setup:
+
+1. Create a Google OAuth client in **Google Cloud → APIs & Services →
+   Credentials**.
+2. Add this exact **Authorized redirect URI** (scheme + host must match your
+   deployment, no trailing slash):
+
+   ```
+   https://<your-worker-domain>/api/gsc/oauth/callback
+   ```
+
+   e.g. `https://open-seo.<you>.workers.dev/api/gsc/oauth/callback` or your
+   custom domain. A mismatch here is the #1 cause of Google's
+   `redirect_uri_mismatch`.
+
+3. Set these Worker **secrets**:
+
+   | Secret                 | Value                                                            |
+   | ---------------------- | ---------------------------------------------------------------- |
+   | `GOOGLE_CLIENT_ID`     | from the OAuth client                                            |
+   | `GOOGLE_CLIENT_SECRET` | from the OAuth client                                            |
+   | `BETTER_AUTH_SECRET`   | a random string ≥ 32 chars — it encrypts the stored OAuth tokens |
+
+4. If your OAuth consent screen is in **Testing** mode, add each user's Google
+   account under **OAuth consent screen → Test users** (or publish the screen).
+
+Then connect it inside the app: open a project → **GSC Insights / Search
+Performance** → connect, and pick that client's verified property. Full
+walkthrough:
+[`SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md`](./SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md).
+
+### Other add-ons
+
 - **SAM (in-app AI agent) + AI features** — set `OPENROUTER_API_KEY`
   ([get a key](https://openrouter.ai/settings/keys)).
 - **R2 cache cleanup** — add a lifecycle rule so cached DataForSEO responses
