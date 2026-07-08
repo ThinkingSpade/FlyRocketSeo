@@ -204,6 +204,13 @@
       "when": 1783117904905,
       "tag": "0028_empty_beyonder",
       "breakpoints": true
+    },
+    {
+      "idx": 29,
+      "version": "6",
+      "when": 1783536131764,
+      "tag": "0029_foamy_anthem",
+      "breakpoints": true
     }
   ]
 }

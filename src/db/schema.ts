@@ -69,5 +69,6 @@ export const {
   invitation,
   billingCustomerStatus,
   gscConnections,
+  gscOauthConfig,
   redditAttributions,
 } = schema;

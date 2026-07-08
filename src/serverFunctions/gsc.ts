@@ -5,9 +5,18 @@ import { z } from "zod";
 import { GscService } from "@/server/features/gsc/services/GscService";
 import { hasSelfHostedGscConfig } from "@/server/features/gsc/oauth-config";
 import { createSelfHostedGscAuthorizationUrl } from "@/server/features/gsc/selfHostedOAuth";
+import {
+  clearStoredGscOAuthConfig,
+  getStoredGscOAuthMeta,
+  setStoredGscOAuthConfig,
+} from "@/server/features/gsc/oauthConfigStore";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { getPublicOrigin } from "@/server/mcp/public-origin";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { AppError } from "@/server/lib/errors";
+import {
+  getOptionalEnvValue,
+  isHostedServerAuthMode,
+} from "@/server/lib/runtime-env";
 import {
   requireAuthenticatedContext,
   requireProjectContext,
@@ -126,4 +135,71 @@ export const startSelfHostedGscLink = createServerFn({ method: "POST" })
     });
 
     return { url };
+  });
+
+const setGscOAuthConfigSchema = z.object({
+  clientId: z.string().trim().min(1).max(512),
+  clientSecret: z.string().trim().min(1).max(512),
+});
+
+// Deployment-level Google OAuth client override, editable from the app so the
+// operator can change credentials without a redeploy. Self-hosted only — in
+// hosted mode the operator manages the client via env.
+export const getGscOAuthConfigStatus = createServerFn({ method: "GET" })
+  .middleware(requireAuthenticatedContext)
+  .handler(async () => {
+    if (await isHostedServerAuthMode()) {
+      return { supported: false as const };
+    }
+    const [override, envClientId, envClientSecret, betterAuthSecret] =
+      await Promise.all([
+        getStoredGscOAuthMeta(),
+        getOptionalEnvValue("GOOGLE_CLIENT_ID"),
+        getOptionalEnvValue("GOOGLE_CLIENT_SECRET"),
+        getOptionalEnvValue("BETTER_AUTH_SECRET"),
+      ]);
+    const hasEnvCredentials = Boolean(
+      envClientId?.trim() && envClientSecret?.trim(),
+    );
+    return {
+      supported: true as const,
+      // Client ids aren't secret; the secret is never returned by any of these.
+      source: override
+        ? ("custom" as const)
+        : hasEnvCredentials
+          ? ("env" as const)
+          : ("none" as const),
+      hasEnvCredentials,
+      betterAuthSecretConfigured: Boolean(
+        betterAuthSecret && betterAuthSecret.trim().length >= 32,
+      ),
+      override,
+    };
+  });
+
+export const setGscOAuthConfig = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .validator(setGscOAuthConfigSchema)
+  .handler(async ({ data }) => {
+    if (await isHostedServerAuthMode()) {
+      throw new AppError(
+        "FORBIDDEN",
+        "Search Console OAuth is managed by the operator in hosted mode.",
+      );
+    }
+    await setStoredGscOAuthConfig(data);
+    return { ok: true as const };
+  });
+
+export const clearGscOAuthConfig = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .handler(async () => {
+    if (await isHostedServerAuthMode()) {
+      throw new AppError(
+        "FORBIDDEN",
+        "Search Console OAuth is managed by the operator in hosted mode.",
+      );
+    }
+    await clearStoredGscOAuthConfig();
+    return { ok: true as const };
   });

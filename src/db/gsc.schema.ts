@@ -36,3 +36,21 @@ export const gscConnections = sqliteTable(
     index("gsc_connections_organization_idx").on(table.organizationId),
   ],
 );
+
+// Deployment-level override for the Google OAuth client used by self-hosted
+// Search Console. A single row (id = "default"): the OAuth client is per
+// deployment, not per project/org. Lets an operator change the client
+// id/secret from the app UI instead of redeploying; env stays the default and
+// this row, when present, takes precedence. The secret is encrypted at rest
+// with BETTER_AUTH_SECRET (same scheme as the stored OAuth tokens).
+export const gscOauthConfig = sqliteTable("gsc_oauth_config", {
+  id: text("id").primaryKey(),
+  clientId: text("client_id").notNull(),
+  clientSecretEncrypted: text("client_secret_encrypted").notNull(),
+  createdAt: text("created_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+  updatedAt: text("updated_at")
+    .notNull()
+    .default(sql`(current_timestamp)`),
+});

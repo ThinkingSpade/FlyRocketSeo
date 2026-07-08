@@ -1,4 +1,5 @@
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
+import { getStoredGscOAuthConfig } from "@/server/features/gsc/oauthConfigStore";
 
 type GscOAuthClientConfig = {
   clientId: string;
@@ -6,6 +7,11 @@ type GscOAuthClientConfig = {
 };
 
 export async function getGscOAuthClientConfig(): Promise<GscOAuthClientConfig | null> {
+  // The DB override (editable from the app UI) wins when present; env is the
+  // secure default and the fallback for every non-override case.
+  const stored = await getStoredGscOAuthConfig();
+  if (stored) return stored;
+
   const clientId = (await getOptionalEnvValue("GOOGLE_CLIENT_ID"))?.trim();
   const clientSecret = (
     await getOptionalEnvValue("GOOGLE_CLIENT_SECRET")

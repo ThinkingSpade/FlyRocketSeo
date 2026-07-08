@@ -6,6 +6,7 @@ import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { exportBackup } from "@/serverFunctions/backup";
+import { GscOAuthConfigSection } from "@/client/features/gsc/GscOAuthConfigSection";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -136,6 +137,8 @@ function SettingsPage() {
             </div>
           </section>
         ) : null}
+
+        {!isHosted ? <GscOAuthConfigSection /> : null}
 
         {!isHosted ? (
           <section className="space-y-3">
