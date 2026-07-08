@@ -20,7 +20,7 @@ const RELATIVE_TIME_DAY_LIMIT = 30;
  * minutes/hours/days ago, falling back to an absolute date once older than a
  * month.
  */
-export function formatRelativeTime(value: string | number | Date): string {
+function formatRelativeTime(value: string | number | Date): string {
   const date = toDate(value);
   if (!date) return "recently";
 

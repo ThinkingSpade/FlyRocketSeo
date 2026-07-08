@@ -7,7 +7,7 @@ import { RankTrackingRepository } from "@/server/features/rank-tracking/reposito
 // Pure core (no I/O, no Date.now, no randomness — fully deterministic)
 // ---------------------------------------------------------------------------
 
-export interface RankMover {
+interface RankMover {
   keyword: string;
   searchVolume: number | null;
   previousPosition: number | null;
@@ -17,7 +17,7 @@ export interface RankMover {
   delta: number | null;
 }
 
-export interface RankDigest {
+interface RankDigest {
   improved: RankMover[];
   declined: RankMover[];
   added: RankMover[];
@@ -28,7 +28,7 @@ export interface RankDigest {
   lostCount: number;
 }
 
-export interface RankDigestMeta {
+interface RankDigestMeta {
   /** keyword -> search volume, used only to rank added/lost movers. */
   searchVolume?: Map<string, number | null>;
 }
@@ -109,7 +109,7 @@ export function computeRankDigest(
 // Service (compute-on-read from existing snapshots — no writes, no migrations)
 // ---------------------------------------------------------------------------
 
-export interface ConfigRankDigest extends RankDigest {
+interface ConfigRankDigest extends RankDigest {
   configId: string;
   domain: string;
   /** Timestamp of the latest completed run compared, or null when none. */

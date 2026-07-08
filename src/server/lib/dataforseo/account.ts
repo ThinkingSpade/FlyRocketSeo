@@ -5,7 +5,7 @@ import { dataforseoGetJson } from "@/server/lib/dataforseo/core";
 // they can see what's left on their own key. Never expose this in hosted mode:
 // the key there is the operator's shared account (see getDataforseoAccountStatus).
 
-export type DataforseoBalance = {
+type DataforseoBalance = {
   balance: number;
   currency: string;
 };

@@ -7,7 +7,7 @@ import { getDatabaseProvider } from "@/db/provider";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { AppError } from "@/server/lib/errors";
 
-export const BACKUP_FORMAT_VERSION = 1;
+const BACKUP_FORMAT_VERSION = 1;
 
 // Tables holding auth secrets or transient state. A downloadable backup file
 // should never carry password hashes, OAuth tokens, or live session ids, so

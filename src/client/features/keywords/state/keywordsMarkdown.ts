@@ -7,7 +7,7 @@ import type { CsvValue } from "@/client/lib/csv";
  * `keywordResearchExportRow`:
  * `[keyword, volume, cpc, competition, keywordDifficulty, intent]`.
  */
-export type ExportRow = CsvValue[];
+type ExportRow = CsvValue[];
 
 const MARKDOWN_HEADERS = [
   "Keyword",

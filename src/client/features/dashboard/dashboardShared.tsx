@@ -13,7 +13,7 @@ type ProjectNavItem = ReturnType<
 type ProjectNavTo = ProjectNavItem["to"];
 
 /** Icon + label stripped off; the rest spreads straight into <Link>. */
-export type ProjectNavLink = {
+type ProjectNavLink = {
   icon: ComponentType<{ className?: string }>;
   label: string;
   linkProps: LinkOptions;
@@ -83,7 +83,7 @@ export function DashboardCard({
 // Stat tiles
 // ---------------------------------------------------------------------------
 
-export type Delta = { text: string; positive: boolean } | null;
+type Delta = { text: string; positive: boolean } | null;
 
 /** A stat tile matching the audit StatCard, with an optional colored delta. */
 export function DeltaStatTile({
