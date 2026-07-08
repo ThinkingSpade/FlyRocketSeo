@@ -92,6 +92,11 @@ vi.mock("@/server/lib/dataforseo/backlinks", () => ({
   fetchDomainPagesSummary: vi.fn(),
   fetchBacklinksHistory: vi.fn(),
 }));
+vi.mock("@/server/lib/dataforseo/trends", () => ({
+  fetchGoogleTrendsExplore: vi.fn(),
+  fetchClickstreamSearchVolume: vi.fn(),
+  fetchGlobalSearchVolume: vi.fn(),
+}));
 vi.mock("@/server/lib/dataforseo/backlinks-insights", () => ({
   fetchBacklinksAnchors: vi.fn(),
   fetchBacklinksCompetitors: vi.fn(),

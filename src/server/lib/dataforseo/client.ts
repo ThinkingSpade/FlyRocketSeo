@@ -51,6 +51,11 @@ import {
   fetchAdsSearchVolume,
 } from "@/server/lib/dataforseo/google-ads";
 import {
+  fetchClickstreamSearchVolume,
+  fetchGlobalSearchVolume,
+  fetchGoogleTrendsExplore,
+} from "@/server/lib/dataforseo/trends";
+import {
   fetchLiveSerp,
   fetchLocalSerp,
   fetchRankCheckSerp,
@@ -126,6 +131,9 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
       forSite: meter(customer, fetchKeywordsForSite),
       bulkDifficulty: meter(customer, fetchBulkKeywordDifficulty),
       searchIntent: meter(customer, fetchSearchIntent),
+      trends: meter(customer, fetchGoogleTrendsExplore),
+      clickstreamVolume: meter(customer, fetchClickstreamSearchVolume),
+      globalVolume: meter(customer, fetchGlobalSearchVolume),
       // Google Ads endpoints for countries Labs doesn't support.
       adsIdeas: meter(customer, fetchAdsKeywordIdeas),
       adsSearchVolume: meter(customer, fetchAdsSearchVolume),

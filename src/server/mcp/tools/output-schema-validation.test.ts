@@ -187,6 +187,28 @@ describe("DataForSEO research tool output schemas", () => {
     },
   );
 
+  // Trend tools that stream provider rows to structuredContent.
+  it.each([
+    ["get_clickstream_search_volume", "volumes"],
+    ["get_global_search_volume", "volumes"],
+  ])(
+    "%s accepts typed (non-plain-object) provider rows",
+    async (toolName, field) => {
+      const tools = await import("./trends-tools");
+      const tool = Object.values(tools).find((t) => t.name === toolName);
+      if (!tool) throw new Error(`tool ${toolName} not found`);
+
+      const schema = normalizeObjectSchema(tool.config.outputSchema);
+      if (!schema) throw new Error("output schema did not normalize");
+
+      const result = await safeParseAsync(schema, {
+        [field]: [new ProviderRow("example.com", 1)],
+      });
+
+      expect(result.success).toBe(true);
+    },
+  );
+
   it("get_backlinks_profile accepts a paginated backlinks profile payload", async () => {
     const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
     const schema = normalizeObjectSchema(

@@ -1,4 +1,5 @@
 import {
+  Activity,
   Bookmark,
   Bot,
   ClipboardCheck,
@@ -18,6 +19,11 @@ const projectNavItems = [
     to: "/p/$projectId/keywords" as const,
     label: "Keyword Research",
     icon: Search,
+  },
+  {
+    to: "/p/$projectId/trends" as const,
+    label: "Keyword Trends",
+    icon: Activity,
   },
   {
     to: "/p/$projectId/saved" as const,
@@ -100,6 +106,7 @@ export function getProjectNavGroups(projectId: string) {
       label: "Research",
       items: [
         byPath("/p/$projectId/keywords"),
+        byPath("/p/$projectId/trends"),
         byPath("/p/$projectId/domain"),
         byPath("/p/$projectId/competitors"),
         byPath("/p/$projectId/backlinks"),

@@ -33,6 +33,11 @@ import {
   getNewLostBacklinksTool,
   getSpamScoresTool,
 } from "@/server/mcp/tools/backlinks-insights-tools";
+import {
+  getClickstreamVolumeTool,
+  getGlobalVolumeTool,
+  getKeywordTrendsTool,
+} from "@/server/mcp/tools/trends-tools";
 import { researchKeywordsTool } from "@/server/mcp/tools/research-keywords";
 import { saveKeywordsTool } from "@/server/mcp/tools/save-keywords";
 import {
@@ -315,6 +320,33 @@ export function registerOpenSeoMcpTools(server: McpServer) {
       getNewLostBacklinksTool.name,
       getNewLostBacklinksTool.config.outputSchema,
       getNewLostBacklinksTool.handler,
+    ),
+  );
+  server.registerTool(
+    getKeywordTrendsTool.name,
+    getKeywordTrendsTool.config,
+    instrumentMcpToolHandler(
+      getKeywordTrendsTool.name,
+      getKeywordTrendsTool.config.outputSchema,
+      getKeywordTrendsTool.handler,
+    ),
+  );
+  server.registerTool(
+    getClickstreamVolumeTool.name,
+    getClickstreamVolumeTool.config,
+    instrumentMcpToolHandler(
+      getClickstreamVolumeTool.name,
+      getClickstreamVolumeTool.config.outputSchema,
+      getClickstreamVolumeTool.handler,
+    ),
+  );
+  server.registerTool(
+    getGlobalVolumeTool.name,
+    getGlobalVolumeTool.config,
+    instrumentMcpToolHandler(
+      getGlobalVolumeTool.name,
+      getGlobalVolumeTool.config.outputSchema,
+      getGlobalVolumeTool.handler,
     ),
   );
   server.registerTool(
