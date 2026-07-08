@@ -26,6 +26,13 @@ import {
   getSearchIntentTool,
   getSubdomainsTool,
 } from "@/server/mcp/tools/competitor-research-tools";
+import {
+  findLinkCompetitorsTool,
+  getBacklinkAnchorsTool,
+  getLinkGapTool,
+  getNewLostBacklinksTool,
+  getSpamScoresTool,
+} from "@/server/mcp/tools/backlinks-insights-tools";
 import { researchKeywordsTool } from "@/server/mcp/tools/research-keywords";
 import { saveKeywordsTool } from "@/server/mcp/tools/save-keywords";
 import {
@@ -263,6 +270,51 @@ export function registerOpenSeoMcpTools(server: McpServer) {
       getSubdomainsTool.name,
       getSubdomainsTool.config.outputSchema,
       getSubdomainsTool.handler,
+    ),
+  );
+  server.registerTool(
+    getBacklinkAnchorsTool.name,
+    getBacklinkAnchorsTool.config,
+    instrumentMcpToolHandler(
+      getBacklinkAnchorsTool.name,
+      getBacklinkAnchorsTool.config.outputSchema,
+      getBacklinkAnchorsTool.handler,
+    ),
+  );
+  server.registerTool(
+    findLinkCompetitorsTool.name,
+    findLinkCompetitorsTool.config,
+    instrumentMcpToolHandler(
+      findLinkCompetitorsTool.name,
+      findLinkCompetitorsTool.config.outputSchema,
+      findLinkCompetitorsTool.handler,
+    ),
+  );
+  server.registerTool(
+    getLinkGapTool.name,
+    getLinkGapTool.config,
+    instrumentMcpToolHandler(
+      getLinkGapTool.name,
+      getLinkGapTool.config.outputSchema,
+      getLinkGapTool.handler,
+    ),
+  );
+  server.registerTool(
+    getSpamScoresTool.name,
+    getSpamScoresTool.config,
+    instrumentMcpToolHandler(
+      getSpamScoresTool.name,
+      getSpamScoresTool.config.outputSchema,
+      getSpamScoresTool.handler,
+    ),
+  );
+  server.registerTool(
+    getNewLostBacklinksTool.name,
+    getNewLostBacklinksTool.config,
+    instrumentMcpToolHandler(
+      getNewLostBacklinksTool.name,
+      getNewLostBacklinksTool.config.outputSchema,
+      getNewLostBacklinksTool.handler,
     ),
   );
   server.registerTool(

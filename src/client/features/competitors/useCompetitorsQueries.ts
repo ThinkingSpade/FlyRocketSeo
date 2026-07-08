@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import {
   getCompetitorsList,
   getKeywordGapPage,
+  getLinkGapPage,
 } from "@/serverFunctions/competitors";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
 
@@ -64,6 +65,40 @@ export function useKeywordGapQuery(input: {
           target,
           competitor,
           mode: input.mode,
+          page: input.page,
+          pageSize: input.pageSize,
+        },
+      }),
+    staleTime: 5 * 60_000,
+  });
+}
+
+export function useLinkGapQuery(input: {
+  projectId: string;
+  target: string;
+  competitor: string;
+  page: number;
+  pageSize: number;
+  enabled: boolean;
+}) {
+  const target = input.target.trim();
+  const competitor = input.competitor.trim();
+  return useQuery({
+    enabled: input.enabled && target !== "" && competitor !== "",
+    queryKey: [
+      "link-gap",
+      input.projectId,
+      target,
+      competitor,
+      input.page,
+      input.pageSize,
+    ],
+    queryFn: () =>
+      getLinkGapPage({
+        data: {
+          projectId: input.projectId,
+          target,
+          competitor,
           page: input.page,
           pageSize: input.pageSize,
         },

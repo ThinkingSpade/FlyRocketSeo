@@ -20,6 +20,13 @@ import {
   fetchReferringDomains,
 } from "@/server/lib/dataforseo/backlinks";
 import {
+  fetchBacklinksAnchors,
+  fetchBacklinksCompetitors,
+  fetchBacklinksDomainIntersection,
+  fetchBacklinksNewLostTimeseries,
+  fetchBulkSpamScores,
+} from "@/server/lib/dataforseo/backlinks-insights";
+import {
   fetchDomainRankOverview,
   fetchKeywordIdeas,
   fetchKeywordOverview,
@@ -106,6 +113,11 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
       referringDomains: meter(customer, fetchReferringDomains),
       domainPages: meter(customer, fetchDomainPagesSummary),
       history: meter(customer, fetchBacklinksHistory),
+      anchors: meter(customer, fetchBacklinksAnchors),
+      competitors: meter(customer, fetchBacklinksCompetitors),
+      domainIntersection: meter(customer, fetchBacklinksDomainIntersection),
+      bulkSpamScores: meter(customer, fetchBulkSpamScores),
+      newLostTimeseries: meter(customer, fetchBacklinksNewLostTimeseries),
     },
     keywords: {
       related: meter(customer, fetchRelatedKeywords),

@@ -50,11 +50,28 @@ export const keywordGapRequestSchema = z.object({
     .default(DEFAULT_KEYWORD_GAP_PAGE_SIZE),
 });
 
+const LINK_GAP_PAGE_SIZES = [50, 100] as const;
+export const DEFAULT_LINK_GAP_PAGE_SIZE = 50;
+
+export const linkGapRequestSchema = z.object({
+  projectId: z.string().uuid(),
+  target: domainField,
+  competitor: domainField,
+  page: z.number().int().positive().default(1),
+  pageSize: z
+    .number()
+    .int()
+    .refine((value) =>
+      (LINK_GAP_PAGE_SIZES as readonly number[]).includes(value),
+    )
+    .default(DEFAULT_LINK_GAP_PAGE_SIZE),
+});
+
 /* ------------------------------------------------------------------ */
 /*  URL search params schema for /p/$projectId/competitors             */
 /* ------------------------------------------------------------------ */
 
-const competitorsTabs = ["competitors", "gap"] as const;
+const competitorsTabs = ["competitors", "gap", "links"] as const;
 export type CompetitorsTab = (typeof competitorsTabs)[number];
 
 const optionalSearchPositiveIntParam = z.coerce

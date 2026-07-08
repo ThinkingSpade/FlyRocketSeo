@@ -3,6 +3,7 @@ import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
   competitorsListRequestSchema,
   keywordGapRequestSchema,
+  linkGapRequestSchema,
 } from "@/types/schemas/competitors";
 import { CompetitorsService } from "@/server/features/competitors/services/CompetitorsService";
 
@@ -24,6 +25,19 @@ export const getKeywordGapPage = createServerFn({ method: "POST" })
   .validator(keywordGapRequestSchema)
   .handler(async ({ data, context }) => {
     return CompetitorsService.getKeywordGap(
+      {
+        ...data,
+        projectId: context.projectId,
+      },
+      context,
+    );
+  });
+
+export const getLinkGapPage = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(linkGapRequestSchema)
+  .handler(async ({ data, context }) => {
+    return CompetitorsService.getLinkGap(
       {
         ...data,
         projectId: context.projectId,

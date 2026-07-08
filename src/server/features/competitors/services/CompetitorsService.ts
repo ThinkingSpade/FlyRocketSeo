@@ -8,6 +8,7 @@ import type {
   CompetitorDomainItem,
   DomainIntersectionItem,
 } from "@/server/lib/dataforseo/labs-competitors";
+import type { BacklinksIntersectionItem } from "@/server/lib/dataforseo/backlinks-insights";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
 
 /** Competitor and keyword-gap data refresh cadence, matching domain overview. */
@@ -256,7 +257,96 @@ async function getKeywordGap(
   return result;
 }
 
+const linkGapRowSchema = z.object({
+  referringDomain: z.string(),
+  rank: z.number().nullable(),
+  backlinksToCompetitor: z.number().nullable(),
+  spamScore: z.number().nullable(),
+  firstSeen: z.string().nullable(),
+});
+
+export type LinkGapRow = z.infer<typeof linkGapRowSchema>;
+
+const linkGapPageSchema = z.object({
+  rows: z.array(linkGapRowSchema),
+  totalCount: z.number().nullable(),
+  fetchedAt: z.string(),
+});
+
+type LinkGapPage = z.infer<typeof linkGapPageSchema>;
+
+function mapLinkGapItem(item: BacklinksIntersectionItem): LinkGapRow | null {
+  // Single-competitor lookups have exactly one intersection entry ("1"); its
+  // `target` is the referring domain that links to the competitor.
+  const entry = Object.values(item.domain_intersection ?? {})[0];
+  if (!entry?.target) return null;
+  return {
+    referringDomain: entry.target,
+    rank: entry.rank ?? null,
+    backlinksToCompetitor: entry.backlinks ?? null,
+    spamScore: entry.backlinks_spam_score ?? null,
+    firstSeen: entry.first_seen ?? null,
+  };
+}
+
+async function getLinkGap(
+  input: {
+    projectId: string;
+    target: string;
+    competitor: string;
+    page: number;
+    pageSize: number;
+  },
+  billingCustomer: BillingCustomerContext,
+): Promise<LinkGapPage> {
+  const target = normalizeDomainInput(input.target, true);
+  const competitor = normalizeDomainInput(input.competitor, true);
+
+  const cacheKey = await buildCacheKey("competitors:link-gap", {
+    organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    target,
+    competitor,
+    page: input.page,
+    pageSize: input.pageSize,
+  });
+
+  const cached = linkGapPageSchema.safeParse(await getCached(cacheKey));
+  if (cached.success && cached.data.rows.length > 0) {
+    return cached.data;
+  }
+
+  const dataforseo = createDataforseoClient(billingCustomer);
+  // Referring domains that link to the competitor but not to the target.
+  const response = await dataforseo.backlinks.domainIntersection({
+    targets: [competitor],
+    excludeTargets: [target],
+    limit: input.pageSize,
+    offset: (input.page - 1) * input.pageSize,
+    orderBy: ["1.rank,desc"],
+  });
+
+  const rows = response.items
+    .map(mapLinkGapItem)
+    .filter((row): row is LinkGapRow => row != null);
+
+  const result: LinkGapPage = {
+    rows,
+    totalCount: response.totalCount,
+    fetchedAt: new Date().toISOString(),
+  };
+
+  if (rows.length > 0) {
+    void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
+      console.error("competitors.link-gap.cache-write failed:", error);
+    });
+  }
+
+  return result;
+}
+
 export const CompetitorsService = {
   getCompetitors,
   getKeywordGap,
+  getLinkGap,
 } as const;
