@@ -1,10 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Download, Loader2, Monitor, Moon, Sun } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { exportBackup } from "@/serverFunctions/backup";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -27,6 +28,28 @@ function SettingsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   const analyticsEnabled = session?.user?.analyticsOptedOut !== true;
+  const [isExportingBackup, setIsExportingBackup] = useState(false);
+
+  async function handleDownloadBackup() {
+    setIsExportingBackup(true);
+    try {
+      const backup = await exportBackup();
+      const blob = new Blob([backup.json], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = backup.fileName;
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      URL.revokeObjectURL(url);
+      toast.success("Backup downloaded");
+    } catch {
+      toast.error("We couldn't create a backup. Please try again.");
+    } finally {
+      setIsExportingBackup(false);
+    }
+  }
 
   async function updateAnalyticsPreference(enabled: boolean) {
     setIsSaving(true);
@@ -110,6 +133,35 @@ function SettingsPage() {
                 }}
                 aria-label="Enable product analytics"
               />
+            </div>
+          </section>
+        ) : null}
+
+        {!isHosted ? (
+          <section className="space-y-3">
+            <h2 className="text-sm font-medium text-base-content/50">Data</h2>
+            <div className="flex items-start justify-between gap-6">
+              <div>
+                <p className="text-sm">Download a backup</p>
+                <p className="mt-1 text-sm text-base-content/60">
+                  Save a JSON snapshot of your projects, keywords, rank
+                  tracking, and audits to keep offsite. Excludes credentials and
+                  sessions.
+                </p>
+              </div>
+              <button
+                type="button"
+                className="btn btn-sm btn-outline gap-2"
+                onClick={() => void handleDownloadBackup()}
+                disabled={isExportingBackup}
+              >
+                {isExportingBackup ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                {isExportingBackup ? "Preparing…" : "Download"}
+              </button>
             </div>
           </section>
         ) : null}
