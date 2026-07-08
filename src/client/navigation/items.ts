@@ -5,6 +5,7 @@ import {
   ClipboardCheck,
   Globe,
   Link2,
+  MapPin,
   MessageSquare,
   Search,
   Sparkles,
@@ -70,6 +71,11 @@ const projectNavItems = [
     label: "Prompt Explorer",
     icon: MessageSquare,
   },
+  {
+    to: "/p/$projectId/local" as const,
+    label: "Local SEO",
+    icon: MapPin,
+  },
 ] as const;
 
 const aiNavItem = linkOptions({
@@ -112,6 +118,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/backlinks"),
         byPath("/p/$projectId/brand-lookup"),
         byPath("/p/$projectId/prompt-explorer"),
+        byPath("/p/$projectId/local"),
       ],
     },
     {

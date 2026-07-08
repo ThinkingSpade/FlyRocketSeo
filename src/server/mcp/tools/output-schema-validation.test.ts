@@ -209,6 +209,24 @@ describe("DataForSEO research tool output schemas", () => {
     },
   );
 
+  it("get_business_reviews accepts typed provider review rows", async () => {
+    const { getBusinessReviewsTool } = await import("./local-seo-tools");
+    const schema = normalizeObjectSchema(
+      getBusinessReviewsTool.config.outputSchema,
+    );
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      status: "completed",
+      taskId: "task_123",
+      rating: 4.6,
+      reviewsCount: 120,
+      reviews: [new ProviderRow("example.com", 1)],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("get_backlinks_profile accepts a paginated backlinks profile payload", async () => {
     const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
     const schema = normalizeObjectSchema(

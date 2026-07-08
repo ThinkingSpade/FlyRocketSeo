@@ -84,6 +84,8 @@ vi.mock("@/server/lib/dataforseo/serp", () => ({
 vi.mock("@/server/lib/dataforseo/business", () => ({
   fetchBusinessListingsSearch: vi.fn(),
   fetchQuestionsAnswers: vi.fn(),
+  fetchMyBusinessInfo: vi.fn(),
+  postGoogleReviewsTask: vi.fn(),
 }));
 vi.mock("@/server/lib/dataforseo/backlinks", () => ({
   fetchBacklinksSummary: vi.fn(),

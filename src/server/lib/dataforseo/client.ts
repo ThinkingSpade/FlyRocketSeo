@@ -10,7 +10,9 @@ import {
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import {
   fetchBusinessListingsSearch,
+  fetchMyBusinessInfo,
   fetchQuestionsAnswers,
+  postGoogleReviewsTask,
 } from "@/server/lib/dataforseo/business";
 import {
   fetchBacklinksHistory,
@@ -111,6 +113,10 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
         "local_seo",
       ),
       questionsAnswers: meter(customer, fetchQuestionsAnswers, "local_seo"),
+      myBusinessInfo: meter(customer, fetchMyBusinessInfo, "local_seo"),
+      // Charged at post time; results are collected for free via
+      // fetchGoogleReviewsResult (not metered, so not on the client).
+      postReviewsTask: meter(customer, postGoogleReviewsTask, "local_seo"),
     },
     backlinks: {
       summary: meter(customer, fetchBacklinksSummary),

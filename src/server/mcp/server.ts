@@ -38,6 +38,10 @@ import {
   getGlobalVolumeTool,
   getKeywordTrendsTool,
 } from "@/server/mcp/tools/trends-tools";
+import {
+  getBusinessProfileTool,
+  getBusinessReviewsTool,
+} from "@/server/mcp/tools/local-seo-tools";
 import { researchKeywordsTool } from "@/server/mcp/tools/research-keywords";
 import { saveKeywordsTool } from "@/server/mcp/tools/save-keywords";
 import {
@@ -205,6 +209,30 @@ export function registerOpenSeoMcpTools(server: McpServer) {
       getKeywordMetricsTool.handler,
     ),
   );
+  registerResearchExpansionTools(server);
+  server.registerTool(
+    getSearchConsolePerformanceTool.name,
+    getSearchConsolePerformanceTool.config,
+    instrumentMcpToolHandler(
+      getSearchConsolePerformanceTool.name,
+      getSearchConsolePerformanceTool.config.outputSchema,
+      getSearchConsolePerformanceTool.handler,
+    ),
+  );
+  server.registerTool(
+    inspectUrlsTool.name,
+    inspectUrlsTool.config,
+    instrumentMcpToolHandler(
+      inspectUrlsTool.name,
+      inspectUrlsTool.config.outputSchema,
+      inspectUrlsTool.handler,
+    ),
+  );
+}
+
+// Competitor, backlink-insight, trends, and local SEO research tools, split
+// from registerOpenSeoMcpTools to keep each registration function readable.
+function registerResearchExpansionTools(server: McpServer) {
   server.registerTool(
     findCompetitorsTool.name,
     findCompetitorsTool.config,
@@ -350,21 +378,21 @@ export function registerOpenSeoMcpTools(server: McpServer) {
     ),
   );
   server.registerTool(
-    getSearchConsolePerformanceTool.name,
-    getSearchConsolePerformanceTool.config,
+    getBusinessProfileTool.name,
+    getBusinessProfileTool.config,
     instrumentMcpToolHandler(
-      getSearchConsolePerformanceTool.name,
-      getSearchConsolePerformanceTool.config.outputSchema,
-      getSearchConsolePerformanceTool.handler,
+      getBusinessProfileTool.name,
+      getBusinessProfileTool.config.outputSchema,
+      getBusinessProfileTool.handler,
     ),
   );
   server.registerTool(
-    inspectUrlsTool.name,
-    inspectUrlsTool.config,
+    getBusinessReviewsTool.name,
+    getBusinessReviewsTool.config,
     instrumentMcpToolHandler(
-      inspectUrlsTool.name,
-      inspectUrlsTool.config.outputSchema,
-      inspectUrlsTool.handler,
+      getBusinessReviewsTool.name,
+      getBusinessReviewsTool.config.outputSchema,
+      getBusinessReviewsTool.handler,
     ),
   );
 }
