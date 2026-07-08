@@ -5,7 +5,8 @@ import {
   exportPerformance,
 } from "@/client/features/audit/results/export";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
-import { isLighthouseFailure } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
+import { computeLighthouseSummary } from "@/client/features/audit/results/auditDiff";
+import { AuditComparison } from "@/client/features/audit/results/AuditComparison";
 import {
   ExportDropdown,
   PagesTable,
@@ -39,6 +40,8 @@ export function ResultsView({
         averageResponseMs={stats.averageResponseMs}
         lighthouseSummary={stats.lighthouseSummary}
       />
+
+      <AuditComparison projectId={projectId} current={data} />
 
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body gap-3">
@@ -86,32 +89,10 @@ function useResultStats(
     return Math.round(total / pages.length);
   }, [pages]);
 
-  const lighthouseSummary = useMemo(() => {
-    const failed = lighthouse.filter(
-      (row: AuditResultsData["lighthouse"][number]) => isLighthouseFailure(row),
-    ).length;
-    const successful = lighthouse.filter(
-      (row: AuditResultsData["lighthouse"][number]) =>
-        !isLighthouseFailure(row),
-    );
-    const averageScore = (
-      key: "performanceScore" | "seoScore" | "accessibilityScore",
-    ) => {
-      const values = successful
-        .map((row: AuditResultsData["lighthouse"][number]) => row[key])
-        .filter((value: number | null): value is number => value != null);
-      if (values.length === 0) return null;
-      const total = values.reduce((sum: number, value) => sum + value, 0);
-      return Math.round(total / values.length);
-    };
-
-    return {
-      failed,
-      avgPerformance: averageScore("performanceScore"),
-      avgSeo: averageScore("seoScore"),
-      avgAccessibility: averageScore("accessibilityScore"),
-    };
-  }, [lighthouse]);
+  const lighthouseSummary = useMemo(
+    () => computeLighthouseSummary(lighthouse),
+    [lighthouse],
+  );
 
   return { averageResponseMs, lighthouseSummary };
 }
