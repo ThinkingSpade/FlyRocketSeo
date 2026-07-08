@@ -23,6 +23,11 @@ import {
 import { SavedKeywordsPagination } from "@/client/features/saved-keywords/SavedKeywordsPagination";
 import { SavedKeywordsStatus } from "@/client/features/saved-keywords/SavedKeywordsStatus";
 import { SavedKeywordsTable } from "@/client/features/saved-keywords/SavedKeywordsTable";
+import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
+import {
+  DEFAULT_LOCATION_CODE,
+  getLanguageCode,
+} from "@/client/features/keywords/locations";
 import { compileSavedKeywordsFilters } from "@/client/features/saved-keywords/savedKeywordsFilterTypes";
 import {
   toSavedKeywordSort,
@@ -62,6 +67,7 @@ function SavedKeywordsPage() {
   const [removeError, setRemoveError] = useState<string | null>(null);
   const [showConfirm, setShowConfirm] = useState(false);
   const [showTagModal, setShowTagModal] = useState(false);
+  const [showTrackModal, setShowTrackModal] = useState(false);
 
   const filters = useSavedKeywordsFilters();
   const [committedFilterValues, setCommittedFilterValues] = useState(
@@ -133,6 +139,25 @@ function SavedKeywordsPage() {
     return [...map.values()].toSorted((a, b) =>
       a.normalizedName.localeCompare(b.normalizedName),
     );
+  }, [selectedRows]);
+
+  // Rank tracking pins one location per domain, so derive a single location for
+  // the selection: the most common one among selected rows (ties break to the
+  // first encountered), and flag when the selection spans several.
+  const trackLocation = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const row of selectedRows) {
+      counts.set(row.locationCode, (counts.get(row.locationCode) ?? 0) + 1);
+    }
+    let bestCode = DEFAULT_LOCATION_CODE;
+    let bestCount = -1;
+    for (const [code, occurrences] of counts) {
+      if (occurrences > bestCount) {
+        bestCount = occurrences;
+        bestCode = code;
+      }
+    }
+    return { locationCode: bestCode, mixed: counts.size > 1 };
   }, [selectedRows]);
 
   useEffect(() => {
@@ -319,6 +344,7 @@ function SavedKeywordsPage() {
             );
           }}
           onOpenTags={() => setShowTagModal(true)}
+          onTrackRanks={() => setShowTrackModal(true)}
           onExportCsv={() => exporter.exportSelectionCsv(selectedRows)}
           onExportSheets={() =>
             void exporter.exportSelectionSheets(selectedRows)
@@ -350,6 +376,18 @@ function SavedKeywordsPage() {
                 removeTagIds,
               })
             }
+          />
+        ) : null}
+
+        {showTrackModal ? (
+          <TrackKeywordsModal
+            projectId={projectId}
+            keywords={selectedRows.map((row) => row.keyword)}
+            defaultLocationCode={trackLocation.locationCode}
+            defaultLanguageCode={getLanguageCode(trackLocation.locationCode)}
+            mixedLocations={trackLocation.mixed}
+            onSuccess={() => setRowSelection({})}
+            onClose={() => setShowTrackModal(false)}
           />
         ) : null}
       </div>

@@ -1,8 +1,11 @@
+import { useState } from "react";
+import { getRouteApi } from "@tanstack/react-router";
 import {
   ChevronDown,
   Download,
   FileDown,
   Globe,
+  LineChart,
   RotateCcw,
   Save,
   Sheet,
@@ -36,6 +39,8 @@ import {
   TableBulkActionButton,
   TableBulkExportMenu,
 } from "@/client/components/table/TableBulkActionBar";
+import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
+import { getLanguageCode } from "@/client/features/keywords/locations";
 
 const MONTH_SHORT_LABELS = [
   "Jan",
@@ -71,6 +76,8 @@ function formatTrendRangeLabel(trend: KeywordResearchRow["trend"]): string {
   const endLabel = toLabel(end.month, end.year);
   return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
 }
+
+const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
 type Props = {
   controller: KeywordResearchControllerState;
@@ -130,6 +137,8 @@ function DesktopTableCard({ controller }: Props) {
   } = controller;
   const { page, pageSize, pageRows, setPage, setPageSize } =
     useKeywordResearchPagination(filteredRows);
+  const { projectId } = keywordsRoute.useParams();
+  const [showTrackModal, setShowTrackModal] = useState(false);
 
   const keywordCountLabel =
     selectedRows.size > 0
@@ -226,6 +235,12 @@ function DesktopTableCard({ controller }: Props) {
             >
               Save Keywords
             </TableBulkActionButton>
+            <TableBulkActionButton
+              icon={<LineChart className="size-3.5" />}
+              onClick={() => setShowTrackModal(true)}
+            >
+              Track ranks
+            </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
                 {
@@ -264,6 +279,18 @@ function DesktopTableCard({ controller }: Props) {
           totalCount={filteredRows.length}
           onPageChange={setPage}
           onPageSizeChange={setPageSize}
+        />
+      ) : null}
+
+      {showTrackModal ? (
+        <TrackKeywordsModal
+          projectId={projectId}
+          keywords={[...selectedRows]}
+          defaultLocationCode={controller.lastSearchLocationCode}
+          defaultLanguageCode={getLanguageCode(
+            controller.lastSearchLocationCode,
+          )}
+          onClose={() => setShowTrackModal(false)}
         />
       ) : null}
     </div>
