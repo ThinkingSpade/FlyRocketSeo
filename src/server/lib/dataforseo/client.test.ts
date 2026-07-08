@@ -65,6 +65,16 @@ vi.mock("@/server/lib/dataforseo/labs", () => ({
   fetchKeywordOverview: vi.fn(),
   fetchSerpCompetitors: vi.fn(),
 }));
+vi.mock("@/server/lib/dataforseo/labs-competitors", () => ({
+  fetchCompetitorsDomain: vi.fn(),
+  fetchDomainIntersection: vi.fn(),
+  fetchKeywordsForSite: vi.fn(),
+  fetchBulkKeywordDifficulty: vi.fn(),
+  fetchSearchIntent: vi.fn(),
+  fetchBulkTrafficEstimation: vi.fn(),
+  fetchHistoricalRankOverview: vi.fn(),
+  fetchSubdomains: vi.fn(),
+}));
 vi.mock("@/server/lib/dataforseo/serp", () => ({
   fetchLiveSerp: vi.fn(),
   fetchRankCheckSerp: vi.fn(),
@@ -524,6 +534,55 @@ describe("mapDataforseoPathToCreditFeature", () => {
         "keywords_data",
         "google_ads",
         "search_volume",
+        "live",
+      ]),
+    ).toBe("keyword_research");
+  });
+
+  it("maps competitor research paths to competitor_insights", () => {
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "dataforseo_labs",
+        "google",
+        "competitors_domain",
+        "live",
+      ]),
+    ).toBe("competitor_insights");
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "dataforseo_labs",
+        "google",
+        "domain_intersection",
+        "live",
+      ]),
+    ).toBe("competitor_insights");
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "dataforseo_labs",
+        "google",
+        "bulk_traffic_estimation",
+        "live",
+      ]),
+    ).toBe("competitor_insights");
+    // Historical visibility stays attributed to the domain overview bucket.
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "dataforseo_labs",
+        "google",
+        "historical_rank_overview",
+        "live",
+      ]),
+    ).toBe("domain_overview");
+    expect(
+      mapDataforseoPathToCreditFeature([
+        "v3",
+        "dataforseo_labs",
+        "google",
+        "keywords_for_site",
         "live",
       ]),
     ).toBe("keyword_research");

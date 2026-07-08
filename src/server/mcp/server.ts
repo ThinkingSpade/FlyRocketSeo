@@ -16,6 +16,16 @@ import {
   getRankedKeywordsTool,
   searchLocalBusinessesTool,
 } from "@/server/mcp/tools/dataforseo-research-tools";
+import {
+  estimateDomainTrafficTool,
+  findCompetitorsTool,
+  getDomainRankHistoryTool,
+  getKeywordDifficultyTool,
+  getKeywordGapTool,
+  getKeywordsForSiteTool,
+  getSearchIntentTool,
+  getSubdomainsTool,
+} from "@/server/mcp/tools/competitor-research-tools";
 import { researchKeywordsTool } from "@/server/mcp/tools/research-keywords";
 import { saveKeywordsTool } from "@/server/mcp/tools/save-keywords";
 import {
@@ -181,6 +191,78 @@ export function registerOpenSeoMcpTools(server: McpServer) {
       getKeywordMetricsTool.name,
       getKeywordMetricsTool.config.outputSchema,
       getKeywordMetricsTool.handler,
+    ),
+  );
+  server.registerTool(
+    findCompetitorsTool.name,
+    findCompetitorsTool.config,
+    instrumentMcpToolHandler(
+      findCompetitorsTool.name,
+      findCompetitorsTool.config.outputSchema,
+      findCompetitorsTool.handler,
+    ),
+  );
+  server.registerTool(
+    getKeywordGapTool.name,
+    getKeywordGapTool.config,
+    instrumentMcpToolHandler(
+      getKeywordGapTool.name,
+      getKeywordGapTool.config.outputSchema,
+      getKeywordGapTool.handler,
+    ),
+  );
+  server.registerTool(
+    getKeywordsForSiteTool.name,
+    getKeywordsForSiteTool.config,
+    instrumentMcpToolHandler(
+      getKeywordsForSiteTool.name,
+      getKeywordsForSiteTool.config.outputSchema,
+      getKeywordsForSiteTool.handler,
+    ),
+  );
+  server.registerTool(
+    getKeywordDifficultyTool.name,
+    getKeywordDifficultyTool.config,
+    instrumentMcpToolHandler(
+      getKeywordDifficultyTool.name,
+      getKeywordDifficultyTool.config.outputSchema,
+      getKeywordDifficultyTool.handler,
+    ),
+  );
+  server.registerTool(
+    getSearchIntentTool.name,
+    getSearchIntentTool.config,
+    instrumentMcpToolHandler(
+      getSearchIntentTool.name,
+      getSearchIntentTool.config.outputSchema,
+      getSearchIntentTool.handler,
+    ),
+  );
+  server.registerTool(
+    estimateDomainTrafficTool.name,
+    estimateDomainTrafficTool.config,
+    instrumentMcpToolHandler(
+      estimateDomainTrafficTool.name,
+      estimateDomainTrafficTool.config.outputSchema,
+      estimateDomainTrafficTool.handler,
+    ),
+  );
+  server.registerTool(
+    getDomainRankHistoryTool.name,
+    getDomainRankHistoryTool.config,
+    instrumentMcpToolHandler(
+      getDomainRankHistoryTool.name,
+      getDomainRankHistoryTool.config.outputSchema,
+      getDomainRankHistoryTool.handler,
+    ),
+  );
+  server.registerTool(
+    getSubdomainsTool.name,
+    getSubdomainsTool.config,
+    instrumentMcpToolHandler(
+      getSubdomainsTool.name,
+      getSubdomainsTool.config.outputSchema,
+      getSubdomainsTool.handler,
     ),
   );
   server.registerTool(

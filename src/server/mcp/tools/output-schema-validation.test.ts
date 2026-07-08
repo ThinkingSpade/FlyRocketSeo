@@ -132,6 +132,35 @@ describe("DataForSEO research tool output schemas", () => {
     },
   );
 
+  // Competitor research tools that stream provider rows to structuredContent.
+  it.each([
+    ["find_competitors", "competitors"],
+    ["get_keyword_gap", "keywords"],
+    ["get_keywords_for_site", "keywords"],
+    ["get_keyword_difficulty", "difficulties"],
+    ["get_search_intent", "intents"],
+    ["estimate_domain_traffic", "estimates"],
+    ["get_domain_rank_history", "history"],
+    ["get_subdomains", "subdomains"],
+  ])(
+    "%s accepts typed (non-plain-object) provider rows",
+    async (toolName, field) => {
+      const tools = await import("./competitor-research-tools");
+      const tool = Object.values(tools).find((t) => t.name === toolName);
+      if (!tool) throw new Error(`tool ${toolName} not found`);
+
+      const schema = normalizeObjectSchema(tool.config.outputSchema);
+      if (!schema) throw new Error("output schema did not normalize");
+
+      const result = await safeParseAsync(schema, {
+        [field]: [new ProviderRow("example.com", 1)],
+        totalCount: 1,
+      });
+
+      expect(result.success).toBe(true);
+    },
+  );
+
   it("get_backlinks_profile accepts a paginated backlinks profile payload", async () => {
     const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
     const schema = normalizeObjectSchema(

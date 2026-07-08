@@ -30,6 +30,16 @@ import {
   fetchSerpCompetitors,
 } from "@/server/lib/dataforseo/labs";
 import {
+  fetchBulkKeywordDifficulty,
+  fetchBulkTrafficEstimation,
+  fetchCompetitorsDomain,
+  fetchDomainIntersection,
+  fetchHistoricalRankOverview,
+  fetchKeywordsForSite,
+  fetchSearchIntent,
+  fetchSubdomains,
+} from "@/server/lib/dataforseo/labs-competitors";
+import {
   fetchAdsKeywordIdeas,
   fetchAdsSearchVolume,
 } from "@/server/lib/dataforseo/google-ads";
@@ -101,6 +111,9 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
       related: meter(customer, fetchRelatedKeywords),
       suggestions: meter(customer, fetchKeywordSuggestions),
       ideas: meter(customer, fetchKeywordIdeas),
+      forSite: meter(customer, fetchKeywordsForSite),
+      bulkDifficulty: meter(customer, fetchBulkKeywordDifficulty),
+      searchIntent: meter(customer, fetchSearchIntent),
       // Google Ads endpoints for countries Labs doesn't support.
       adsIdeas: meter(customer, fetchAdsKeywordIdeas),
       adsSearchVolume: meter(customer, fetchAdsSearchVolume),
@@ -109,6 +122,13 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
       rankOverview: meter(customer, fetchDomainRankOverview),
       rankedKeywords: meter(customer, fetchRankedKeywords),
       relevantPages: meter(customer, fetchRelevantPages),
+      historicalRankOverview: meter(customer, fetchHistoricalRankOverview),
+    },
+    competitors: {
+      domainCompetitors: meter(customer, fetchCompetitorsDomain),
+      keywordGap: meter(customer, fetchDomainIntersection),
+      trafficEstimation: meter(customer, fetchBulkTrafficEstimation),
+      subdomains: meter(customer, fetchSubdomains),
     },
     serp: {
       live: meter(customer, fetchLiveSerp),

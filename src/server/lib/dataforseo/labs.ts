@@ -89,7 +89,7 @@ export type DomainRankedKeywordItem = z.infer<
   typeof domainRankedKeywordItemSchema
 >;
 
-type DataforseoLabsItemType =
+export type DataforseoLabsItemType =
   | "organic"
   | "paid"
   | "featured_snippet"

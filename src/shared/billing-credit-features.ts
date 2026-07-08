@@ -1,6 +1,7 @@
 export type CreditFeature =
   | "keyword_research"
   | "domain_overview"
+  | "competitor_insights"
   | "backlinks"
   | "site_audit"
   | "rank_tracking"
@@ -13,6 +14,7 @@ export type CreditFeature =
 const CREDIT_FEATURE_LABELS: Record<string, string> = {
   keyword_research: "Keyword Research",
   domain_overview: "Domain Overview",
+  competitor_insights: "Competitor Insights",
   backlinks: "Backlinks",
   site_audit: "Site Audit",
   rank_tracking: "Rank Tracking",
@@ -59,9 +61,19 @@ export function mapDataforseoPathToCreditFeature(
     case "dataforseo_labs": {
       const endpoint = normalizedPath[3] ?? "";
       if (
+        endpoint === "competitors_domain" ||
+        endpoint === "domain_intersection" ||
+        endpoint === "page_intersection" ||
+        endpoint === "subdomains" ||
+        endpoint === "bulk_traffic_estimation"
+      ) {
+        return "competitor_insights";
+      }
+      if (
         endpoint.startsWith("domain_") ||
         endpoint === "ranked_keywords" ||
-        endpoint === "relevant_pages"
+        endpoint === "relevant_pages" ||
+        endpoint === "historical_rank_overview"
       ) {
         return "domain_overview";
       }
