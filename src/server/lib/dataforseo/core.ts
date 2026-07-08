@@ -136,3 +136,15 @@ export const contentAnalysisApi = () =>
   new ContentAnalysisApi(API_BASE, http());
 export const domainAnalyticsApi = () =>
   new DomainAnalyticsApi(API_BASE, http());
+
+/**
+ * Authenticated GET for DataForSEO endpoints the SDK doesn't wrap (e.g.
+ * `/v3/appendix/user_data`). Reuses the shared auth/timeout/retry fetch, so a
+ * non-2xx throws the same classified AppError as every other call. Returns the
+ * parsed JSON body; the caller validates its shape.
+ */
+export async function dataforseoGetJson(path: string): Promise<unknown> {
+  const authFetch = createAuthenticatedFetch();
+  const response = await authFetch(`${API_BASE}${path}`);
+  return response.json();
+}

@@ -17,6 +17,7 @@ import {
 } from "@/client/navigation/items";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 import { SamSidebarPanel } from "@/client/features/sam/SamSidebarPanel";
+import { DataforseoBalanceIndicator } from "@/client/components/DataforseoBalanceIndicator";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { closeDropdown } from "@/client/lib/dropdown";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
@@ -221,6 +222,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="shrink-0 border-t border-base-300 px-2 py-2 pb-safe">
+      {!isHostedMode ? <DataforseoBalanceIndicator /> : null}
       <SidebarNavLink
         icon={CircleHelp}
         label="Help & Community"
