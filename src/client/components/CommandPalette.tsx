@@ -13,12 +13,14 @@ import {
   CornerDownLeft,
   Folder,
   FolderCog,
+  Keyboard,
   Monitor,
   Moon,
   Search,
   Settings,
   Sun,
 } from "lucide-react";
+import { openKeyboardShortcuts } from "@/client/components/KeyboardShortcutsHelp";
 import { getProjectNavGroups } from "@/client/navigation/items";
 import { getProjects } from "@/serverFunctions/projects";
 import {
@@ -71,6 +73,14 @@ function matchesQuery(query: string, ...haystacks: (string | undefined)[]) {
   });
 }
 
+/** Whether the current platform uses the Cmd key (guarded for SSR). */
+function detectIsMac(): boolean {
+  return (
+    typeof navigator !== "undefined" &&
+    /mac|iphone|ipad|ipod/i.test(navigator.userAgent)
+  );
+}
+
 export function CommandPalette() {
   const { data: session } = useSession();
   // Don't mount the listener or overlay on signed-out pages.
@@ -115,12 +125,7 @@ function CommandPaletteImpl() {
   const activeProjectId =
     routeProjectId ?? fallbackProjectId ?? rememberedProjectId;
 
-  const isMac = useMemo(
-    () =>
-      typeof navigator !== "undefined" &&
-      /mac|iphone|ipad|ipod/i.test(navigator.userAgent),
-    [],
-  );
+  const isMac = useMemo(detectIsMac, []);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -256,6 +261,12 @@ function CommandPaletteImpl() {
           label: "Manage projects",
           icon: FolderCog,
           run: () => void navigate({ to: "/projects" }),
+        },
+        {
+          id: "help:shortcuts",
+          label: "Keyboard shortcuts",
+          icon: Keyboard,
+          run: () => openKeyboardShortcuts(),
         },
       ],
     });
