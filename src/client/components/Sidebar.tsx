@@ -7,10 +7,12 @@ import {
   LayoutGrid,
   LogOut,
   MessageCircle,
+  Search,
   Settings,
   User,
   X,
 } from "lucide-react";
+import { openCommandPalette } from "@/client/components/CommandPalette";
 import {
   connectNavGroup,
   getProjectNavGroups,
@@ -54,7 +56,13 @@ function SidebarNavLink({
     <Link
       {...linkProps}
       onClick={onNavigate}
-      activeOptions={{ exact: false, includeSearch: false }}
+      // The Overview item points at the project layout route itself, so a
+      // prefix match would light it up on every sub-route; match it exactly so
+      // it's only active on the dashboard. Other items keep the prefix match.
+      activeOptions={{
+        exact: linkProps.to === "/p/$projectId",
+        includeSearch: false,
+      }}
       className={navItemClass}
       activeProps={navItemActiveProps}
     >
@@ -222,6 +230,17 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
 
   return (
     <div className="shrink-0 border-t border-base-300 px-2 py-2 pb-safe">
+      <button
+        type="button"
+        onClick={openCommandPalette}
+        className={`${navItemClass} w-full`}
+        aria-label="Open command menu"
+      >
+        <Search className="h-4 w-4 shrink-0" />
+        <span className="truncate">Search</span>
+        <kbd className="kbd kbd-xs ml-auto text-base-content/50">⌘K</kbd>
+      </button>
+
       {!isHostedMode ? <DataforseoBalanceIndicator /> : null}
       <SidebarNavLink
         icon={CircleHelp}

@@ -11,6 +11,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { AutumnProvider } from "autumn-js/react";
 import * as React from "react";
+import { CommandPalette } from "@/client/components/CommandPalette";
 import { DefaultCatchBoundary } from "@/client/components/DefaultCatchBoundary";
 import { ExportToSheetsModal } from "@/client/components/table/ExportToSheetsModal";
 import { themePreferenceInitScript } from "@/client/lib/theme";
@@ -184,6 +185,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
               <>
                 <PostHogBootstrap />
                 {children}
+                <CommandPalette />
                 <ExportToSheetsModal />
                 <Toaster
                   position="bottom-right"
