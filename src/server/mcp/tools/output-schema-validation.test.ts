@@ -233,6 +233,19 @@ describe("DataForSEO research tool output schemas", () => {
     },
   );
 
+  it("audit_page accepts a typed provider page object", async () => {
+    const { auditPageTool } = await import("./onpage-tools");
+    const schema = normalizeObjectSchema(auditPageTool.config.outputSchema);
+    if (!schema) throw new Error("output schema did not normalize");
+
+    const result = await safeParseAsync(schema, {
+      page: new ProviderRow("example.com", 1),
+      failedChecks: ["no_description"],
+    });
+
+    expect(result.success).toBe(true);
+  });
+
   it("get_domain_technologies accepts a typed provider result object", async () => {
     const { getDomainTechnologiesTool } =
       await import("./domain-analytics-tools");

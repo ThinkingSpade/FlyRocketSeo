@@ -109,6 +109,9 @@ vi.mock("@/server/lib/dataforseo/backlinks-insights", () => ({
 vi.mock("@/server/lib/dataforseo/lighthouse", () => ({
   fetchLighthouseResult: vi.fn(),
 }));
+vi.mock("@/server/lib/dataforseo/onpage", () => ({
+  fetchInstantPageAudit: vi.fn(),
+}));
 vi.mock("@/server/lib/dataforseo/ai", () => ({
   fetchLlmMentionsSearch: vi.fn(),
   fetchLlmAggregatedMetrics: vi.fn(),

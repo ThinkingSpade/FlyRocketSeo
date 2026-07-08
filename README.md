@@ -46,11 +46,14 @@ If you're not interested in self hosting, or just want to support the project, w
 ## Main SEO Workflows
 
 - Keyword research
+- Keyword trends
 - Rank tracking
-- Competitor Insights
+- Competitor insights (competitor discovery, keyword gap, link gap)
 - Backlinks
-- Site Audits
+- Site audits (plus instant single-page audits via MCP)
 - AI Visibility
+- Local SEO (business profile + reviews)
+- Brand monitoring (web mentions via MCP)
 
 ## Community
 

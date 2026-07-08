@@ -67,6 +67,7 @@ import {
   fetchDomainWhois,
 } from "@/server/lib/dataforseo/domain-analytics";
 import { fetchAiKeywordVolume } from "@/server/lib/dataforseo/ai-keyword-data";
+import { fetchInstantPageAudit } from "@/server/lib/dataforseo/onpage";
 import {
   fetchLiveSerp,
   fetchLocalSerp,
@@ -184,6 +185,9 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
     },
     lighthouse: {
       live: meter(customer, fetchLighthouseResult),
+    },
+    onPage: {
+      instantPage: meter(customer, fetchInstantPageAudit),
     },
     aiSearch: {
       mentionsSearch: meter(customer, fetchLlmMentionsSearch),

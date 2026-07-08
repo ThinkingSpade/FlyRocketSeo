@@ -36,6 +36,7 @@ import {
   getDomainTechnologiesTool,
   getDomainWhoisTool,
 } from "@/server/mcp/tools/domain-analytics-tools";
+import { auditPageTool } from "@/server/mcp/tools/onpage-tools";
 
 // Competitor, backlink-insight, trends, and local SEO research tools, split
 // from registerOpenSeoMcpTools to keep each registration function readable.
@@ -259,6 +260,15 @@ function registerMarketIntelligenceTools(server: McpServer) {
       getDomainWhoisTool.name,
       getDomainWhoisTool.config.outputSchema,
       getDomainWhoisTool.handler,
+    ),
+  );
+  server.registerTool(
+    auditPageTool.name,
+    auditPageTool.config,
+    instrumentMcpToolHandler(
+      auditPageTool.name,
+      auditPageTool.config.outputSchema,
+      auditPageTool.handler,
     ),
   );
 }
