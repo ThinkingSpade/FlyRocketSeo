@@ -10,6 +10,30 @@ export function getFixtureOverview(domain: string) {
   };
 }
 
+export function getFixtureRankHistory() {
+  const monthly = [
+    ["2025-06", 210, 240, 12],
+    ["2025-07", 234, 268, 15],
+    ["2025-08", 251, 289, 14],
+    ["2025-09", 268, 301, 18],
+    ["2025-10", 279, 315, 21],
+    ["2025-11", 288, 330, 22],
+    ["2025-12", 295, 344, 24],
+    ["2026-01", 301, 351, 25],
+    ["2026-02", 305, 358, 27],
+    ["2026-03", 307, 366, 28],
+  ] as const;
+  return {
+    points: monthly.map(([date, organicKeywords, organicTraffic, top3]) => ({
+      date,
+      organicKeywords,
+      organicTraffic,
+      top3,
+    })),
+    fetchedAt: "2026-05-19T00:00:00.000Z",
+  };
+}
+
 export function getFixturePagesPage(data: {
   domain: string;
   page: number;

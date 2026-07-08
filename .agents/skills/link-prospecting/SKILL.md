@@ -20,7 +20,11 @@ Find realistic pages, sites, and authors that might reference the user's page, p
 ## OpenSEO MCP tools
 
 - `get_serp_results`: find ranking articles, listicles, resource pages, comparisons, and topical publishers.
+- `get_link_gap`: the fastest prospecting path — pass the user's domain and a competitor to get referring domains that link to the competitor but not the user, sorted by domain rank. Each row is a vetted prospect that already links to a peer.
+- `find_link_competitors`: find domains with backlink profiles similar to the user or a target, to widen the pool of competitors worth mining with `get_link_gap`.
 - `get_backlinks_overview`: inspect competitor domain or page backlink/referring-domain patterns.
+- `get_backlink_anchors`: read a prospect's or competitor's anchor-text distribution to gauge how links are typically acquired and phrased.
+- `get_spam_scores`: vet a batch of prospect domains before outreach — skip toxic/high-spam-score domains.
 - `get_domain_overview`: qualify important prospect domains.
 - `get_ranked_keywords`: understand what a prospect or competitor ranks for when topical fit matters.
 - `search_local_businesses` and `get_local_serp_results`: use for local SEO link prospecting when nearby businesses, local competitors, or Maps/category signals can reveal partnership targets.

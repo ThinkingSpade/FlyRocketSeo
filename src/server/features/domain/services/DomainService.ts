@@ -7,6 +7,7 @@ import { normalizeDomainInput } from "@/server/lib/domainUtils";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
 import { getKeywordsPage } from "@/server/features/domain/services/domainKeywordsPage";
 import { getPagesPage } from "@/server/features/domain/services/domainPagesPage";
+import { getRankHistory } from "@/server/features/domain/services/domainRankHistory";
 
 // Lets a caller attribute spend to its own feature (e.g. onboarding). Applied
 // to the DataForSEO call, not the cache key, so cached results are shared
@@ -189,4 +190,5 @@ export const DomainService = {
   getSuggestedKeywords,
   getKeywordsPage,
   getPagesPage,
+  getRankHistory,
 } as const;

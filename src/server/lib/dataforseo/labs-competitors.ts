@@ -34,7 +34,7 @@ type SubdomainItem = DataforseoLabsSubdomainsLiveItem;
 type KeywordDifficultyItem = DataforseoLabsBulkKeywordDifficultyLiveItem;
 type SearchIntentItem = DataforseoLabsGoogleSearchIntentLiveItem;
 type TrafficEstimationItem = DataforseoLabsGoogleBulkTrafficEstimationLiveItem;
-type HistoricalRankOverviewItem =
+export type HistoricalRankOverviewItem =
   DataforseoLabsGoogleHistoricalRankOverviewLiveItem;
 
 type CompetitorsDomainPage = {

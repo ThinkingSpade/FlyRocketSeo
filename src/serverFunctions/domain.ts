@@ -5,6 +5,7 @@ import {
   domainKeywordSuggestionsSchema,
   domainKeywordsPageRequestSchema,
   domainPagesPageRequestSchema,
+  domainRankHistorySchema,
 } from "@/types/schemas/domain";
 import { DomainService } from "@/server/features/domain/services/DomainService";
 
@@ -47,6 +48,24 @@ export const getDomainKeywordSuggestions = createServerFn({ method: "POST" })
       context,
     ),
   );
+
+export const getDomainRankHistory = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(domainRankHistorySchema)
+  .handler(async ({ data, context }) => {
+    if (shouldUseDomainE2eFixtures()) {
+      const fixtures = await getDomainE2eFixtures();
+      return fixtures.getFixtureRankHistory();
+    }
+
+    return DomainService.getRankHistory(
+      {
+        ...data,
+        projectId: context.projectId,
+      },
+      context,
+    );
+  });
 
 export const getDomainKeywordsPage = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)

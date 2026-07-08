@@ -26,6 +26,7 @@ import { DomainSearchCard } from "@/client/features/domain/components/DomainSear
 import { KeywordsTab } from "@/client/features/domain/components/KeywordsTab";
 import { PagesTab } from "@/client/features/domain/components/PagesTab";
 import { StatCard } from "@/client/features/domain/components/StatCard";
+import { DomainVisibilityTrend } from "@/client/features/domain/components/DomainVisibilityTrend";
 import { SearchTabStrip } from "@/client/features/search-tabs/SearchTabStrip";
 import type { SearchTabInput } from "@/client/features/search-tabs/types";
 import { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchTabNavigation";
@@ -584,6 +585,15 @@ export function DomainOverviewPage({
                 )}
               />
             </div>
+
+            {state.overview.hasData ? (
+              <DomainVisibilityTrend
+                projectId={projectId}
+                domain={state.overview.domain}
+                locationCode={routeState.locationCode}
+                languageCode={getLanguageCode(routeState.locationCode)}
+              />
+            ) : null}
 
             {!state.overview.hasData ? (
               <div className="alert alert-info">

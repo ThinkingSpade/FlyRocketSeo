@@ -21,6 +21,11 @@ If `projectId` is missing, use `list_projects` first. If the target market/locat
 
 - `research_keywords`: primary discovery tool. Use 1-5 seeds per call and prefer 150 results unless the user asks for exhaustive research.
 - `get_keyword_metrics`: hydrate up to 700 known keywords with volume, keyword difficulty (KD), search intent, CPC, and monthly trends in one call. Use it to score candidate or known terms — including the Search Console striking-distance queries from step 1.
+- `get_keyword_trends`: compare Google Trends interest-over-time for up to 5 keywords when seasonality or momentum matters for prioritization (e.g. rising vs. declining topics).
+- `get_search_intent` and `get_keyword_difficulty`: cheap bulk classification (up to 1000 keywords) when you only need intent or KD and not the full metric set — otherwise `get_keyword_metrics` already returns both.
+- `get_clickstream_search_volume`: clickstream-refined volume that is often more accurate than Google Ads volume (which groups close variants); use when volume precision drives the shortlist.
+- `get_ai_search_volume`: estimated volume of keywords appearing in AI assistant prompts — use when the brief targets AI-era/LLM discovery, not just classic search.
+- `get_keywords_for_site`: generate keywords a whole site could target based on its content, when the brief starts from a domain rather than seed terms.
 - `get_ranked_keywords`: pull exact ranking keyword rows when a target domain or page is part of the research brief.
 - `get_search_console_performance`: when Search Console is connected, start from the project's real first-party demand — queries already earning impressions and near-ranking ("striking distance") terms. Request a high `rowLimit` and filter average position 5-20 client-side, since the API sorts by clicks and can't filter by position. Then hydrate those striking-distance queries with `get_keyword_metrics` to attach difficulty and intent.
 - `get_serp_results`: inspect SERPs for the top candidate terms, especially when intent is ambiguous.

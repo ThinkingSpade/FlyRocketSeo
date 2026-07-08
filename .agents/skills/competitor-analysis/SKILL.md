@@ -21,9 +21,13 @@ Use this for a named competitor. For identifying the market leaders first, use `
 ## OpenSEO MCP tools
 
 - `get_domain_overview`: baseline organic traffic and keyword count.
+- `get_domain_rank_history`: month-by-month organic keyword and traffic trend for the competitor — use to see whether they are gaining or losing visibility, and to spot algorithm-update impact.
 - `get_search_console_performance`: when comparing to the user's own domain and Search Console is connected, use it as the first-party baseline (real clicks/impressions/CTR/position) instead of estimating the user's own performance from third-party data.
 - `get_ranked_keywords`: exact keyword, URL, rank, intent, traffic, CPC, and SERP-type rows for the competitor domain or page.
+- `get_keyword_gap`: the core comparison — pass the user's domain and the competitor to get the keywords the competitor ranks for that the user does not (`mode: "missing"`), the shared set, or the user's advantages. Prefer this over manually diffing two `get_ranked_keywords` calls.
 - `get_backlinks_overview`: backlink/referring-domain profile.
+- `get_link_gap`: referring domains that link to the competitor but not the user — ready-made link-prospecting targets that also quantify the authority gap.
+- `find_competitors`: discover the competitor's own organic rivals (domain-level, by shared ranking keywords) when scoping the wider competitive set.
 - `find_serp_competitors`: validate whether the named competitor is a real search competitor across the target keyword set.
 - `search_local_businesses`, `get_local_serp_results`, and `get_google_business_questions`: use for local SEO competitors when Maps/local-pack visibility, nearby businesses, categories, or Google Q&A matter.
 - `get_serp_results`: validate direct head-to-head SERPs for important keywords.
