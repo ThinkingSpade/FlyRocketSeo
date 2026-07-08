@@ -7,6 +7,7 @@ import {
   Save,
   Sheet,
   SlidersHorizontal,
+  Sparkles,
 } from "lucide-react";
 import { useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
@@ -15,6 +16,7 @@ import {
   KEYWORD_RESEARCH_HEADERS,
   keywordResearchExportRow,
 } from "@/client/features/keywords/state/keywordControllerActions";
+import { copyKeywordsAsMarkdown } from "@/client/features/keywords/state/keywordsMarkdown";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { SerpAnalysisCard } from "@/client/features/keywords/components";
@@ -213,6 +215,12 @@ function MobileKeywordResults({ controller }: Props) {
             </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
+                {
+                  label: "Copy for AI",
+                  icon: <Sparkles className="size-4" />,
+                  onClick: () =>
+                    void copyKeywordsAsMarkdown(selectedExportRows),
+                },
                 {
                   label: "Export to Sheets",
                   icon: <Sheet className="size-4" />,
