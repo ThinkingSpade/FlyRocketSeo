@@ -14,6 +14,7 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getKeywordTrends } from "@/serverFunctions/trends";
 import { MAX_TRENDS_KEYWORDS } from "@/types/schemas/trends";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
+import { TrendsExportMenu } from "./TrendsExportMenu";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -177,22 +178,25 @@ function TrendsChart({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
-        {keywords.map((keyword, index) => (
-          <span
-            key={keyword}
-            className="inline-flex items-center gap-1.5 text-sm"
-          >
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          {keywords.map((keyword, index) => (
             <span
-              className="inline-block size-2.5 rounded-full"
-              style={{ backgroundColor: SERIES_COLORS[index] }}
-            />
-            {keyword}
-            <span className="text-base-content/50">
-              avg {averages[index] ?? "—"}
+              key={keyword}
+              className="inline-flex items-center gap-1.5 text-sm"
+            >
+              <span
+                className="inline-block size-2.5 rounded-full"
+                style={{ backgroundColor: SERIES_COLORS[index] }}
+              />
+              {keyword}
+              <span className="text-base-content/50">
+                avg {averages[index] ?? "—"}
+              </span>
             </span>
-          </span>
-        ))}
+          ))}
+        </div>
+        <TrendsExportMenu keywords={keywords} points={points} />
       </div>
       <div ref={containerRef} className="w-full min-w-0" style={{ height }}>
         {chartWidth > 0 ? (

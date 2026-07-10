@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";
@@ -14,7 +14,14 @@ import {
   type CompetitorsTab,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
+import { CompetitorsExportMenu } from "./CompetitorsExportMenu";
+import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { CompetitorsTable } from "./CompetitorsTable";
+import {
+  competitorsTableExport,
+  keywordGapTableExport,
+  linkGapTableExport,
+} from "./export";
 import { KeywordGapTable } from "./KeywordGapTable";
 import { LinkGapTable } from "./LinkGapTable";
 import {
@@ -153,6 +160,28 @@ export function CompetitorsPage({
   const rowsOnPage = activeQuery.data?.rows.length ?? 0;
   const totalCount = activeQuery.data?.totalCount ?? null;
 
+  // Export payload for the visible tab (typed per tab, not via activeQuery).
+  const exportPayload = useMemo(() => {
+    if (tab === "competitors") {
+      return competitorsTableExport(competitorsQuery.data?.rows ?? []);
+    }
+    if (tab === "gap") {
+      return keywordGapTableExport(
+        gapQuery.data?.rows ?? [],
+        target,
+        competitor,
+      );
+    }
+    return linkGapTableExport(linkGapQuery.data?.rows ?? []);
+  }, [
+    tab,
+    competitorsQuery.data,
+    gapQuery.data,
+    linkGapQuery.data,
+    target,
+    competitor,
+  ]);
+
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -175,7 +204,7 @@ export function CompetitorsPage({
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
-          <SearchForm
+          <CompetitorsSearchForm
             targetInput={targetInput}
             competitorInput={competitorInput}
             needsCompetitor={needsCompetitor}
@@ -216,7 +245,7 @@ export function CompetitorsPage({
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
-        <div className="border-b border-base-300 px-4 py-3">
+        <div className="flex items-center justify-between gap-2 border-b border-base-300 px-4 py-3">
           <div role="tablist" className="tabs tabs-border w-fit">
             {COMPETITORS_TABS.map(({ tab: tabId, label }) => (
               <button
@@ -231,6 +260,14 @@ export function CompetitorsPage({
               </button>
             ))}
           </div>
+          <CompetitorsExportMenu
+            tab={tab}
+            target={target}
+            competitor={competitor}
+            mode={mode}
+            headers={exportPayload.headers}
+            rows={exportPayload.rows}
+          />
         </div>
 
         <TabBody
@@ -264,75 +301,6 @@ export function CompetitorsPage({
         ) : null}
       </div>
     </div>
-  );
-}
-
-function SearchForm({
-  targetInput,
-  competitorInput,
-  needsCompetitor,
-  isFetching,
-  onTargetChange,
-  onCompetitorChange,
-  onSubmit,
-}: {
-  targetInput: string;
-  competitorInput: string;
-  needsCompetitor: boolean;
-  isFetching: boolean;
-  onTargetChange: (value: string) => void;
-  onCompetitorChange: (value: string) => void;
-  onSubmit: () => void;
-}) {
-  return (
-    <form
-      className="flex flex-col gap-3 sm:flex-row sm:items-end"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-    >
-      <label className="form-control w-full sm:max-w-xs">
-        <span className="label-text pb-1 text-xs font-medium">Your domain</span>
-        <input
-          type="text"
-          className="input input-bordered input-sm w-full"
-          placeholder="example.com"
-          value={targetInput}
-          onChange={(event) => onTargetChange(event.target.value)}
-        />
-      </label>
-      {needsCompetitor ? (
-        <label className="form-control w-full sm:max-w-xs">
-          <span className="label-text pb-1 text-xs font-medium">
-            Competitor domain
-          </span>
-          <input
-            type="text"
-            className="input input-bordered input-sm w-full"
-            placeholder="competitor.com"
-            value={competitorInput}
-            onChange={(event) => onCompetitorChange(event.target.value)}
-          />
-        </label>
-      ) : null}
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={
-          !targetInput.trim() ||
-          (needsCompetitor && !competitorInput.trim()) ||
-          isFetching
-        }
-      >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
-        Analyze
-      </button>
-    </form>
   );
 }
 
