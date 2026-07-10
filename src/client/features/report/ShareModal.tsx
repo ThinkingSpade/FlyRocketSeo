@@ -58,7 +58,9 @@ export function ShareModal({
         data: {
           projectId,
           rangeKey,
-          title: snapshot.projectTitle,
+          // Clamp to the share-title cap: projectTitle allows up to 255 but the
+          // share title caps at 160, and a long domain shouldn't fail creation.
+          title: snapshot.projectTitle.slice(0, 160),
           snapshot,
         },
       });

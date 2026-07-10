@@ -120,6 +120,19 @@ describe("filterEventsToRange", () => {
     );
     expect(events.map((e) => e.id)).toEqual(["edge", "new"]);
   });
+
+  it("excludes future-dated events (form allows future dates)", () => {
+    const events = filterEventsToRange(
+      [
+        makeEvent("today", "2026-07-10"),
+        makeEvent("tomorrow", "2026-07-11"),
+        makeEvent("next-year", "2027-01-01"),
+      ],
+      30,
+      now,
+    );
+    expect(events.map((e) => e.id)).toEqual(["today"]);
+  });
 });
 
 const makePage = (

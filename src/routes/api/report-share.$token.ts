@@ -20,6 +20,9 @@ const JSON_HEADERS = {
   // makes revocation take effect immediately.
   "x-robots-tag": "noindex, nofollow",
   "cache-control": "no-store",
+  // Public endpoint returning user-influenced strings — don't let a browser
+  // sniff the JSON into anything executable.
+  "x-content-type-options": "nosniff",
 } as const;
 
 function jsonResponse(body: unknown, status: number): Response {

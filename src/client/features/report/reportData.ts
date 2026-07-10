@@ -215,17 +215,24 @@ export interface ReportEventLike {
   note: string | null;
 }
 
-/** Events dated within the last `sinceDays` of `nowMs` (inclusive), oldest
- * first — a report timeline reads chronologically. */
+const dayKey = (ms: number): string => {
+  const date = new Date(ms);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+};
+
+/** Events dated within the last `sinceDays` up to today (inclusive), oldest
+ * first. The upper bound matters: the event form allows future dates, and a
+ * future-dated event must not appear in a "last 30 days" work log (or get
+ * frozen into a shared snapshot). */
 export function filterEventsToRange<T extends ReportEventLike>(
   events: readonly T[],
   sinceDays: number,
   nowMs: number,
 ): T[] {
-  const start = new Date(nowMs - sinceDays * 24 * 60 * 60 * 1000);
-  const startKey = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-${String(start.getDate()).padStart(2, "0")}`;
+  const startKey = dayKey(nowMs - sinceDays * 24 * 60 * 60 * 1000);
+  const endKey = dayKey(nowMs);
   return events
-    .filter((event) => event.eventDate >= startKey)
+    .filter((event) => event.eventDate >= startKey && event.eventDate <= endKey)
     .toSorted((a, b) => a.eventDate.localeCompare(b.eventDate));
 }
 

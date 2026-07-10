@@ -26,15 +26,23 @@ async function create(input: {
   title: string;
   snapshotJson: string;
 }) {
-  const existing = await db
+  // Count ACTIVE shares only: revoking is a soft delete, so counting revoked
+  // rows too would make the cap unreachable-to-clear and the "revoke old ones"
+  // remedy a lie. Active-only keeps revoke a real way to free capacity.
+  const active = await db
     .select({ id: reportShares.id })
     .from(reportShares)
-    .where(eq(reportShares.projectId, input.projectId))
+    .where(
+      and(
+        eq(reportShares.projectId, input.projectId),
+        isNull(reportShares.revokedAt),
+      ),
+    )
     .limit(MAX_SHARES_PER_PROJECT);
-  if (existing.length >= MAX_SHARES_PER_PROJECT) {
+  if (active.length >= MAX_SHARES_PER_PROJECT) {
     throw new AppError(
       "VALIDATION_ERROR",
-      `A project can hold at most ${MAX_SHARES_PER_PROJECT} share links. Revoke old ones first.`,
+      `A project can have at most ${MAX_SHARES_PER_PROJECT} active share links. Revoke old ones first.`,
     );
   }
 
