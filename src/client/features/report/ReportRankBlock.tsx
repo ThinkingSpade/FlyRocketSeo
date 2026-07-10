@@ -5,16 +5,12 @@ import {
   PositionDistributionChart,
 } from "@/client/features/rank-tracking/PositionDistributionChart";
 import { ProjectEventsStrip } from "@/client/features/rank-tracking/ProjectEventsMarkers";
-import {
-  buildEventMarkers,
-  type ProjectEventLike,
-} from "@/client/features/rank-tracking/projectEventMarkers";
-import { computeScorecards } from "@/client/features/rank-tracking/rankTrackingScorecards";
+import type { ProjectEventLike } from "@/client/features/rank-tracking/projectEventMarkers";
 import type { RankConfigTrendPoint } from "@/serverFunctions/rank-tracking";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import {
-  computeAveragePositions,
-  computeMovers,
+  buildRankBlockModel,
+  type ReportRankBlockModel,
   type ReportMover,
 } from "./reportData";
 import {
@@ -26,13 +22,84 @@ import {
 } from "./ReportPrimitives";
 
 /**
- * One tracked domain's slice of the report: scorecard tiles, the position
- * distribution over the period (with ⚑ event markers), and the biggest
- * ranking movements. Purely presentational — the page owns the queries.
+ * One tracked domain's slice of the report, rendered from the computed block
+ * model — the same object that gets frozen into public share snapshots, so
+ * the live page and a shared link can never disagree.
  */
+export function RankBlockView({ block }: { block: ReportRankBlockModel }) {
+  const avgDelta =
+    block.avgPosition !== null && block.avgPositionPrevious !== null
+      ? block.avgPosition - block.avgPositionPrevious
+      : null;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-sm font-semibold">{block.domain}</h3>
+        <span className="text-[11px] text-base-content/50">
+          {block.keywordCount} keywords tracked · {block.device}
+        </span>
+      </div>
+
+      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+        <StatTile
+          label="Visibility"
+          value={
+            block.visibility === null
+              ? "—"
+              : `${formatNumber(block.visibility)}%`
+          }
+          delta={block.visibilityDelta}
+        />
+        <StatTile
+          label="Ranking keywords"
+          value={String(block.ranking)}
+          delta={block.rankingDelta}
+        />
+        <StatTile
+          label="Avg position"
+          value={formatPosition(block.avgPosition)}
+          delta={avgDelta}
+          deltaGoodWhen="down"
+        />
+        <StatTile
+          label="Top 3 / Top 10"
+          value={`${block.top3} / ${block.top10}`}
+        />
+      </div>
+
+      {block.chartData.length > 1 ? (
+        <div className="break-inside-avoid space-y-2">
+          <PositionBucketLegend />
+          <PositionDistributionChart
+            data={block.chartData}
+            height={190}
+            eventMarkers={block.eventMarkers}
+          />
+          <ProjectEventsStrip markers={block.eventMarkers} />
+        </div>
+      ) : null}
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <MoversTable
+          heading={`Top improvements (${block.movers.improvedTotal})`}
+          movers={block.movers.improved}
+          emptyLabel="No improvements in this period."
+        />
+        <MoversTable
+          heading={`Biggest declines (${block.movers.declinedTotal})`}
+          movers={block.movers.declined}
+          emptyLabel="No declines in this period."
+        />
+      </div>
+    </div>
+  );
+}
+
+/** Query-aware wrapper used on the live report page. */
 export function ReportRankBlock({
   domain,
-  device,
+  devices,
   keywordCount,
   rows,
   rowsPending,
@@ -41,7 +108,7 @@ export function ReportRankBlock({
   events,
 }: {
   domain: string;
-  device: "desktop" | "mobile";
+  devices: "both" | "desktop" | "mobile";
   keywordCount: number;
   rows: RankTrackingRow[] | undefined;
   rowsPending: boolean;
@@ -49,24 +116,19 @@ export function ReportRankBlock({
   trend: RankConfigTrendPoint[] | undefined;
   events: ProjectEventLike[];
 }) {
-  const chartData = useMemo(
+  const block = useMemo(
     () =>
-      (trend ?? []).map((point) => ({
-        checkedAt: new Date(point.checkedAt).getTime(),
-        top3: point.top3,
-        top4to10: point.top4to10,
-        top11to20: point.top11to20,
-        notRanking: point.notRanking,
-      })),
-    [trend],
-  );
-  const eventMarkers = useMemo(
-    () =>
-      buildEventMarkers(
-        events,
-        chartData.map((row) => row.checkedAt),
-      ),
-    [events, chartData],
+      rows && rows.length > 0
+        ? buildRankBlockModel({
+            domain,
+            devices,
+            keywordCount,
+            rows,
+            trend: trend ?? [],
+            events,
+          })
+        : null,
+    [domain, devices, keywordCount, rows, trend, events],
   );
 
   if (rowsError) {
@@ -83,7 +145,7 @@ export function ReportRankBlock({
       </div>
     );
   }
-  if (!rows || rows.length === 0) {
+  if (!block) {
     return (
       <SectionNote>
         No rank checks recorded for {domain} yet — run a check to include it.
@@ -91,76 +153,7 @@ export function ReportRankBlock({
     );
   }
 
-  const cards = computeScorecards(rows, device);
-  const averages = computeAveragePositions(rows, device);
-  const movers = computeMovers(rows, device);
-  const avgDelta =
-    averages.current !== null && averages.previous !== null
-      ? averages.current - averages.previous
-      : null;
-
-  return (
-    <div className="space-y-4">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-sm font-semibold">{domain}</h3>
-        <span className="text-[11px] text-base-content/50">
-          {keywordCount} keywords tracked · {device}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <StatTile
-          label="Visibility"
-          value={
-            cards.visibility === null
-              ? "—"
-              : `${formatNumber(cards.visibility)}%`
-          }
-          delta={cards.visibilityDelta}
-        />
-        <StatTile
-          label="Ranking keywords"
-          value={String(cards.ranking)}
-          delta={cards.rankingDelta}
-        />
-        <StatTile
-          label="Avg position"
-          value={formatPosition(averages.current)}
-          delta={avgDelta}
-          deltaGoodWhen="down"
-        />
-        <StatTile
-          label="Top 3 / Top 10"
-          value={`${cards.top3} / ${cards.top10}`}
-        />
-      </div>
-
-      {chartData.length > 1 ? (
-        <div className="break-inside-avoid space-y-2">
-          <PositionBucketLegend />
-          <PositionDistributionChart
-            data={chartData}
-            height={190}
-            eventMarkers={eventMarkers}
-          />
-          <ProjectEventsStrip markers={eventMarkers} />
-        </div>
-      ) : null}
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <MoversTable
-          heading={`Top improvements (${movers.improvedTotal})`}
-          movers={movers.improved}
-          emptyLabel="No improvements in this period."
-        />
-        <MoversTable
-          heading={`Biggest declines (${movers.declinedTotal})`}
-          movers={movers.declined}
-          emptyLabel="No declines in this period."
-        />
-      </div>
-    </div>
-  );
+  return <RankBlockView block={block} />;
 }
 
 function MoversTable({

@@ -8,7 +8,7 @@ import {
   type ReportMovers,
 } from "./reportData";
 
-export interface ReportRankBlockSnapshot {
+interface ReportRankBlockSnapshot {
   domain: string;
   device: "desktop" | "mobile";
   keywordCount: number;
@@ -39,6 +39,8 @@ interface ReportSnapshot {
   projectDomain: string | null;
   rangeLabel: string;
   generatedAt: string;
+  /** White-label line, when the project has branding configured. */
+  branding?: { brandName: string | null; preparedBy: string | null } | null;
   rankBlocks: ReportRankBlockSnapshot[];
   events: ReportEventLike[];
   audit: { completedAt: string | null; health: AuditHealth } | null;
@@ -83,6 +85,13 @@ export function reportToMarkdown(snapshot: ReportSnapshot): string {
   lines.push(
     `Period: ${snapshot.rangeLabel} · Generated: ${snapshot.generatedAt} · Source: OpenSEO`,
   );
+  const preparedBy = snapshot.branding?.preparedBy;
+  const brandName = snapshot.branding?.brandName;
+  if (preparedBy || brandName) {
+    lines.push(
+      `Prepared by: ${[preparedBy, brandName].filter(Boolean).join(" · ")}`,
+    );
+  }
 
   for (const block of snapshot.rankBlocks) {
     lines.push("");

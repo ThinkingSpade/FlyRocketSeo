@@ -2,7 +2,13 @@
 // payloads the app already fetches (latest rank results, audit results,
 // project events) — the report adds no server surface of its own.
 
+import { computeScorecards } from "@/client/features/rank-tracking/rankTrackingScorecards";
+import {
+  buildEventMarkers,
+  type ProjectEventLike,
+} from "@/client/features/rank-tracking/projectEventMarkers";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
+import type { ReportShareSnapshot } from "@/types/schemas/report";
 
 export const REPORT_RANGES = {
   "30d": {
@@ -138,6 +144,63 @@ export function computeAveragePositions(
   return {
     current: currentCount ? currentSum / currentCount : null,
     previous: previousCount ? previousSum / previousCount : null,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Rank block model — one tracked domain's computed slice of the report
+// ---------------------------------------------------------------------------
+
+/** Matches the share-snapshot block shape exactly, so the on-screen block,
+ * the markdown export, and the stored public snapshot can never drift. */
+export type ReportRankBlockModel = ReportShareSnapshot["rankBlocks"][number];
+
+interface TrendPointLike {
+  checkedAt: string;
+  top3: number;
+  top4to10: number;
+  top11to20: number;
+  notRanking: number;
+}
+
+export function buildRankBlockModel(input: {
+  domain: string;
+  devices: "both" | "desktop" | "mobile";
+  keywordCount: number;
+  rows: readonly RankTrackingRow[];
+  trend: readonly TrendPointLike[];
+  events: readonly ProjectEventLike[];
+}): ReportRankBlockModel {
+  const device = reportDevice(input.devices);
+  const cards = computeScorecards([...input.rows], device);
+  const averages = computeAveragePositions(input.rows, device);
+  const chartData = input.trend.map((point) => ({
+    checkedAt: new Date(point.checkedAt).getTime(),
+    top3: point.top3,
+    top4to10: point.top4to10,
+    top11to20: point.top11to20,
+    notRanking: point.notRanking,
+  }));
+  return {
+    domain: input.domain,
+    device,
+    keywordCount: input.keywordCount,
+    visibility: cards.visibility,
+    visibilityDelta: cards.visibilityDelta,
+    ranking: cards.ranking,
+    rankingDelta: cards.rankingDelta,
+    top3: cards.top3,
+    top10: cards.top10,
+    improved: cards.improved,
+    declined: cards.declined,
+    avgPosition: averages.current,
+    avgPositionPrevious: averages.previous,
+    movers: computeMovers(input.rows, device),
+    chartData,
+    eventMarkers: buildEventMarkers(
+      input.events,
+      chartData.map((row) => row.checkedAt),
+    ),
   };
 }
 

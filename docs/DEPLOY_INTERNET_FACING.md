@@ -143,6 +143,21 @@ workspace. See
 
 These are all off by default and safe to skip.
 
+### Public report share links
+
+The Client Report page can mint public, revocable share links (`/r/<token>`)
+for clients who don't have a login. Cloudflare Access sits in front of the
+whole Worker, so those links are blocked for people outside your team until
+you add a **bypass policy**:
+
+1. In **Zero Trust → Access → Applications**, add a second application for
+   the same domain with paths `/r/*` and `/api/report-share/*`.
+2. Give it a single **Bypass** policy (Everyone).
+
+Each link is a 256-bit token that serves one frozen snapshot of the report —
+recipients can't reach any live data, and revoking the link in the app kills
+it immediately.
+
 ### Google Search Console (recommended)
 
 Free, first-party search data (real clicks/impressions/CTR/position +
