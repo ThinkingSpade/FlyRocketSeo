@@ -25,7 +25,7 @@ export function Modal({
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 print:hidden">
       <div
         role="dialog"
         aria-modal="true"

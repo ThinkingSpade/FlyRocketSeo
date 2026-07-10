@@ -115,29 +115,38 @@ export function AuthenticatedAppLayout({
   }, [shouldShowMissingSeoApiKeyModal]);
 
   return (
-    <div className="flex h-[100dvh] bg-base-200">
-      <div className="hidden shrink-0 md:block">
+    // print: overrides let any page print as a document — chrome (sidebar,
+    // top bar, banners) disappears and the scroll containers stop clipping
+    // content to a single viewport-height page.
+    <div className="flex h-[100dvh] bg-base-200 print:block print:h-auto print:bg-base-100">
+      <div className="hidden shrink-0 md:block print:hidden">
         <Sidebar projectId={sidebarProjectId} />
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col">
-        <MobileTopBar
-          drawerOpen={drawerOpen}
-          onOpenDrawer={() => setDrawerOpen(true)}
-        />
+      <div className="flex min-w-0 flex-1 flex-col print:block">
+        <div className="print:hidden">
+          <MobileTopBar
+            drawerOpen={drawerOpen}
+            onOpenDrawer={() => setDrawerOpen(true)}
+          />
+        </div>
 
         {/* PostHog-style cutout: the main content sits on a raised panel with a
             thin strip of the sidebar background above it and a hairline border. */}
-        <div className="flex min-h-0 flex-1 flex-col md:pt-2">
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-base-100 md:rounded-tl-lg md:border-l md:border-t md:border-base-300">
-            <SeoApiStatusBanners
-              shouldShowSeoApiWarning={shouldShowSeoApiWarning}
-              seoApiKeyStatusError={seoApiKeyStatusError}
-            />
+        <div className="flex min-h-0 flex-1 flex-col md:pt-2 print:block print:pt-0">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-base-100 md:rounded-tl-lg md:border-l md:border-t md:border-base-300 print:block print:overflow-visible print:rounded-none print:border-0">
+            <div className="print:hidden">
+              <SeoApiStatusBanners
+                shouldShowSeoApiWarning={shouldShowSeoApiWarning}
+                seoApiKeyStatusError={seoApiKeyStatusError}
+              />
 
-            {banner}
+              {banner}
+            </div>
 
-            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+            <div className="min-h-0 flex-1 overflow-auto print:overflow-visible">
+              {children}
+            </div>
           </div>
         </div>
       </div>

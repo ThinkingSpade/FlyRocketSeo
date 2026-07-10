@@ -326,7 +326,7 @@ function CommandPaletteImpl() {
 
   return (
     <div
-      className="fixed inset-0 z-[60] flex justify-center bg-black/50 pt-[12vh]"
+      className="fixed inset-0 z-[60] flex justify-center bg-black/50 pt-[12vh] print:hidden"
       onClick={close}
     >
       <div
