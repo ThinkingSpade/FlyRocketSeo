@@ -31,7 +31,7 @@ export interface RankKeywordHistoryPoint {
   position: number | null;
 }
 
-interface RankConfigTrendPoint {
+export interface RankConfigTrendPoint {
   runId: string;
   checkedAt: string;
   top3: number;

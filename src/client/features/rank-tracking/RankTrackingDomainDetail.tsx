@@ -37,7 +37,9 @@ import {
   type Filters,
 } from "./RankTrackingFilters";
 import { CheckConfirmModal } from "./CheckConfirmModal";
+import { ProjectEventsModal } from "./ProjectEventsModal";
 import { useMetricsRefresh } from "./useMetricsRefresh";
+import { useProjectEvents } from "./useProjectEvents";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
 import { useRankRunPolling } from "./useRankRunPolling";
 
@@ -91,6 +93,8 @@ export function RankTrackingDomainDetail({
     config.devices === "mobile" ? "mobile" : "desktop",
   );
   const [viewMode, setViewMode] = useState<"table" | "history">("table");
+  const [showEvents, setShowEvents] = useState(false);
+  const { data: projectEvents } = useProjectEvents(projectId);
 
   const { data: resultsData, isLoading: resultsLoading } = useQuery({
     queryKey: ["rankTrackingResults", projectId, config.id, comparePeriod],
@@ -250,6 +254,8 @@ export function RankTrackingDomainDetail({
             device={activeDevice}
             projectId={projectId}
             configId={config.id}
+            events={projectEvents}
+            onManageEvents={() => setShowEvents(true)}
           />
         )}
 
@@ -331,6 +337,13 @@ export function RankTrackingDomainDetail({
           )}
         </div>
       </div>
+
+      {showEvents && (
+        <ProjectEventsModal
+          projectId={projectId}
+          onClose={() => setShowEvents(false)}
+        />
+      )}
 
       {pendingCheck && (
         <CheckConfirmModal

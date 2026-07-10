@@ -28,7 +28,9 @@ import process from "node:process";
 import { getPlatformProxy } from "wrangler";
 import { drizzle } from "drizzle-orm/d1";
 import { and, eq } from "drizzle-orm";
-import * as schema from "../src/db/schema";
+// The raw SQLite barrel, NOT ../src/db/schema: the provider-aware barrel
+// imports `cloudflare:workers`, which Node/tsx cannot load outside a Worker.
+import * as schema from "../src/db/d1/schema";
 import { parseArgs } from "./cli-utils";
 
 const LOCAL_ADMIN_USER_ID = "local-admin";

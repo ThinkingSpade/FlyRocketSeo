@@ -8,12 +8,15 @@ import { captureClientEvent } from "@/client/lib/posthog";
 import { getRankKeywordHistory } from "@/serverFunctions/rank-tracking";
 import type { RankKeywordHistoryPoint } from "@/serverFunctions/rank-tracking";
 import { LOCATIONS } from "@/client/features/keywords/locations";
+import { ProjectEventsStrip } from "./ProjectEventsMarkers";
+import { buildEventMarkers } from "./projectEventMarkers";
 import { csvChange, DeviceRankCell } from "./RankTrackingTableParts";
 import {
   RankTrendChart,
   TrendRangeToggle,
   type TrendSeries,
 } from "./RankTrackingTrendChart";
+import { useProjectEvents } from "./useProjectEvents";
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
@@ -94,6 +97,17 @@ export function KeywordTrendModal({
     [points, serpDepth],
   );
 
+  // Same cache entry as the overview chart and the events manager.
+  const { data: events } = useProjectEvents(projectId);
+  const eventMarkers = useMemo(
+    () =>
+      buildEventMarkers(
+        events ?? [],
+        chartData.map((row) => row.checkedAt),
+      ),
+    [events, chartData],
+  );
+
   // Keys ("<ts>:<device>") whose plotted point sits in the bottom band because
   // the real position was null — so the tooltip can say "Not in top N"
   // unambiguously even when a genuine position equals serpDepth.
@@ -165,6 +179,7 @@ export function KeywordTrendModal({
             series={series}
             serpDepth={serpDepth}
             showBottomBand
+            eventMarkers={eventMarkers}
             renderTooltip={(label, entries) => (
               <ChartTooltip
                 label={label}
@@ -174,6 +189,8 @@ export function KeywordTrendModal({
               />
             )}
           />
+
+          <ProjectEventsStrip markers={eventMarkers} />
 
           <div className="flex items-center justify-end gap-2">
             <button className="btn btn-ghost btn-xs gap-1" onClick={handleCopy}>

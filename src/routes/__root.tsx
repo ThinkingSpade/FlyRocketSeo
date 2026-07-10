@@ -192,19 +192,22 @@ function RootDocument({ children }: { children: React.ReactNode }) {
                 <Toaster
                   position="bottom-right"
                   mobileOffset={{ bottom: 100 }}
+                  className="print:hidden"
                 />
                 {showDevtools ? (
-                  <TanStackDevtools
-                    config={{ position: "bottom-right" }}
-                    eventBusConfig={{ connectToServerBus: true }}
-                    plugins={[
-                      {
-                        name: "TanStack Router",
-                        render: <TanStackRouterDevtoolsPanel />,
-                        defaultOpen: true,
-                      },
-                    ]}
-                  />
+                  <div className="print:hidden">
+                    <TanStackDevtools
+                      config={{ position: "bottom-right" }}
+                      eventBusConfig={{ connectToServerBus: true }}
+                      plugins={[
+                        {
+                          name: "TanStack Router",
+                          render: <TanStackRouterDevtoolsPanel />,
+                          defaultOpen: true,
+                        },
+                      ]}
+                    />
+                  </div>
                 ) : null}
               </>
             </QueryClientProvider>
