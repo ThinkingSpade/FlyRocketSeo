@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
+import { Flag, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Area,
@@ -11,6 +11,14 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { getRankConfigTrend } from "@/serverFunctions/rank-tracking";
+import {
+  ProjectEventsStrip,
+  renderEventMarkerLines,
+} from "./ProjectEventsMarkers";
+import {
+  buildEventMarkers,
+  type ProjectEventLike,
+} from "./projectEventMarkers";
 import {
   formatDateTick,
   TrendRangeToggle,
@@ -34,10 +42,15 @@ export function RankTrackingOverview({
   device,
   projectId,
   configId,
+  events,
+  onManageEvents,
 }: {
   device: "desktop" | "mobile";
   projectId: string;
   configId: string;
+  /** Project event journal — plotted as ⚑ markers on the trend. */
+  events?: ProjectEventLike[];
+  onManageEvents?: () => void;
 }) {
   const [sinceDays, setSinceDays] = useState(730);
 
@@ -61,6 +74,15 @@ export function RankTrackingOverview({
     [trend],
   );
 
+  const eventMarkers = useMemo(
+    () =>
+      buildEventMarkers(
+        events ?? [],
+        chartData.map((row) => row.checkedAt),
+      ),
+    [events, chartData],
+  );
+
   const { containerRef, width } = useChartWidth();
 
   return (
@@ -68,7 +90,23 @@ export function RankTrackingOverview({
       <div className="rounded-lg border border-base-300 p-3 space-y-2">
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-medium">Position distribution</span>
-          <TrendRangeToggle value={sinceDays} onChange={setSinceDays} />
+          <div className="flex items-center gap-1.5">
+            {onManageEvents && (
+              <button
+                type="button"
+                className="btn btn-ghost btn-xs gap-1 text-base-content/60"
+                title="Log site events (content published, redirects fixed…) as chart markers"
+                onClick={onManageEvents}
+              >
+                <Flag className="size-3" />
+                Events
+                {(events?.length ?? 0) > 0 && (
+                  <span className="tabular-nums">{events?.length}</span>
+                )}
+              </button>
+            )}
+            <TrendRangeToggle value={sinceDays} onChange={setSinceDays} />
+          </div>
         </div>
 
         <div className="flex flex-wrap gap-x-3 gap-y-1">
@@ -166,10 +204,15 @@ export function RankTrackingOverview({
                     isAnimationActive={false}
                   />
                 ))}
+                {/* After the series: the stack fills the full plot height, so
+                    markers rendered under it would be invisible. */}
+                {renderEventMarkerLines(eventMarkers)}
               </AreaChart>
             ) : null}
           </div>
         )}
+
+        <ProjectEventsStrip markers={eventMarkers} onManage={onManageEvents} />
       </div>
     </div>
   );

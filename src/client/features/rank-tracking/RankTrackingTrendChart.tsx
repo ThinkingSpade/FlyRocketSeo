@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
+import { renderEventMarkerLines } from "./ProjectEventsMarkers";
+import type { ProjectEventMarker } from "./projectEventMarkers";
 
 export interface TrendSeries {
   /** key into each data row holding the position value (1 = best, serpDepth = bottom band) */
@@ -48,6 +50,7 @@ export function RankTrendChart({
   height = 224,
   renderTooltip,
   showBottomBand = false,
+  eventMarkers,
 }: {
   data: Array<Record<string, unknown>>;
   series: TrendSeries[];
@@ -57,6 +60,8 @@ export function RankTrendChart({
   /** Show the muted "not in top {serpDepth}" band — only meaningful for a
    * single keyword's position line, not for an averaged value. */
   showBottomBand?: boolean;
+  /** Project events plotted as dashed ⚑ lines (see projectEventMarkers). */
+  eventMarkers?: ProjectEventMarker[];
 }) {
   const { containerRef, width: chartWidth } = useChartWidth();
 
@@ -145,6 +150,9 @@ export function RankTrendChart({
                 isAnimationActive={false}
               />
             ))}
+            {/* After the series (matching the overview chart) so the thin
+                dashed markers stay visible over the plotted lines. */}
+            {eventMarkers ? renderEventMarkerLines(eventMarkers) : null}
           </LineChart>
         ) : null}
       </div>
