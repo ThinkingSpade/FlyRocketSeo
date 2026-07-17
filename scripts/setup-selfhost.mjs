@@ -141,8 +141,20 @@ async function ensureD1(name) {
 
 function ensureR2(name) {
   const out = wrangler(`r2 bucket create ${JSON.stringify(name)}`, { allowFail: true });
-  if (/already exists|already owned/i.test(out)) log(`  reusing existing R2 bucket "${name}"`);
-  // R2 binds by name, so there is no id to capture.
+  if (/already exists|already owned/i.test(out)) {
+    log(`  reusing existing R2 bucket "${name}"`);
+    return;
+  }
+  // R2 must be activated once per account; wrangler surfaces that as error
+  // 10042. Fail loudly — a missing bucket only explodes later, at deploy time.
+  if (/\[ERROR\]|error code|failed/i.test(out)) {
+    die(
+      `R2 bucket creation failed. If the error mentions enabling R2 (code 10042),\n` +
+        `activate R2 once in the Cloudflare dashboard (sidebar -> R2 Object Storage ->\n` +
+        `subscribe to the $0 plan), then re-run this script.\n\nwrangler output:\n${out}`,
+    );
+  }
+  // Success — R2 binds by name, so there is no id to capture.
 }
 
 async function ensureHyperdrive(name, connString) {
