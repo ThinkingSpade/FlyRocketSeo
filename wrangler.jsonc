@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "open-seo",
+  "name": "flyrocketseo2",
   "main": "src/server.ts",
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -71,18 +71,18 @@
   "kv_namespaces": [
     {
       "binding": "KV",
-      "id": "4abd52f3f2c549ac83cc2cb4ceec8620",
+      "id": "a9673ddaffa44bac9b10113d95fc0386",
     },
     {
       "binding": "OAUTH_KV",
-      "id": "bd1759494309474a9b423b029967b0db",
+      "id": "641adbc7a31d40eab5640ab31bd429ce",
     },
   ],
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "open-seo",
-      "database_id": "37bee90a-e1aa-404f-b01e-b0d1d479bda1",
+      "database_id": "c4426462-7f20-4202-9bcd-d8dfc553ae28",
       "migrations_dir": "drizzle",
     },
   ],
@@ -101,13 +101,13 @@
   // deploying. The id below lives in OpenSEO's Cloudflare account, so `wrangler
   // deploy` will fail without access to it. D1 stays the default when
   // DATABASE_PROVIDER is unset.
-  "hyperdrive": [
-    {
-      "binding": "HYPERDRIVE",
-      "id": "9d64ccfb559f44449ce52a143912f898",
-      "localConnectionString": "postgres://openseo:openseo@localhost:5433/openseo",
-    },
-  ],
+  // "hyperdrive": [
+    // {
+      // "binding": "HYPERDRIVE",
+      // "id": "9d64ccfb559f44449ce52a143912f898",
+      // "localConnectionString": "postgres://openseo:openseo@localhost:5433/openseo",
+    // },
+  // ],
   "r2_buckets": [
     {
       "bucket_name": "open-seo",
