@@ -114,13 +114,30 @@ function createAuth() {
           // throwaway-inbox domains before the user row is created. Self-hosted
           // has no shared credit pool to protect, so it's left untouched.
           before: async (user) => {
-            if (
-              isHostedAuthMode(env.AUTH_MODE) &&
-              isDisposableEmailDomain(user.email)
-            ) {
-              throw new APIError("BAD_REQUEST", {
-                message: "Please sign up with a non-disposable email address.",
-              });
+            if (isHostedAuthMode(env.AUTH_MODE)) {
+              // Private deployment: when HOSTED_ALLOWED_EMAILS is set (a comma-
+              // separated list), only those addresses may create an account.
+              // Both password and Google signup flow through this hook, so it
+              // gates every path. Unset = open signup (the upstream default) —
+              // leave it unset only if you actually want a public, multi-user SaaS.
+              const allowList = (env.HOSTED_ALLOWED_EMAILS ?? "")
+                .split(",")
+                .map((email) => email.trim().toLowerCase())
+                .filter(Boolean);
+              if (
+                allowList.length > 0 &&
+                !allowList.includes(user.email.trim().toLowerCase())
+              ) {
+                throw new APIError("FORBIDDEN", {
+                  message:
+                    "This OpenSEO deployment is private — your email isn't on the allow-list.",
+                });
+              }
+              if (isDisposableEmailDomain(user.email)) {
+                throw new APIError("BAD_REQUEST", {
+                  message: "Please sign up with a non-disposable email address.",
+                });
+              }
             }
             return { data: user };
           },

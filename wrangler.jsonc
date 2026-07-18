@@ -1,7 +1,13 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "flyrocketseo2",
+  "name": "flyrocketseo",
   "main": "src/server.ts",
+  // Hosted-mode login (Better Auth email/password + Google), private via the
+  // HOSTED_ALLOWED_EMAILS allow-list. This is the RUNTIME half of the deploy-time
+  // AUTH_MODE contract; the client-build half is set in scripts/build.mjs.
+  "vars": {
+    "AUTH_MODE": "hosted",
+  },
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "observability": {
