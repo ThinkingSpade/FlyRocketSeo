@@ -14,8 +14,10 @@ if (!/--max-old-space-size/.test(existing)) {
 // Deploy-time AUTH_MODE contract: the client bundle must be built with
 // AUTH_MODE=hosted so the in-app login UI enables (isHostedClientAuthMode reads
 // import.meta.env.AUTH_MODE; Vite exposes prefixed process.env vars to it). The
-// server runtime half is set in wrangler.jsonc `vars`. An explicit AUTH_MODE in
-// the environment still wins, so local cloudflare_access/local_noauth builds work.
-process.env.AUTH_MODE ??= "hosted";
+// server runtime half is set in wrangler.jsonc `vars`. Forced (not defaulted) so
+// an AUTH_MODE inherited from the build env can't desync the client from the
+// hosted runtime. This fork's production builds are always hosted; local dev
+// (`vite dev`) doesn't run this wrapper, so it's unaffected.
+process.env.AUTH_MODE = "hosted";
 
 execSync("vite build", { stdio: "inherit" });

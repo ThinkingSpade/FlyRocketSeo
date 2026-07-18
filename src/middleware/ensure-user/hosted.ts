@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import { getAuth, hasHostedAuthConfig } from "@/lib/auth";
 import { getActiveOrganizationId } from "@/lib/auth-session";
 import { getOrCreateDefaultHostedOrganization } from "@/server/auth/default-hosted-organization";
@@ -25,6 +26,23 @@ export async function resolveHostedContext(
   headers: Headers,
 ): Promise<EnsuredUserContext> {
   const session = await requireHostedSession(headers);
+
+  // Private deployment: enforce HOSTED_ALLOWED_EMAILS on EVERY request, not just
+  // at signup. This closes the gap where a pre-existing account (e.g. one
+  // provisioned during the Cloudflare Access era) or a Google identity linked to
+  // an existing email could sign in without passing the signup hook. Fail OPEN
+  // only when the list is unset, so a missing secret can't lock the operator out.
+  const allowList = (env.HOSTED_ALLOWED_EMAILS ?? "")
+    .split(",")
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+  if (
+    allowList.length > 0 &&
+    !allowList.includes(session.user.email.trim().toLowerCase())
+  ) {
+    throw new AppError("FORBIDDEN", "This deployment is private.");
+  }
+
   const activeOrganizationId = getActiveOrganizationId(session);
 
   if (activeOrganizationId) {

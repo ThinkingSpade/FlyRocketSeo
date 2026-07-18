@@ -124,10 +124,10 @@ function createAuth() {
                 .split(",")
                 .map((email) => email.trim().toLowerCase())
                 .filter(Boolean);
-              if (
-                allowList.length > 0 &&
-                !allowList.includes(user.email.trim().toLowerCase())
-              ) {
+              // Fail CLOSED: an unset/empty allow-list denies ALL new accounts —
+              // this fork's hosted mode is private-by-default. Set
+              // HOSTED_ALLOWED_EMAILS to every address allowed to register.
+              if (!allowList.includes(user.email.trim().toLowerCase())) {
                 throw new APIError("FORBIDDEN", {
                   message:
                     "This OpenSEO deployment is private — your email isn't on the allow-list.",
