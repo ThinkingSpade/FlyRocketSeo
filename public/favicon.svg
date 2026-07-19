@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FlyRocketSEO">
+  <defs>
+    <linearGradient id="tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a45e0"/>
+      <stop offset="1" stop-color="#3a2aa6"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="16" fill="url(#tile)"/>
+  <!-- flame -->
+  <path d="M26 50 C27 57 29 59 32 61 C35 59 37 57 38 50 Z" fill="#fbbf24"/>
+  <!-- fins -->
+  <path d="M22 42 L14 54 L22 50 Z" fill="#c7cffb"/>
+  <path d="M42 42 L50 54 L42 50 Z" fill="#c7cffb"/>
+  <!-- body -->
+  <path d="M32 11 C41 20 45 31 45 41 C45 49 41 54 32 56 C23 54 19 49 19 41 C19 31 23 20 32 11 Z" fill="#ffffff"/>
+  <!-- window -->
+  <circle cx="32" cy="33" r="6" fill="#4934c7"/>
+</svg>

@@ -17,24 +17,29 @@ const onboardingAnswersSchema = z.object({
 export const getOnboardingAnswers = createServerFn({ method: "GET" })
   .middleware(requireAuthenticatedContext)
   .handler(async ({ context }) => {
-    const answers = await db.query.userOnboardingAnswers.findFirst({
-      columns: {
-        completedAt: true,
-        gscNudgeDismissedAt: true,
-        interestedFeatures: true,
-        workFor: true,
-        clientWebsiteCount: true,
-        foundVia: true,
-        mcpSetupIntent: true,
-      },
-      where: eq(userOnboardingAnswers.userId, context.userId),
-    });
-    const userRecord = await db.query.user.findFirst({
-      columns: {
-        createdAt: true,
-      },
-      where: eq(user.id, context.userId),
-    });
+    // These two reads are independent — run them concurrently so the critical
+    // path is the slower single query rather than the sum of two serial ones.
+    // (Still two D1 calls; a true single round-trip would need D1 batch().)
+    const [answers, userRecord] = await Promise.all([
+      db.query.userOnboardingAnswers.findFirst({
+        columns: {
+          completedAt: true,
+          gscNudgeDismissedAt: true,
+          interestedFeatures: true,
+          workFor: true,
+          clientWebsiteCount: true,
+          foundVia: true,
+          mcpSetupIntent: true,
+        },
+        where: eq(userOnboardingAnswers.userId, context.userId),
+      }),
+      db.query.user.findFirst({
+        columns: {
+          createdAt: true,
+        },
+        where: eq(user.id, context.userId),
+      }),
+    ]);
 
     let interestedFeatures: string[] = [];
     if (answers?.interestedFeatures) {

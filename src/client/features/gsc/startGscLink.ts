@@ -12,12 +12,21 @@ import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
  * step, and the re-engagement nudge so the link/error/redirect flow stays in
  * one place — callers keep their own analytics/dismissal at the call site.
  */
+// Single-flight latch. Each OAuth flow writes one `__Secure-better-auth.state`
+// cookie under a fixed name; a second click (or two entry points firing) before
+// the redirect would start a parallel flow and overwrite the first flow's
+// cookie, so the eventual callback fails `state_mismatch`. We ignore re-entrant
+// calls until the page navigates away (success) or the attempt errors out.
+let linkInFlight = false;
+
 export async function startGscLink(callbackURL: string): Promise<void> {
+  if (linkInFlight) return;
+  linkInFlight = true;
   try {
     if (!isHostedClientAuthMode()) {
       const res = await startSelfHostedGscLink({ data: { callbackURL } });
       window.location.href = res.url;
-      return;
+      return; // navigating away — keep the latch closed
     }
 
     const res = await authClient.oauth2.link({
@@ -26,12 +35,16 @@ export async function startGscLink(callbackURL: string): Promise<void> {
     });
     if (res.error) {
       toast.error(res.error.message ?? "Could not start Google sign-in");
+      linkInFlight = false; // let the user retry
       return;
     }
     if (res.data?.url) {
       window.location.href = res.data.url;
+      return; // navigating away — keep the latch closed
     }
+    linkInFlight = false; // no url and no error: unlatch so we're not stuck
   } catch (error) {
     toast.error(getStandardErrorMessage(error));
+    linkInFlight = false;
   }
 }

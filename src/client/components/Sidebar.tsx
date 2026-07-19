@@ -118,9 +118,16 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
         <Link
           to="/"
           onClick={onNavigate}
-          className="text-base font-semibold text-base-content"
+          className="flex items-center gap-2 text-base font-semibold text-base-content"
         >
-          OpenSEO
+          <img
+            src="/transparent-logo-mark.svg"
+            alt=""
+            width={24}
+            height={24}
+            className="h-6 w-6"
+          />
+          FlyRocketSEO
         </Link>
         {onClose ? (
           <button

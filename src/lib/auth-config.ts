@@ -14,6 +14,21 @@ export function createBaseAuthConfig() {
         // /api/auth endpoint. Header lookup is case-insensitive.
         ipAddressHeaders: ["cf-connecting-ip"],
       },
+      cookies: {
+        // The genericOAuth (Search Console) flow stores its CSRF `state` in BOTH
+        // a signed `__Secure-better-auth.state` cookie AND a DB verification row.
+        // Better Auth hard-codes the cookie to maxAge 300s while the row lives
+        // 600s, so a Google consent/account-picker that takes >5 min drops the
+        // cookie but keeps the row -> the callback fails with `state_mismatch`.
+        // Match the cookie to the row's 10-minute window. (These per-cookie
+        // attributes are spread last in createCookieGetter, so they override the
+        // hard-coded per-flow maxAge — unlike advanced.defaultCookieAttributes.)
+        state: {
+          attributes: {
+            maxAge: 600,
+          },
+        },
+      },
     },
     account: {
       // Encrypt OAuth access/refresh tokens at rest in D1. Also covers the

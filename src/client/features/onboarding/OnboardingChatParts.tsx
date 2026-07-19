@@ -65,9 +65,9 @@ export function WelcomeMessage({
       </div>
       <div className="min-w-0 flex-1 space-y-3 pt-0.5 text-sm">
         <div className="space-y-3 text-base-content/80">
-          <p>Hey, I’m Sam — welcome to OpenSEO.</p>
+          <p>Hey, I’m Sam — welcome to FlyRocketSEO.</p>
           <p>
-            To get full access to OpenSEO, you need to upgrade to the paid plan.
+            To get full access to FlyRocketSEO, you need to upgrade to the paid plan.
             But, I’m here if you have any questions.
           </p>
           <p>
@@ -146,7 +146,7 @@ export function UpgradeSidebar({
           <Globe className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="font-medium text-base-content/80">Previewing OpenSEO</p>
+          <p className="font-medium text-base-content/80">Previewing FlyRocketSEO</p>
           <p className="truncate" title={domain}>
             {domain}
           </p>
@@ -187,7 +187,7 @@ export function UpgradeSidebar({
             {isStartingCheckout ? "Redirecting..." : "Upgrade to continue"}
           </button>
           <p className="text-center text-xs leading-relaxed text-base-content/55">
-            Want advice from other OpenSEO users?{" "}
+            Want advice from other FlyRocketSEO users?{" "}
             <a
               href={DISCORD_URL}
               target="_blank"
@@ -231,7 +231,7 @@ export function ChatGate({
           That’s all {FREE_ONBOARDING_QUESTION_LIMIT} free questions
         </p>
         <p className="mx-auto mt-1 max-w-md text-xs text-base-content/70">
-          Upgrade to keep working with Sam and unlock the full OpenSEO app.
+          Upgrade to keep working with Sam and unlock the full FlyRocketSEO app.
         </p>
         <button
           type="button"
@@ -252,7 +252,7 @@ export function ChatGate({
 export function ChatComposer({
   busy,
   onSend,
-  placeholder = "Ask Sam about your strategy or OpenSEO…",
+  placeholder = "Ask Sam about your strategy or FlyRocketSEO…",
 }: {
   busy: boolean;
   onSend: (text: string) => void;

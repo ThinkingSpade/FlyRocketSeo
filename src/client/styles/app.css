@@ -21,30 +21,30 @@
 
 /* Light theme */
 @plugin "daisyui/theme" {
-  name: "openseo";
+  name: "flyrocketseo";
   default: true;
   prefersdark: false;
   color-scheme: light;
-  --color-base-100: oklch(100% 0 0);
-  --color-base-200: oklch(97% 0 0);
-  --color-base-300: oklch(92% 0 0);
-  --color-base-content: oklch(20% 0 0);
-  --color-primary: oklch(50% 0.12 262);
-  --color-primary-content: oklch(100% 0 0);
-  --color-secondary: oklch(55% 0.15 145);
-  --color-secondary-content: oklch(100% 0 0);
-  --color-accent: oklch(50% 0.12 262);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(25% 0 0);
-  --color-neutral-content: oklch(100% 0 0);
-  --color-info: oklch(70% 0.15 230);
-  --color-info-content: oklch(100% 0 0);
-  --color-success: oklch(65% 0.18 145);
-  --color-success-content: oklch(100% 0 0);
-  --color-warning: oklch(80% 0.15 80);
-  --color-warning-content: oklch(100% 0 0);
-  --color-error: oklch(65% 0.2 25);
-  --color-error-content: oklch(100% 0 0);
+  --color-base-100: #ffffff;
+  --color-base-200: #f5f7fb;
+  --color-base-300: #e2e7f0;
+  --color-base-content: #172033;
+  --color-primary: #4934c7;
+  --color-primary-content: #ffffff;
+  --color-secondary: #087a70;
+  --color-secondary-content: #ffffff;
+  --color-accent: #c2410c;
+  --color-accent-content: #ffffff;
+  --color-neutral: #243047;
+  --color-neutral-content: #ffffff;
+  --color-info: #0b6e99;
+  --color-info-content: #ffffff;
+  --color-success: #087a55;
+  --color-success-content: #ffffff;
+  --color-warning: #8a5200;
+  --color-warning-content: #ffffff;
+  --color-error: #b42318;
+  --color-error-content: #ffffff;
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
   --radius-box: 0.75rem;
@@ -57,29 +57,29 @@
 
 /* Dark theme - auto-activates via prefers-color-scheme */
 @plugin "daisyui/theme" {
-  name: "openseo-dark";
+  name: "flyrocketseo-dark";
   prefersdark: true;
   color-scheme: dark;
-  --color-base-100: oklch(18% 0 0);
-  --color-base-200: oklch(12% 0 0);
-  --color-base-300: oklch(27% 0 0);
-  --color-base-content: oklch(92% 0 0);
-  --color-primary: oklch(66% 0.12 262);
-  --color-primary-content: oklch(100% 0 0);
-  --color-secondary: oklch(60% 0.15 145);
-  --color-secondary-content: oklch(100% 0 0);
-  --color-accent: oklch(66% 0.12 262);
-  --color-accent-content: oklch(100% 0 0);
-  --color-neutral: oklch(85% 0 0);
-  --color-neutral-content: oklch(20% 0 0);
-  --color-info: oklch(70% 0.15 230);
-  --color-info-content: oklch(100% 0 0);
-  --color-success: oklch(65% 0.18 145);
-  --color-success-content: oklch(100% 0 0);
-  --color-warning: oklch(80% 0.15 80);
-  --color-warning-content: oklch(100% 0 0);
-  --color-error: oklch(65% 0.2 25);
-  --color-error-content: oklch(100% 0 0);
+  --color-base-100: #131c2b;
+  --color-base-200: #0b1120;
+  --color-base-300: #263247;
+  --color-base-content: #eaf0fa;
+  --color-primary: #a89bff;
+  --color-primary-content: #14102e;
+  --color-secondary: #4fd1be;
+  --color-secondary-content: #062b27;
+  --color-accent: #ff9a62;
+  --color-accent-content: #351405;
+  --color-neutral: #cbd5e1;
+  --color-neutral-content: #172033;
+  --color-info: #67c7f2;
+  --color-info-content: #062636;
+  --color-success: #55d6a0;
+  --color-success-content: #052a1d;
+  --color-warning: #f6c453;
+  --color-warning-content: #321f00;
+  --color-error: #ff8a80;
+  --color-error-content: #3b0a06;
   --radius-selector: 0.5rem;
   --radius-field: 0.5rem;
   --radius-box: 0.75rem;
@@ -153,7 +153,7 @@ select {
    base-200, which is darker than the base-100 content panel in dark mode,
    so they read as sunken/disabled. Colored variants (primary, error, ...)
    set their own --btn-color and are excluded. */
-html[data-theme="openseo-dark"]
+html[data-theme="flyrocketseo-dark"]
   .btn:not(
     .btn-primary,
     .btn-error,
@@ -162,13 +162,13 @@ html[data-theme="openseo-dark"]
     .btn-outline,
     .btn-soft
   ) {
-  --btn-color: oklch(25% 0 0);
+  --btn-color: var(--color-base-300);
 }
 
 /* Light mode: the base-200 default button is nearly invisible on the
    base-100 content panel; use a white surface with a visible border,
    matching inputs/selects. */
-html[data-theme="openseo"]
+html[data-theme="flyrocketseo"]
   .btn:not(
     .btn-primary,
     .btn-error,
@@ -251,28 +251,28 @@ html[data-theme="openseo"]
   --tw-ring-color: color-mix(in oklab, #d946ef 30%, transparent);
 }
 
-html[data-theme="openseo-dark"] .tag-chip-slate {
+html[data-theme="flyrocketseo-dark"] .tag-chip-slate {
   color: #cbd5e1;
 }
-html[data-theme="openseo-dark"] .tag-chip-rose {
+html[data-theme="flyrocketseo-dark"] .tag-chip-rose {
   color: #fda4af;
 }
-html[data-theme="openseo-dark"] .tag-chip-amber {
+html[data-theme="flyrocketseo-dark"] .tag-chip-amber {
   color: #fcd34d;
 }
-html[data-theme="openseo-dark"] .tag-chip-lime {
+html[data-theme="flyrocketseo-dark"] .tag-chip-lime {
   color: #d9f99d;
 }
-html[data-theme="openseo-dark"] .tag-chip-emerald {
+html[data-theme="flyrocketseo-dark"] .tag-chip-emerald {
   color: #6ee7b7;
 }
-html[data-theme="openseo-dark"] .tag-chip-sky {
+html[data-theme="flyrocketseo-dark"] .tag-chip-sky {
   color: #7dd3fc;
 }
-html[data-theme="openseo-dark"] .tag-chip-violet {
+html[data-theme="flyrocketseo-dark"] .tag-chip-violet {
   color: #c4b5fd;
 }
-html[data-theme="openseo-dark"] .tag-chip-fuchsia {
+html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
   color: #f5d0fe;
 }
 
@@ -323,29 +323,29 @@ html[data-theme="openseo-dark"] .tag-chip-fuchsia {
   --tw-ring-color: color-mix(in oklab, #b91c1c 32%, transparent);
 }
 
-html[data-theme="openseo-dark"] .score-tier-na {
+html[data-theme="flyrocketseo-dark"] .score-tier-na {
   color: #cbd5e1;
 }
-html[data-theme="openseo-dark"] .score-tier-1 {
+html[data-theme="flyrocketseo-dark"] .score-tier-1 {
   color: #6ee7b7;
 }
-html[data-theme="openseo-dark"] .score-tier-2 {
+html[data-theme="flyrocketseo-dark"] .score-tier-2 {
   color: #bef264;
 }
-html[data-theme="openseo-dark"] .score-tier-3 {
+html[data-theme="flyrocketseo-dark"] .score-tier-3 {
   color: #fde047;
 }
-html[data-theme="openseo-dark"] .score-tier-4 {
+html[data-theme="flyrocketseo-dark"] .score-tier-4 {
   color: #fdba74;
 }
-html[data-theme="openseo-dark"] .score-tier-5 {
+html[data-theme="flyrocketseo-dark"] .score-tier-5 {
   color: #fca5a5;
 }
-html[data-theme="openseo-dark"] .score-tier-6 {
+html[data-theme="flyrocketseo-dark"] .score-tier-6 {
   color: #fda4af;
 }
 
-html[data-theme="openseo-dark"] {
+html[data-theme="flyrocketseo-dark"] {
   --trend-grid-color: oklch(78% 0.01 255 / 0.22);
   --trend-axis-color: oklch(84% 0.01 255 / 0.62);
   --trend-fill-start-opacity: 0.24;
@@ -355,18 +355,18 @@ html[data-theme="openseo-dark"] {
   --trend-tooltip-shadow: oklch(0% 0 0 / 0.35);
 }
 
-html[data-theme="openseo-dark"] .alert-warning {
+html[data-theme="flyrocketseo-dark"] .alert-warning {
   @apply border-warning/60 bg-warning/20;
 }
 
-html[data-theme="openseo-dark"] .alert-info {
+html[data-theme="flyrocketseo-dark"] .alert-info {
   @apply border-info/60 bg-info/20;
 }
 
-html[data-theme="openseo-dark"] .alert-success {
+html[data-theme="flyrocketseo-dark"] .alert-success {
   @apply border-success/60 bg-success/20;
 }
 
-html[data-theme="openseo-dark"] .alert-error {
+html[data-theme="flyrocketseo-dark"] .alert-error {
   @apply border-error/60 bg-error/20;
 }

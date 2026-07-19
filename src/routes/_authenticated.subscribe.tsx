@@ -131,8 +131,8 @@ function SubscribePage() {
     return (
       <div className="w-full max-w-xs space-y-4 text-center">
         <img
-          src="/transparent-logo.png"
-          alt="OpenSEO"
+          src="/transparent-logo.svg"
+          alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <h1 className="text-xl font-semibold">
@@ -158,8 +158,8 @@ function SubscribePage() {
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center space-y-3">
           <img
-            src="/transparent-logo.png"
-            alt="OpenSEO"
+            src="/transparent-logo.svg"
+            alt="FlyRocketSEO"
             className="mx-auto size-10 rounded-lg"
           />
           <h1 className="text-xl font-semibold">Billing unavailable</h1>
@@ -217,16 +217,16 @@ function SubscribePage() {
 
       <div className="text-center space-y-3">
         <img
-          src="/transparent-logo.png"
-          alt="OpenSEO"
+          src="/transparent-logo.svg"
+          alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <h1 className="text-xl font-semibold">
           {isUpgradeFlow
             ? "Upgrade your plan"
             : firstName
-              ? `Welcome to OpenSEO, ${firstName}!`
-              : "Welcome to OpenSEO!"}
+              ? `Welcome to FlyRocketSEO, ${firstName}!`
+              : "Welcome to FlyRocketSEO!"}
         </h1>
         <p className="text-sm text-base-content/60">
           SEO on your terms. All your SEO tools in one place at a fair price.

@@ -130,7 +130,7 @@ function createAuth() {
               if (!allowList.includes(user.email.trim().toLowerCase())) {
                 throw new APIError("FORBIDDEN", {
                   message:
-                    "This OpenSEO deployment is private — your email isn't on the allow-list.",
+                    "This FlyRocketSEO deployment is private — your email isn't on the allow-list.",
                 });
               }
               if (isDisposableEmailDomain(user.email)) {

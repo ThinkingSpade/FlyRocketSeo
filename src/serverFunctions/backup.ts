@@ -57,7 +57,7 @@ export const exportBackup = createServerFn({ method: "GET" })
     // contract rejects. Handing back a JSON string keeps the payload primitive
     // and lets the client write it straight to a Blob.
     return {
-      fileName: `openseo-backup-${exportedAt.slice(0, 10)}.json`,
+      fileName: `flyrocketseo-backup-${exportedAt.slice(0, 10)}.json`,
       json: JSON.stringify(backup, null, 2),
     };
   });

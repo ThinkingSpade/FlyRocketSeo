@@ -42,7 +42,7 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       {
-        title: "OpenSEO",
+        title: "FlyRocketSEO",
       },
       {
         charSet: "utf-8",
@@ -71,6 +71,9 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
+      // SVG favicon first — modern browsers prefer it and render the crisp
+      // FlyRocketSEO mark at any DPI; the PNG/ico entries below are fallbacks.
+      { rel: "icon", type: "image/svg+xml", sizes: "any", href: "/favicon.svg" },
       {
         rel: "apple-touch-icon",
         sizes: "180x180",

@@ -101,8 +101,8 @@ export function AuthPageCard({
     <div className="w-full max-w-xs space-y-6">
       <div className="text-center space-y-3">
         <img
-          src="/transparent-logo.png"
-          alt="OpenSEO"
+          src="/transparent-logo.svg"
+          alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <div>

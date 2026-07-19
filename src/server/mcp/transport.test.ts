@@ -225,8 +225,8 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
 
     const serverInfo = client.getServerVersion();
     expect(serverInfo).toMatchObject({
-      name: "OpenSEO MCP",
-      title: "OpenSEO",
+      name: "FlyRocketSEO MCP",
+      title: "FlyRocketSEO",
       websiteUrl: "https://openseo.so",
       icons: [
         {

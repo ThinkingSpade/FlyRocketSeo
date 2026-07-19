@@ -180,8 +180,18 @@ function MobileTopBar({
       >
         <Menu className="h-5 w-5" />
       </button>
-      <Link to="/" className="ml-1 font-semibold text-base-content">
-        OpenSEO
+      <Link
+        to="/"
+        className="ml-1 flex items-center gap-1.5 font-semibold text-base-content"
+      >
+        <img
+          src="/transparent-logo-mark.svg"
+          alt=""
+          width={20}
+          height={20}
+          className="h-5 w-5"
+        />
+        FlyRocketSEO
       </Link>
     </div>
   );

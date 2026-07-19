@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" role="img" aria-label="FlyRocketSEO">
+  <style>
+    .body { fill: #4934c7; }
+    .fin { fill: #3a2aa6; }
+    .window { fill: #ffffff; }
+    .window-ring { fill: #c7cffb; }
+    .flame-outer { fill: #f97316; }
+    .flame-inner { fill: #fbbf24; }
+    .trail { stroke: #6b5be0; }
+    .dot { fill: #c2410c; }
+    @media (prefers-color-scheme: dark) {
+      .body { fill: #a89bff; }
+      .fin { fill: #8b7cf0; }
+      .window { fill: #131c2b; }
+      .window-ring { fill: #4934c7; }
+      .trail { stroke: #a89bff; }
+      .dot { fill: #ff9a62; }
+    }
+  </style>
+
+  <!-- SEO trajectory / growth line the rocket launches from -->
+  <path class="trail" d="M15 110 C 30 107 39 98 47 87"
+        fill="none" stroke-width="5" stroke-linecap="round"/>
+  <circle class="dot" cx="15" cy="110" r="3.4"/>
+  <circle class="dot" cx="31" cy="100" r="3.9"/>
+  <circle class="dot" cx="47" cy="87" r="4.4"/>
+
+  <!-- fins -->
+  <path class="fin" d="M55 64 L43 83 L55 77 Z"/>
+  <path class="fin" d="M85 64 L97 83 L85 77 Z"/>
+
+  <!-- flame -->
+  <path class="flame-outer" d="M60 83 C62 96 66 104 70 113 C74 104 78 96 80 83 Z"/>
+  <path class="flame-inner" d="M65 83 C66 92 68 98 70 104 C72 98 74 92 75 83 Z"/>
+
+  <!-- body -->
+  <path class="body" d="M70 15 C 81 26 86 41 86 57 C 86 71 81 81 70 85 C 59 81 54 71 54 57 C 54 41 59 26 70 15 Z"/>
+
+  <!-- window -->
+  <circle class="window-ring" cx="70" cy="46" r="11"/>
+  <circle class="window" cx="70" cy="46" r="8"/>
+</svg>

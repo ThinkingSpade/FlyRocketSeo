@@ -152,7 +152,7 @@ export function SearchConsoleConnectionCard({
       ) : (
         <div className="space-y-4">
           <p className="text-sm text-base-content/70">
-            Connect your Google Search Console to get insights in OpenSEO.
+            Connect your Google Search Console to get insights in FlyRocketSEO.
           </p>
           <button
             type="button"
