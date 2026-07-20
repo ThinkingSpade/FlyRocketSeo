@@ -13,8 +13,10 @@ import {
   NotebookPen,
   Search,
   Sparkles,
+  Split,
   TrendingUp,
   Users,
+  Waypoints,
 } from "lucide-react";
 import { linkOptions } from "@tanstack/react-router";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
@@ -64,6 +66,16 @@ const projectNavItems = [
     to: "/p/$projectId/search-performance" as const,
     label: "GSC Insights",
     icon: GoogleGlyphMuted,
+  },
+  {
+    to: "/p/$projectId/links" as const,
+    label: "Link Opportunities",
+    icon: Waypoints,
+  },
+  {
+    to: "/p/$projectId/cannibalization" as const,
+    label: "Cannibalization",
+    icon: Split,
   },
   {
     to: "/p/$projectId/domain" as const,
@@ -153,6 +165,8 @@ export function getProjectNavGroups(projectId: string) {
       label: "My Site",
       items: [
         byPath("/p/$projectId/search-performance"),
+        byPath("/p/$projectId/links"),
+        byPath("/p/$projectId/cannibalization"),
         byPath("/p/$projectId/rank-tracking"),
         byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),
