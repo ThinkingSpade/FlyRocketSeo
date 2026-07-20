@@ -44,8 +44,9 @@ export function createBaseAuthConfig() {
       // Block user-initiated org creation: each org is its own Autumn customer
       // with its own onboarding-plan credit grant, so an authenticated user
       // hitting POST /api/auth/organization/create could mint unlimited fresh
-      // grants. The app gives every user exactly one workspace, created
-      // server-side at signup via `auth.api.createOrganization({ body: { userId }})`
+      // grants. The app gives every user access to one shared workspace. The
+      // first signup creates it server-side via
+      // `auth.api.createOrganization({ body: { userId }})`; later users join it.
       // — that's a "system action" (no session + userId in body) which better-auth
       // exempts from this flag, so the bootstrap keeps working.
       organization({ allowUserToCreateOrganization: false }),

@@ -1,7 +1,7 @@
 import { env } from "cloudflare:workers";
 import { getAuth, hasHostedAuthConfig } from "@/lib/auth";
 import { getActiveOrganizationId } from "@/lib/auth-session";
-import { getOrCreateDefaultHostedOrganization } from "@/server/auth/default-hosted-organization";
+import { getOrJoinSharedHostedOrganization } from "@/server/auth/default-hosted-organization";
 import { AppError } from "@/server/lib/errors";
 import type { EnsuredUserContext } from "./types";
 
@@ -55,7 +55,7 @@ export async function resolveHostedContext(
   }
 
   const authApi = getAuth().api;
-  const organizationId = await getOrCreateDefaultHostedOrganization(
+  const organizationId = await getOrJoinSharedHostedOrganization(
     session.user.id,
     (body) => authApi.createOrganization({ body }),
   );

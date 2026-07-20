@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { member, organization, user as authUser } from "@/db/schema";
 
@@ -39,6 +39,48 @@ async function findFirstOrganizationIdForUser(userId: string) {
   return existingMembership?.organizationId ?? null;
 }
 
+async function findSharedOrganizationId(): Promise<string | null> {
+  const [sharedOrganization] = await db
+    .select({ id: organization.id })
+    .from(organization)
+    .orderBy(asc(organization.createdAt))
+    .limit(1);
+
+  return sharedOrganization?.id ?? null;
+}
+
+async function ensureMembership(input: {
+  userId: string;
+  organizationId: string;
+  role?: string;
+}): Promise<void> {
+  const [existingMembership] = await db
+    .select({ id: member.id })
+    .from(member)
+    .where(
+      and(
+        eq(member.userId, input.userId),
+        eq(member.organizationId, input.organizationId),
+      ),
+    )
+    .limit(1);
+
+  if (existingMembership) {
+    return;
+  }
+
+  await db
+    .insert(member)
+    .values({
+      id: crypto.randomUUID(),
+      organizationId: input.organizationId,
+      userId: input.userId,
+      role: input.role ?? "member",
+      createdAt: new Date(),
+    })
+    .onConflictDoNothing();
+}
+
 async function getHostedUser(userId: string) {
   return db.query.user.findFirst({
     columns: {
@@ -53,5 +95,7 @@ async function getHostedUser(userId: string) {
 export const AuthRepository = {
   upsertDelegatedOrganization,
   findFirstOrganizationIdForUser,
+  findSharedOrganizationId,
+  ensureMembership,
   getHostedUser,
 } as const;

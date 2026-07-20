@@ -1,11 +1,4 @@
 import { AuthRepository } from "@/server/auth/repositories/AuthRepository";
-import { slugify, toHex } from "./org-slug";
-
-type HostedUser = {
-  id: string;
-  email: string;
-  name?: string | null;
-};
 
 type HostedOrganizationCreateInput = {
   name: string;
@@ -17,44 +10,21 @@ type HostedOrganizationCreator = (
   input: HostedOrganizationCreateInput,
 ) => Promise<{ id: string }>;
 
-function getDefaultHostedOrganizationName(user: HostedUser) {
-  const name = user.name?.trim() || user.email.split("@")[0] || "FlyRocketSEO";
-  return `${name}'s workspace`;
-}
-
-function getDefaultHostedOrganizationSlug(user: HostedUser) {
-  const slugSource =
-    user.name?.trim() || user.email.split("@")[0] || "workspace";
-  const suffix = toHex(user.id).slice(0, 12);
-  return `${slugify(slugSource)}-${suffix}`;
-}
-
-async function getHostedUser(userId: string) {
-  const hostedUser = await AuthRepository.getHostedUser(userId);
-
-  if (!hostedUser?.email) {
-    throw new Error("Failed to resolve hosted user for session setup");
-  }
-
-  return hostedUser;
-}
-
-async function createDefaultHostedOrganization(
-  user: HostedUser,
+async function createSharedHostedOrganization(
+  userId: string,
   createOrganization: HostedOrganizationCreator,
 ) {
   try {
     const createdOrganization = await createOrganization({
-      name: getDefaultHostedOrganizationName(user),
-      slug: getDefaultHostedOrganizationSlug(user),
-      userId: user.id,
+      name: "Team workspace",
+      slug: "team-workspace",
+      userId,
     });
 
     return createdOrganization.id;
   } catch (error) {
-    const organizationId = await AuthRepository.findFirstOrganizationIdForUser(
-      user.id,
-    );
+    const organizationId =
+      await AuthRepository.findFirstOrganizationIdForUser(userId);
 
     if (organizationId) {
       return organizationId;
@@ -64,17 +34,19 @@ async function createDefaultHostedOrganization(
   }
 }
 
-export async function getOrCreateDefaultHostedOrganization(
+export async function getOrJoinSharedHostedOrganization(
   userId: string,
   createOrganization: HostedOrganizationCreator,
 ) {
-  const existingOrganizationId =
-    await AuthRepository.findFirstOrganizationIdForUser(userId);
+  const sharedOrganizationId = await AuthRepository.findSharedOrganizationId();
 
-  if (existingOrganizationId) {
-    return existingOrganizationId;
+  if (sharedOrganizationId) {
+    await AuthRepository.ensureMembership({
+      userId,
+      organizationId: sharedOrganizationId,
+    });
+    return sharedOrganizationId;
   }
 
-  const hostedUser = await getHostedUser(userId);
-  return createDefaultHostedOrganization(hostedUser, createOrganization);
+  return createSharedHostedOrganization(userId, createOrganization);
 }

@@ -17,7 +17,7 @@ import {
   getHostedTurnstileSecretKey,
   hasHostedTurnstileConfig,
 } from "@/lib/auth-turnstile";
-import { getOrCreateDefaultHostedOrganization } from "@/server/auth/default-hosted-organization";
+import { getOrJoinSharedHostedOrganization } from "@/server/auth/default-hosted-organization";
 import {
   sendHostedPasswordResetEmail,
   sendHostedVerificationEmail,
@@ -135,7 +135,8 @@ function createAuth() {
               }
               if (isDisposableEmailDomain(user.email)) {
                 throw new APIError("BAD_REQUEST", {
-                  message: "Please sign up with a non-disposable email address.",
+                  message:
+                    "Please sign up with a non-disposable email address.",
                 });
               }
             }
@@ -151,7 +152,7 @@ function createAuth() {
           before: async (session) => {
             // Inject Better Auth's createOrganization here so the helper can
             // stay reusable without importing auth.ts and creating a cycle.
-            const organizationId = await getOrCreateDefaultHostedOrganization(
+            const organizationId = await getOrJoinSharedHostedOrganization(
               session.userId,
               (body) => auth.api.createOrganization({ body }),
             );
