@@ -3,6 +3,7 @@ import {
   Bookmark,
   Bot,
   ClipboardCheck,
+  FileSearch,
   Globe,
   LayoutDashboard,
   Link2,
@@ -43,6 +44,11 @@ const projectNavItems = [
     to: "/p/$projectId/content" as const,
     label: "Content Optimizer",
     icon: NotebookPen,
+  },
+  {
+    to: "/p/$projectId/page" as const,
+    label: "Page Explorer",
+    icon: FileSearch,
   },
   {
     to: "/p/$projectId/saved" as const,
@@ -134,6 +140,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/trends"),
         byPath("/p/$projectId/serp"),
         byPath("/p/$projectId/content"),
+        byPath("/p/$projectId/page"),
         byPath("/p/$projectId/domain"),
         byPath("/p/$projectId/competitors"),
         byPath("/p/$projectId/backlinks"),
