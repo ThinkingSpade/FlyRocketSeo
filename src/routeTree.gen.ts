@@ -39,6 +39,7 @@ import { Route as ProjectPProjectIdIndexRouteImport } from './routes/_project/p/
 import { Route as ApiGscOauthCallbackRouteImport } from './routes/api/gsc/oauth/callback'
 import { Route as ProjectPProjectIdTrendsRouteImport } from './routes/_project/p/$projectId/trends'
 import { Route as ProjectPProjectIdSettingsRouteImport } from './routes/_project/p/$projectId/settings'
+import { Route as ProjectPProjectIdSerpRouteImport } from './routes/_project/p/$projectId/serp'
 import { Route as ProjectPProjectIdSearchPerformanceRouteImport } from './routes/_project/p/$projectId/search-performance'
 import { Route as ProjectPProjectIdSavedRouteImport } from './routes/_project/p/$projectId/saved'
 import { Route as ProjectPProjectIdSamRouteImport } from './routes/_project/p/$projectId/sam'
@@ -207,6 +208,11 @@ const ProjectPProjectIdSettingsRoute =
     path: '/settings',
     getParentRoute: () => ProjectPProjectIdRouteRoute,
   } as any)
+const ProjectPProjectIdSerpRoute = ProjectPProjectIdSerpRouteImport.update({
+  id: '/serp',
+  path: '/serp',
+  getParentRoute: () => ProjectPProjectIdRouteRoute,
+} as any)
 const ProjectPProjectIdSearchPerformanceRoute =
   ProjectPProjectIdSearchPerformanceRouteImport.update({
     id: '/search-performance',
@@ -334,6 +340,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/sam': typeof ProjectPProjectIdSamRoute
   '/p/$projectId/saved': typeof ProjectPProjectIdSavedRoute
   '/p/$projectId/search-performance': typeof ProjectPProjectIdSearchPerformanceRoute
+  '/p/$projectId/serp': typeof ProjectPProjectIdSerpRoute
   '/p/$projectId/settings': typeof ProjectPProjectIdSettingsRoute
   '/p/$projectId/trends': typeof ProjectPProjectIdTrendsRoute
   '/api/gsc/oauth/callback': typeof ApiGscOauthCallbackRoute
@@ -375,6 +382,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/sam': typeof ProjectPProjectIdSamRoute
   '/p/$projectId/saved': typeof ProjectPProjectIdSavedRoute
   '/p/$projectId/search-performance': typeof ProjectPProjectIdSearchPerformanceRoute
+  '/p/$projectId/serp': typeof ProjectPProjectIdSerpRoute
   '/p/$projectId/settings': typeof ProjectPProjectIdSettingsRoute
   '/p/$projectId/trends': typeof ProjectPProjectIdTrendsRoute
   '/api/gsc/oauth/callback': typeof ApiGscOauthCallbackRoute
@@ -424,6 +432,7 @@ export interface FileRoutesById {
   '/_project/p/$projectId/sam': typeof ProjectPProjectIdSamRoute
   '/_project/p/$projectId/saved': typeof ProjectPProjectIdSavedRoute
   '/_project/p/$projectId/search-performance': typeof ProjectPProjectIdSearchPerformanceRoute
+  '/_project/p/$projectId/serp': typeof ProjectPProjectIdSerpRoute
   '/_project/p/$projectId/settings': typeof ProjectPProjectIdSettingsRoute
   '/_project/p/$projectId/trends': typeof ProjectPProjectIdTrendsRoute
   '/api/gsc/oauth/callback': typeof ApiGscOauthCallbackRoute
@@ -470,6 +479,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/sam'
     | '/p/$projectId/saved'
     | '/p/$projectId/search-performance'
+    | '/p/$projectId/serp'
     | '/p/$projectId/settings'
     | '/p/$projectId/trends'
     | '/api/gsc/oauth/callback'
@@ -511,6 +521,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/sam'
     | '/p/$projectId/saved'
     | '/p/$projectId/search-performance'
+    | '/p/$projectId/serp'
     | '/p/$projectId/settings'
     | '/p/$projectId/trends'
     | '/api/gsc/oauth/callback'
@@ -559,6 +570,7 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/sam'
     | '/_project/p/$projectId/saved'
     | '/_project/p/$projectId/search-performance'
+    | '/_project/p/$projectId/serp'
     | '/_project/p/$projectId/settings'
     | '/_project/p/$projectId/trends'
     | '/api/gsc/oauth/callback'
@@ -795,6 +807,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPProjectIdSettingsRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
+    '/_project/p/$projectId/serp': {
+      id: '/_project/p/$projectId/serp'
+      path: '/serp'
+      fullPath: '/p/$projectId/serp'
+      preLoaderRoute: typeof ProjectPProjectIdSerpRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
     '/_project/p/$projectId/search-performance': {
       id: '/_project/p/$projectId/search-performance'
       path: '/search-performance'
@@ -986,6 +1005,7 @@ interface ProjectPProjectIdRouteRouteChildren {
   ProjectPProjectIdSamRoute: typeof ProjectPProjectIdSamRoute
   ProjectPProjectIdSavedRoute: typeof ProjectPProjectIdSavedRoute
   ProjectPProjectIdSearchPerformanceRoute: typeof ProjectPProjectIdSearchPerformanceRoute
+  ProjectPProjectIdSerpRoute: typeof ProjectPProjectIdSerpRoute
   ProjectPProjectIdSettingsRoute: typeof ProjectPProjectIdSettingsRoute
   ProjectPProjectIdTrendsRoute: typeof ProjectPProjectIdTrendsRoute
   ProjectPProjectIdIndexRoute: typeof ProjectPProjectIdIndexRoute
@@ -1007,6 +1027,7 @@ const ProjectPProjectIdRouteRouteChildren: ProjectPProjectIdRouteRouteChildren =
     ProjectPProjectIdSavedRoute: ProjectPProjectIdSavedRoute,
     ProjectPProjectIdSearchPerformanceRoute:
       ProjectPProjectIdSearchPerformanceRoute,
+    ProjectPProjectIdSerpRoute: ProjectPProjectIdSerpRoute,
     ProjectPProjectIdSettingsRoute: ProjectPProjectIdSettingsRoute,
     ProjectPProjectIdTrendsRoute: ProjectPProjectIdTrendsRoute,
     ProjectPProjectIdIndexRoute: ProjectPProjectIdIndexRoute,

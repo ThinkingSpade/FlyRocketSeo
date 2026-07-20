@@ -6,6 +6,7 @@ import {
   Globe,
   LayoutDashboard,
   Link2,
+  ListOrdered,
   MapPin,
   MessageSquare,
   Search,
@@ -31,6 +32,11 @@ const projectNavItems = [
     to: "/p/$projectId/trends" as const,
     label: "Keyword Trends",
     icon: Activity,
+  },
+  {
+    to: "/p/$projectId/serp" as const,
+    label: "SERP Overview",
+    icon: ListOrdered,
   },
   {
     to: "/p/$projectId/saved" as const,
@@ -120,6 +126,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId"),
         byPath("/p/$projectId/keywords"),
         byPath("/p/$projectId/trends"),
+        byPath("/p/$projectId/serp"),
         byPath("/p/$projectId/domain"),
         byPath("/p/$projectId/competitors"),
         byPath("/p/$projectId/backlinks"),
