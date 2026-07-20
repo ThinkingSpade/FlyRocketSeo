@@ -1,8 +1,32 @@
 import type { InstantPageAuditItem } from "@/server/lib/dataforseo/onpage";
 import type { StepPageResult } from "@/server/lib/audit/types";
+import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
 
 // Pure mapping (no I/O), split out so it's unit-testable without pulling the
 // DataForSEO client + its `cloudflare:workers` env dependency into the test env.
+
+/**
+ * Pick usable audit seed URLs out of DataForSEO Labs relevant_pages items
+ * (`page_address` = the page's absolute URL). Keeps only same-origin, parseable
+ * URLs, deduped after normalization — Labs data is external, so treat every
+ * field as untrusted.
+ */
+export function selectLabsSeedUrls(
+  origin: string,
+  pageAddresses: Array<string | null | undefined>,
+  limit: number,
+): string[] {
+  const seeds = new Set<string>();
+  for (const address of pageAddresses) {
+    if (seeds.size >= limit) break;
+    if (typeof address !== "string") continue;
+    const normalized = normalizeUrl(address);
+    if (!normalized) continue;
+    if (!isSameOrigin(normalized, origin)) continue;
+    seeds.add(normalized);
+  }
+  return Array.from(seeds);
+}
 
 /**
  * Map a DataForSEO instant_pages result to the audit's StepPageResult.

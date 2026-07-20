@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import type { InstantPageAuditItem } from "@/server/lib/dataforseo/onpage";
-import { instantPageToStepPageResult } from "@/server/workflows/siteAuditFallbackMapping";
+import {
+  instantPageToStepPageResult,
+  selectLabsSeedUrls,
+} from "@/server/workflows/siteAuditFallbackMapping";
 
 describe("instantPageToStepPageResult", () => {
   it("maps DataForSEO instant_pages fields into the audit page result", () => {
@@ -58,5 +61,41 @@ describe("instantPageToStepPageResult", () => {
     } as InstantPageAuditItem);
     expect(result.statusCode).toBe(404);
     expect(result.isIndexable).toBe(false);
+  });
+});
+
+describe("selectLabsSeedUrls", () => {
+  const origin = "https://example.com/";
+
+  it("keeps same-origin URLs, dropping other hosts and junk values", () => {
+    expect(
+      selectLabsSeedUrls(
+        origin,
+        [
+          "https://example.com/pricing",
+          "https://other.example.net/stolen",
+          null,
+          undefined,
+          "not a url",
+          "https://example.com/blog/post",
+        ],
+        10,
+      ),
+    ).toEqual(["https://example.com/pricing", "https://example.com/blog/post"]);
+  });
+
+  it("dedupes after normalization and respects the limit", () => {
+    const selected = selectLabsSeedUrls(
+      origin,
+      [
+        "https://example.com/a",
+        "https://example.com/a",
+        "https://example.com/b",
+        "https://example.com/c",
+      ],
+      2,
+    );
+    expect(selected).toHaveLength(2);
+    expect(selected[0]).toContain("/a");
   });
 });
