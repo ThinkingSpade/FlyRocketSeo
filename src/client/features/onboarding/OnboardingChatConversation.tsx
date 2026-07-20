@@ -113,7 +113,7 @@ export function OnboardingChatConversation({
       // After payment, re-enter onboarding at the GSC step (not back into this
       // chat) so the user finishes connecting Search Console + MCP.
       const successUrl = new URL("/onboarding", window.location.origin);
-      successUrl.searchParams.set("step", "3");
+      successUrl.searchParams.set("step", "0");
       successUrl.searchParams.set("checkout", "success");
       await customerQuery.attach({
         planId: AUTUMN_PAID_PLAN_ID,

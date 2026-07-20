@@ -17,13 +17,7 @@ import { pgStep } from "@/server/workflows/pgStep";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { AppError } from "@/server/lib/errors";
-import { autumn } from "@/server/billing/autumn";
-import {
-  AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
-  AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
-} from "@/shared/billing";
-import { estimateRankCheckCredits } from "@/shared/rank-tracking";
-import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { assertRankCheckCreditsAvailable } from "@/server/workflows/rankCheckBilling";
 
 const SINGLE_ATTEMPT_STEP_CONFIG = {
   retries: { limit: 0, delay: "1 second" as const },
@@ -82,33 +76,13 @@ async function prepareRankCheckKeywords(input: {
   // Verify the user has enough credits for the full check before starting.
   // Scheduled checks go through the cheaper task queue, so estimate at queued
   // pricing — a live-price estimate would skip checks the user can afford.
-  if (await isHostedServerAuthMode()) {
-    const { costCredits } = estimateRankCheckCredits(
-      trackingKeywords.length,
-      input.devices,
-      input.serpDepth,
-      input.trigger === "scheduled" ? "queued" : "live",
-    );
-    const [monthlyCheck, topupCheck] = await Promise.all([
-      autumn.check({
-        customerId: input.billingCustomer.organizationId,
-        featureId: AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
-      }),
-      autumn.check({
-        customerId: input.billingCustomer.organizationId,
-        featureId: AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
-      }),
-    ]);
-    const available =
-      (monthlyCheck.balance?.remaining ?? 0) +
-      (topupCheck.balance?.remaining ?? 0);
-    if (available < costCredits) {
-      throw new AppError(
-        "INSUFFICIENT_CREDITS",
-        "Insufficient credits for rank check",
-      );
-    }
-  }
+  await assertRankCheckCreditsAvailable({
+    customerId: input.billingCustomer.organizationId,
+    keywordCount: trackingKeywords.length,
+    devices: input.devices,
+    serpDepth: input.serpDepth,
+    trigger: input.trigger,
+  });
 
   await RankTrackingRepository.updateRun(input.runId, {
     keywordsTotal: trackingKeywords.length,

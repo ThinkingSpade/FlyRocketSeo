@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isBillingEnabled } from "@/server/billing/config";
 import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import { captureServerError } from "@/server/lib/posthog";
 import { syncAutumnCustomerStatus } from "./customer-status-sync";
@@ -16,6 +17,10 @@ const autumnWebhookPayloadSchema = z
 type AutumnWebhookPayload = z.infer<typeof autumnWebhookPayloadSchema>;
 
 export async function handleAutumnWebhookRequest(request: Request) {
+  if (!(await isBillingEnabled())) {
+    return new Response("Not found", { status: 404 });
+  }
+
   if (request.method !== "POST") {
     return new Response("Method not allowed", {
       headers: { Allow: "POST" },

@@ -14,13 +14,19 @@ interface TrackCallArg {
   properties?: { balanceFeatureId: string };
 }
 
-const { checkMock, trackMock, getOrCreateMock, isHostedServerAuthModeMock } =
-  vi.hoisted(() => ({
-    checkMock: vi.fn(),
-    trackMock: vi.fn<(arg: TrackCallArg) => void>(),
-    getOrCreateMock: vi.fn(),
-    isHostedServerAuthModeMock: vi.fn(),
-  }));
+const {
+  checkMock,
+  trackMock,
+  getOrCreateMock,
+  isBillingEnabledMock,
+  isHostedServerAuthModeMock,
+} = vi.hoisted(() => ({
+  checkMock: vi.fn(),
+  trackMock: vi.fn<(arg: TrackCallArg) => void>(),
+  getOrCreateMock: vi.fn(),
+  isBillingEnabledMock: vi.fn(),
+  isHostedServerAuthModeMock: vi.fn(),
+}));
 
 vi.mock("cloudflare:workers", () => ({
   waitUntil: vi.fn(),
@@ -32,6 +38,10 @@ vi.mock("@/server/billing/autumn", () => ({
     track: trackMock,
   },
   AUTUMN_TRACK_RETRY_OPTIONS: {},
+}));
+
+vi.mock("@/server/billing/config", () => ({
+  isBillingEnabled: isBillingEnabledMock,
 }));
 
 // Keep the real subscription module (its assertUsageCreditsAvailable calls the
@@ -151,6 +161,7 @@ const backlinksInput = {
 
 function setupHostedMode() {
   isHostedServerAuthModeMock.mockResolvedValue(true);
+  isBillingEnabledMock.mockResolvedValue(true);
   getOrCreateMock.mockResolvedValue({ id: "org_123" });
 }
 
@@ -180,6 +191,19 @@ describe("meterDataforseoCall with split balances", () => {
 
   it("skips billing in non-hosted mode", async () => {
     isHostedServerAuthModeMock.mockResolvedValue(false);
+    mockDataforseoResult(0.05);
+
+    const client = createDataforseoClient(billingCustomer);
+    const result = await client.backlinks.summary(backlinksInput);
+
+    expect(result).toEqual({ rank: 42 });
+    expect(checkMock).not.toHaveBeenCalled();
+    expect(trackMock).not.toHaveBeenCalled();
+  });
+
+  it("runs hosted provider calls without Autumn when billing is disabled", async () => {
+    setupHostedMode();
+    isBillingEnabledMock.mockResolvedValue(false);
     mockDataforseoResult(0.05);
 
     const client = createDataforseoClient(billingCustomer);

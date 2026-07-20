@@ -4,11 +4,9 @@ import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
 } from "@/shared/billing";
+import { isBillingEnabled } from "@/server/billing/config";
 import { AppError } from "@/server/lib/errors";
-import {
-  getRequiredEnvValue,
-  isHostedServerAuthMode,
-} from "@/server/lib/runtime-env";
+import { getRequiredEnvValue } from "@/server/lib/runtime-env";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 
 const AUTUMN_EVENTS_LIST_URL = "https://api.useautumn.com/v1/events.list";
@@ -57,9 +55,7 @@ export const getBillingUsageEvents = createServerFn({ method: "POST" })
   .middleware(requireAuthenticatedContext)
   .validator(billingUsageRangeSchema)
   .handler(async ({ data, context }) => {
-    if (!(await isHostedServerAuthMode())) {
-      return [];
-    }
+    if (!(await isBillingEnabled())) return [];
 
     const events: BillingUsageEvent[] = [];
     let offset = 0;

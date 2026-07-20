@@ -7,7 +7,7 @@ export const Route = createFileRoute("/_authenticated/onboarding/chat")({
   // has no business here — send it back to the onboarding wizard.
   beforeLoad: () => {
     if (!isHostedClientAuthMode()) {
-      throw redirect({ to: "/onboarding", search: { step: 3 }, replace: true });
+      throw redirect({ to: "/onboarding", search: { step: 0 }, replace: true });
     }
   },
   component: OnboardingChat,

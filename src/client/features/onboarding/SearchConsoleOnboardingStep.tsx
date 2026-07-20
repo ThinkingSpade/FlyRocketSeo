@@ -25,6 +25,7 @@ export function SearchConsoleOnboardingStep() {
   const projectsQuery = useQuery({
     queryKey: ["projects"],
     queryFn: () => getProjects(),
+    retry: false,
   });
   const projectId = projectsQuery.data?.[0]?.id;
 
@@ -34,7 +35,16 @@ export function SearchConsoleOnboardingStep() {
         Connect with Google Search Console now?
       </h2>
 
-      {projectId ? <GscConnect projectId={projectId} /> : <Checking />}
+      {projectsQuery.isError ? (
+        <QueryError
+          message="Couldn't load your projects — please try again."
+          onRetry={() => void projectsQuery.refetch()}
+        />
+      ) : projectId ? (
+        <GscConnect projectId={projectId} />
+      ) : (
+        <Checking />
+      )}
 
       <p className="text-xs leading-relaxed text-base-content/55">
         For now, Search Console data flows through the FlyRocketSEO MCP. We're
@@ -53,6 +63,7 @@ function GscConnect({ projectId }: { projectId: string }) {
   const connectionQuery = useQuery({
     queryKey: connectionKey,
     queryFn: () => getGscConnection({ data: { projectId } }),
+    retry: false,
   });
   const connection = connectionQuery.data;
   const connected = Boolean(connection?.connected);
@@ -64,8 +75,12 @@ function GscConnect({ projectId }: { projectId: string }) {
     queryKey: ["gscSites", projectId],
     queryFn: () => listGscSites({ data: { projectId } }),
     enabled: hasGrant && !connected && !needsSetup,
+    retry: false,
   });
-  const requiresReconnect = Boolean(sitesQuery.data?.requiresReconnect);
+  const sitesErrorReason =
+    sitesQuery.data?.errorReason ??
+    (sitesQuery.isError ? ("temporary" as const) : null);
+  const requiresReconnect = sitesErrorReason === "requires_reconnect";
 
   React.useEffect(() => {
     if (!requiresReconnect) return;
@@ -92,6 +107,15 @@ function GscConnect({ projectId }: { projectId: string }) {
 
   if (connectionQuery.isLoading) return <Checking />;
 
+  if (connectionQuery.isError) {
+    return (
+      <QueryError
+        message="Couldn't check your Search Console connection — please try again."
+        onRetry={() => void connectionQuery.refetch()}
+      />
+    );
+  }
+
   if (needsSetup) {
     return <SelfHostedSetupWarning />;
   }
@@ -113,7 +137,7 @@ function GscConnect({ projectId }: { projectId: string }) {
     return (
       <SitePicker
         loading={sitesQuery.isLoading}
-        error={sitesQuery.isError || requiresReconnect}
+        errorReason={sitesErrorReason}
         sites={sitesQuery.data?.sites ?? []}
         selectedSiteUrl={selectedSiteUrl}
         onSelect={setSelectedSiteUrl}
@@ -122,6 +146,7 @@ function GscConnect({ projectId }: { projectId: string }) {
         }
         saving={setSiteMutation.isPending}
         onReconnect={handleConnect}
+        onRetry={() => void sitesQuery.refetch()}
       />
     );
   }
@@ -143,6 +168,27 @@ function Checking() {
     <div className="flex items-center gap-2 text-sm text-base-content/50">
       <span className="loading loading-spinner loading-sm" />
       Checking…
+    </div>
+  );
+}
+
+function QueryError({
+  message,
+  onRetry,
+}: {
+  message: string;
+  onRetry: () => void;
+}) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-error">{message}</p>
+      <button
+        type="button"
+        className="btn btn-outline btn-sm"
+        onClick={onRetry}
+      >
+        Retry
+      </button>
     </div>
   );
 }

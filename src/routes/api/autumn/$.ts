@@ -1,8 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { autumnHandler } from "autumn-js/fetch";
-import { env } from "cloudflare:workers";
-import { isHostedAuthMode } from "@/lib/auth-mode";
 import { resolveHostedContext } from "@/middleware/ensure-user/hosted";
+import { isBillingEnabled } from "@/server/billing/config";
 
 const handler = autumnHandler({
   identify: async (request) => {
@@ -14,8 +13,8 @@ const handler = autumnHandler({
   },
 });
 
-function handleAutumnRequest(request: Request) {
-  if (!isHostedAuthMode(env.AUTH_MODE)) {
+async function handleAutumnRequest(request: Request) {
+  if (!(await isBillingEnabled())) {
     return new Response("Not found", {
       status: 404,
     });

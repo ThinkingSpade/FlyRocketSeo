@@ -42,8 +42,12 @@ export function SearchConsoleConnectionCard({
     queryKey: ["gscSites", projectId],
     queryFn: () => listGscSites({ data: { projectId } }),
     enabled: Boolean(showPicker && !selfHostedNeedsSetup),
+    retry: false,
   });
-  const requiresReconnect = Boolean(sitesQuery.data?.requiresReconnect);
+  const sitesErrorReason =
+    sitesQuery.data?.errorReason ??
+    (sitesQuery.isError ? ("temporary" as const) : null);
+  const requiresReconnect = sitesErrorReason === "requires_reconnect";
 
   React.useEffect(() => {
     if (!requiresReconnect) return;
@@ -129,7 +133,7 @@ export function SearchConsoleConnectionCard({
       ) : showPicker ? (
         <SitePicker
           loading={sitesQuery.isLoading}
-          error={sitesQuery.isError || requiresReconnect}
+          errorReason={sitesErrorReason}
           sites={sitesQuery.data?.sites ?? []}
           selectedSiteUrl={selectedSiteUrl}
           onSelect={setSelectedSiteUrl}
@@ -138,6 +142,7 @@ export function SearchConsoleConnectionCard({
           }
           saving={setSiteMutation.isPending}
           onReconnect={handleConnect}
+          onRetry={() => void sitesQuery.refetch()}
           secondaryAction={
             connected
               ? { label: "Cancel", onClick: () => setPicking(false) }

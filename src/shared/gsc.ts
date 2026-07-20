@@ -3,6 +3,11 @@
  *  button) can reference it without importing the server-only auth config. */
 export const GSC_OAUTH_PROVIDER_ID = "google-search-console";
 
+export type GscSitesErrorReason =
+  | "requires_reconnect"
+  | "api_not_configured"
+  | "temporary";
+
 export const GSC_OAUTH_SCOPES = [
   "openid",
   "email",

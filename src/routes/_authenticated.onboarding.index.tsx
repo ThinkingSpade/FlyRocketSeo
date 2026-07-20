@@ -4,18 +4,14 @@ import { useState } from "react";
 import { OnboardingAccountMenu } from "@/client/features/onboarding/OnboardingAccountMenu";
 import { PostSignupOnboarding } from "@/client/features/onboarding/PostSignupOnboarding";
 import {
-  buildOnboardingPayload,
   ONBOARDING_LAST_STEP,
   type OnboardingAnswers,
   onboardingAnswersQueryOptions,
-  restoreOnboardingAnswers,
 } from "@/client/features/onboarding/onboardingModel";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { queryClient } from "@/client/tanstack-db";
 import { useSession } from "@/lib/auth-client";
 import { saveOnboardingAnswers } from "@/serverFunctions/onboarding";
-
-const ONBOARDING_EXISTING_USER_CUTOFF = "2026-05-27T00:00:00.000Z";
 
 const clampStep = (step: number) =>
   Math.min(Math.max(0, Math.trunc(step)), ONBOARDING_LAST_STEP);
@@ -48,46 +44,25 @@ function OnboardingPage() {
     return null;
   }
 
-  const userCreatedAt = onboardingQuery.data.userCreatedAt
-    ? Date.parse(onboardingQuery.data.userCreatedAt)
-    : Date.now();
-  const isExistingUser =
-    userCreatedAt < Date.parse(ONBOARDING_EXISTING_USER_CUTOFF);
   const firstName = session?.user?.name?.split(" ")[0] || "";
 
-  return (
-    <OnboardingFlow
-      firstName={firstName}
-      isExistingUser={isExistingUser}
-      initialAnswers={restoreOnboardingAnswers(onboardingQuery.data.answers)}
-      email={session?.user?.email}
-    />
-  );
+  return <OnboardingFlow firstName={firstName} email={session?.user?.email} />;
 }
 
 function OnboardingFlow({
   firstName,
-  isExistingUser,
-  initialAnswers,
   email,
 }: {
   firstName: string;
-  isExistingUser: boolean;
-  initialAnswers: OnboardingAnswers;
   email: string | undefined;
 }) {
   const navigate = useNavigate();
   const { step } = Route.useSearch();
-  const [answers, setAnswers] = useState<OnboardingAnswers>(initialAnswers);
+  const [finishError, setFinishError] = useState<string | null>(null);
 
   const saveMutation = useMutation({
-    mutationFn: (extra: {
-      mcpSetupIntent?: "yes" | "no";
-      completed?: boolean;
-    }) =>
-      saveOnboardingAnswers({
-        data: buildOnboardingPayload(answers, step, extra),
-      }),
+    mutationFn: (answers: OnboardingAnswers) =>
+      saveOnboardingAnswers({ data: answers }),
     onError: (error) => {
       console.error("Failed to save onboarding answers", error);
     },
@@ -97,35 +72,35 @@ function OnboardingFlow({
     void navigate({ to: "/onboarding", search: { step: clampStep(next) } });
 
   const handleNext = () => {
-    if (step === 0) {
-      captureClientEvent("onboarding:interests_selected", {
-        interests: answers.selectedInterests,
-        interest_other: answers.interestOther.trim() || undefined,
-      });
-    }
-    saveMutation.mutate({});
     goToStep(step + 1);
   };
 
   const handleSkip = () => {
-    saveMutation.mutate({});
-    captureClientEvent("onboarding:step_skipped", { step });
     goToStep(step + 1);
   };
 
   const handleFinish = async (mcpSetupIntent: "yes" | "no") => {
+    setFinishError(null);
+    const completedAt = new Date().toISOString();
+
     try {
       await saveMutation.mutateAsync({ mcpSetupIntent, completed: true });
-      // Refresh the shared cache so the destination's onboarding-redirect guard
-      // sees the completed state and doesn't bounce the user back here.
-      await queryClient.invalidateQueries({ queryKey: ["onboardingAnswers"] });
     } catch {
-      // Already logged by the mutation's onError; still navigate the user on.
+      setFinishError("We couldn't save your setup. Please try again.");
+      return;
     }
+
+    queryClient.setQueryData(onboardingAnswersQueryOptions().queryKey, (old) =>
+      old
+        ? {
+            ...old,
+            completedAt,
+            gscNudgeDismissedAt: completedAt,
+            answers: { ...old.answers, mcpSetupIntent },
+          }
+        : old,
+    );
     captureClientEvent("onboarding:completed", {
-      interests: answers.selectedInterests,
-      work_for: answers.workFor,
-      source: answers.source,
       wants_mcp_setup: mcpSetupIntent === "yes",
     });
     if (mcpSetupIntent === "yes") {
@@ -138,20 +113,13 @@ function OnboardingFlow({
   return (
     <PostSignupOnboarding
       firstName={firstName}
-      title={isExistingUser ? "Tell us about your work" : undefined}
-      helperText={
-        isExistingUser
-          ? "A little context helps us decide where to focus. You can also reach me anytime at ben@openseo.so."
-          : undefined
-      }
       step={step}
-      answers={answers}
-      onAnswersChange={setAnswers}
       onNext={handleNext}
       onBack={() => goToStep(step - 1)}
       onSkip={handleSkip}
       onFinish={handleFinish}
       isSaving={saveMutation.isPending}
+      finishError={finishError}
       accountMenu={<OnboardingAccountMenu email={email} />}
     />
   );

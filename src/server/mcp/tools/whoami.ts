@@ -6,6 +6,7 @@ import {
 import { mcpResponse } from "@/server/mcp/formatters";
 import { getAuth, type ToolExtra } from "@/server/mcp/context";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { isBillingEnabled } from "@/server/billing/config";
 import { optionalMetaOutputSchema } from "@/server/mcp/output-schemas";
 import { z } from "zod";
 
@@ -23,7 +24,7 @@ export const whoamiTool = {
   config: {
     title: "Who am I",
     description:
-      "Returns the authenticated user, organization, server mode, token scopes, and current credit balance. Uses no credits — does not call DataForSEO. Use this first to confirm connection context before choosing a project or running paid tools.",
+      "Returns the authenticated user, organization, server mode, token scopes, and current credit status. Uses no credits — does not call DataForSEO. Use this first to confirm connection context before choosing a project or running paid tools.",
     inputSchema: {} as Record<string, never>,
     outputSchema: {
       userId: z.string(),
@@ -32,6 +33,7 @@ export const whoamiTool = {
       scopes: z.array(z.string()),
       mode: z.enum(["hosted", "self-hosted"]),
       creditsRemaining: z.number().nullable(),
+      creditsUnmetered: z.boolean(),
       ...optionalMetaOutputSchema,
     },
     annotations: {
@@ -43,8 +45,9 @@ export const whoamiTool = {
   handler: async (_args: Record<string, never>, extra: ToolExtra) => {
     const auth = getAuth(extra);
     const isHosted = await isHostedServerAuthMode();
+    const billingEnabled = await isBillingEnabled();
     let creditsRemaining: number | null = null;
-    if (isHosted) {
+    if (billingEnabled) {
       const [base, topup] = await Promise.all([
         checkBalance(AUTUMN_SEO_DATA_BALANCE_FEATURE_ID, auth.organizationId),
         checkBalance(
@@ -60,10 +63,12 @@ export const whoamiTool = {
       `Mode: ${isHosted ? "hosted" : "self-hosted"}`,
       `Scopes: ${auth.scopes.length > 0 ? auth.scopes.join(", ") : "none"}`,
     ];
-    if (isHosted) {
+    if (billingEnabled) {
       lines.push(
         `Credits remaining: ${creditsRemaining != null ? creditsRemaining.toLocaleString() : "unknown"}`,
       );
+    } else {
+      lines.push("Credits remaining: unlimited (billing disabled)");
     }
     return mcpResponse({
       text: lines.join("\n"),
@@ -78,6 +83,7 @@ export const whoamiTool = {
         scopes: auth.scopes,
         mode: isHosted ? "hosted" : "self-hosted",
         creditsRemaining,
+        creditsUnmetered: !billingEnabled,
       },
     });
   },

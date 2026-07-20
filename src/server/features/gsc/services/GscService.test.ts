@@ -1,10 +1,11 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => {
   class GscApiError extends Error {
     constructor(
       public readonly status: number,
       message: string,
+      public readonly body?: string,
     ) {
       super(message);
       this.name = "GscApiError";
@@ -107,6 +108,11 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
   beforeEach(() => {
     mocks.listSites.mockReset();
     mocks.dbDelete.mockClear();
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("returns available sites when the grant is healthy", async () => {
@@ -119,31 +125,109 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
       GscService.listSitesForUserWithGrantStatus("u1"),
     ).resolves.toEqual({
       sites: [{ siteUrl: "https://x/", permissionLevel: "siteOwner" }],
+      errorReason: null,
       requiresReconnect: false,
     });
     expect(mocks.dbDelete).not.toHaveBeenCalled();
   });
 
   it("unlinks the dead grant and asks for reconnect when no token can be minted", async () => {
-    mocks.listSites.mockRejectedValue(new mocks.GscTokenError());
-    const { GscService } = await import("./GscService");
-
-    await expect(
-      GscService.listSitesForUserWithGrantStatus("u1"),
-    ).resolves.toEqual({ sites: [], requiresReconnect: true });
-    expect(mocks.dbDelete).toHaveBeenCalled();
-  });
-
-  it("asks for reconnect without unlinking on a 403 (revoked vs. quota is ambiguous)", async () => {
     mocks.listSites.mockRejectedValue(
-      new mocks.GscApiError(403, "Search Console denied access"),
+      new mocks.GscTokenError("secret-access-token"),
     );
     const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
-    ).resolves.toEqual({ sites: [], requiresReconnect: true });
+    ).resolves.toEqual({
+      sites: [],
+      errorReason: "requires_reconnect",
+      requiresReconnect: true,
+    });
+    expect(mocks.dbDelete).toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith(
+      "[GSC] Unlinking stored grant after token failure",
+      { reason: "requires_reconnect", status: null },
+    );
+    expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain(
+      "secret-access-token",
+    );
+  });
+
+  it.each([
+    '{"error":{"errors":[{"reason":"accessNotConfigured"}]}}',
+    '{"error":{"status":"SERVICE_DISABLED"}}',
+    "Search Console API has not been used in project 123 before",
+    "Search Console API is disabled for this project",
+  ])(
+    "reports an API-not-configured 403 without unlinking (%s)",
+    async (body) => {
+      mocks.listSites.mockRejectedValue(
+        new mocks.GscApiError(403, "Search Console denied access", body),
+      );
+      const { GscService } = await import("./GscService");
+
+      await expect(
+        GscService.listSitesForUserWithGrantStatus("u1"),
+      ).resolves.toEqual({
+        sites: [],
+        errorReason: "api_not_configured",
+        requiresReconnect: false,
+      });
+      expect(mocks.dbDelete).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    "forbidden",
+    '{"error":{"errors":[{"reason":"userRateLimitExceeded"}]}}',
+  ])(
+    "treats a retryable 403 as temporary without unlinking (%s)",
+    async (body) => {
+      mocks.listSites.mockRejectedValue(
+        new mocks.GscApiError(403, "Search Console denied access", body),
+      );
+      const { GscService } = await import("./GscService");
+
+      await expect(
+        GscService.listSitesForUserWithGrantStatus("u1"),
+      ).resolves.toEqual({
+        sites: [],
+        errorReason: "temporary",
+        requiresReconnect: false,
+      });
+      expect(mocks.dbDelete).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith("[GSC] Unable to list sites", {
+        reason: "temporary",
+        status: 403,
+      });
+    },
+  );
+
+  it.each([
+    '{"error":{"errors":[{"reason":"insufficientPermissions"}]}}',
+    '{"error":{"status":"PERMISSION_DENIED"}}',
+  ])("asks for reconnect on a missing-scope 403 (%s)", async (body) => {
+    mocks.listSites.mockRejectedValue(
+      new mocks.GscApiError(403, "secret-token", body),
+    );
+    const { GscService } = await import("./GscService");
+
+    await expect(
+      GscService.listSitesForUserWithGrantStatus("u1"),
+    ).resolves.toEqual({
+      sites: [],
+      errorReason: "requires_reconnect",
+      requiresReconnect: true,
+    });
     expect(mocks.dbDelete).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith("[GSC] Unable to list sites", {
+      reason: "requires_reconnect",
+      status: 403,
+    });
+    expect(JSON.stringify(vi.mocked(console.warn).mock.calls)).not.toContain(
+      "secret-token",
+    );
   });
 
   it("asks for reconnect without unlinking on a 401", async () => {
@@ -154,17 +238,75 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
-    ).resolves.toEqual({ sites: [], requiresReconnect: true });
+    ).resolves.toEqual({
+      sites: [],
+      errorReason: "requires_reconnect",
+      requiresReconnect: true,
+    });
     expect(mocks.dbDelete).not.toHaveBeenCalled();
   });
 
-  it("keeps non-auth GSC API errors reportable", async () => {
-    const rateLimit = new mocks.GscApiError(429, "slow down");
-    mocks.listSites.mockRejectedValue(rateLimit);
+  it.each([429, 500, 503])(
+    "reports status %s as temporary without unlinking",
+    async (status) => {
+      mocks.listSites.mockRejectedValue(
+        new mocks.GscApiError(status, "temporary failure"),
+      );
+      const { GscService } = await import("./GscService");
+
+      await expect(
+        GscService.listSitesForUserWithGrantStatus("u1"),
+      ).resolves.toEqual({
+        sites: [],
+        errorReason: "temporary",
+        requiresReconnect: false,
+      });
+      expect(mocks.dbDelete).not.toHaveBeenCalled();
+      expect(console.warn).toHaveBeenCalledWith("[GSC] Unable to list sites", {
+        reason: "temporary",
+        status,
+      });
+    },
+  );
+
+  it("reports a network failure as temporary", async () => {
+    mocks.listSites.mockRejectedValue(new TypeError("fetch failed"));
+    const { GscService } = await import("./GscService");
+
+    await expect(
+      GscService.listSitesForUserWithGrantStatus("u1"),
+    ).resolves.toEqual({
+      sites: [],
+      errorReason: "temporary",
+      requiresReconnect: false,
+    });
+    expect(mocks.dbDelete).not.toHaveBeenCalled();
+    expect(console.warn).toHaveBeenCalledWith("[GSC] Unable to list sites", {
+      reason: "temporary",
+      status: null,
+    });
+  });
+
+  it("rethrows a non-network TypeError as a programming defect", async () => {
+    const programmingError = new TypeError(
+      "client.listSites is not a function",
+    );
+    mocks.listSites.mockRejectedValue(programmingError);
     const { GscService } = await import("./GscService");
 
     await expect(GscService.listSitesForUserWithGrantStatus("u1")).rejects.toBe(
-      rateLimit,
+      programmingError,
+    );
+    expect(console.warn).not.toHaveBeenCalled();
+  });
+
+  it("keeps unclassified errors reportable", async () => {
+    const unexpected = new Error("unexpected");
+    mocks.listSites.mockRejectedValue(unexpected);
+    const { GscService } = await import("./GscService");
+
+    await expect(GscService.listSitesForUserWithGrantStatus("u1")).rejects.toBe(
+      unexpected,
     );
     expect(mocks.dbDelete).not.toHaveBeenCalled();
   });

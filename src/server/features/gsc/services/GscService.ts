@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { account } from "@/db/schema";
-import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
+import { GSC_OAUTH_PROVIDER_ID, type GscSitesErrorReason } from "@/shared/gsc";
 import { AppError } from "@/server/lib/errors";
 import {
   createGscClient,
@@ -34,6 +34,7 @@ type GscPerformanceResult = {
 
 type GscSiteListResult = {
   sites: GscSite[];
+  errorReason: GscSitesErrorReason | null;
   requiresReconnect: boolean;
 };
 
@@ -70,10 +71,8 @@ async function listSitesForUser(userId: string): Promise<GscSite[]> {
   return createGscClient({ userId }).listSites();
 }
 
-/** Expected ways a stored grant fails to reach Search Console: no token could be
- *  minted (refresh token revoked or expired), or Google rejected the call
- *  (401/403). These surface a reconnect prompt instead of being routed through
- *  error tracking. Other statuses (429, 5xx) are genuine faults and propagate. */
+/** Whether a failure indicates that the stored grant itself may be unusable.
+ *  Retryable API and network failures are classified separately below. */
 export function isExpectedGrantFailure(error: unknown): boolean {
   if (error instanceof GscTokenError) return true;
   return (
@@ -82,29 +81,90 @@ export function isExpectedGrantFailure(error: unknown): boolean {
   );
 }
 
-/** List properties for the picker UI. When the stored grant can't currently
- *  reach GSC, return a reconnect signal instead of throwing, so an expected
- *  external-auth failure doesn't land in error tracking.
+function isApiNotConfiguredError(error: GscApiError): boolean {
+  if (error.status !== 403 || !error.body) return false;
+
+  return (
+    /accessNotConfigured/i.test(error.body) ||
+    /SERVICE_DISABLED/i.test(error.body) ||
+    /has not been used/i.test(error.body) ||
+    /is disabled/i.test(error.body)
+  );
+}
+
+function isInsufficientPermissionsError(error: GscApiError): boolean {
+  if (error.status !== 403 || !error.body) return false;
+  return (
+    /insufficientPermissions/i.test(error.body) ||
+    /PERMISSION_DENIED/i.test(error.body)
+  );
+}
+
+function isNetworkTypeError(error: TypeError): boolean {
+  return /fetch failed|failed to fetch|networkerror|network request failed|load failed/i.test(
+    error.message,
+  );
+}
+
+/** Classify site-list failures that have a safe, actionable client state. */
+export function classifyGscSitesError(
+  error: unknown,
+): GscSitesErrorReason | null {
+  if (error instanceof GscTokenError) return "requires_reconnect";
+  if (error instanceof GscApiError) {
+    if (error.status === 401) return "requires_reconnect";
+    if (isApiNotConfiguredError(error)) return "api_not_configured";
+    if (isInsufficientPermissionsError(error)) return "requires_reconnect";
+    if (error.status === 403 || error.status === 429 || error.status >= 500) {
+      return "temporary";
+    }
+    return null;
+  }
+  // Fetch reports transport/network failures as TypeError. Other TypeErrors are
+  // programming defects and must remain visible to error tracking.
+  if (error instanceof TypeError && isNetworkTypeError(error)) {
+    return "temporary";
+  }
+  return null;
+}
+
+/** List properties for the picker UI. Known external failures become an
+ *  actionable reason instead of being mistaken for an expired connection.
  *
  *  Only a GscTokenError unlinks the stored grant — the one unambiguous "this
  *  grant is dead" signal (Better Auth couldn't mint/refresh a token, i.e. the
- *  user revoked access or the refresh token expired). A bare 401/403 from
- *  sites.list is left in place: Search Console also returns 403 for quota/rate
- *  limits, so destroying the grant there would force needless reconnects across
- *  every project on it. Reconnecting re-upserts the grant either way. */
+ *  user revoked access or the refresh token expired). API and transport errors
+ *  leave the grant intact. */
 async function listSitesForUserWithGrantStatus(
   userId: string,
 ): Promise<GscSiteListResult> {
   try {
-    return { sites: await listSitesForUser(userId), requiresReconnect: false };
+    return {
+      sites: await listSitesForUser(userId),
+      errorReason: null,
+      requiresReconnect: false,
+    };
   } catch (error) {
-    if (!isExpectedGrantFailure(error)) {
-      throw error;
-    }
+    const errorReason = classifyGscSitesError(error);
+    if (!errorReason) throw error;
+
     if (error instanceof GscTokenError) {
+      console.warn("[GSC] Unlinking stored grant after token failure", {
+        reason: "requires_reconnect",
+        status: null,
+      });
       await unlinkUserGrant(userId);
+    } else {
+      console.warn("[GSC] Unable to list sites", {
+        reason: errorReason,
+        status: error instanceof GscApiError ? error.status : null,
+      });
     }
-    return { sites: [], requiresReconnect: true };
+    return {
+      sites: [],
+      errorReason,
+      requiresReconnect: errorReason === "requires_reconnect",
+    };
   }
 }
 

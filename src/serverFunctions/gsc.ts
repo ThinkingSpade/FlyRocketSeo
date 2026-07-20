@@ -69,6 +69,7 @@ export const listGscSites = createServerFn({ method: "POST" })
       GscService.getConnection(context.projectId),
     ]);
     return {
+      errorReason: siteList.errorReason,
       requiresReconnect: siteList.requiresReconnect,
       sites: siteList.sites.map((s) => ({
         siteUrl: s.siteUrl,

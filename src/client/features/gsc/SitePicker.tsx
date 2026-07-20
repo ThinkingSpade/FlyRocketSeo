@@ -1,4 +1,5 @@
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
+import type { GscSitesErrorReason } from "@/shared/gsc";
 
 type SiteOption = {
   siteUrl: string;
@@ -21,23 +22,25 @@ type SecondaryAction = {
  */
 export function SitePicker({
   loading,
-  error,
+  errorReason,
   sites,
   selectedSiteUrl,
   onSelect,
   onSave,
   saving,
   onReconnect,
+  onRetry,
   secondaryAction,
 }: {
   loading: boolean;
-  error: boolean;
+  errorReason: GscSitesErrorReason | null;
   sites: SiteOption[];
   selectedSiteUrl: string;
   onSelect: (siteUrl: string) => void;
   onSave: () => void;
   saving: boolean;
   onReconnect: () => void;
+  onRetry: () => void;
   secondaryAction?: SecondaryAction;
 }) {
   if (loading) {
@@ -48,7 +51,7 @@ export function SitePicker({
       </div>
     );
   }
-  if (error) {
+  if (errorReason === "requires_reconnect") {
     return (
       <div className="space-y-3">
         <p className="text-sm text-error">
@@ -61,6 +64,48 @@ export function SitePicker({
         >
           <GoogleGlyph className="size-[18px]" />
           Reconnect with Google
+        </button>
+      </div>
+    );
+  }
+  if (errorReason === "api_not_configured") {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-error">
+          Search Console API isn&apos;t enabled for your Google Cloud project.{" "}
+          <a
+            href="https://console.cloud.google.com/apis/library/searchconsole.googleapis.com"
+            target="_blank"
+            rel="noreferrer"
+            className="font-medium underline underline-offset-2"
+          >
+            Enable it in Google Cloud Console
+          </a>
+          , then reconnect.
+        </p>
+        <button
+          type="button"
+          onClick={onReconnect}
+          className="inline-flex items-center gap-2.5 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:bg-base-200"
+        >
+          <GoogleGlyph className="size-[18px]" />
+          Reconnect with Google
+        </button>
+      </div>
+    );
+  }
+  if (errorReason === "temporary") {
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-error">
+          Couldn&apos;t load your Search Console sites — please try again.
+        </p>
+        <button
+          type="button"
+          className="btn btn-outline btn-sm"
+          onClick={onRetry}
+        >
+          Retry
         </button>
       </div>
     );

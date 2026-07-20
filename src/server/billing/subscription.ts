@@ -10,8 +10,11 @@ import {
 } from "@/shared/billing";
 import type { CreditFeature } from "@/shared/billing-credit-features";
 import { autumn, AUTUMN_TRACK_RETRY_OPTIONS } from "@/server/billing/autumn";
+import { isBillingEnabled } from "@/server/billing/config";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { AppError } from "@/server/lib/errors";
+
+const UNMETERED_MONTHLY_REMAINING = Number.MAX_SAFE_INTEGER;
 
 export type BillingCustomerContext = Pick<
   EnsuredUserContext,
@@ -23,6 +26,10 @@ export type BillingCustomerContext = Pick<
 export async function getOrCreateOrganizationCustomer(
   context: BillingCustomerContext,
 ) {
+  if (!(await isBillingEnabled())) {
+    return { id: context.organizationId };
+  }
+
   const customer = await autumn.customers.getOrCreate({
     customerId: context.organizationId,
     email: context.userEmail,
@@ -39,6 +46,10 @@ export async function getOrCreateOrganizationCustomer(
 }
 
 export async function customerHasPaidPlan(customerId: string) {
+  if (!(await isBillingEnabled())) {
+    return true;
+  }
+
   const result = await autumn.check({
     customerId,
     featureId: AUTUMN_PAID_PLAN_FEATURE_ID,
@@ -48,6 +59,10 @@ export async function customerHasPaidPlan(customerId: string) {
 }
 
 export async function customerHasManagedAccess(customerId: string) {
+  if (!(await isBillingEnabled())) {
+    return true;
+  }
+
   const result = await autumn.check({
     customerId,
     featureId: AUTUMN_MANAGED_ACCESS_FEATURE_ID,
@@ -63,6 +78,13 @@ export async function getUsageCreditsRemaining(customerId: string): Promise<{
   monthlyRemaining: number;
   topupRemaining: number;
 }> {
+  if (!(await isBillingEnabled())) {
+    return {
+      monthlyRemaining: UNMETERED_MONTHLY_REMAINING,
+      topupRemaining: 0,
+    };
+  }
+
   const [monthlyCheck, topupCheck] = await Promise.all([
     autumn.check({ customerId, featureId: AUTUMN_SEO_DATA_BALANCE_FEATURE_ID }),
     autumn.check({
@@ -84,6 +106,10 @@ export async function getUsageCreditsRemaining(customerId: string): Promise<{
 export async function assertUsageCreditsAvailable(
   customerId: string,
 ): Promise<{ monthlyRemaining: number }> {
+  if (!(await isBillingEnabled())) {
+    return { monthlyRemaining: UNMETERED_MONTHLY_REMAINING };
+  }
+
   const { monthlyRemaining, topupRemaining } =
     await getUsageCreditsRemaining(customerId);
 
@@ -109,6 +135,10 @@ export async function trackUsageCreditSpend(args: {
   monthlyRemaining: number;
   properties?: Record<string, unknown>;
 }): Promise<void> {
+  if (!(await isBillingEnabled())) {
+    return;
+  }
+
   const totalCostUsd = roundUsdForBilling(args.costUsd * SEO_DATA_COST_MARKUP);
   const totalCostCredits = Math.ceil(
     totalCostUsd * AUTUMN_SEO_DATA_CREDITS_PER_USD,
