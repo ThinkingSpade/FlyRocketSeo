@@ -1,3 +1,6 @@
+import { and, desc, eq } from "drizzle-orm";
+import { db } from "@/db";
+import { account } from "@/db/schema";
 import { getAuth } from "@/lib/auth";
 import { GSC_OAUTH_PROVIDER_ID } from "@/shared/gsc";
 
@@ -100,7 +103,37 @@ function messageForStatus(status: number, body: string): string {
  *  are minted (and auto-refreshed) by Better Auth from the connector's stored
  *  google-search-console grant. */
 export function createGscClient(opts: { userId: string }) {
+  // A user can link more than one Google account to the GSC provider over time
+  // (each distinct Google account inserts its own `account` row). Better Auth's
+  // getAccessToken without an accountId takes the FIRST row matching the
+  // provider, silently pinning tokens to the oldest grant — so "reconnect with
+  // a different Google account" would look connected but read the wrong
+  // account's properties. Resolve the newest grant ourselves and pass its
+  // accountId so the most recent connection always wins. (Disconnect deletes
+  // every grant row, so stale rows only exist between two link flows.)
+  async function findNewestGrantAccountId(): Promise<string | undefined> {
+    try {
+      const rows = await db
+        .select({ accountId: account.accountId })
+        .from(account)
+        .where(
+          and(
+            eq(account.userId, opts.userId),
+            eq(account.providerId, GSC_OAUTH_PROVIDER_ID),
+          ),
+        )
+        .orderBy(desc(account.createdAt))
+        .limit(1);
+      return rows[0]?.accountId;
+    } catch {
+      // Resolution is best-effort: fall back to Better Auth's own (first-row)
+      // lookup rather than failing the request over a disambiguation query.
+      return undefined;
+    }
+  }
+
   async function getToken(): Promise<string> {
+    const grantAccountId = await findNewestGrantAccountId();
     let result: { accessToken?: string } | undefined;
     try {
       // Headerless call: getAccessToken trusts body.userId when no request
@@ -108,7 +141,11 @@ export function createGscClient(opts: { userId: string }) {
       // Works in every auth mode — self-hosted builds the same Better Auth
       // instance once BETTER_AUTH_SECRET is set.
       result = await getAuth().api.getAccessToken({
-        body: { providerId: GSC_OAUTH_PROVIDER_ID, userId: opts.userId },
+        body: {
+          providerId: GSC_OAUTH_PROVIDER_ID,
+          userId: opts.userId,
+          ...(grantAccountId ? { accountId: grantAccountId } : {}),
+        },
       });
     } catch (error) {
       throw new GscTokenError(
