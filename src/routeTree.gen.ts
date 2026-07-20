@@ -46,12 +46,14 @@ import { Route as ProjectPProjectIdSamRouteImport } from './routes/_project/p/$p
 import { Route as ProjectPProjectIdRankTrackingRouteImport } from './routes/_project/p/$projectId/rank-tracking'
 import { Route as ProjectPProjectIdPromptExplorerRouteImport } from './routes/_project/p/$projectId/prompt-explorer'
 import { Route as ProjectPProjectIdPageRouteImport } from './routes/_project/p/$projectId/page'
+import { Route as ProjectPProjectIdLocalGridRouteImport } from './routes/_project/p/$projectId/local-grid'
 import { Route as ProjectPProjectIdLocalRouteImport } from './routes/_project/p/$projectId/local'
 import { Route as ProjectPProjectIdLinksRouteImport } from './routes/_project/p/$projectId/links'
 import { Route as ProjectPProjectIdKeywordsRouteImport } from './routes/_project/p/$projectId/keywords'
 import { Route as ProjectPProjectIdDomainRouteImport } from './routes/_project/p/$projectId/domain'
 import { Route as ProjectPProjectIdContentRouteImport } from './routes/_project/p/$projectId/content'
 import { Route as ProjectPProjectIdCompetitorsRouteImport } from './routes/_project/p/$projectId/competitors'
+import { Route as ProjectPProjectIdClustersRouteImport } from './routes/_project/p/$projectId/clusters'
 import { Route as ProjectPProjectIdCannibalizationRouteImport } from './routes/_project/p/$projectId/cannibalization'
 import { Route as ProjectPProjectIdBrandLookupRouteImport } from './routes/_project/p/$projectId/brand-lookup'
 import { Route as ProjectPProjectIdBacklinksRouteImport } from './routes/_project/p/$projectId/backlinks'
@@ -250,6 +252,12 @@ const ProjectPProjectIdPageRoute = ProjectPProjectIdPageRouteImport.update({
   path: '/page',
   getParentRoute: () => ProjectPProjectIdRouteRoute,
 } as any)
+const ProjectPProjectIdLocalGridRoute =
+  ProjectPProjectIdLocalGridRouteImport.update({
+    id: '/local-grid',
+    path: '/local-grid',
+    getParentRoute: () => ProjectPProjectIdRouteRoute,
+  } as any)
 const ProjectPProjectIdLocalRoute = ProjectPProjectIdLocalRouteImport.update({
   id: '/local',
   path: '/local',
@@ -281,6 +289,12 @@ const ProjectPProjectIdCompetitorsRoute =
   ProjectPProjectIdCompetitorsRouteImport.update({
     id: '/competitors',
     path: '/competitors',
+    getParentRoute: () => ProjectPProjectIdRouteRoute,
+  } as any)
+const ProjectPProjectIdClustersRoute =
+  ProjectPProjectIdClustersRouteImport.update({
+    id: '/clusters',
+    path: '/clusters',
     getParentRoute: () => ProjectPProjectIdRouteRoute,
   } as any)
 const ProjectPProjectIdCannibalizationRoute =
@@ -358,12 +372,14 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/p/$projectId/cannibalization': typeof ProjectPProjectIdCannibalizationRoute
+  '/p/$projectId/clusters': typeof ProjectPProjectIdClustersRoute
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
+  '/p/$projectId/local-grid': typeof ProjectPProjectIdLocalGridRoute
   '/p/$projectId/page': typeof ProjectPProjectIdPageRoute
   '/p/$projectId/prompt-explorer': typeof ProjectPProjectIdPromptExplorerRoute
   '/p/$projectId/rank-tracking': typeof ProjectPProjectIdRankTrackingRouteWithChildren
@@ -405,12 +421,14 @@ export interface FileRoutesByTo {
   '/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/p/$projectId/cannibalization': typeof ProjectPProjectIdCannibalizationRoute
+  '/p/$projectId/clusters': typeof ProjectPProjectIdClustersRoute
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
+  '/p/$projectId/local-grid': typeof ProjectPProjectIdLocalGridRoute
   '/p/$projectId/page': typeof ProjectPProjectIdPageRoute
   '/p/$projectId/prompt-explorer': typeof ProjectPProjectIdPromptExplorerRoute
   '/p/$projectId/sam': typeof ProjectPProjectIdSamRoute
@@ -458,12 +476,14 @@ export interface FileRoutesById {
   '/_project/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/_project/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/_project/p/$projectId/cannibalization': typeof ProjectPProjectIdCannibalizationRoute
+  '/_project/p/$projectId/clusters': typeof ProjectPProjectIdClustersRoute
   '/_project/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/_project/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/_project/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
   '/_project/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/_project/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/_project/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
+  '/_project/p/$projectId/local-grid': typeof ProjectPProjectIdLocalGridRoute
   '/_project/p/$projectId/page': typeof ProjectPProjectIdPageRoute
   '/_project/p/$projectId/prompt-explorer': typeof ProjectPProjectIdPromptExplorerRoute
   '/_project/p/$projectId/rank-tracking': typeof ProjectPProjectIdRankTrackingRouteWithChildren
@@ -509,12 +529,14 @@ export interface FileRouteTypes {
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/cannibalization'
+    | '/p/$projectId/clusters'
     | '/p/$projectId/competitors'
     | '/p/$projectId/content'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
     | '/p/$projectId/links'
     | '/p/$projectId/local'
+    | '/p/$projectId/local-grid'
     | '/p/$projectId/page'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/rank-tracking'
@@ -556,12 +578,14 @@ export interface FileRouteTypes {
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/cannibalization'
+    | '/p/$projectId/clusters'
     | '/p/$projectId/competitors'
     | '/p/$projectId/content'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
     | '/p/$projectId/links'
     | '/p/$projectId/local'
+    | '/p/$projectId/local-grid'
     | '/p/$projectId/page'
     | '/p/$projectId/prompt-explorer'
     | '/p/$projectId/sam'
@@ -608,12 +632,14 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/backlinks'
     | '/_project/p/$projectId/brand-lookup'
     | '/_project/p/$projectId/cannibalization'
+    | '/_project/p/$projectId/clusters'
     | '/_project/p/$projectId/competitors'
     | '/_project/p/$projectId/content'
     | '/_project/p/$projectId/domain'
     | '/_project/p/$projectId/keywords'
     | '/_project/p/$projectId/links'
     | '/_project/p/$projectId/local'
+    | '/_project/p/$projectId/local-grid'
     | '/_project/p/$projectId/page'
     | '/_project/p/$projectId/prompt-explorer'
     | '/_project/p/$projectId/rank-tracking'
@@ -906,6 +932,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPProjectIdPageRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
+    '/_project/p/$projectId/local-grid': {
+      id: '/_project/p/$projectId/local-grid'
+      path: '/local-grid'
+      fullPath: '/p/$projectId/local-grid'
+      preLoaderRoute: typeof ProjectPProjectIdLocalGridRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
     '/_project/p/$projectId/local': {
       id: '/_project/p/$projectId/local'
       path: '/local'
@@ -946,6 +979,13 @@ declare module '@tanstack/react-router' {
       path: '/competitors'
       fullPath: '/p/$projectId/competitors'
       preLoaderRoute: typeof ProjectPProjectIdCompetitorsRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
+    '/_project/p/$projectId/clusters': {
+      id: '/_project/p/$projectId/clusters'
+      path: '/clusters'
+      fullPath: '/p/$projectId/clusters'
+      preLoaderRoute: typeof ProjectPProjectIdClustersRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
     '/_project/p/$projectId/cannibalization': {
@@ -1075,12 +1115,14 @@ interface ProjectPProjectIdRouteRouteChildren {
   ProjectPProjectIdBacklinksRoute: typeof ProjectPProjectIdBacklinksRoute
   ProjectPProjectIdBrandLookupRoute: typeof ProjectPProjectIdBrandLookupRoute
   ProjectPProjectIdCannibalizationRoute: typeof ProjectPProjectIdCannibalizationRoute
+  ProjectPProjectIdClustersRoute: typeof ProjectPProjectIdClustersRoute
   ProjectPProjectIdCompetitorsRoute: typeof ProjectPProjectIdCompetitorsRoute
   ProjectPProjectIdContentRoute: typeof ProjectPProjectIdContentRoute
   ProjectPProjectIdDomainRoute: typeof ProjectPProjectIdDomainRoute
   ProjectPProjectIdKeywordsRoute: typeof ProjectPProjectIdKeywordsRoute
   ProjectPProjectIdLinksRoute: typeof ProjectPProjectIdLinksRoute
   ProjectPProjectIdLocalRoute: typeof ProjectPProjectIdLocalRoute
+  ProjectPProjectIdLocalGridRoute: typeof ProjectPProjectIdLocalGridRoute
   ProjectPProjectIdPageRoute: typeof ProjectPProjectIdPageRoute
   ProjectPProjectIdPromptExplorerRoute: typeof ProjectPProjectIdPromptExplorerRoute
   ProjectPProjectIdRankTrackingRoute: typeof ProjectPProjectIdRankTrackingRouteWithChildren
@@ -1100,12 +1142,14 @@ const ProjectPProjectIdRouteRouteChildren: ProjectPProjectIdRouteRouteChildren =
     ProjectPProjectIdBrandLookupRoute: ProjectPProjectIdBrandLookupRoute,
     ProjectPProjectIdCannibalizationRoute:
       ProjectPProjectIdCannibalizationRoute,
+    ProjectPProjectIdClustersRoute: ProjectPProjectIdClustersRoute,
     ProjectPProjectIdCompetitorsRoute: ProjectPProjectIdCompetitorsRoute,
     ProjectPProjectIdContentRoute: ProjectPProjectIdContentRoute,
     ProjectPProjectIdDomainRoute: ProjectPProjectIdDomainRoute,
     ProjectPProjectIdKeywordsRoute: ProjectPProjectIdKeywordsRoute,
     ProjectPProjectIdLinksRoute: ProjectPProjectIdLinksRoute,
     ProjectPProjectIdLocalRoute: ProjectPProjectIdLocalRoute,
+    ProjectPProjectIdLocalGridRoute: ProjectPProjectIdLocalGridRoute,
     ProjectPProjectIdPageRoute: ProjectPProjectIdPageRoute,
     ProjectPProjectIdPromptExplorerRoute: ProjectPProjectIdPromptExplorerRoute,
     ProjectPProjectIdRankTrackingRoute:
