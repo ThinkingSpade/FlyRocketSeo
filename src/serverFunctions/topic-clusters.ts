@@ -45,7 +45,10 @@ export const getTopicClusters = createServerFn({ method: "POST" })
     const locationCode = data.locationCode ?? DEFAULT_LOCATION_CODE;
     const languageCode = getLanguageCode(locationCode);
 
-    const cacheKey = await buildCacheKey("topic-clusters", {
+    // v2: suggestions (phrase-match) instead of ideas — ideas expands to
+    // category-level concepts sharing any seed token ("office vending
+    // machines" pulled in office chair mats), which makes junk clusters.
+    const cacheKey = await buildCacheKey("topic-clusters:v2", {
       organizationId: context.organizationId,
       projectId: context.projectId,
       topic,
@@ -58,7 +61,7 @@ export const getTopicClusters = createServerFn({ method: "POST" })
     }
 
     const dataforseo = createDataforseoClient(context);
-    const items = await dataforseo.keywords.ideas({
+    const items = await dataforseo.keywords.suggestions({
       keyword: topic,
       locationCode,
       languageCode,
