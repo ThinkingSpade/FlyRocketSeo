@@ -16,7 +16,6 @@ import {
   formatStartedAt,
   HttpStatusBadge,
   StatusBadge,
-  SUPPORT_URL,
 } from "@/client/features/audit/shared";
 
 export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
@@ -160,17 +159,13 @@ function AuditDetail({
                 Site audit couldn't fully crawl this website.
               </p>
               <p>
-                This is often caused by anti-bot or firewall settings. Reach out
-                at{" "}
-                <a
-                  className="link link-primary"
-                  href={SUPPORT_URL}
-                  target="_blank"
-                  rel="noreferrer"
-                >
-                  everyapp.dev/support
-                </a>{" "}
-                and we'll help configure auditing for your site.
+                This is usually anti-bot or firewall protection blocking the
+                crawler. Allow the{" "}
+                <code className="rounded bg-base-200 px-1 text-xs">
+                  FlyRocketSEO-Audit
+                </code>{" "}
+                user-agent through the site's bot protection (or check its
+                robots.txt), then re-run the audit.
               </p>
             </div>
           </div>

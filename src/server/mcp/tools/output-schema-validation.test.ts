@@ -103,6 +103,9 @@ beforeEach(() => {
 });
 
 describe("DataForSEO research tool output schemas", () => {
+  // These cases do heavy zod schema validation; under full-suite CPU load the
+  // default 5s timeout flakes even though each passes in ~2-3s in isolation.
+  vi.setConfig({ testTimeout: 20_000 });
   // Every tool that streams provider rows straight to structuredContent.
   it.each([
     ["find_serp_competitors", "competitors"],
