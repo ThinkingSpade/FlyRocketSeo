@@ -1,7 +1,10 @@
-import { env } from "cloudflare:workers";
 import { getAuth, hasHostedAuthConfig } from "@/lib/auth";
 import { getActiveOrganizationId } from "@/lib/auth-session";
 import { getOrJoinSharedHostedOrganization } from "@/server/auth/default-hosted-organization";
+import {
+  getHostedAllowedEmails,
+  isHostedEmailAllowed,
+} from "@/server/auth/hosted-access";
 import { AppError } from "@/server/lib/errors";
 import type { EnsuredUserContext } from "./types";
 
@@ -32,13 +35,10 @@ export async function resolveHostedContext(
   // provisioned during the Cloudflare Access era) or a Google identity linked to
   // an existing email could sign in without passing the signup hook. Fail OPEN
   // only when the list is unset, so a missing secret can't lock the operator out.
-  const allowList = (env.HOSTED_ALLOWED_EMAILS ?? "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+  const allowListConfigured = getHostedAllowedEmails().length > 0;
   if (
-    allowList.length > 0 &&
-    !allowList.includes(session.user.email.trim().toLowerCase())
+    allowListConfigured &&
+    !(await isHostedEmailAllowed(session.user.email))
   ) {
     throw new AppError("FORBIDDEN", "This deployment is private.");
   }

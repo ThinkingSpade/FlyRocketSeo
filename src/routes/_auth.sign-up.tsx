@@ -43,8 +43,13 @@ const signUpSchema = z
     path: ["confirmPassword"],
   });
 
+const signUpSearchSchema = authRedirectSearchSchema.extend({
+  email: z.string().trim().email().max(320).optional().catch(undefined),
+  invite: z.string().max(128).optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/_auth/sign-up")({
-  validateSearch: authRedirectSearchSchema,
+  validateSearch: signUpSearchSchema,
   component: SignUpPage,
 });
 
@@ -53,7 +58,7 @@ function SignUpPage() {
   const navigate = useNavigate();
   const { redirectTo, isHostedMode } = useAuthPageState(search.redirect);
   const postSignupRedirect = redirectTo === "/" ? "/onboarding" : redirectTo;
-  const [showEmailForm, setShowEmailForm] = useState(false);
+  const [showEmailForm, setShowEmailForm] = useState(Boolean(search.email));
   const google = useGoogleSignUp({ redirectTo, postSignupRedirect });
 
   // Turnstile is active only in hosted mode with a configured site key.
@@ -63,7 +68,7 @@ function SignUpPage() {
   const form = useForm({
     defaultValues: {
       name: "",
-      email: "",
+      email: search.email ?? "",
       password: "",
       confirmPassword: "",
     },
@@ -229,6 +234,11 @@ function SignUpPage() {
             void form.handleSubmit();
           }}
         >
+          {search.invite && search.email ? (
+            <p className="text-sm text-base-content/70">
+              You've been invited to FlyRocketSEO.
+            </p>
+          ) : null}
           <form.Field name="name">
             {(field) => {
               const error = getFieldError(field.state.meta.errors);

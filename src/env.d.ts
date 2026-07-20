@@ -13,8 +13,8 @@ declare namespace Cloudflare {
     SAM_CHAT: DurableObjectNamespace;
 
     AUTH_MODE?: "cloudflare_access" | "local_noauth" | "hosted";
-    // Comma-separated allow-list for hosted mode: when set, only these emails
-    // may create an account (keeps a hosted deployment private). Unset = open signup.
+    // Comma-separated allow-list for hosted mode. Signup also accepts active
+    // invitations; with neither configured, new-account creation stays closed.
     HOSTED_ALLOWED_EMAILS?: string;
     BYPASS_EMAIL_VERIFICATION?: string;
     TEAM_DOMAIN?: string;
@@ -32,6 +32,7 @@ declare namespace Cloudflare {
     LOOPS_API_KEY?: string;
     LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID?: string;
     LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID?: string;
+    LOOPS_TRANSACTIONAL_INVITE_ID?: string;
     AUTUMN_SECRET_KEY?: string;
     AUTUMN_WEBHOOK_SECRET?: string;
 

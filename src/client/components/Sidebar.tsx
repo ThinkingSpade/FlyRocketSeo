@@ -9,6 +9,7 @@ import {
   MessageCircle,
   Search,
   Settings,
+  Users,
   User,
   X,
 } from "lucide-react";
@@ -249,6 +250,14 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
       </button>
 
       {!isHostedMode ? <DataforseoBalanceIndicator /> : null}
+      {isHostedMode ? (
+        <SidebarNavLink
+          icon={Users}
+          label="Team"
+          onNavigate={onNavigate}
+          linkProps={{ to: "/team" }}
+        />
+      ) : null}
       <SidebarNavLink
         icon={CircleHelp}
         label="Help & Community"

@@ -18,6 +18,8 @@ import {
   hasHostedTurnstileConfig,
 } from "@/lib/auth-turnstile";
 import { getOrJoinSharedHostedOrganization } from "@/server/auth/default-hosted-organization";
+import { isHostedEmailAllowed } from "@/server/auth/hosted-access";
+import { InviteRepository } from "@/server/auth/repositories/InviteRepository";
 import {
   sendHostedPasswordResetEmail,
   sendHostedVerificationEmail,
@@ -115,22 +117,13 @@ function createAuth() {
           // has no shared credit pool to protect, so it's left untouched.
           before: async (user) => {
             if (isHostedAuthMode(env.AUTH_MODE)) {
-              // Private deployment: when HOSTED_ALLOWED_EMAILS is set (a comma-
-              // separated list), only those addresses may create an account.
-              // Both password and Google signup flow through this hook, so it
-              // gates every path. Unset = open signup (the upstream default) —
-              // leave it unset only if you actually want a public, multi-user SaaS.
-              const allowList = (env.HOSTED_ALLOWED_EMAILS ?? "")
-                .split(",")
-                .map((email) => email.trim().toLowerCase())
-                .filter(Boolean);
-              // Fail CLOSED: an unset/empty allow-list denies ALL new accounts —
-              // this fork's hosted mode is private-by-default. Set
-              // HOSTED_ALLOWED_EMAILS to every address allowed to register.
-              if (!allowList.includes(user.email.trim().toLowerCase())) {
+              // Password and Google signup both flow through this hook. Hosted
+              // signup is private-by-default: an env allow-list entry or active
+              // invitation is required, and an invite lookup failure denies.
+              if (!(await isHostedEmailAllowed(user.email))) {
                 throw new APIError("FORBIDDEN", {
                   message:
-                    "This FlyRocketSEO deployment is private — your email isn't on the allow-list.",
+                    "This FlyRocketSEO deployment is private — your email isn't allowed or invited.",
                 });
               }
               if (isDisposableEmailDomain(user.email)) {
@@ -143,6 +136,9 @@ function createAuth() {
             return { data: user };
           },
           after: async (user) => {
+            if (isHostedAuthMode(env.AUTH_MODE)) {
+              await InviteRepository.markInviteAccepted(user.email);
+            }
             await syncHostedSignupContact(user);
           },
         },

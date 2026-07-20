@@ -35,6 +35,13 @@ function getHostedAuthEmailConfig() {
   };
 }
 
+export function hasHostedInviteEmailConfig() {
+  return Boolean(
+    getOptionalEnv("LOOPS_API_KEY") &&
+    getOptionalEnv("LOOPS_TRANSACTIONAL_INVITE_ID"),
+  );
+}
+
 async function sendLoopsTransactionalEmail({
   apiKey,
   email,
@@ -142,6 +149,36 @@ export async function sendHostedPasswordResetEmail({
     dataVariables: {
       appName: "FlyRocketSEO",
       resetUrl,
+    },
+  });
+}
+
+export async function sendHostedInviteEmail({
+  email,
+  inviteUrl,
+  invitedByName,
+}: {
+  email: string;
+  inviteUrl: string;
+  invitedByName: string;
+}): Promise<void> {
+  const apiKey = getOptionalEnv("LOOPS_API_KEY");
+  const transactionalId = getOptionalEnv("LOOPS_TRANSACTIONAL_INVITE_ID");
+
+  // Invite links are always returned to the caller, so email delivery remains
+  // dormant until both provider values are explicitly configured.
+  if (!apiKey || !transactionalId) {
+    return;
+  }
+
+  await sendLoopsTransactionalEmail({
+    apiKey,
+    email: email.trim().toLowerCase(),
+    transactionalId,
+    dataVariables: {
+      appName: "FlyRocketSEO",
+      inviteUrl,
+      invitedByName,
     },
   });
 }
