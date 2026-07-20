@@ -9,6 +9,21 @@ vi.mock("@/lib/auth", () => ({
   getAuth: () => ({ api: { getAccessToken: mocks.getAccessToken } }),
 }));
 
+// gscClient resolves the newest GSC grant from the DB before minting a token.
+// Its import graph reaches `cloudflare:workers` (via the db provider), which
+// doesn't exist in vitest — stub it, and mock @/db with an empty result set so
+// grant resolution falls back to the provider-only lookup these tests exercise.
+vi.mock("cloudflare:workers", () => ({ env: {} }));
+vi.mock("@/db", () => {
+  const emptyQuery = {
+    from: () => emptyQuery,
+    where: () => emptyQuery,
+    orderBy: () => emptyQuery,
+    limit: () => Promise.resolve([]),
+  };
+  return { db: { select: () => emptyQuery } };
+});
+
 function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, { status });
 }
