@@ -48,6 +48,7 @@ import { Route as ProjectPProjectIdPromptExplorerRouteImport } from './routes/_p
 import { Route as ProjectPProjectIdLocalRouteImport } from './routes/_project/p/$projectId/local'
 import { Route as ProjectPProjectIdKeywordsRouteImport } from './routes/_project/p/$projectId/keywords'
 import { Route as ProjectPProjectIdDomainRouteImport } from './routes/_project/p/$projectId/domain'
+import { Route as ProjectPProjectIdContentRouteImport } from './routes/_project/p/$projectId/content'
 import { Route as ProjectPProjectIdCompetitorsRouteImport } from './routes/_project/p/$projectId/competitors'
 import { Route as ProjectPProjectIdBrandLookupRouteImport } from './routes/_project/p/$projectId/brand-lookup'
 import { Route as ProjectPProjectIdBacklinksRouteImport } from './routes/_project/p/$projectId/backlinks'
@@ -257,6 +258,12 @@ const ProjectPProjectIdDomainRoute = ProjectPProjectIdDomainRouteImport.update({
   path: '/domain',
   getParentRoute: () => ProjectPProjectIdRouteRoute,
 } as any)
+const ProjectPProjectIdContentRoute =
+  ProjectPProjectIdContentRouteImport.update({
+    id: '/content',
+    path: '/content',
+    getParentRoute: () => ProjectPProjectIdRouteRoute,
+  } as any)
 const ProjectPProjectIdCompetitorsRoute =
   ProjectPProjectIdCompetitorsRouteImport.update({
     id: '/competitors',
@@ -332,6 +339,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
+  '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
@@ -375,6 +383,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
+  '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
   '/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
@@ -424,6 +433,7 @@ export interface FileRoutesById {
   '/_project/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/_project/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/_project/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
+  '/_project/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/_project/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
   '/_project/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/_project/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
@@ -471,6 +481,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/competitors'
+    | '/p/$projectId/content'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
     | '/p/$projectId/local'
@@ -514,6 +525,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/competitors'
+    | '/p/$projectId/content'
     | '/p/$projectId/domain'
     | '/p/$projectId/keywords'
     | '/p/$projectId/local'
@@ -562,6 +574,7 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/backlinks'
     | '/_project/p/$projectId/brand-lookup'
     | '/_project/p/$projectId/competitors'
+    | '/_project/p/$projectId/content'
     | '/_project/p/$projectId/domain'
     | '/_project/p/$projectId/keywords'
     | '/_project/p/$projectId/local'
@@ -870,6 +883,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPProjectIdDomainRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
+    '/_project/p/$projectId/content': {
+      id: '/_project/p/$projectId/content'
+      path: '/content'
+      fullPath: '/p/$projectId/content'
+      preLoaderRoute: typeof ProjectPProjectIdContentRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
     '/_project/p/$projectId/competitors': {
       id: '/_project/p/$projectId/competitors'
       path: '/competitors'
@@ -997,6 +1017,7 @@ interface ProjectPProjectIdRouteRouteChildren {
   ProjectPProjectIdBacklinksRoute: typeof ProjectPProjectIdBacklinksRoute
   ProjectPProjectIdBrandLookupRoute: typeof ProjectPProjectIdBrandLookupRoute
   ProjectPProjectIdCompetitorsRoute: typeof ProjectPProjectIdCompetitorsRoute
+  ProjectPProjectIdContentRoute: typeof ProjectPProjectIdContentRoute
   ProjectPProjectIdDomainRoute: typeof ProjectPProjectIdDomainRoute
   ProjectPProjectIdKeywordsRoute: typeof ProjectPProjectIdKeywordsRoute
   ProjectPProjectIdLocalRoute: typeof ProjectPProjectIdLocalRoute
@@ -1017,6 +1038,7 @@ const ProjectPProjectIdRouteRouteChildren: ProjectPProjectIdRouteRouteChildren =
     ProjectPProjectIdBacklinksRoute: ProjectPProjectIdBacklinksRoute,
     ProjectPProjectIdBrandLookupRoute: ProjectPProjectIdBrandLookupRoute,
     ProjectPProjectIdCompetitorsRoute: ProjectPProjectIdCompetitorsRoute,
+    ProjectPProjectIdContentRoute: ProjectPProjectIdContentRoute,
     ProjectPProjectIdDomainRoute: ProjectPProjectIdDomainRoute,
     ProjectPProjectIdKeywordsRoute: ProjectPProjectIdKeywordsRoute,
     ProjectPProjectIdLocalRoute: ProjectPProjectIdLocalRoute,

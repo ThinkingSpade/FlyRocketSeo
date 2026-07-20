@@ -9,6 +9,7 @@ import {
   ListOrdered,
   MapPin,
   MessageSquare,
+  NotebookPen,
   Search,
   Sparkles,
   TrendingUp,
@@ -37,6 +38,11 @@ const projectNavItems = [
     to: "/p/$projectId/serp" as const,
     label: "SERP Overview",
     icon: ListOrdered,
+  },
+  {
+    to: "/p/$projectId/content" as const,
+    label: "Content Optimizer",
+    icon: NotebookPen,
   },
   {
     to: "/p/$projectId/saved" as const,
@@ -127,6 +133,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/keywords"),
         byPath("/p/$projectId/trends"),
         byPath("/p/$projectId/serp"),
+        byPath("/p/$projectId/content"),
         byPath("/p/$projectId/domain"),
         byPath("/p/$projectId/competitors"),
         byPath("/p/$projectId/backlinks"),
