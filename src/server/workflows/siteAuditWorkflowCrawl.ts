@@ -6,6 +6,8 @@ import { AuditRepository } from "@/server/features/audit/repositories/AuditRepos
 import { AuditProgressKV } from "@/server/lib/audit/progress-kv";
 import { crawlPage } from "@/server/workflows/site-audit-workflow-helpers";
 import { pgStep } from "@/server/workflows/pgStep";
+import { runDataforseoFallbackCrawl } from "@/server/workflows/siteAuditWorkflowFallback";
+import type { BillingCustomerContext } from "@/server/billing/subscription";
 
 const CRAWL_CONCURRENCY = 25;
 
@@ -32,6 +34,7 @@ type CrawlPhaseParams = {
   maxPages: number;
   robots: RobotsResult;
   sitemapUrls: string[];
+  billingCustomer: BillingCustomerContext;
 };
 
 export async function runCrawlPhase(
@@ -46,6 +49,7 @@ export async function runCrawlPhase(
     maxPages,
     robots,
     sitemapUrls,
+    billingCustomer,
   } = params;
   const visited = new Set<string>();
   const queue: string[] = [];
@@ -101,6 +105,33 @@ export async function runCrawlPhase(
       queueLength: queue.length,
       maxPages,
     });
+  }
+
+  // Free crawler returned nothing (blocked by anti-bot/firewall, or the pages
+  // are client-rendered). Fall back to DataForSEO's crawler on the discovered
+  // seed URLs so bot-protected/competitor sites still audit. Any error here
+  // leaves allPages empty — the same "couldn't crawl" outcome as before — so
+  // the fallback can only help, never make a working audit worse.
+  if (allPages.length === 0) {
+    try {
+      const fallbackPages = await runDataforseoFallbackCrawl(step, {
+        seedUrls: [startUrl, ...sitemapUrls],
+        billingCustomer,
+        maxPages,
+      });
+      if (fallbackPages.length > 0) {
+        allPages.push(...fallbackPages);
+        await persistFallbackProgress({
+          step,
+          auditId,
+          workflowInstanceId,
+          pages: fallbackPages,
+        });
+      }
+    } catch {
+      // DataForSEO fallback also failed; fall through with an empty result and
+      // let the existing "couldn't fully crawl" handling take over.
+    }
   }
 
   return allPages;
@@ -248,4 +279,31 @@ async function persistCrawlProgress(params: {
       });
     },
   );
+}
+
+async function persistFallbackProgress(params: {
+  step: WorkflowStep;
+  auditId: string;
+  workflowInstanceId: string;
+  pages: StepPageResult[];
+}) {
+  const { step, auditId, workflowInstanceId, pages } = params;
+  await step.do("kv-progress-fallback", async () => {
+    await AuditProgressKV.pushCrawledUrls(
+      auditId,
+      pages.map((pageResult) => ({
+        url: pageResult.url,
+        statusCode: pageResult.statusCode,
+        title: pageResult.title,
+        crawledAt: Date.now(),
+      })),
+    );
+  });
+
+  await pgStep(step, "progress-fallback", undefined, async () => {
+    await AuditRepository.updateAuditProgress(auditId, workflowInstanceId, {
+      pagesCrawled: pages.length,
+      pagesTotal: pages.length,
+    });
+  });
 }

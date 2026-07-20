@@ -91,6 +91,7 @@ export async function runAuditPhases(
     maxPages,
     robots,
     sitemapUrls: discovery.sitemapUrls,
+    billingCustomer,
   });
   const lighthouseResults = await runLighthousePhase(step, {
     auditId,
