@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { useCustomer } from "autumn-js/react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
@@ -33,9 +33,7 @@ function HostedPlanGateContent({
 }) {
   const { data: session, isPending: isSessionPending } = useSession();
   const hasSession = Boolean(session?.user?.id);
-  const customerQuery = useCustomer({
-    queryOptions: { enabled: hasSession },
-  });
+  const customerQuery = useBillingCustomer({ enabled: hasSession });
 
   return children({
     isLoading: isSessionPending || !hasSession || customerQuery.isLoading,

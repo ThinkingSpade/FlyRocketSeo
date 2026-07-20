@@ -47,6 +47,7 @@ describe("getBillingRouteState", () => {
 
 describe("getSubscribeRouteState", () => {
   const base = {
+    billingDisabled: false,
     hasSession: true,
     isCustomerLoading: false,
     isCustomerError: false,
@@ -55,6 +56,21 @@ describe("getSubscribeRouteState", () => {
     isUpgradeFlow: false,
     checkoutCompleted: false,
   };
+
+  it("redirects into the app when billing is disabled (unmetered self-host)", () => {
+    expect(getSubscribeRouteState({ ...base, billingDisabled: true })).toBe(
+      "redirectToApp",
+    );
+    // Even mid-loading or in the upgrade flow — there is nothing to buy.
+    expect(
+      getSubscribeRouteState({
+        ...base,
+        billingDisabled: true,
+        isCustomerLoading: true,
+        isUpgradeFlow: true,
+      }),
+    ).toBe("redirectToApp");
+  });
 
   it("shows an error state on billing lookup failures", () => {
     expect(getSubscribeRouteState({ ...base, isCustomerError: true })).toBe(

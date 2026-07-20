@@ -1,6 +1,6 @@
 import { useAgent } from "agents/react";
 import { useAgentChat } from "@cloudflare/ai-chat/react";
-import { useCustomer } from "autumn-js/react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { useEffect, useRef, useState } from "react";
 import {
   ChatMessage,
@@ -86,10 +86,14 @@ export function OnboardingChatConversation({
   const agent = useAgent({ agent: "onboarding-chat", name: projectId });
   const { messages, sendMessage, status } = useAgentChat({ agent });
 
-  // This chat is only ever the pre-upgrade free preview: once a user upgrades
-  // they are routed into the GSC onboarding step and never return here, so
-  // there's no "paid" state to model — the question cap always applies.
-  const customerQuery = useCustomer();
+  // On billed deployments this chat is only ever the pre-upgrade free preview:
+  // once a user upgrades they are routed into the GSC onboarding step and never
+  // return here, so there's no "paid" state to model — the question cap always
+  // applies. On unmetered self-hosts (billing disabled) there is nothing to
+  // upgrade to and the server never enforces the cap (customerHasManagedAccess
+  // allows everyone), so hide the cap and every upgrade CTA.
+  const customerQuery = useBillingCustomer();
+  const billingDisabled = customerQuery.billingDisabled;
   const [checkoutError, setCheckoutError] = useState<string | null>(null);
   const [isStartingCheckout, setIsStartingCheckout] = useState(false);
   const [usedSuggestions, setUsedSuggestions] = useState<string[]>([]);
@@ -99,9 +103,9 @@ export function OnboardingChatConversation({
 
   const questionsUsed = messages.filter((m) => m.role === "user").length;
   const remaining = Math.max(0, FREE_ONBOARDING_QUESTION_LIMIT - questionsUsed);
-  const isLocked = remaining <= 0;
+  const isLocked = !billingDisabled && remaining <= 0;
   // Nudge once they're within the last few questions, not from the start.
-  const showRemainingHint = remaining > 0 && remaining <= 3;
+  const showRemainingHint = !billingDisabled && remaining > 0 && remaining <= 3;
 
   const isBusy = status === "submitted" || status === "streaming";
   const sendText = (text: string) => void sendMessage({ text });
@@ -164,18 +168,21 @@ export function OnboardingChatConversation({
 
   return (
     <div className="flex min-h-0 flex-1">
-      <UpgradeSidebar
-        domain={domain}
-        questionsUsed={questionsUsed}
-        isStartingCheckout={isStartingCheckout}
-        onUpgrade={() => void startCheckout()}
-      />
+      {billingDisabled ? null : (
+        <UpgradeSidebar
+          domain={domain}
+          questionsUsed={questionsUsed}
+          isStartingCheckout={isStartingCheckout}
+          onUpgrade={() => void startCheckout()}
+        />
+      )}
 
       <div className="flex min-w-0 flex-1 flex-col">
         <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6">
           <div className="mx-auto max-w-2xl space-y-6">
             <WelcomeMessage
               domain={domain}
+              showUpgrade={!billingDisabled}
               checkoutError={checkoutError}
               isStartingCheckout={isStartingCheckout}
               onUpgrade={() => void startCheckout()}

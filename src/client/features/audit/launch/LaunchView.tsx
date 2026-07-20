@@ -1,4 +1,4 @@
-import { useCustomer } from "autumn-js/react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { AuditHistorySection } from "@/client/features/audit/launch/AuditHistorySection";
 import { LaunchFormCard } from "@/client/features/audit/launch/LaunchFormCard";
 import { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
@@ -23,10 +23,8 @@ export function LaunchView(props: LaunchViewProps) {
 
 function HostedLaunchView(props: LaunchViewProps) {
   const { data: session } = useSession();
-  const customerQuery = useCustomer({
-    queryOptions: {
-      enabled: Boolean(session?.user?.id),
-    },
+  const customerQuery = useBillingCustomer({
+    enabled: Boolean(session?.user?.id),
   });
 
   // Until the customer loads, leave the form unrestricted rather than flash

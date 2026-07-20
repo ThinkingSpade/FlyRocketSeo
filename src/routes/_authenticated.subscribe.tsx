@@ -1,6 +1,6 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useCustomer } from "autumn-js/react";
 import { useEffect, useState } from "react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { ArrowRight, Settings, User } from "lucide-react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -51,11 +51,7 @@ function SubscribePage() {
     new URLSearchParams(window.location.search).get("checkout") === "success";
 
   const hasSession = Boolean(session?.user?.id);
-  const customerQuery = useCustomer({
-    queryOptions: {
-      enabled: hasSession,
-    },
-  });
+  const customerQuery = useBillingCustomer({ enabled: hasSession });
 
   // Read managed access from the already-loaded Autumn customer (local, no API
   // call) instead of a separate server round-trip. Self-hosted has no Autumn
@@ -67,6 +63,7 @@ function SubscribePage() {
 
   const planStatus = getCustomerPlanStatus(customerQuery.data);
   const subscribeRouteState = getSubscribeRouteState({
+    billingDisabled: customerQuery.billingDisabled,
     hasSession,
     isCustomerLoading: customerQuery.isLoading,
     isCustomerError: customerQuery.isError,

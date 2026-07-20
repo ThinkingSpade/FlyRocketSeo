@@ -18,6 +18,7 @@ export function getBillingRouteState(args: {
 }
 
 export function getSubscribeRouteState(args: {
+  billingDisabled: boolean;
   hasSession: boolean;
   isCustomerLoading: boolean;
   isCustomerError: boolean;
@@ -26,6 +27,11 @@ export function getSubscribeRouteState(args: {
   isUpgradeFlow: boolean;
   checkoutCompleted: boolean;
 }) {
+  // Unmetered self-hosts have nothing to subscribe to — never show the paywall.
+  if (args.billingDisabled) {
+    return "redirectToApp" as const;
+  }
+
   if (!args.hasSession || args.isCustomerLoading) {
     return "loading" as const;
   }

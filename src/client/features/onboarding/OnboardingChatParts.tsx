@@ -49,11 +49,14 @@ export function SuggestedQuestions({
 
 export function WelcomeMessage({
   domain,
+  showUpgrade,
   checkoutError,
   isStartingCheckout,
   onUpgrade,
 }: {
   domain: string;
+  // Unmetered self-hosts have no paid plan — hide every upgrade mention.
+  showUpgrade: boolean;
   checkoutError: string | null;
   isStartingCheckout: boolean;
   onUpgrade: () => void;
@@ -66,10 +69,12 @@ export function WelcomeMessage({
       <div className="min-w-0 flex-1 space-y-3 pt-0.5 text-sm">
         <div className="space-y-3 text-base-content/80">
           <p>Hey, I’m Sam — welcome to FlyRocketSEO.</p>
-          <p>
-            To get full access to FlyRocketSEO, you need to upgrade to the paid plan.
-            But, I’m here if you have any questions.
-          </p>
+          {showUpgrade ? (
+            <p>
+              To get full access to FlyRocketSEO, you need to upgrade to the
+              paid plan. But, I’m here if you have any questions.
+            </p>
+          ) : null}
           <p>
             You can also{" "}
             <a
@@ -94,24 +99,26 @@ export function WelcomeMessage({
           </p>
         </div>
 
-        <div className="rounded-box border border-base-300 bg-base-200/50 p-3 text-xs lg:hidden">
-          <p className="font-medium">Want Sam to keep going?</p>
-          <p className="mt-0.5 text-base-content/70">
-            Upgrade to run keyword research, rank tracking, and site audits on{" "}
-            {domain}.
-          </p>
-          <button
-            type="button"
-            className="btn btn-primary btn-xs mt-2"
-            disabled={isStartingCheckout}
-            onClick={onUpgrade}
-          >
-            {isStartingCheckout ? "Redirecting..." : "Upgrade"}
-          </button>
-          {checkoutError ? (
-            <p className="mt-2 text-error">{checkoutError}</p>
-          ) : null}
-        </div>
+        {showUpgrade ? (
+          <div className="rounded-box border border-base-300 bg-base-200/50 p-3 text-xs lg:hidden">
+            <p className="font-medium">Want Sam to keep going?</p>
+            <p className="mt-0.5 text-base-content/70">
+              Upgrade to run keyword research, rank tracking, and site audits
+              on {domain}.
+            </p>
+            <button
+              type="button"
+              className="btn btn-primary btn-xs mt-2"
+              disabled={isStartingCheckout}
+              onClick={onUpgrade}
+            >
+              {isStartingCheckout ? "Redirecting..." : "Upgrade"}
+            </button>
+            {checkoutError ? (
+              <p className="mt-2 text-error">{checkoutError}</p>
+            ) : null}
+          </div>
+        ) : null}
       </div>
     </div>
   );

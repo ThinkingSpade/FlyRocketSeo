@@ -1,6 +1,6 @@
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { useCustomer } from "autumn-js/react";
+import { createFileRoute, notFound, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -32,15 +32,23 @@ export const Route = createFileRoute("/_app/billing")({
 
 function BillingPage() {
   const { data: session, isPending: isSessionPending } = useSession();
+  const navigate = useNavigate();
   const [topUpAmount, setTopUpAmount] = useState("20");
   const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const customerQuery = useCustomer({
-    queryOptions: {
-      enabled: Boolean(session?.user?.id),
-    },
+  const customerQuery = useBillingCustomer({
+    enabled: Boolean(session?.user?.id),
   });
+
+  // Unmetered self-hosts have no billing to show — send the page home instead
+  // of rendering plan/credit UI that doesn't apply.
+  const billingDisabled = customerQuery.billingDisabled;
+  useEffect(() => {
+    if (billingDisabled) {
+      void navigate({ to: "/", replace: true });
+    }
+  }, [billingDisabled, navigate]);
 
   const planStatus = getCustomerPlanStatus(customerQuery.data);
   const isFreePlan = planStatus === "free";
@@ -78,7 +86,7 @@ function BillingPage() {
     });
   }, [billingRouteState, checkoutCompleted]);
 
-  if (billingRouteState === "loading") {
+  if (billingDisabled || billingRouteState === "loading") {
     return null;
   }
 

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCustomer } from "autumn-js/react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import {
   getLatestRankResults,
   getRankPositionMatrix,
@@ -69,8 +69,8 @@ export function RankTrackingDomainDetail({
   onEdit: () => void;
 }) {
   const { data: session } = useSession();
-  const customerQuery = useCustomer({
-    queryOptions: { enabled: Boolean(session?.user?.id) },
+  const customerQuery = useBillingCustomer({
+    enabled: Boolean(session?.user?.id),
   });
   const isFreePlan =
     !!customerQuery.data &&

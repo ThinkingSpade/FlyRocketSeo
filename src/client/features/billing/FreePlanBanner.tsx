@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useCustomer } from "autumn-js/react";
+import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { useSession } from "@/lib/auth-client";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import {
@@ -13,10 +13,8 @@ import {
 
 export function FreePlanBanner() {
   const { data: session } = useSession();
-  const customerQuery = useCustomer({
-    queryOptions: {
-      enabled: Boolean(session?.user?.id),
-    },
+  const customerQuery = useBillingCustomer({
+    enabled: Boolean(session?.user?.id),
   });
 
   if (customerQuery.isLoading || !customerQuery.data) {

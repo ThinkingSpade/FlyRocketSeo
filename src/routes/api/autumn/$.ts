@@ -15,9 +15,9 @@ const handler = autumnHandler({
 
 async function handleAutumnRequest(request: Request) {
   if (!(await isBillingEnabled())) {
-    return new Response("Not found", {
-      status: 404,
-    });
+    // JSON, not plain text: the autumn-js client always parses the body, and a
+    // text body turns a clean 404 into a noisy JSON-parse console error.
+    return Response.json({ error: "billing_disabled" }, { status: 404 });
   }
 
   return handler(request);
