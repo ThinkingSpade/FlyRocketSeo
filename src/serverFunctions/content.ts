@@ -11,8 +11,7 @@ import { ContentBriefService } from "@/server/features/content/services/ContentB
  *  real failure and rethrow a plain Error so the client sees the message. */
 function rethrowPlain(scope: string, error: unknown): never {
   console.error(`[${scope}] failed:`, error);
-  throw error instanceof Error &&
-    error.constructor === Error
+  throw error instanceof Error && error.constructor === Error
     ? error
     : new Error(
         error instanceof Error ? error.message : String(error).slice(0, 300),

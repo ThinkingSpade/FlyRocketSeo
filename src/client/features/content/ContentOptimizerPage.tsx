@@ -157,8 +157,7 @@ export function ContentOptimizerPage({
     if (data !== undefined) analysisByUrl.set(url, data);
   });
   const loadedAnalyses = [...analysisByUrl.values()].filter(
-    (analysis): analysis is NonNullable<CompetitorAnalysis> =>
-      analysis != null,
+    (analysis): analysis is NonNullable<CompetitorAnalysis> => analysis != null,
   );
   const analysesPending = analysisQueries.some((query_) => query_.isLoading);
 
@@ -187,8 +186,8 @@ export function ContentOptimizerPage({
         </h1>
         <p className="text-sm text-base-content/60">
           Build a data-backed content brief from the pages that actually rank:
-          target length, subtopics to cover, terms to include, and the
-          questions searchers ask.
+          target length, subtopics to cover, terms to include, and the questions
+          searchers ask.
         </p>
       </div>
 

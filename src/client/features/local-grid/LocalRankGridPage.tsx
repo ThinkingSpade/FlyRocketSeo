@@ -139,8 +139,8 @@ export function LocalRankGridPage({
         </h1>
         <p className="text-sm text-base-content/60">
           Your local-finder ranking for each keyword, city by city across the
-          DFW metro — see exactly where you own the map and where
-          you&rsquo;re invisible. Hover a cell for the local leaders there.
+          DFW metro — see exactly where you own the map and where you&rsquo;re
+          invisible. Hover a cell for the local leaders there.
         </p>
       </div>
 
@@ -191,8 +191,8 @@ export function LocalRankGridPage({
           <div className="card-body items-center py-12 text-center">
             <p className="font-medium">Enter keywords to map your coverage</p>
             <p className="max-w-md text-sm text-base-content/60">
-              Try the services you sell — the grid shows where in the metro
-              you actually appear when locals search.
+              Try the services you sell — the grid shows where in the metro you
+              actually appear when locals search.
             </p>
           </div>
         </div>

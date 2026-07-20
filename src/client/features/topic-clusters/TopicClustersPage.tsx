@@ -58,8 +58,8 @@ export function TopicClustersPage({
         </h1>
         <p className="text-sm text-base-content/60">
           Turn one topic into a hub-and-spoke content plan: the hub page&rsquo;s
-          keyword set plus the subtopic clusters worth their own articles —
-          each one a click away from a full content brief.
+          keyword set plus the subtopic clusters worth their own articles — each
+          one a click away from a full content brief.
         </p>
       </div>
 

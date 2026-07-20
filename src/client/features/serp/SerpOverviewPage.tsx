@@ -255,9 +255,9 @@ export function SerpOverviewPage({
           ) : null}
 
           <p className="text-xs text-base-content/40">
-            Top {result.results.length} of {result.totalOrganic} organic
-            results · fetched {new Date(result.fetchedAt).toLocaleString()} ·
-            DR via Ahrefs
+            Top {result.results.length} of {result.totalOrganic} organic results
+            · fetched {new Date(result.fetchedAt).toLocaleString()} · DR via
+            Ahrefs
           </p>
         </>
       ) : null}

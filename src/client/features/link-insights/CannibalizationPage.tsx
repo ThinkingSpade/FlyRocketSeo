@@ -20,9 +20,9 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
         </h1>
         <p className="text-sm text-base-content/60">
           Queries where two or more of your pages compete against each other,
-          splitting clicks and rankings. Consolidate content into the winner,
-          or differentiate the losers onto different keywords — and point
-          internal links at the page that should win.
+          splitting clicks and rankings. Consolidate content into the winner, or
+          differentiate the losers onto different keywords — and point internal
+          links at the page that should win.
         </p>
       </div>
 
@@ -81,8 +81,8 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
               </span>
               <span className="text-xs text-base-content/50 tabular-nums">
                 {row.totalImpressions.toLocaleString()} impressions ·{" "}
-                {row.totalClicks.toLocaleString()} clicks ·{" "}
-                {row.pages.length} competing pages
+                {row.totalClicks.toLocaleString()} clicks · {row.pages.length}{" "}
+                competing pages
               </span>
             </div>
 

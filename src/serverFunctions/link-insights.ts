@@ -137,9 +137,8 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
         } else {
           // Dynamic import keeps cheerio out of the worker's startup graph
           // (same reasoning as the audit's page analyzer).
-          const { analyzeLinkPresence } = await import(
-            "@/server/features/gsc/linkPresence"
-          );
+          const { analyzeLinkPresence } =
+            await import("@/server/features/gsc/linkPresence");
           result = {
             ...analyzeLinkPresence(html, {
               sourceUrl: data.sourceUrl,

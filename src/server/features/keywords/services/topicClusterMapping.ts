@@ -196,7 +196,9 @@ export function buildTopicClusters(
   }
 
   return {
-    hub: hub.toSorted((a, b) => (b.searchVolume ?? -1) - (a.searchVolume ?? -1)),
+    hub: hub.toSorted(
+      (a, b) => (b.searchVolume ?? -1) - (a.searchVolume ?? -1),
+    ),
     clusters: ranked,
   };
 }

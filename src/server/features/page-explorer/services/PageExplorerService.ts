@@ -152,11 +152,9 @@ async function getPageExplorer(
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, PAGE_EXPLORER_TTL_SECONDS).catch(
-    (error) => {
-      console.error("page-explorer cache-write failed:", error);
-    },
-  );
+  void setCached(cacheKey, result, PAGE_EXPLORER_TTL_SECONDS).catch((error) => {
+    console.error("page-explorer cache-write failed:", error);
+  });
 
   return result;
 }

@@ -14,11 +14,7 @@ type PresenceResult = {
   error: string | null;
 };
 
-function PresenceBadge({
-  presence,
-}: {
-  presence: PresenceResult | undefined;
-}) {
+function PresenceBadge({ presence }: { presence: PresenceResult | undefined }) {
   if (presence === undefined) {
     return <span className="loading loading-dots loading-xs" />;
   }
@@ -97,8 +93,8 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
         </h1>
         <p className="text-sm text-base-content/60">
           Internal links you should add: for each keyword you almost rank for,
-          these are your own pages Google already associates with it — link
-          from them to the target page using the keyword as the anchor.
+          these are your own pages Google already associates with it — link from
+          them to the target page using the keyword as the anchor.
         </p>
       </div>
 

@@ -159,9 +159,8 @@ export function PageExplorerPage({
           <div className="card-body items-center py-12 text-center">
             <p className="font-medium">Paste a URL to inspect it</p>
             <p className="max-w-md text-sm text-base-content/60">
-              Great for reverse-engineering a competitor page that outranks
-              you — see exactly which keywords it wins and how strong its
-              links are.
+              Great for reverse-engineering a competitor page that outranks you
+              — see exactly which keywords it wins and how strong its links are.
             </p>
           </div>
         </div>
@@ -183,7 +182,9 @@ export function PageExplorerPage({
             />
             <StatCard
               label="Ranking keywords"
-              value={formatCount(result.totalKeywords ?? result.keywords.length)}
+              value={formatCount(
+                result.totalKeywords ?? result.keywords.length,
+              )}
               hint={`Top ${result.keywords.length} shown`}
             />
             <StatCard

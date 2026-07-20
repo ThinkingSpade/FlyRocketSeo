@@ -49,7 +49,8 @@ export function extractBriefTerms(items: unknown[]): BriefTerm[] {
     if (!keyword || byKeyword.has(keyword)) continue;
     byKeyword.set(keyword, {
       keyword,
-      searchVolume: parsed.data.keyword_data?.keyword_info?.search_volume ?? null,
+      searchVolume:
+        parsed.data.keyword_data?.keyword_info?.search_volume ?? null,
     });
   }
   return [...byKeyword.values()]

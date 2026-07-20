@@ -138,11 +138,9 @@ async function getSerpOverview(
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, SERP_OVERVIEW_TTL_SECONDS).catch(
-    (error) => {
-      console.error("serp:overview cache-write failed:", error);
-    },
-  );
+  void setCached(cacheKey, result, SERP_OVERVIEW_TTL_SECONDS).catch((error) => {
+    console.error("serp:overview cache-write failed:", error);
+  });
 
   return result;
 }
