@@ -1,6 +1,11 @@
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
 
+// Cap the HTML we hand to cheerio. A pathologically large document can exhaust
+// the Worker CPU limit during parsing and take the whole crawl batch down with
+// it. ~3M chars is far above any legitimate HTML page.
+const MAX_HTML_CHARS = 3_000_000;
+
 export async function crawlPage(
   url: string,
   crawlOrigin: string,
@@ -30,6 +35,15 @@ export async function crawlPage(
     }
 
     const html = await response.text();
+    // A single oversized document can burn the whole CPU budget in cheerio's
+    // parse + body-clone, killing the batch. Skip analysis for abnormally large
+    // pages (real HTML is well under this); the page still counts as crawled.
+    if (html.length > MAX_HTML_CHARS) {
+      console.warn(
+        `Skipping analysis for oversized page ${finalUrl} (${html.length} chars)`,
+      );
+      return emptyPageResult(finalUrl, statusCode, redirectUrl, responseTimeMs);
+    }
     // Dynamic import keeps cheerio (page-analyzer's HTML parser) out of the
     // worker's startup module graph: SiteAuditWorkflow is re-exported from
     // src/server.ts, so a static import would evaluate cheerio in every

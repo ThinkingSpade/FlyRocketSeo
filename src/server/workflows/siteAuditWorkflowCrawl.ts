@@ -9,7 +9,22 @@ import { pgStep } from "@/server/workflows/pgStep";
 import { runDataforseoFallbackCrawl } from "@/server/workflows/siteAuditWorkflowFallback";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 
-const CRAWL_CONCURRENCY = 25;
+// Small batches keep each crawl step's CPU within the Worker limit: analyzeHtml()
+// runs a full cheerio parse + body-clone per page, so parsing many pages in one
+// step invocation blows the CPU ceiling and fails the step. That ceiling is
+// tight and non-configurable on the Cloudflare Free plan (`cpu_ms` can't be set
+// there), so we keep batches small and lean on the DataForSEO fallback below
+// when the free crawl still can't finish. 8 pages/step is comfortable on paid.
+const CRAWL_CONCURRENCY = 8;
+
+// crawlPage swallows its own fetch/parse errors (returns an empty result), so
+// the only way a crawl-batch step throws is the isolate being killed for a
+// resource limit (CPU/memory) — which retrying can't fix. Cap retries at 1 so a
+// batch that can't fit the CPU budget fails fast into the DataForSEO fallback
+// instead of burning minutes on backoff before the audit gives up.
+const CRAWL_BATCH_STEP_CONFIG = {
+  retries: { limit: 1, delay: "2 seconds" as const },
+};
 
 function shouldQueueCrawlLink(
   link: string,
@@ -67,44 +82,63 @@ export async function runCrawlPhase(
   });
 
   let crawlBatchIndex = 0;
-  while (queue.length > 0 && allPages.length < maxPages) {
-    const urlsToCrawl = selectNextCrawlBatch(
-      queue,
-      queued,
-      visited,
-      robots,
-      maxPages - allPages.length,
-    );
-    if (urlsToCrawl.length === 0) continue;
+  try {
+    while (queue.length > 0 && allPages.length < maxPages) {
+      const urlsToCrawl = selectNextCrawlBatch(
+        queue,
+        queued,
+        visited,
+        robots,
+        maxPages - allPages.length,
+      );
+      if (urlsToCrawl.length === 0) continue;
 
-    crawlBatchIndex += 1;
-    const crawledBatch = await runCrawlBatch(
-      step,
-      crawlBatchIndex,
-      urlsToCrawl,
-      origin,
-    );
-    allPages.push(...crawledBatch);
+      crawlBatchIndex += 1;
+      const crawledBatch = await runCrawlBatch(
+        step,
+        crawlBatchIndex,
+        urlsToCrawl,
+        origin,
+      );
+      allPages.push(...crawledBatch);
 
-    enqueueDiscoveredLinks({
-      crawledBatch,
-      queue,
-      queued,
-      visited,
-      origin,
-      robots,
-    });
-    await persistCrawlProgress({
-      step,
-      crawlBatchIndex,
-      auditId,
-      workflowInstanceId,
-      crawledBatch,
-      pagesCrawled: allPages.length,
-      visitedCount: visited.size,
-      queueLength: queue.length,
-      maxPages,
-    });
+      enqueueDiscoveredLinks({
+        crawledBatch,
+        queue,
+        queued,
+        visited,
+        origin,
+        robots,
+      });
+      await persistCrawlProgress({
+        step,
+        crawlBatchIndex,
+        auditId,
+        workflowInstanceId,
+        crawledBatch,
+        pagesCrawled: allPages.length,
+        visitedCount: visited.size,
+        queueLength: queue.length,
+        maxPages,
+      });
+    }
+  } catch (crawlError) {
+    // A crawl-batch step exhausted its retries — almost always the isolate
+    // being killed for a CPU/memory limit while parsing a batch (uncatchable
+    // inside crawlPage, so it surfaces here as a step failure). Don't let that
+    // hard-fail the whole audit: fall through to the DataForSEO fallback below,
+    // which parses server-side (no local cheerio). Any pages already crawled are
+    // kept, and a non-empty result skips the fallback.
+    console.warn(
+      "[audit-fallback] free crawl phase threw; falling through to DataForSEO",
+      {
+        pagesSoFar: allPages.length,
+        error:
+          crawlError instanceof Error
+            ? `${crawlError.name}: ${crawlError.message.slice(0, 300)}`
+            : String(crawlError).slice(0, 300),
+      },
+    );
   }
 
   // Free crawler returned nothing (blocked by anti-bot/firewall, or the pages
@@ -209,17 +243,21 @@ async function runCrawlBatch(
   urlsToCrawl: string[],
   origin: string,
 ): Promise<StepPageResult[]> {
-  return step.do(`crawl-batch-${crawlBatchIndex}`, async () => {
-    const settled = await Promise.allSettled(
-      urlsToCrawl.map((url) => crawlPage(url, origin)),
-    );
-    return settled.flatMap((result) => {
-      if (result.status === "fulfilled" && result.value) {
-        return [result.value];
-      }
-      return [];
-    });
-  });
+  return step.do(
+    `crawl-batch-${crawlBatchIndex}`,
+    CRAWL_BATCH_STEP_CONFIG,
+    async () => {
+      const settled = await Promise.allSettled(
+        urlsToCrawl.map((url) => crawlPage(url, origin)),
+      );
+      return settled.flatMap((result) => {
+        if (result.status === "fulfilled" && result.value) {
+          return [result.value];
+        }
+        return [];
+      });
+    },
+  );
 }
 
 function enqueueDiscoveredLinks(params: {

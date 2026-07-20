@@ -12,11 +12,14 @@ import { instantPageToStepPageResult } from "@/server/workflows/siteAuditFallbac
 // (a no-op when Autumn billing is disabled; DataForSEO still charges per page,
 // so callers must bound the URL count to maxPages).
 
-// Small batches bound each step's wall time (JS-rendered instant_pages can take
-// ~5-15s per URL), and no-retry steps ensure a step replay can never re-bill
-// pages that DataForSEO already charged for. A failed batch forfeits only its
-// own pages; the loop moves on to the next batch.
-const FALLBACK_BATCH_SIZE = 8;
+// Small batches keep each step under the Worker CPU limit: parsing DataForSEO's
+// (large, JS-rendered) instant_pages responses is CPU-heavy, and on the
+// Cloudflare Free plan the fixed CPU ceiling is tight enough that ~8 responses
+// in one step invocation exceeds it ("Worker exceeded CPU time limit"). 2/step
+// stays comfortably under it. No-retry steps also ensure a step replay can never
+// re-bill pages DataForSEO already charged for; a failed batch forfeits only its
+// own pages and the loop moves on to the next batch.
+const FALLBACK_BATCH_SIZE = 2;
 const SINGLE_ATTEMPT_STEP_CONFIG = {
   retries: { limit: 0, delay: "1 second" as const },
 };

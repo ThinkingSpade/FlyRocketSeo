@@ -10,6 +10,12 @@
   },
   "compatibility_date": "2025-09-02",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  // NOTE: `limits.cpu_ms` is NOT set here on purpose — it's rejected on the
+  // Cloudflare Free plan ("CPU limits are not supported for the Free plan"),
+  // which is why site-audit crawl batches that parse many pages with cheerio can
+  // exceed the (tight, fixed) Free-plan CPU ceiling. The crawl handles this with
+  // small batches + a DataForSEO fallback (see siteAuditWorkflowCrawl.ts). Paid
+  // self-hosters can add `"limits": { "cpu_ms": 300000 }` for headroom.
   "observability": {
     "enabled": true,
     // Spans are billed as observability events (free tier 200k/day); add a
