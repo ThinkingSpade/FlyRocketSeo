@@ -128,9 +128,16 @@ export async function runCrawlPhase(
           pages: fallbackPages,
         });
       }
-    } catch {
+    } catch (error) {
       // DataForSEO fallback also failed; fall through with an empty result and
-      // let the existing "couldn't fully crawl" handling take over.
+      // let the existing "couldn't fully crawl" handling take over. Log the
+      // reason (sanitized) so a failed fallback is diagnosable via wrangler tail.
+      console.warn("[audit-fallback] fallback errored; audit stays failed", {
+        error:
+          error instanceof Error
+            ? `${error.name}: ${error.message.slice(0, 300)}`
+            : String(error).slice(0, 300),
+      });
     }
   }
 
