@@ -78,6 +78,13 @@ export const getBillingUsageEvents = createServerFn({ method: "POST" })
     }
   });
 
+// Lets the client hide billing/upgrade UI when billing is disabled (hosted mode
+// with no Autumn key = an unmetered self-host). Only the boolean leaves the
+// Worker; the secret never does.
+export const getBillingRuntimeStatus = createServerFn({ method: "GET" })
+  .middleware(requireAuthenticatedContext)
+  .handler(async () => ({ enabled: await isBillingEnabled() }));
+
 async function fetchAutumnEventsPage(args: {
   customerId: string;
   end: number;
