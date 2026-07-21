@@ -86,7 +86,7 @@ const keywordOverviewItemSchema = z
   })
   .passthrough();
 
-export type SerpOverviewResponse = z.infer<typeof serpOverviewSchema>;
+type SerpOverviewResponse = z.infer<typeof serpOverviewSchema>;
 
 async function getSerpOverview(
   input: {

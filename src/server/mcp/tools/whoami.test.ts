@@ -59,12 +59,13 @@ describe("whoamiTool", () => {
     const result = await whoamiTool.handler({}, toolExtra);
 
     expect(mocks.autumnCheck).not.toHaveBeenCalled();
-    expect(result.content[0]).toMatchObject({
-      type: "text",
-      text: expect.stringContaining(
-        "Credits remaining: unlimited (billing disabled)",
-      ),
-    });
+    const first = result.content[0];
+    if (first?.type !== "text") {
+      throw new Error("expected a text content item");
+    }
+    expect(first.text).toContain(
+      "Credits remaining: unlimited (billing disabled)",
+    );
     expect(result.structuredContent).toMatchObject({
       mode: "hosted",
       creditsRemaining: null,

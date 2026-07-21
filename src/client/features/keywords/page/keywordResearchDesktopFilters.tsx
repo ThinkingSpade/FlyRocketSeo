@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { KeywordResearchControllerState } from "./types";
 
-export function FilterTextInput({
+function FilterTextInput({
   form,
   name,
   label,
@@ -31,7 +31,7 @@ export function FilterTextInput({
   );
 }
 
-export function FilterRangeInputs({
+function FilterRangeInputs({
   form,
   title,
   minName,
@@ -115,7 +115,7 @@ export function EmptyFilterResults({
   );
 }
 
-export function FilterQuestionsToggle({
+function FilterQuestionsToggle({
   form,
 }: {
   form: KeywordResearchControllerState["filtersForm"];

@@ -42,7 +42,7 @@ const contentBriefSchema = z.object({
   fetchedAt: z.string(),
 });
 
-export type ContentBrief = z.infer<typeof contentBriefSchema>;
+type ContentBrief = z.infer<typeof contentBriefSchema>;
 
 const competitorPageSchema = z.object({
   url: z.string(),
@@ -52,7 +52,7 @@ const competitorPageSchema = z.object({
   h3: z.array(z.string()),
 });
 
-export type CompetitorPageAnalysis = z.infer<
+type CompetitorPageAnalysis = z.infer<
   typeof competitorPageSchema
 > | null;
 

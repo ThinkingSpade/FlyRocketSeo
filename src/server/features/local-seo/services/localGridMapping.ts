@@ -3,7 +3,7 @@ import { z } from "zod";
 // Pure mapping (no I/O) for the Local Rank Grid, split out so the position
 // matching is unit-testable without the DataForSEO client.
 
-export type LocalGridCell = {
+type LocalGridCell = {
   /** 1-based rank of the project's business in the local results, or null. */
   position: number | null;
   /** The top 3 business names at this location, for "who's winning" context. */

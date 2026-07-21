@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getBillingRuntimeStatus } from "@/serverFunctions/billing";
 
-export type BillingMode = "loading" | "enabled" | "disabled";
+type BillingMode = "loading" | "enabled" | "disabled";
 
 /**
  * Runtime billing state for gating billing/upgrade UI. Returns "disabled" ONLY

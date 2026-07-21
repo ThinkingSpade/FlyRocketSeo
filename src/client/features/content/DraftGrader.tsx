@@ -35,7 +35,7 @@ function significantWords(text: string): string[] {
 
 /** A question counts as answered when most of its meaningful words appear in
  *  the draft — crude, but catches "did you cover this at all". */
-export function isQuestionCovered(draft: string, question: string): boolean {
+function isQuestionCovered(draft: string, question: string): boolean {
   const words = significantWords(question);
   if (words.length === 0) return false;
   const hits = words.filter((word) => draft.includes(word)).length;

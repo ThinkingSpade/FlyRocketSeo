@@ -45,7 +45,7 @@ const pageExplorerSchema = z.object({
   fetchedAt: z.string(),
 });
 
-export type PageExplorerResult = z.infer<typeof pageExplorerSchema>;
+type PageExplorerResult = z.infer<typeof pageExplorerSchema>;
 
 // Backlinks summary item, read defensively (external data).
 const summaryItemSchema = z

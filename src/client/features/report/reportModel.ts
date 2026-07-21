@@ -3,13 +3,6 @@
  * so the formatting and recommendation rules are unit-testable.
  */
 
-export type GscTotals = {
-  clicks: number;
-  impressions: number;
-  ctr: number;
-  position: number;
-};
-
 export function formatCount(value: number | null | undefined): string {
   if (value == null) return "—";
   return Math.round(value).toLocaleString();
@@ -52,7 +45,7 @@ export function positionDelta(
   return { text: `${sign}${improvement.toFixed(1)}`, good: improvement > 0 };
 }
 
-export type RecommendationInput = {
+type RecommendationInput = {
   strikingDistanceCount: number;
   cannibalizationCount: number;
   linkOpportunityCount: number;

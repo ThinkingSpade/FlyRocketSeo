@@ -6,13 +6,13 @@ import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
  * so the ranking rules are unit-testable without a GSC client.
  */
 
-export type LinkOpportunitySource = {
+type LinkOpportunitySource = {
   page: string;
   position: number;
   impressions: number;
 };
 
-export type LinkOpportunity = {
+type LinkOpportunity = {
   query: string;
   target: {
     page: string;
@@ -23,7 +23,7 @@ export type LinkOpportunity = {
   sources: LinkOpportunitySource[];
 };
 
-export type CannibalizationPage = {
+type CannibalizationPage = {
   page: string;
   clicks: number;
   impressions: number;
@@ -31,7 +31,7 @@ export type CannibalizationPage = {
   isWinner: boolean;
 };
 
-export type CannibalizationRow = {
+type CannibalizationRow = {
   query: string;
   totalClicks: number;
   totalImpressions: number;

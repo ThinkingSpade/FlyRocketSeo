@@ -4,12 +4,12 @@ import type { InstantPageAuditItem } from "@/server/lib/dataforseo/onpage";
 // Pure mapping (no I/O), split from the service so it's unit-testable without
 // the DataForSEO client's `cloudflare:workers` env dependency.
 
-export type BriefTerm = {
+type BriefTerm = {
   keyword: string;
   searchVolume: number | null;
 };
 
-export type CompetitorPage = {
+type CompetitorPage = {
   url: string;
   title: string;
   wordCount: number | null;

@@ -125,7 +125,7 @@ function GscRowsTable({
   );
 }
 
-export type ReportBodyProps = {
+type ReportBodyProps = {
   gsc: {
     totals: {
       clicks: number;

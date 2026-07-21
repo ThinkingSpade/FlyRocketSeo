@@ -143,7 +143,7 @@ function formatUtcDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
-export type CtrOpportunityRow = {
+type CtrOpportunityRow = {
   query: string;
   page: string;
   clicks: number;

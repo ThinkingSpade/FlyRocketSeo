@@ -3,20 +3,20 @@ import { z } from "zod";
 // Pure clustering (no I/O) for the Topic Cluster Planner, split out so the
 // grouping rules are unit-testable without the DataForSEO client.
 
-export type ClusterKeyword = {
+type ClusterKeyword = {
   keyword: string;
   searchVolume: number | null;
   keywordDifficulty: number | null;
 };
 
-export type TopicCluster = {
+type TopicCluster = {
   /** Human label derived from the shared modifier (e.g. "healthy"). */
   name: string;
   keywords: ClusterKeyword[];
   totalVolume: number;
 };
 
-export type TopicClusterPlan = {
+type TopicClusterPlan = {
   /** Close variants of the seed itself — the hub page's keyword set. */
   hub: ClusterKeyword[];
   clusters: TopicCluster[];

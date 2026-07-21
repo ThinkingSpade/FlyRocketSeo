@@ -107,7 +107,7 @@ function isNetworkTypeError(error: TypeError): boolean {
 }
 
 /** Classify site-list failures that have a safe, actionable client state. */
-export function classifyGscSitesError(
+function classifyGscSitesError(
   error: unknown,
 ): GscSitesErrorReason | null {
   if (error instanceof GscTokenError) return "requires_reconnect";

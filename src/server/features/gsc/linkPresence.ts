@@ -6,7 +6,7 @@ import * as cheerio from "cheerio";
  * fetch so the matching rules are unit-testable.
  */
 
-export type LinkPresence = {
+type LinkPresence = {
   linksToTarget: boolean;
   mentionsPhrase: boolean;
 };

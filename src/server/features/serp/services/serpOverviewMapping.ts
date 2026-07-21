@@ -4,7 +4,7 @@ import type { SerpLiveItem } from "@/server/lib/dataforseo/serp";
 // Pure mapping (no I/O), split from the service so it's unit-testable without
 // the DataForSEO client's `cloudflare:workers` env dependency.
 
-export type SerpOverviewResult = {
+type SerpOverviewResult = {
   rank: number | null;
   title: string | null;
   url: string | null;
@@ -19,7 +19,7 @@ export type SerpOverviewResult = {
   isDown: boolean;
 };
 
-export type SerpOverview = {
+type SerpOverview = {
   results: SerpOverviewResult[];
   paaQuestions: string[];
   serpFeatures: Array<{ type: string; count: number }>;
