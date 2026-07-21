@@ -28,6 +28,7 @@ import { KeywordsTab } from "@/client/features/domain/components/KeywordsTab";
 import { PagesTab } from "@/client/features/domain/components/PagesTab";
 import { StatCard } from "@/client/features/domain/components/StatCard";
 import { PositionDistribution } from "@/client/features/domain/components/PositionDistribution";
+import { DomainCompetitorsCard } from "@/client/features/domain/components/DomainCompetitorsCard";
 import { DomainVisibilityTrend } from "@/client/features/domain/components/DomainVisibilityTrend";
 import { SearchTabStrip } from "@/client/features/search-tabs/SearchTabStrip";
 import type { SearchTabInput } from "@/client/features/search-tabs/types";
@@ -599,6 +600,13 @@ export function DomainOverviewPage({
 
             {state.overview.hasData && state.overview.positionBuckets ? (
               <PositionDistribution buckets={state.overview.positionBuckets} />
+            ) : null}
+
+            {state.overview.hasData ? (
+              <DomainCompetitorsCard
+                projectId={projectId}
+                domain={state.overview.domain}
+              />
             ) : null}
 
             {state.overview.hasData ? (
