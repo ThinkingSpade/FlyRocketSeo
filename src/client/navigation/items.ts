@@ -4,6 +4,7 @@ import {
   Bot,
   ClipboardCheck,
   FileSearch,
+  FileText,
   Globe,
   Grid3x3,
   LayoutDashboard,
@@ -110,6 +111,11 @@ const projectNavItems = [
     icon: ClipboardCheck,
   },
   {
+    to: "/p/$projectId/report" as const,
+    label: "Client Report",
+    icon: FileText,
+  },
+  {
     to: "/p/$projectId/brand-lookup" as const,
     label: "Brand Lookup",
     icon: Sparkles,
@@ -184,6 +190,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/rank-tracking"),
         byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),
+        byPath("/p/$projectId/report"),
       ],
     },
   ];
