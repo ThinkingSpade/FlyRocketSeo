@@ -1,13 +1,48 @@
 import { useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { MapPin, Search, Star } from "lucide-react";
+import {
+  BadgeCheck,
+  MapPin,
+  MessageSquareReply,
+  Search,
+  Star,
+  TrendingUp,
+} from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   getBusinessProfile,
   getBusinessReviewsResult,
   startBusinessReviews,
 } from "@/serverFunctions/local-seo";
+import {
+  AnalyzeDomainPrompt,
+  type AnalyzePreviewItem,
+} from "@/client/components/AnalyzeDomainPrompt";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { ReviewAnalyticsCards } from "./ReviewAnalyticsCards";
+
+const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
+  {
+    icon: Star,
+    title: "Rating & reviews",
+    description: "Star rating, review count, and the newest reviews",
+  },
+  {
+    icon: MessageSquareReply,
+    title: "Response coverage",
+    description: "Reply rate and unanswered negative reviews",
+  },
+  {
+    icon: TrendingUp,
+    title: "Review velocity",
+    description: "How steadily reviews arrive, month by month",
+  },
+  {
+    icon: BadgeCheck,
+    title: "Profile completeness",
+    description: "Categories, hours, claimed status and description",
+  },
+];
 
 type LocalSeoNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -25,6 +60,7 @@ export function LocalSeoPage({
 }) {
   const [input, setInput] = useState(query);
   const keyword = query.trim();
+  const projectDomain = useProjectDomain(projectId);
 
   const profileQuery = useQuery({
     enabled: keyword !== "",
@@ -98,11 +134,27 @@ export function LocalSeoPage({
       ) : null}
 
       {keyword === "" ? (
-        <div className="card border border-base-300 bg-base-100">
-          <div className="card-body items-center py-12 text-sm text-base-content/60">
-            Enter a business name above to load its Google Business Profile.
-          </div>
-        </div>
+        <AnalyzeDomainPrompt
+          domain={projectDomain}
+          title="Look up your business profile"
+          description="Search your Google Business Profile by name — add a city if the name is common."
+          preview={LOCAL_ANALYZE_PREVIEW}
+          onAnalyze={() => {
+            if (!projectDomain) return;
+            // The lookup is name-based; the domain's stem is the best guess
+            // we have, and the user can refine it in the field above.
+            const guess = projectDomain
+              .replace(/^https?:\/\//, "")
+              .replace(/^www\./, "")
+              .split(".")[0];
+            setInput(guess);
+            navigate({
+              search: (prev) => ({ ...prev, q: guess }),
+              replace: false,
+            });
+          }}
+          isBusy={profileQuery.isFetching}
+        />
       ) : profile ? (
         !profile.found ? (
           <div className="card border border-base-300 bg-base-100">

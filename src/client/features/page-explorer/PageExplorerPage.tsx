@@ -23,6 +23,11 @@ import {
 } from "./PageInsightsCards";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import {
+  AnalyzeDomainPrompt,
+  type AnalyzePreviewItem,
+} from "@/client/components/AnalyzeDomainPrompt";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
@@ -36,6 +41,29 @@ function formatCount(value: number | null | undefined): string {
   if (value == null) return "—";
   return Math.round(value).toLocaleString();
 }
+
+const PAGE_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
+  {
+    icon: KeyRound,
+    title: "Every keyword it ranks for",
+    description: "Positions, volume, difficulty and estimated traffic",
+  },
+  {
+    icon: Award,
+    title: "Ranking real estate",
+    description: "#1s, top-3, top-10 and striking-distance counts",
+  },
+  {
+    icon: TrendingUp,
+    title: "Traffic concentration",
+    description: "Which few keywords actually carry the page",
+  },
+  {
+    icon: Link2,
+    title: "Links & on-page",
+    description: "Backlinks, referring domains, and the heading outline",
+  },
+];
 
 export function PageExplorerPage({
   projectId,
@@ -52,6 +80,7 @@ export function PageExplorerPage({
   const [input, setInput] = useState(url);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
   const targetUrl = url.trim();
+  const projectDomain = useProjectDomain(projectId);
 
   const pageQuery = useQuery({
     enabled: targetUrl.length > 0,
@@ -162,15 +191,37 @@ export function PageExplorerPage({
       ) : null}
 
       {!targetUrl ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
-            <p className="font-medium">Paste a URL to inspect it</p>
-            <p className="max-w-md text-sm text-base-content/60">
-              Great for reverse-engineering a competitor page that outranks you
-              — see exactly which keywords it wins and how strong its links are.
-            </p>
+        <>
+          <AnalyzeDomainPrompt
+            domain={projectDomain}
+            title="Start with your homepage"
+            description="Inspect any page on your site — or paste a competitor's URL above to reverse-engineer it."
+            preview={PAGE_ANALYZE_PREVIEW}
+            onAnalyze={() => {
+              if (!projectDomain) return;
+              const homepage = `https://${projectDomain.replace(/^https?:\/\//, "")}/`;
+              setInput(homepage);
+              navigate({
+                search: (prev) => ({
+                  ...prev,
+                  u: homepage,
+                  loc: activeLocation,
+                }),
+                replace: false,
+              });
+            }}
+            isBusy={pageQuery.isFetching}
+          />
+          <div className="card border border-dashed border-base-300">
+            <div className="card-body items-center py-8 text-center">
+              <p className="max-w-md text-sm text-base-content/60">
+                Great for reverse-engineering a competitor page that outranks
+                you — see exactly which keywords it wins and how strong its
+                links are.
+              </p>
+            </div>
           </div>
-        </div>
+        </>
       ) : null}
 
       {targetUrl && pageQuery.isLoading ? (

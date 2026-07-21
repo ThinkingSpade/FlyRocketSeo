@@ -1,7 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import {
-  Eye,
   Grid3x3,
   Hash,
   LocateFixed,
@@ -10,7 +9,7 @@ import {
   Search,
   Trophy,
 } from "lucide-react";
-import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
+import { InsightIcon } from "@/client/components/InsightTile";
 import {
   geocodeLocation,
   getLocalGridCell,
@@ -25,6 +24,31 @@ import {
   type CellState,
 } from "@/client/features/local-grid/RankGridMap";
 import { computeGridShareOfVoice } from "@/client/features/local-grid/gridShareOfVoice";
+import { GridShareOfVoiceCards } from "@/client/features/local-grid/GridShareOfVoiceCards";
+import type { AnalyzePreviewItem } from "@/client/components/AnalyzeDomainPrompt";
+
+const GRID_PREVIEW: AnalyzePreviewItem[] = [
+  {
+    icon: Megaphone,
+    title: "Share of voice",
+    description: "Share of scanned pins where you rank in the local top 3",
+  },
+  {
+    icon: MapPin,
+    title: "Pin-by-pin ranking",
+    description: "A colored grid showing your position at each location",
+  },
+  {
+    icon: Trophy,
+    title: "Map leaders",
+    description: "Which businesses own the top 3 across your area",
+  },
+  {
+    icon: Hash,
+    title: "Average rank",
+    description: "Your mean local position across every pin scanned",
+  },
+];
 
 type LocalGridNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -323,101 +347,39 @@ export function LocalRankGridPage({
       {keyword && shareOfVoice.scannedPins > 0 ? (
         <GridShareOfVoiceCards shareOfVoice={shareOfVoice} />
       ) : null}
-    </div>
-  );
-}
 
-function GridShareOfVoiceCards({
-  shareOfVoice,
-}: {
-  shareOfVoice: ReturnType<typeof computeGridShareOfVoice>;
-}) {
-  const { scannedPins, myTop3Count, myVisibleCount, averagePosition, leaders } =
-    shareOfVoice;
-  const top3Percent = Math.round((myTop3Count / scannedPins) * 100);
-
-  return (
-    <>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <InsightTile
-          icon={Megaphone}
-          label="Share of voice"
-          value={`${top3Percent}%`}
-          tone={top3Percent > 0 ? "success" : "warning"}
-          title="Share of the scanned pins where you rank in the local top 3"
-        />
-        <InsightTile
-          icon={MapPin}
-          label="Top-3 pins"
-          tone="primary"
-          value={
-            <>
-              {myTop3Count}
-              <span className="text-sm font-normal text-base-content/50">
-                {" "}
-                / {scannedPins}
-              </span>
-            </>
-          }
-        />
-        <InsightTile
-          icon={Eye}
-          label="Visible pins"
-          tone="info"
-          value={
-            <>
-              {myVisibleCount}
-              <span className="text-sm font-normal text-base-content/50">
-                {" "}
-                / {scannedPins}
-              </span>
-            </>
-          }
-        />
-        <InsightTile
-          icon={Hash}
-          label="Avg rank"
-          value={
-            averagePosition != null ? `#${averagePosition.toFixed(1)}` : "—"
-          }
-        />
-      </div>
-
-      {leaders.length > 0 ? (
+      {!keyword ? (
         <div className="card border border-base-300 bg-base-100">
-          <div className="card-body gap-2 p-4">
-            <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-              <InsightIcon icon={Trophy} tone="warning" />
-              Map leaders
-            </h2>
-            <p className="-mt-1 text-xs text-base-content/50">
-              Who holds the local top 3 across your grid — including your own
-              listing when it ranks.
-            </p>
-            <ul className="space-y-1.5">
-              {leaders.map((leader) => (
-                <li
-                  key={leader.name}
-                  className="flex items-center gap-3 text-sm"
+          <div className="card-body gap-3 p-5">
+            <div>
+              <h2 className="text-base font-semibold">
+                Map your local visibility
+              </h2>
+              <p className="mt-0.5 max-w-2xl text-sm text-base-content/60">
+                Enter a keyword above and scan — each pin checks the local
+                results from that spot, so you see exactly where you drop off
+                the map. A scan costs about $0.002 per pin and caches for a day.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {GRID_PREVIEW.map((item) => (
+                <div
+                  key={item.title}
+                  className="rounded-lg border border-base-300 p-3"
                 >
-                  <span className="w-44 shrink-0 truncate" title={leader.name}>
-                    {leader.name}
-                  </span>
-                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-base-200">
-                    <span
-                      className="block h-full rounded-full bg-primary/70"
-                      style={{ width: `${Math.round(leader.share * 100)}%` }}
-                    />
-                  </span>
-                  <span className="w-24 shrink-0 text-right text-xs text-base-content/60 tabular-nums">
-                    {leader.appearances} of {scannedPins} pins
-                  </span>
-                </li>
+                  <div className="flex items-center gap-1.5 text-sm font-medium">
+                    <InsightIcon icon={item.icon} />
+                    {item.title}
+                  </div>
+                  <p className="mt-1 text-xs text-base-content/55">
+                    {item.description}
+                  </p>
+                </div>
               ))}
-            </ul>
+            </div>
           </div>
         </div>
       ) : null}
-    </>
+    </div>
   );
 }

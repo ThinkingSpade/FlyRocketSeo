@@ -8,6 +8,7 @@ import {
   Globe,
   Grid3x3,
   LayoutDashboard,
+  Lightbulb,
   Link2,
   ListOrdered,
   MapPin,
@@ -69,6 +70,11 @@ const projectNavItems = [
     to: "/p/$projectId/rank-tracking" as const,
     label: "Rank Tracking",
     icon: TrendingUp,
+  },
+  {
+    to: "/p/$projectId/opportunities" as const,
+    label: "SEO Opportunities",
+    icon: Lightbulb,
   },
   {
     to: "/p/$projectId/search-performance" as const,
@@ -183,6 +189,7 @@ export function getProjectNavGroups(projectId: string) {
     {
       label: "My Site",
       items: [
+        byPath("/p/$projectId/opportunities"),
         byPath("/p/$projectId/search-performance"),
         byPath("/p/$projectId/links"),
         byPath("/p/$projectId/cannibalization"),
