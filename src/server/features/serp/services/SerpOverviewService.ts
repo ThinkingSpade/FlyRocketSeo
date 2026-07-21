@@ -48,16 +48,43 @@ const trafficEstimationItemSchema = z
   })
   .passthrough();
 
+const keywordStatsSchema = z.object({
+  searchVolume: z.number().nullable(),
+  keywordDifficulty: z.number().nullable(),
+  cpc: z.number().nullable(),
+});
+
 const serpOverviewSchema = z.object({
   keyword: z.string(),
   locationCode: z.number(),
   languageCode: z.string(),
+  /** The keyword's own metrics (Labs overview); null when Labs has no data. */
+  keywordStats: keywordStatsSchema.nullable(),
   results: z.array(serpOverviewResultSchema),
   paaQuestions: z.array(z.string()),
   serpFeatures: z.array(z.object({ type: z.string(), count: z.number() })),
   totalOrganic: z.number(),
   fetchedAt: z.string(),
 });
+
+// Labs keyword_overview item, read defensively (external data).
+const keywordOverviewItemSchema = z
+  .object({
+    keyword_info: z
+      .object({
+        search_volume: z.number().nullable().optional(),
+        cpc: z.number().nullable().optional(),
+      })
+      .passthrough()
+      .nullable()
+      .optional(),
+    keyword_properties: z
+      .object({ keyword_difficulty: z.number().nullable().optional() })
+      .passthrough()
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
 
 export type SerpOverviewResponse = z.infer<typeof serpOverviewSchema>;
 
@@ -74,7 +101,7 @@ async function getSerpOverview(
   const locationCode = input.locationCode ?? DEFAULT_LOCATION_CODE;
   const languageCode = input.languageCode ?? getLanguageCode(locationCode);
 
-  const cacheKey = await buildCacheKey("serp:overview", {
+  const cacheKey = await buildCacheKey("serp:overview:v2", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     keyword,
@@ -125,10 +152,33 @@ async function getSerpOverview(
     }
   }
 
+  // The keyword's own metrics for the stats header. Best-effort — Labs has no
+  // data for many long-tails and that must not sink the SERP view.
+  let keywordStats: SerpOverviewResponse["keywordStats"] = null;
+  try {
+    const overviewItems = await dataforseo.labs.keywordOverview({
+      keywords: [keyword],
+      locationCode,
+      languageCode,
+    });
+    const parsed = keywordOverviewItemSchema.safeParse(overviewItems[0] ?? {});
+    if (parsed.success && overviewItems.length > 0) {
+      keywordStats = {
+        searchVolume: parsed.data.keyword_info?.search_volume ?? null,
+        cpc: parsed.data.keyword_info?.cpc ?? null,
+        keywordDifficulty:
+          parsed.data.keyword_properties?.keyword_difficulty ?? null,
+      };
+    }
+  } catch (error) {
+    console.warn("serp:overview keyword stats failed:", error);
+  }
+
   const result: SerpOverviewResponse = {
     keyword,
     locationCode,
     languageCode,
+    keywordStats,
     ...overview,
     results: overview.results.map((item) => ({
       ...item,

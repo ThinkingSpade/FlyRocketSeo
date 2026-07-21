@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { FileSearch, Search } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getPageExplorer } from "@/serverFunctions/page-explorer";
+import { analyzeContentCompetitor } from "@/serverFunctions/content";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -71,6 +72,18 @@ export function PageExplorerPage({
   const errorMessage = pageQuery.isError
     ? getStandardErrorMessage(pageQuery.error)
     : null;
+
+  // On-page snapshot: same analysis (and server cache) the Content Optimizer
+  // uses for competitor pages — title, length, and the heading outline.
+  const snapshotQuery = useQuery({
+    enabled: targetUrl.length > 0,
+    queryKey: ["content-competitor", projectId, targetUrl],
+    queryFn: () =>
+      analyzeContentCompetitor({ data: { projectId, url: targetUrl } }),
+    staleTime: 60 * 60_000,
+    retry: 1,
+  });
+  const snapshot = snapshotQuery.data ?? null;
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
@@ -248,6 +261,31 @@ export function PageExplorerPage({
               </table>
             </div>
           </div>
+
+          {snapshot ? (
+            <div className="card border border-base-300 bg-base-100">
+              <div className="card-body gap-2 p-4">
+                <h2 className="text-sm font-semibold">On-page snapshot</h2>
+                <p className="text-sm text-base-content/80">
+                  <span className="font-medium">{snapshot.title || "—"}</span>
+                  {snapshot.wordCount != null ? (
+                    <span className="text-base-content/60">
+                      {" "}
+                      · {snapshot.wordCount.toLocaleString()} words ·{" "}
+                      {snapshot.h2.length} H2s · {snapshot.h3.length} H3s
+                    </span>
+                  ) : null}
+                </p>
+                {snapshot.h2.length > 0 ? (
+                  <ul className="list-inside list-disc space-y-0.5 text-sm text-base-content/70">
+                    {snapshot.h2.map((heading) => (
+                      <li key={heading}>{heading}</li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
 
           <p className="text-xs text-base-content/40">
             {result.url} · fetched {new Date(result.fetchedAt).toLocaleString()}

@@ -158,6 +158,43 @@ export function SerpOverviewPage({
 
       {result ? (
         <>
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+                Volume
+              </div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">
+                {formatCount(result.keywordStats?.searchVolume)}
+              </div>
+            </div>
+            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+                Difficulty
+              </div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">
+                {result.keywordStats?.keywordDifficulty ?? "—"}
+              </div>
+            </div>
+            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+                CPC
+              </div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">
+                {result.keywordStats?.cpc != null
+                  ? `$${result.keywordStats.cpc.toFixed(2)}`
+                  : "—"}
+              </div>
+            </div>
+            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+                Organic results
+              </div>
+              <div className="mt-1 text-xl font-semibold tabular-nums">
+                {result.totalOrganic}
+              </div>
+            </div>
+          </div>
+
           {result.serpFeatures.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5">
               <span className="text-xs font-medium uppercase tracking-wide text-base-content/50">

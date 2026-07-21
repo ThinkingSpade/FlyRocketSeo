@@ -10,6 +10,7 @@ import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
+import { CompetitorOutlines } from "@/client/features/content/CompetitorOutlines";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -392,6 +393,8 @@ export function ContentOptimizerPage({
               </table>
             </div>
           </div>
+
+          <CompetitorOutlines analyses={loadedAnalyses} />
 
           <p className="text-xs text-base-content/40">
             Brief for &ldquo;{brief.keyword}&rdquo; · fetched{" "}
