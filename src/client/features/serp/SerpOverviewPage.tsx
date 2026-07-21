@@ -1,10 +1,24 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ListOrdered, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  BarChart3,
+  CircleDollarSign,
+  Gauge,
+  HelpCircle,
+  ListOrdered,
+  Search,
+} from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSerpOverview } from "@/serverFunctions/serp";
 import { estimateTrafficShare } from "@/client/features/serp/serpTrafficShare";
 import { SerpStrengthCards } from "@/client/features/serp/SerpStrengthCards";
+import {
+  InsightIcon,
+  InsightTile,
+  type InsightTone,
+} from "@/client/components/InsightTile";
 import {
   useAhrefsDomainRatings,
   type DomainRatings,
@@ -26,6 +40,14 @@ function formatCount(value: number | null | undefined): string {
 
 function formatFeatureLabel(type: string): string {
   return type.replace(/_/g, " ");
+}
+
+/** Green under 30, amber to 60, red above — mirrors the difficulty badge. */
+function difficultyTone(value: number | null | undefined): InsightTone {
+  if (value == null) return "neutral";
+  if (value < 30) return "success";
+  if (value < 60) return "warning";
+  return "error";
 }
 
 export function SerpOverviewPage({
@@ -164,40 +186,33 @@ export function SerpOverviewPage({
       {result ? (
         <>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-                Volume
-              </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
-                {formatCount(result.keywordStats?.searchVolume)}
-              </div>
-            </div>
-            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-                Difficulty
-              </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
-                {result.keywordStats?.keywordDifficulty ?? "—"}
-              </div>
-            </div>
-            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-                CPC
-              </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
-                {result.keywordStats?.cpc != null
+            <InsightTile
+              icon={BarChart3}
+              label="Volume"
+              value={formatCount(result.keywordStats?.searchVolume)}
+              tone="primary"
+            />
+            <InsightTile
+              icon={Gauge}
+              label="Difficulty"
+              value={result.keywordStats?.keywordDifficulty ?? "—"}
+              tone={difficultyTone(result.keywordStats?.keywordDifficulty)}
+            />
+            <InsightTile
+              icon={CircleDollarSign}
+              label="CPC"
+              value={
+                result.keywordStats?.cpc != null
                   ? `$${result.keywordStats.cpc.toFixed(2)}`
-                  : "—"}
-              </div>
-            </div>
-            <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-              <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-                Organic results
-              </div>
-              <div className="mt-1 text-xl font-semibold tabular-nums">
-                {result.totalOrganic}
-              </div>
-            </div>
+                  : "—"
+              }
+              tone="info"
+            />
+            <InsightTile
+              icon={ListOrdered}
+              label="Organic results"
+              value={result.totalOrganic}
+            />
           </div>
 
           {result.serpFeatures.length > 0 ? (
@@ -224,7 +239,10 @@ export function SerpOverviewPage({
           {result.paaQuestions.length > 0 ? (
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body gap-2 p-4">
-                <h2 className="text-sm font-semibold">People also ask</h2>
+                <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                  <InsightIcon icon={HelpCircle} tone="info" />
+                  People also ask
+                </h2>
                 <ul className="list-inside list-disc space-y-1 text-sm text-base-content/80">
                   {result.paaQuestions.map((question) => (
                     <li key={question}>{question}</li>

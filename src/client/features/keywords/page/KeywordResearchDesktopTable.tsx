@@ -17,6 +17,7 @@ import {
   type SortField,
 } from "@/client/features/keywords/components";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
+import { TrendSparkline } from "@/client/components/TrendSparkline";
 import { formatNumber } from "@/client/features/keywords/utils";
 import type { KeywordResearchRow } from "@/types/keywords";
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
@@ -99,6 +100,20 @@ export function KeywordResearchDesktopTable({
           headerClassName: "text-right",
           cellClassName:
             "whitespace-nowrap text-right tabular-nums text-base-content/70",
+        },
+      }),
+      keywordColumnHelper.accessor("trend", {
+        id: "trend",
+        header: () => (
+          <span title="Monthly search volume over the last 12 months">
+            Trend
+          </span>
+        ),
+        enableSorting: false,
+        cell: ({ getValue }) => <TrendSparkline points={getValue()} />,
+        meta: {
+          headerClassName: "text-center",
+          cellClassName: "whitespace-nowrap text-center",
         },
       }),
       keywordColumnHelper.accessor("cpc", {

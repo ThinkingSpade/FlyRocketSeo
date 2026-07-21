@@ -1,6 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { Grid3x3, LocateFixed, Search } from "lucide-react";
+import {
+  Eye,
+  Grid3x3,
+  Hash,
+  LocateFixed,
+  MapPin,
+  Megaphone,
+  Search,
+  Trophy,
+} from "lucide-react";
+import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import {
   geocodeLocation,
   getLocalGridCell,
@@ -329,55 +339,57 @@ function GridShareOfVoiceCards({
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-          <div
-            className="text-xs font-medium uppercase tracking-wide text-base-content/50"
-            title="Share of the scanned pins where you rank in the local top 3"
-          >
-            Share of voice
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums">
-            {top3Percent}%
-          </div>
-        </div>
-        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-            Top-3 pins
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums">
-            {myTop3Count}
-            <span className="text-sm font-normal text-base-content/50">
-              {" "}
-              / {scannedPins}
-            </span>
-          </div>
-        </div>
-        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-            Visible pins
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums">
-            {myVisibleCount}
-            <span className="text-sm font-normal text-base-content/50">
-              {" "}
-              / {scannedPins}
-            </span>
-          </div>
-        </div>
-        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-          <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-            Avg rank
-          </div>
-          <div className="mt-1 text-xl font-semibold tabular-nums">
-            {averagePosition != null ? `#${averagePosition.toFixed(1)}` : "—"}
-          </div>
-        </div>
+        <InsightTile
+          icon={Megaphone}
+          label="Share of voice"
+          value={`${top3Percent}%`}
+          tone={top3Percent > 0 ? "success" : "warning"}
+          title="Share of the scanned pins where you rank in the local top 3"
+        />
+        <InsightTile
+          icon={MapPin}
+          label="Top-3 pins"
+          tone="primary"
+          value={
+            <>
+              {myTop3Count}
+              <span className="text-sm font-normal text-base-content/50">
+                {" "}
+                / {scannedPins}
+              </span>
+            </>
+          }
+        />
+        <InsightTile
+          icon={Eye}
+          label="Visible pins"
+          tone="info"
+          value={
+            <>
+              {myVisibleCount}
+              <span className="text-sm font-normal text-base-content/50">
+                {" "}
+                / {scannedPins}
+              </span>
+            </>
+          }
+        />
+        <InsightTile
+          icon={Hash}
+          label="Avg rank"
+          value={
+            averagePosition != null ? `#${averagePosition.toFixed(1)}` : "—"
+          }
+        />
       </div>
 
       {leaders.length > 0 ? (
         <div className="card border border-base-300 bg-base-100">
           <div className="card-body gap-2 p-4">
-            <h2 className="text-sm font-semibold">Map leaders</h2>
+            <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+              <InsightIcon icon={Trophy} tone="warning" />
+              Map leaders
+            </h2>
             <p className="-mt-1 text-xs text-base-content/50">
               Who holds the local top 3 across your grid — including your own
               listing when it ranks.

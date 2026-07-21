@@ -1,4 +1,11 @@
-import { Star } from "lucide-react";
+import {
+  CalendarClock,
+  MessageSquareReply,
+  MessageSquareWarning,
+  Star,
+  TrendingUp,
+} from "lucide-react";
+import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import {
   computeReviewAnalytics,
   selectNeedsResponse,
@@ -11,32 +18,6 @@ type ReviewRow = ReviewInput & {
   timeAgo: string | null;
   text: string | null;
 };
-
-function Tile({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-  tone?: "warning";
-}) {
-  return (
-    <div
-      className={`rounded-lg border bg-base-100 p-3 ${
-        tone === "warning" ? "border-warning/50" : "border-base-300"
-      }`}
-    >
-      <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-        {label}
-      </div>
-      <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
-      {hint ? <div className="text-xs text-base-content/50">{hint}</div> : null}
-    </div>
-  );
-}
 
 /** Review-management analytics computed from the crawled review set. */
 export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
@@ -55,7 +36,8 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <Tile
+        <InsightTile
+          icon={Star}
           label="Crawled average"
           value={
             analytics.averageRating != null
@@ -63,8 +45,10 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
               : "—"
           }
           hint={`${analytics.reviewCount} reviews crawled`}
+          tone="warning"
         />
-        <Tile
+        <InsightTile
+          icon={MessageSquareReply}
           label="Response rate"
           value={
             analytics.responseRate != null
@@ -72,24 +56,31 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
               : "—"
           }
           hint="Reviews with an owner reply"
+          tone="info"
         />
-        <Tile
+        <InsightTile
+          icon={MessageSquareWarning}
           label="Unanswered ≤3★"
-          value={String(analytics.unansweredNegativeCount)}
+          value={analytics.unansweredNegativeCount}
           hint="Reply to protect the rating"
-          tone={analytics.unansweredNegativeCount > 0 ? "warning" : undefined}
+          tone={analytics.unansweredNegativeCount > 0 ? "warning" : "success"}
         />
-        <Tile
+        <InsightTile
+          icon={CalendarClock}
           label="Last 90 days"
-          value={String(analytics.last90DaysCount)}
+          value={analytics.last90DaysCount}
           hint="Recent review velocity"
+          tone="primary"
         />
       </div>
 
       <div className="grid items-start gap-3 lg:grid-cols-2">
         <div className="card border border-base-300 bg-base-100">
           <div className="card-body gap-2 p-4">
-            <h3 className="text-sm font-semibold">Rating distribution</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+              <InsightIcon icon={Star} tone="warning" />
+              Rating distribution
+            </h3>
             <ul className="space-y-1">
               {stars.map((star) => (
                 <li
@@ -116,7 +107,10 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
 
         <div className="card border border-base-300 bg-base-100">
           <div className="card-body gap-2 p-4">
-            <h3 className="text-sm font-semibold">Review velocity</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+              <InsightIcon icon={TrendingUp} tone="primary" />
+              Review velocity
+            </h3>
             <div className="flex h-24 items-end gap-1">
               {analytics.velocity.map((month, index) => (
                 <div
@@ -150,7 +144,10 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
       {needsResponse.length > 0 ? (
         <div className="card border border-warning/40 bg-base-100">
           <div className="card-body gap-2 p-4">
-            <h3 className="text-sm font-semibold">Needs a response</h3>
+            <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+              <InsightIcon icon={MessageSquareWarning} tone="warning" />
+              Needs a response
+            </h3>
             <ul className="space-y-2">
               {needsResponse.map((review, index) => (
                 <li

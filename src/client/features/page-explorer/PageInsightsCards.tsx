@@ -1,4 +1,6 @@
+import { Target, Zap } from "lucide-react";
 import { PositionDistribution } from "@/client/features/domain/components/PositionDistribution";
+import { InsightIcon } from "@/client/components/InsightTile";
 import {
   computePositionBuckets,
   computeStrikingDistance,
@@ -25,7 +27,10 @@ export function TrafficConcentrationCard({
   return (
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-2 p-4">
-        <h2 className="text-sm font-semibold">Traffic concentration</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          <InsightIcon icon={Zap} tone="primary" />
+          Traffic concentration
+        </h2>
         <ul className="space-y-1.5">
           {concentration.rows.map((row) => (
             <li key={row.keyword} className="flex items-center gap-2 text-sm">
@@ -72,7 +77,10 @@ export function StrikingDistanceCard({
   return (
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-2 p-4">
-        <h2 className="text-sm font-semibold">Striking distance</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          <InsightIcon icon={Target} tone="warning" />
+          Striking distance
+        </h2>
         <p className="-mt-1 text-xs text-base-content/50">
           Ranked #4–15 — the keywords a content refresh moves onto page-one
           money spots.

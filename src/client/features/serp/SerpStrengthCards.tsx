@@ -1,4 +1,5 @@
-import { Crosshair } from "lucide-react";
+import { CircleDot, Crosshair, ShieldHalf, TrendingUp } from "lucide-react";
+import { InsightTile } from "@/client/components/InsightTile";
 import type { DomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { computeSerpStrength, type SerpStrengthInput } from "./serpStrength";
 
@@ -26,57 +27,47 @@ export function SerpStrengthCards({
 
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-      <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-        <div
-          className="text-xs font-medium uppercase tracking-wide text-base-content/50"
-          title="Average Ahrefs domain rating across the top 10"
-        >
-          Avg DR (top 10)
-        </div>
-        <div className="mt-1 text-xl font-semibold tabular-nums">
-          {strength.averageDr ?? "—"}
-        </div>
-      </div>
-      <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-        <div
-          className="text-xs font-medium uppercase tracking-wide text-base-content/50"
-          title="Median whole-domain monthly traffic across the top 10"
-        >
-          Median domain traffic
-        </div>
-        <div className="mt-1 text-xl font-semibold tabular-nums">
-          {formatCount(strength.medianDomainTraffic)}
-        </div>
-      </div>
-      <div className="rounded-lg border border-base-300 bg-base-100 p-3">
-        <div
-          className="text-xs font-medium uppercase tracking-wide text-base-content/50"
-          title="Top-10 results on domains with DR under 30"
-        >
-          Soft spots
-        </div>
-        <div className="mt-1 text-xl font-semibold tabular-nums">
-          {strength.softSpots}
-        </div>
-      </div>
-      <div className="rounded-lg border border-primary/40 bg-base-100 p-3">
-        <div className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-base-content/50">
-          <Crosshair className="size-3" />
-          Easiest target
-        </div>
-        {strength.weakest ? (
-          <div className="mt-1 text-sm">
-            <span className="font-semibold">#{strength.weakest.rank}</span>{" "}
-            <span className="break-all">{strength.weakest.domain}</span>
-            <span className="text-base-content/50">
-              {" "}
-              · DR {strength.weakest.dr}
+      <InsightTile
+        icon={ShieldHalf}
+        label="Avg DR (top 10)"
+        value={strength.averageDr ?? "—"}
+        tone="primary"
+        title="Average Ahrefs domain rating across the top 10"
+      />
+      <InsightTile
+        icon={TrendingUp}
+        label="Median domain traffic"
+        value={formatCount(strength.medianDomainTraffic)}
+        tone="info"
+        title="Median whole-domain monthly traffic across the top 10"
+      />
+      <InsightTile
+        icon={CircleDot}
+        label="Soft spots"
+        value={strength.softSpots}
+        tone={strength.softSpots > 0 ? "success" : "neutral"}
+        hint="Top-10 results with DR under 30"
+      />
+      <InsightTile
+        icon={Crosshair}
+        label="Easiest target"
+        tone="primary"
+        value={
+          strength.weakest ? (
+            <span className="text-sm font-semibold">
+              #{strength.weakest.rank}{" "}
+              <span className="break-all">{strength.weakest.domain}</span>
             </span>
-          </div>
-        ) : (
-          <div className="mt-1 text-xl font-semibold">—</div>
-        )}
-      </div>
+          ) : (
+            "—"
+          )
+        }
+        hint={
+          strength.weakest
+            ? `DR ${strength.weakest.dr} — the slot a strong page can take`
+            : undefined
+        }
+      />
     </div>
   );
 }

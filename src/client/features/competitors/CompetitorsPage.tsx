@@ -14,6 +14,7 @@ import {
   type CompetitorsTab,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
+import { CompetitorsPositioningMap } from "./CompetitorsPositioningMap";
 import { CompetitorsTable } from "./CompetitorsTable";
 import { KeywordGapTable } from "./KeywordGapTable";
 import { LinkGapTable } from "./LinkGapTable";
@@ -154,7 +155,7 @@ export function CompetitorsPage({
   const totalCount = activeQuery.data?.totalCount ?? null;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
@@ -213,6 +214,16 @@ export function CompetitorsPage({
 
       {errorMessage ? (
         <div className="alert alert-error text-sm">{errorMessage}</div>
+      ) : null}
+
+      {tab === "competitors" &&
+      target &&
+      (competitorsQuery.data?.rows.length ?? 0) > 0 ? (
+        <CompetitorsPositioningMap
+          projectId={projectId}
+          target={target}
+          rows={competitorsQuery.data?.rows ?? []}
+        />
       ) : null}
 
       <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">

@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
+import {
+  Activity,
+  ArrowDownRight,
+  ArrowUpRight,
+  CalendarDays,
+  Minus,
+} from "lucide-react";
+import { InsightIcon } from "@/client/components/InsightTile";
 import {
   computeMonthlyInterest,
   computeTrendInsights,
@@ -75,7 +82,10 @@ export function TrendsInsightsTable({
   return (
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-2 p-4">
-        <h2 className="text-sm font-semibold">Momentum &amp; seasonality</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          <InsightIcon icon={Activity} tone="primary" />
+          Momentum &amp; seasonality
+        </h2>
         <div className="overflow-x-auto">
           <table className="table table-sm">
             <thead>
@@ -160,7 +170,10 @@ export function TrendsSeasonalHeatmap({
   return (
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-2 p-4">
-        <h2 className="text-sm font-semibold">Seasonal heatmap</h2>
+        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+          <InsightIcon icon={CalendarDays} tone="info" />
+          Seasonal heatmap
+        </h2>
         <div className="overflow-x-auto">
           <table className="table table-xs">
             <thead>

@@ -1,6 +1,17 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { FileSearch, Search } from "lucide-react";
+import {
+  Award,
+  FileSearch,
+  FileText,
+  KeyRound,
+  Link2,
+  Medal,
+  Network,
+  Search,
+  Target,
+  TrendingUp,
+} from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getPageExplorer } from "@/serverFunctions/page-explorer";
 import { analyzeContentCompetitor } from "@/serverFunctions/content";
@@ -10,6 +21,7 @@ import {
   StrikingDistanceCard,
   TrafficConcentrationCard,
 } from "./PageInsightsCards";
+import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -23,30 +35,6 @@ type PageExplorerNavigate = (args: {
 function formatCount(value: number | null | undefined): string {
   if (value == null) return "—";
   return Math.round(value).toLocaleString();
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-}: {
-  label: string;
-  value: string;
-  hint?: string;
-}) {
-  return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-1 p-4">
-        <span className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-          {label}
-        </span>
-        <span className="text-2xl font-semibold tabular-nums">{value}</span>
-        {hint ? (
-          <span className="text-xs text-base-content/60">{hint}</span>
-        ) : null}
-      </div>
-    </div>
-  );
 }
 
 export function PageExplorerPage({
@@ -215,31 +203,49 @@ function PageExplorerResults({
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-8">
-        <StatCard
+        <InsightTile
+          icon={TrendingUp}
           label="Est. monthly traffic"
           value={formatCount(result.estimatedTraffic)}
           hint="Sum of keyword-level estimates"
+          tone="primary"
         />
-        <StatCard
+        <InsightTile
+          icon={KeyRound}
           label="Ranking keywords"
           value={formatCount(result.totalKeywords ?? result.keywords.length)}
           hint={`Top ${result.keywords.length} shown`}
+          tone="info"
         />
-        <StatCard
+        <InsightTile
+          icon={Link2}
           label="Backlinks"
           value={formatCount(result.backlinks?.backlinks)}
         />
-        <StatCard
+        <InsightTile
+          icon={Network}
           label="Ref. domains"
           value={formatCount(result.backlinks?.referringDomains)}
         />
-        <StatCard label="#1 rankings" value={String(realEstate.numberOne)} />
-        <StatCard label="Top 3" value={String(realEstate.top3)} />
-        <StatCard label="Top 10" value={String(realEstate.top10)} />
-        <StatCard
+        <InsightTile
+          icon={Award}
+          label="#1 rankings"
+          value={realEstate.numberOne}
+          tone={realEstate.numberOne > 0 ? "success" : "neutral"}
+        />
+        <InsightTile
+          icon={Medal}
+          label="Top 3"
+          value={realEstate.top3}
+          tone={realEstate.top3 > 0 ? "success" : "neutral"}
+        />
+        <InsightTile icon={Medal} label="Top 10" value={realEstate.top10} />
+        <InsightTile
+          icon={Target}
           label="Striking distance"
-          value={String(realEstate.strikingDistance)}
+          value={realEstate.strikingDistance}
           hint="Ranked #4–15"
+          tone={realEstate.strikingDistance > 0 ? "warning" : "neutral"}
         />
       </div>
 
@@ -308,7 +314,10 @@ function PageExplorerResults({
           {snapshot ? (
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body gap-2 p-4">
-                <h2 className="text-sm font-semibold">On-page snapshot</h2>
+                <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+                  <InsightIcon icon={FileText} tone="info" />
+                  On-page snapshot
+                </h2>
                 <p className="text-sm text-base-content/80">
                   <span className="font-medium">{snapshot.title || "—"}</span>
                   {snapshot.wordCount != null ? (
