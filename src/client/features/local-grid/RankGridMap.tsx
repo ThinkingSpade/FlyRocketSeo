@@ -124,11 +124,32 @@ export function RankGridMap({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Frame the scanned pins whenever a grid is plotted.
+  const pointsKey = JSON.stringify(points);
   useEffect(() => {
-    mapRef.current?.setView(
-      [center.lat, center.lng],
-      zoomForRadius(radiusMiles),
+    const L = leafletRef.current;
+    const map = mapRef.current;
+    if (!map || !L || points.length === 0) return;
+    map.fitBounds(
+      L.latLngBounds(points.map((point) => [point.lat, point.lng])),
+      { padding: [48, 48] },
     );
+    // pointsKey stands in for the points array identity.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pointsKey]);
+
+  // Follow the (pending) center: zoom to it when nothing is plotted yet, and
+  // pan over only when a picked location falls outside the current view.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+    if (points.length === 0) {
+      map.setView([center.lat, center.lng], zoomForRadius(radiusMiles));
+    } else if (!map.getBounds().contains([center.lat, center.lng])) {
+      map.panTo([center.lat, center.lng]);
+    }
+    // Only center/radius changes should retrigger this.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [center.lat, center.lng, radiusMiles]);
 
   const stateSignature = JSON.stringify([

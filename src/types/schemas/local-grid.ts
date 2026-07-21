@@ -7,6 +7,11 @@ export const localGridCellRequestSchema = z.object({
   lng: z.number().min(-180).max(180),
 });
 
+export const geocodeRequestSchema = z.object({
+  projectId: z.string().uuid(),
+  query: z.string().trim().min(2).max(200),
+});
+
 /* ------------------------------------------------------------------ */
 /*  URL search params schema for /p/$projectId/local-grid              */
 /* ------------------------------------------------------------------ */

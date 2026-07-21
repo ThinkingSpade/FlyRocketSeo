@@ -1,7 +1,10 @@
 import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { Grid3x3, Search } from "lucide-react";
-import { getLocalGridCell } from "@/serverFunctions/local-grid";
+import { Grid3x3, LocateFixed, Search } from "lucide-react";
+import {
+  geocodeLocation,
+  getLocalGridCell,
+} from "@/serverFunctions/local-grid";
 import {
   buildGrid,
   roundCoord,
@@ -16,22 +19,6 @@ type LocalGridNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
-
-/** Quick jumps — the DFW cities Delio targets. The map click sets any other
- *  center. */
-const CITY_PRESETS: ReadonlyArray<{ name: string; lat: number; lng: number }> =
-  [
-    { name: "Dallas", lat: 32.7767, lng: -96.797 },
-    { name: "Fort Worth", lat: 32.7555, lng: -97.3308 },
-    { name: "Arlington", lat: 32.7357, lng: -97.1081 },
-    { name: "Plano", lat: 33.0198, lng: -96.6989 },
-    { name: "Frisco", lat: 33.1507, lng: -96.8236 },
-    { name: "Addison", lat: 32.9618, lng: -96.8292 },
-    { name: "Allen", lat: 33.1032, lng: -96.6706 },
-    { name: "Richardson", lat: 32.9483, lng: -96.7299 },
-    { name: "Carrollton", lat: 32.9756, lng: -96.8899 },
-    { name: "Bedford", lat: 32.844, lng: -97.1431 },
-  ];
 
 const DEFAULT_CENTER: GridPoint = { lat: 32.7767, lng: -96.797 };
 const RADIUS_OPTIONS = [1, 2, 5, 10] as const;
@@ -54,23 +41,34 @@ export function LocalRankGridPage({
   radius: number | undefined;
   gridSize: number | undefined;
 }) {
-  const centerLat = lat ?? DEFAULT_CENTER.lat;
-  const centerLng = lng ?? DEFAULT_CENTER.lng;
-  const center = useMemo<GridPoint>(
-    () => ({ lat: centerLat, lng: centerLng }),
-    [centerLat, centerLng],
+  // Committed scan parameters live in the URL; everything the user is still
+  // fiddling with (keyword text, a clicked map point, a typed zip) stays local
+  // until "Scan grid" — so exploring the map never spends a check.
+  const committedCenter = useMemo<GridPoint>(
+    () => ({
+      lat: lat ?? DEFAULT_CENTER.lat,
+      lng: lng ?? DEFAULT_CENTER.lng,
+    }),
+    [lat, lng],
   );
   const activeRadius = radius ?? 5;
   const activeGrid = gridSize ?? 5;
   const keyword = query.trim().toLowerCase();
 
   const [input, setInput] = useState(query);
+  const [locationInput, setLocationInput] = useState("");
   const [radiusInput, setRadiusInput] = useState(String(activeRadius));
   const [gridInput, setGridInput] = useState(String(activeGrid));
+  const [pendingCenter, setPendingCenter] = useState<GridPoint | null>(null);
+  const [pendingLabel, setPendingLabel] = useState<string | null>(null);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
+
+  const mapCenter = pendingCenter ?? committedCenter;
 
   const points = useMemo(
-    () => (keyword ? buildGrid(center, activeRadius, activeGrid) : []),
-    [keyword, center, activeRadius, activeGrid],
+    () => (keyword ? buildGrid(committedCenter, activeRadius, activeGrid) : []),
+    [keyword, committedCenter, activeRadius, activeGrid],
   );
 
   const cellQueries = useQueries({
@@ -84,7 +82,6 @@ export function LocalRankGridPage({
       retry: 1,
     })),
   });
-
   const cellStates = new Map<string, CellState>();
   points.forEach((point, index) => {
     const cellQuery = cellQueries[index];
@@ -106,12 +103,48 @@ export function LocalRankGridPage({
         ranked.length
       : null;
 
-  const applySearch = (next: Partial<Record<string, unknown>>) => {
+  const gridCount = Number(gridInput) * Number(gridInput);
+
+  async function handleScan() {
+    const nextKeyword = input.trim().toLowerCase();
+    if (!nextKeyword) return;
+    setLocationError(null);
+
+    let center = pendingCenter ?? committedCenter;
+    const locationQuery = locationInput.trim();
+    if (locationQuery) {
+      setIsLocating(true);
+      try {
+        const found = await geocodeLocation({
+          data: { projectId, query: locationQuery },
+        });
+        if (!found) {
+          setLocationError(
+            "Couldn't find that location — try a zip code or “city, state”.",
+          );
+          return;
+        }
+        center = { lat: found.lat, lng: found.lng };
+        setPendingCenter(center);
+        setPendingLabel(found.label.split(",").slice(0, 2).join(","));
+        setLocationInput("");
+      } finally {
+        setIsLocating(false);
+      }
+    }
+
     navigate({
-      search: (prev) => ({ ...prev, ...next }),
+      search: (prev) => ({
+        ...prev,
+        q: nextKeyword,
+        lat: roundCoord(center.lat),
+        lng: roundCoord(center.lng),
+        r: Number(radiusInput),
+        g: Number(gridInput),
+      }),
       replace: false,
     });
-  };
+  }
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
@@ -121,31 +154,22 @@ export function LocalRankGridPage({
           Local Rank Grid
         </h1>
         <p className="text-sm text-base-content/60">
-          A Local-Falcon-style map of your local rankings: pick a center (click
-          the map or jump to a city), choose the radius and grid, and scan. Each
-          pin is your local-finder rank at that exact spot — hover a pin for the
-          local leaders there.
+          Where you actually show up on the map. Enter a keyword and a location
+          (zip code, city, or address — or just click the map), choose the
+          radius and grid, and scan.
         </p>
       </div>
 
       <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+        <div className="card-body gap-2 p-4">
           <form
             className="flex flex-col gap-3 lg:flex-row lg:items-end"
             onSubmit={(event) => {
               event.preventDefault();
-              const next = input.trim().toLowerCase();
-              if (!next) return;
-              applySearch({
-                q: next,
-                lat: roundCoord(center.lat),
-                lng: roundCoord(center.lng),
-                r: Number(radiusInput),
-                g: Number(gridInput),
-              });
+              void handleScan();
             }}
           >
-            <label className="form-control w-full lg:max-w-sm">
+            <label className="form-control w-full lg:max-w-xs">
               <span className="label-text pb-1 text-xs font-medium">
                 Keyword
               </span>
@@ -157,34 +181,19 @@ export function LocalRankGridPage({
                 onChange={(event) => setInput(event.target.value)}
               />
             </label>
-            <label className="form-control w-full lg:max-w-44">
+            <label className="form-control w-full lg:max-w-xs">
               <span className="label-text pb-1 text-xs font-medium">
-                Jump to city
+                Location
               </span>
-              <select
-                className="select select-bordered select-sm w-full"
-                value=""
-                onChange={(event) => {
-                  const preset = CITY_PRESETS.find(
-                    (city) => city.name === event.target.value,
-                  );
-                  if (preset) {
-                    applySearch({
-                      lat: preset.lat,
-                      lng: preset.lng,
-                    });
-                  }
-                }}
-              >
-                <option value="">Pick a city…</option>
-                {CITY_PRESETS.map((city) => (
-                  <option key={city.name} value={city.name}>
-                    {city.name}
-                  </option>
-                ))}
-              </select>
+              <input
+                type="text"
+                className="input input-bordered input-sm w-full"
+                placeholder="75201 · Plano, TX · any address"
+                value={locationInput}
+                onChange={(event) => setLocationInput(event.target.value)}
+              />
             </label>
-            <label className="form-control w-full lg:max-w-32">
+            <label className="form-control w-28">
               <span className="label-text pb-1 text-xs font-medium">
                 Radius
               </span>
@@ -200,7 +209,7 @@ export function LocalRankGridPage({
                 ))}
               </select>
             </label>
-            <label className="form-control w-full lg:max-w-32">
+            <label className="form-control w-28">
               <span className="label-text pb-1 text-xs font-medium">Grid</span>
               <select
                 className="select select-bordered select-sm w-full"
@@ -217,66 +226,89 @@ export function LocalRankGridPage({
             <button
               type="submit"
               className="btn btn-primary btn-sm gap-1.5"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isLocating}
             >
-              <Search className="size-3.5" />
+              {isLocating ? (
+                <span className="loading loading-spinner loading-xs" />
+              ) : (
+                <Search className="size-3.5" />
+              )}
               Scan grid
             </button>
           </form>
-          <p className="text-xs text-base-content/50">
-            Click anywhere on the map to move the center pin.{" "}
-            {Number(gridInput) * Number(gridInput)} checks per scan (~$
-            {(Number(gridInput) * Number(gridInput) * 0.002).toFixed(2)}),
-            cached for a day.
-          </p>
+          {locationError ? (
+            <p className="text-xs text-error">{locationError}</p>
+          ) : (
+            <p className="text-xs text-base-content/50">
+              {gridCount} checks per scan (~${(gridCount * 0.002).toFixed(2)}),
+              cached for a day. Clicking the map moves the center — nothing is
+              checked until you scan.
+            </p>
+          )}
         </div>
       </div>
 
-      <RankGridMap
-        center={center}
-        radiusMiles={activeRadius}
-        points={points}
-        cellStates={cellStates}
-        onPickCenter={(point) => {
-          applySearch({
-            lat: roundCoord(point.lat),
-            lng: roundCoord(point.lng),
-          });
-        }}
-      />
+      <div className="relative">
+        <RankGridMap
+          center={mapCenter}
+          radiusMiles={activeRadius}
+          points={points}
+          cellStates={cellStates}
+          onPickCenter={(point) => {
+            setPendingCenter({
+              lat: roundCoord(point.lat),
+              lng: roundCoord(point.lng),
+            });
+            setPendingLabel(null);
+          }}
+        />
 
-      <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-base-content/60">
-        <span>
-          <span className="font-medium text-success">● #1–3</span>{" "}
-          <span className="font-medium text-warning">● #4–10</span>{" "}
-          <span className="font-medium text-error">● #11–20</span>{" "}
-          <span className="font-medium text-base-content/40">
-            ● not in top 20
+        <div className="pointer-events-none absolute bottom-3 left-3 z-[1000] flex items-center gap-2 rounded-full border border-base-300 bg-base-100/95 px-3 py-1.5 text-xs shadow">
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2.5 rounded-full bg-success" />
+            1–3
           </span>
-        </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2.5 rounded-full bg-orange-600" />
+            4–10
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2.5 rounded-full bg-error" />
+            11–20
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block size-2.5 rounded-full bg-base-content/30" />
+            not found
+          </span>
+        </div>
+
         {keyword && resolved.length > 0 ? (
-          <span className="tabular-nums">
-            Visible at {ranked.length}/{resolved.length} pins
+          <div className="pointer-events-none absolute right-3 top-3 z-[1000] rounded-full border border-base-300 bg-base-100/95 px-3 py-1.5 text-xs shadow tabular-nums">
+            <span className="font-medium">“{keyword}”</span> · visible at{" "}
+            {ranked.length}/{resolved.length} pins
             {averagePosition != null
-              ? ` · avg rank ${averagePosition.toFixed(1)}`
+              ? ` · avg #${averagePosition.toFixed(1)}`
               : ""}
-          </span>
+          </div>
+        ) : null}
+
+        {pendingCenter ? (
+          <div className="pointer-events-none absolute left-3 top-3 z-[1000] flex items-center gap-1.5 rounded-full border border-primary/40 bg-base-100/95 px-3 py-1.5 text-xs shadow">
+            <LocateFixed className="size-3.5 text-primary" />
+            {pendingLabel ??
+              `${pendingCenter.lat.toFixed(3)}, ${pendingCenter.lng.toFixed(3)}`}{" "}
+            — scan to check here
+          </div>
+        ) : null}
+
+        {!keyword ? (
+          <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center">
+            <div className="rounded-lg border border-base-300 bg-base-100/95 px-4 py-2 text-sm shadow">
+              Enter a keyword and scan to fill the grid
+            </div>
+          </div>
         ) : null}
       </div>
-
-      {!keyword ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-8 text-center">
-            <p className="font-medium">
-              Enter a keyword and scan to fill the grid
-            </p>
-            <p className="max-w-md text-sm text-base-content/60">
-              The pins show where in the metro you actually appear when locals
-              search — and where competitors own the map.
-            </p>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
