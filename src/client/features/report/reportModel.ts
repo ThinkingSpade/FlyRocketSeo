@@ -107,3 +107,14 @@ export function buildRecommendations(input: RecommendationInput): string[] {
   }
   return recommendations;
 }
+
+/** Display a URL as its path — report tables don't need the domain repeated. */
+export function toPath(url: string | null): string {
+  if (!url) return "—";
+  try {
+    const parsed = new URL(url);
+    return parsed.pathname + parsed.search;
+  } catch {
+    return url;
+  }
+}

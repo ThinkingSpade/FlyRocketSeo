@@ -5,6 +5,7 @@ import {
   formatPercent,
   formatPosition,
   positionDelta,
+  toPath,
 } from "@/client/features/report/reportModel";
 
 /** Presentational sections for the Client Report, split from the page so each
@@ -124,15 +125,6 @@ function GscRowsTable({
   );
 }
 
-function toPath(url: string): string {
-  try {
-    const parsed = new URL(url);
-    return parsed.pathname + parsed.search;
-  } catch {
-    return url;
-  }
-}
-
 export type ReportBodyProps = {
   gsc: {
     totals: {
@@ -190,6 +182,10 @@ export type ReportBodyProps = {
     startedAt: string | Date;
   } | null;
   recommendations: string[];
+  /** Deep-dive keyword sections, rendered after the GSC tables. */
+  keywordSections?: ReactNode;
+  /** Deep-dive link sections, rendered after the link-profile tiles. */
+  linkSections?: ReactNode;
 };
 
 export function ReportBody({
@@ -202,6 +198,8 @@ export function ReportBody({
   insights,
   latestAudit,
   recommendations,
+  keywordSections,
+  linkSections,
 }: ReportBodyProps) {
   return (
     <>
@@ -278,6 +276,8 @@ export function ReportBody({
           />
         </Section>
       ) : null}
+
+      {keywordSections}
 
       {gsc && gsc.strikingDistance.length > 0 ? (
         <Section
@@ -375,6 +375,8 @@ export function ReportBody({
           />
         </div>
       </Section>
+
+      {linkSections}
 
       <Section title="Site health" subtitle="Latest technical crawl.">
         {latestAudit ? (

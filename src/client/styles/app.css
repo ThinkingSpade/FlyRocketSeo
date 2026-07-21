@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* Leaflet map chrome for the Local Rank Grid. */
+@import "leaflet/dist/leaflet.css";
 
 @theme {
   --container-8xl: 88rem;

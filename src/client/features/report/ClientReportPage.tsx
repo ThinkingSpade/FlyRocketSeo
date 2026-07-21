@@ -6,11 +6,23 @@ import {
   getSearchPerformanceTable,
 } from "@/serverFunctions/searchPerformance";
 import { getLinkInsights } from "@/serverFunctions/link-insights";
-import { getDomainOverview } from "@/serverFunctions/domain";
-import { getBacklinksOverview } from "@/serverFunctions/backlinks";
+import {
+  getDomainKeywordSuggestions,
+  getDomainKeywordsPage,
+  getDomainOverview,
+} from "@/serverFunctions/domain";
+import {
+  getBacklinksOverview,
+  getBacklinksReferringDomains,
+  getBacklinksRows,
+} from "@/serverFunctions/backlinks";
 import { getAuditHistory } from "@/serverFunctions/audit";
 import { buildRecommendations } from "@/client/features/report/reportModel";
 import { ReportBody } from "@/client/features/report/ReportSections";
+import {
+  KeywordDeepSections,
+  LinkDeepSections,
+} from "@/client/features/report/ReportDeepSections";
 
 const STALE_TIME = 10 * 60_000;
 
@@ -87,6 +99,43 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
   const auditsQuery = useQuery({
     queryKey: ["report-audits", projectId],
     queryFn: () => getAuditHistory({ data: { projectId } }),
+    staleTime: STALE_TIME,
+  });
+  const rankingsQuery = useQuery({
+    enabled: Boolean(domain),
+    queryKey: ["report-rankings", projectId, domain],
+    queryFn: () =>
+      getDomainKeywordsPage({ data: { projectId, domain: domain ?? "" } }),
+    staleTime: STALE_TIME,
+  });
+  const suggestionsQuery = useQuery({
+    enabled: Boolean(domain),
+    queryKey: ["report-suggestions", projectId, domain],
+    queryFn: () =>
+      getDomainKeywordSuggestions({
+        data: {
+          projectId,
+          domain: domain ?? "",
+          locationCode: 2840,
+          languageCode: "en",
+        },
+      }),
+    staleTime: STALE_TIME,
+  });
+  const backlinkRowsQuery = useQuery({
+    enabled: Boolean(domain),
+    queryKey: ["report-backlink-rows", projectId, domain],
+    queryFn: () =>
+      getBacklinksRows({ data: { projectId, target: domain ?? "" } }),
+    staleTime: STALE_TIME,
+  });
+  const referringDomainsQuery = useQuery({
+    enabled: Boolean(domain),
+    queryKey: ["report-ref-domains", projectId, domain],
+    queryFn: () =>
+      getBacklinksReferringDomains({
+        data: { projectId, target: domain ?? "" },
+      }),
     staleTime: STALE_TIME,
   });
 
@@ -169,6 +218,22 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
           insights={insights}
           latestAudit={latestAudit ?? null}
           recommendations={recommendations}
+          keywordSections={
+            <KeywordDeepSections
+              rankings={(rankingsQuery.data?.keywords ?? []).slice(0, 10)}
+              suggestions={(suggestionsQuery.data ?? []).slice(0, 12)}
+            />
+          }
+          linkSections={
+            <LinkDeepSections
+              opportunities={insights?.opportunities ?? []}
+              backlinkRows={(backlinkRowsQuery.data?.rows ?? []).slice(0, 10)}
+              referringDomains={(referringDomainsQuery.data?.rows ?? []).slice(
+                0,
+                10,
+              )}
+            />
+          }
         />
 
         <footer className="border-t border-base-300 pt-3 text-xs text-base-content/50">
