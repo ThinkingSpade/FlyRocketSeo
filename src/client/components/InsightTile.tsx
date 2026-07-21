@@ -9,14 +9,16 @@ export type InsightTone =
   | "info"
   | "neutral";
 
-// Soft tinted icon chips per tone — daisyUI tokens only, dark-mode safe.
-const ICON_CHIP: Record<InsightTone, string> = {
-  primary: "bg-primary/12 text-primary",
-  success: "bg-success/12 text-success",
-  warning: "bg-warning/15 text-warning",
-  error: "bg-error/12 text-error",
-  info: "bg-info/12 text-info",
-  neutral: "bg-base-content/8 text-base-content/60",
+// Plain colored icons, no chip backgrounds — matches the app's native icon
+// language (muted lucide glyphs like `text-base-content/45`). Tones stay
+// quiet; only the meaning-bearing ones get color.
+const ICON_COLOR: Record<InsightTone, string> = {
+  primary: "text-primary/70",
+  success: "text-success/80",
+  warning: "text-warning",
+  error: "text-error/80",
+  info: "text-info/80",
+  neutral: "text-base-content/35",
 };
 
 const BORDER: Record<InsightTone, string> = {
@@ -28,7 +30,7 @@ const BORDER: Record<InsightTone, string> = {
   neutral: "border-base-300",
 };
 
-/** The tinted icon chip alone — for card headers next to a title. */
+/** A small inline icon for card headers, styled like the app's own icons. */
 export function InsightIcon({
   icon: Icon,
   tone = "neutral",
@@ -37,18 +39,16 @@ export function InsightIcon({
   tone?: InsightTone;
 }) {
   return (
-    <span
-      className={`flex size-6 shrink-0 items-center justify-center rounded-md ${ICON_CHIP[tone]}`}
-    >
-      <Icon className="size-3.5" />
-    </span>
+    <Icon
+      className={`size-4 shrink-0 ${tone === "neutral" ? "text-base-content/45" : ICON_COLOR[tone]}`}
+    />
   );
 }
 
 /**
- * Semrush-style stat tile: soft tinted icon chip, uppercase label, big
- * tabular value. `tone` tints the icon (and the border for warning/error
- * states so problem tiles pop without shouting).
+ * Stat tile in the app's native style: uppercase muted label with a small
+ * quiet icon, big tabular value. `tone` colors the icon and, for
+ * warning/error states, the border — no chip backgrounds.
  */
 export function InsightTile({
   icon: Icon,
@@ -67,20 +67,16 @@ export function InsightTile({
 }) {
   return (
     <div
-      className={`rounded-xl border bg-base-100 p-3 ${BORDER[tone]}`}
+      className={`rounded-lg border bg-base-100 p-3 ${BORDER[tone]}`}
       title={title}
     >
-      <div className="flex items-center gap-2">
-        <span
-          className={`flex size-7 shrink-0 items-center justify-center rounded-lg ${ICON_CHIP[tone]}`}
-        >
-          <Icon className="size-3.5" />
-        </span>
+      <div className="flex items-center justify-between gap-2">
         <span className="truncate text-xs font-medium uppercase tracking-wide text-base-content/50">
           {label}
         </span>
+        <Icon className={`size-3.5 shrink-0 ${ICON_COLOR[tone]}`} />
       </div>
-      <div className="mt-1.5 text-xl font-semibold tabular-nums">{value}</div>
+      <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
       {hint ? (
         <div className="mt-0.5 text-xs text-base-content/50">{hint}</div>
       ) : null}

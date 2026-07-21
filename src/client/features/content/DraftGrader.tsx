@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
+import { computeOutlineThemes, isThemeCovered } from "./outlineGap";
 
 const STOPWORDS = new Set([
   "a",
@@ -42,18 +43,31 @@ function isQuestionCovered(draft: string, question: string): boolean {
   return hits / words.length >= 0.7;
 }
 
-/** Paste-a-draft coverage check against the brief's terms and questions. Runs
- *  entirely client-side — nothing is stored or sent anywhere. */
+/** Paste-a-draft coverage check against the brief's terms, questions, and the
+ *  recurring sections competitors write. Runs entirely client-side — nothing
+ *  is stored or sent anywhere. */
 export function DraftGrader({
   terms,
   questions,
+  outlines = [],
 }: {
   terms: Array<{ keyword: string }>;
   questions: string[];
+  /** Each competitor's H2 outline, for the outline-coverage check. */
+  outlines?: string[][];
 }) {
   const [draft, setDraft] = useState("");
   const normalized = draft.toLowerCase();
   const hasDraft = normalized.trim().length > 0;
+
+  const outlineThemes = useMemo(
+    () => computeOutlineThemes(outlines),
+    [outlines],
+  );
+  const themeHits = outlineThemes.map((theme) => ({
+    theme,
+    covered: hasDraft && isThemeCovered(normalized, theme),
+  }));
 
   const termHits = terms.map((term) => ({
     keyword: term.keyword,
@@ -63,10 +77,11 @@ export function DraftGrader({
     question,
     covered: hasDraft && isQuestionCovered(normalized, question),
   }));
-  const totalChecks = termHits.length + questionHits.length;
+  const totalChecks = termHits.length + questionHits.length + themeHits.length;
   const coveredChecks =
     termHits.filter((t) => t.covered).length +
-    questionHits.filter((q) => q.covered).length;
+    questionHits.filter((q) => q.covered).length +
+    themeHits.filter((t) => t.covered).length;
   const score =
     hasDraft && totalChecks > 0
       ? Math.round((coveredChecks / totalChecks) * 100)
@@ -132,6 +147,31 @@ export function DraftGrader({
               </ul>
             ) : null}
           </>
+        ) : null}
+        {themeHits.length > 0 ? (
+          <div className="space-y-1 border-t border-base-200 pt-2">
+            <p className="text-xs font-medium text-base-content/70">
+              Outline coverage
+              <span className="font-normal text-base-content/50">
+                {" "}
+                — sections most ranking pages include
+              </span>
+            </p>
+            <ul className="space-y-0.5 text-sm">
+              {themeHits.map(({ theme, covered }) => (
+                <li
+                  key={theme.label}
+                  className={covered ? "text-success" : "text-base-content/60"}
+                >
+                  {hasDraft ? (covered ? "✓" : "○") : "•"} {theme.label}
+                  <span className="text-xs text-base-content/40">
+                    {" "}
+                    · {theme.competitorCount} of the top pages
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         ) : null}
       </div>
     </div>

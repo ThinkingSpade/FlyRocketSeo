@@ -397,7 +397,11 @@ export function ContentOptimizerPage({
 
           <CompetitorOutlines analyses={loadedAnalyses} />
 
-          <DraftGrader terms={brief.terms} questions={brief.paaQuestions} />
+          <DraftGrader
+            terms={brief.terms}
+            questions={brief.paaQuestions}
+            outlines={loadedAnalyses.map((analysis) => analysis.h2)}
+          />
 
           <p className="text-xs text-base-content/40">
             Brief for &ldquo;{brief.keyword}&rdquo; · fetched{" "}

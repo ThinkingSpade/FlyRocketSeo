@@ -21,6 +21,7 @@ import {
   RemoveSavedKeywordsError,
 } from "@/client/features/saved-keywords/SavedKeywordsModals";
 import { SavedKeywordsPagination } from "@/client/features/saved-keywords/SavedKeywordsPagination";
+import { SavedKeywordsPortfolio } from "@/client/features/saved-keywords/SavedKeywordsPortfolio";
 import { SavedKeywordsStatus } from "@/client/features/saved-keywords/SavedKeywordsStatus";
 import { SavedKeywordsTable } from "@/client/features/saved-keywords/SavedKeywordsTable";
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
@@ -272,6 +273,15 @@ function SavedKeywordsPage() {
           onExportCsv={() => void exporter.exportFilteredCsv()}
           onExportSheets={() => void exporter.exportFilteredSheets()}
           onRefreshMetrics={() => refreshMetricsMutation.mutate()}
+        />
+
+        <SavedKeywordsPortfolio
+          projectId={projectId}
+          appliedFilters={appliedFilters}
+          selectedTagIds={selectedTagIds}
+          sort={sort}
+          order={order}
+          totalCount={totalCount}
         />
 
         <div className="overflow-hidden rounded-lg border border-base-300 bg-base-100">
