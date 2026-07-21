@@ -23,6 +23,7 @@ import {
 } from "@/client/features/search-performance/SearchPerformanceParts";
 import { CtrOpportunitiesTable } from "@/client/features/search-performance/CtrOpportunitiesTable";
 import { BrandedSplitCard } from "@/client/features/search-performance/BrandedSplitCard";
+import { ContentPerformanceTab } from "@/client/features/search-performance/ContentPerformanceTab";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   exportSearchPerformanceTable,
@@ -235,6 +236,11 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                     label={`CTR opportunities (${report.ctrOpportunities.length})`}
                   />
                   <TabButton
+                    active={tab === "content"}
+                    onClick={() => setTab("content")}
+                    label="Content"
+                  />
+                  <TabButton
                     active={tab === "queries"}
                     onClick={() => setTab("queries")}
                     label="Queries"
@@ -320,6 +326,13 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 />
               ) : tab === "ctr" ? (
                 <CtrOpportunitiesTable rows={report.ctrOpportunities} />
+              ) : tab === "content" ? (
+                <ContentPerformanceTab
+                  projectId={projectId}
+                  dateRange={range}
+                  device={device === ALL ? undefined : device}
+                  country={country === ALL ? undefined : country}
+                />
               ) : tableQuery.isPending ? (
                 <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
                   <Loader2 className="size-4 animate-spin" /> Loading…

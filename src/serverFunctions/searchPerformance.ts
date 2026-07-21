@@ -208,3 +208,70 @@ export const exportSearchPerformanceTable = createServerFn({ method: "POST" })
       rows: toDimensionRows(result.rows),
     };
   });
+
+// Page-level rows for the content analyzer; one row per page, both periods.
+const CONTENT_PAGE_ROW_LIMIT = 1000;
+
+/** Flatten page-dimension rows, dropping any without a URL key. */
+function toContentPages(
+  rows: Awaited<ReturnType<typeof GscService.getPerformance>>["rows"],
+) {
+  return rows
+    .map((row) => ({
+      page: row.keys?.[0] ?? "",
+      clicks: row.clicks,
+      impressions: row.impressions,
+      position: row.position,
+    }))
+    .filter((row) => row.page !== "");
+}
+
+/**
+ * Page performance for the current period and the one before it — the input
+ * for position buckets and content-group comparisons. All first-party GSC
+ * data, free.
+ */
+export const getContentPerformance = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(searchPerformanceInputSchema)
+  .handler(async ({ data, context }) => {
+    const { startDate, endDate } = resolveDateRange({
+      dateRange: data.dateRange,
+    });
+    const prev = previousPeriod(startDate, endDate);
+    const projectId = context.projectId;
+    const { filters } = buildGscFilters(data);
+
+    try {
+      const [current, previous] = await Promise.all([
+        GscService.getPerformance({
+          projectId,
+          startDate,
+          endDate,
+          dimensions: ["page"],
+          filters,
+          rowLimit: CONTENT_PAGE_ROW_LIMIT,
+        }),
+        GscService.getPerformance({
+          projectId,
+          startDate: prev.startDate,
+          endDate: prev.endDate,
+          dimensions: ["page"],
+          filters,
+          rowLimit: CONTENT_PAGE_ROW_LIMIT,
+        }),
+      ]);
+
+      return {
+        connected: true as const,
+        range: { startDate, endDate },
+        current: toContentPages(current.rows),
+        previous: toContentPages(previous.rows),
+      };
+    } catch (error) {
+      if (isExpectedConnectionFailure(error)) {
+        return { connected: false as const };
+      }
+      throw error;
+    }
+  });
