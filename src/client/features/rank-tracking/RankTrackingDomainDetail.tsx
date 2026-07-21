@@ -19,6 +19,7 @@ import {
   countMatrixRuns,
   RankTrackingHistoryMatrix,
 } from "./RankTrackingHistoryMatrix";
+import { RankTrackingScoreboard } from "./RankTrackingScoreboard";
 import { VisibilityTrendChart } from "./VisibilityTrendChart";
 import { RankTrackingTableToolbar } from "./RankTrackingTableToolbar";
 import {
@@ -247,11 +248,18 @@ export function RankTrackingDomainDetail({
 
         {/* Portfolio overview */}
         {(rows?.length ?? 0) > 0 && (
-          <RankTrackingOverview
-            device={activeDevice}
-            projectId={projectId}
-            configId={config.id}
-          />
+          <>
+            <RankTrackingScoreboard
+              rows={rows ?? []}
+              device={activeDevice}
+              cells={matrixCells ?? []}
+            />
+            <RankTrackingOverview
+              device={activeDevice}
+              projectId={projectId}
+              configId={config.id}
+            />
+          </>
         )}
 
         {/* Table toolbar */}

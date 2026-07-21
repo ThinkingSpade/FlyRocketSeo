@@ -3,7 +3,10 @@ import type {
   RankTrackingDeviceResult,
   RankTrackingRow,
 } from "@/types/schemas/rank-tracking";
-import { computeScorecards } from "./rankTrackingScorecards";
+import {
+  computeBucketTransitions,
+  computeScorecards,
+} from "./rankTrackingScorecards";
 
 function device(
   position: number | null,
@@ -87,5 +90,44 @@ describe("computeScorecards", () => {
     const result = computeScorecards(rows, "desktop");
     expect(result.improved).toBe(2);
     expect(result.declined).toBe(2);
+  });
+});
+
+describe("computeScorecards unchanged", () => {
+  it("counts same-position keywords as unchanged, not improved/declined", () => {
+    const cards = computeScorecards(
+      [
+        row(device(5, 5)),
+        row(device(3, 7)),
+        row(device(9, 4)),
+        row(device(null, null)),
+      ],
+      "desktop",
+    );
+    expect(cards.unchanged).toBe(1);
+    expect(cards.improved).toBe(1);
+    expect(cards.declined).toBe(1);
+  });
+});
+
+describe("computeBucketTransitions", () => {
+  it("buckets previous vs current positions including not-ranking", () => {
+    const transitions = computeBucketTransitions(
+      [
+        row(device(2, 4)), // 4-10 -> Top 3
+        row(device(8, 12)), // 11-20 -> 4-10
+        row(device(15, null)), // not ranking -> 11-20
+        row(device(null, 18)), // 11-20 -> not ranking
+        row(device(25, 30)), // beyond depth counts as not ranking both times
+      ],
+      "desktop",
+    );
+
+    expect(transitions).toEqual([
+      { label: "Top 3", previous: 0, current: 1 },
+      { label: "Top 4–10", previous: 1, current: 1 },
+      { label: "Top 11–20", previous: 2, current: 1 },
+      { label: "Not ranking", previous: 2, current: 2 },
+    ]);
   });
 });

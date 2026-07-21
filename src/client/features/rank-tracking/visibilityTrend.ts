@@ -11,6 +11,49 @@ type VisibilityTrendPoint = {
   visibility: number | null;
 };
 
+type AveragePositionPoint = {
+  runId: string;
+  checkedAt: string;
+  /** Mean position across keywords ranked in that run, or null. */
+  averagePosition: number | null;
+  /** How many keywords were ranked (found in the SERP) that run. */
+  rankedCount: number;
+};
+
+/**
+ * Average position per stored run, over the keywords that ranked that run —
+ * the Ubersuggest headline chart. Oldest first.
+ */
+export function computeAveragePositionTrend(
+  cells: RankPositionMatrixCell[],
+): AveragePositionPoint[] {
+  const runs = new Map<
+    string,
+    { checkedAt: string; sum: number; count: number }
+  >();
+  for (const cell of cells) {
+    const run = runs.get(cell.runId) ?? {
+      checkedAt: cell.checkedAt,
+      sum: 0,
+      count: 0,
+    };
+    if (cell.position != null) {
+      run.sum += cell.position;
+      run.count += 1;
+    }
+    runs.set(cell.runId, run);
+  }
+
+  return [...runs.entries()]
+    .map(([runId, run]) => ({
+      runId,
+      checkedAt: run.checkedAt,
+      averagePosition: run.count > 0 ? run.sum / run.count : null,
+      rankedCount: run.count,
+    }))
+    .toSorted((a, b) => a.checkedAt.localeCompare(b.checkedAt));
+}
+
 /**
  * Replay the scorecard's visibility formula over every run in the history
  * matrix. Keywords without a known volume are ignored (same rule as the

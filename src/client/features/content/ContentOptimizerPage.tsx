@@ -1,6 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { NotebookPen, Search } from "lucide-react";
+import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
+import { useContentBriefHistory } from "@/client/features/content/useContentBriefHistory";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   analyzeContentCompetitor,
@@ -124,6 +126,8 @@ export function ContentOptimizerPage({
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
   const keyword = query.trim();
+  const { history, historyLoaded, addBrief, removeBrief } =
+    useContentBriefHistory(projectId);
 
   const briefQuery = useQuery({
     enabled: keyword.length > 0,
@@ -138,6 +142,13 @@ export function ContentOptimizerPage({
   const errorMessage = briefQuery.isError
     ? getStandardErrorMessage(briefQuery.error)
     : null;
+
+  // Remember successful briefs so the empty state can relink them.
+  useEffect(() => {
+    if (brief) {
+      addBrief({ keyword: brief.keyword, locationCode: brief.locationCode });
+    }
+  }, [brief, addBrief]);
 
   // One analysis call per competitor page — each is its own Worker invocation
   // (CPU-bounded) and is cached server-side for a week.
@@ -260,15 +271,23 @@ export function ContentOptimizerPage({
       ) : null}
 
       {!keyword ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
-            <p className="font-medium">Enter a keyword to build a brief</p>
-            <p className="max-w-md text-sm text-base-content/60">
-              The optimizer reads the current top-ranking pages and turns them
-              into a concrete writing target.
-            </p>
-          </div>
-        </div>
+        <ContentEmptyState
+          history={history}
+          historyLoaded={historyLoaded}
+          onOpenBrief={(item) => {
+            setInput(item.keyword);
+            setLocationInput(String(item.locationCode));
+            navigate({
+              search: (prev) => ({
+                ...prev,
+                q: item.keyword,
+                loc: item.locationCode,
+              }),
+              replace: false,
+            });
+          }}
+          onRemoveBrief={removeBrief}
+        />
       ) : null}
 
       {keyword && briefQuery.isLoading ? (

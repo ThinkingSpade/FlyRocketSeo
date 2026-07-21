@@ -49,6 +49,8 @@ interface Scorecards {
   top10: number;
   improved: number;
   declined: number;
+  /** ranked in both periods at the same position */
+  unchanged: number;
 }
 
 /**
@@ -69,6 +71,7 @@ export function computeScorecards(
   let top10 = 0;
   let improved = 0;
   let declined = 0;
+  let unchanged = 0;
   let visNumCurrent = 0;
   let visNumPrevious = 0;
   let visVolume = 0; // Σ volume over keywords with known volume
@@ -102,6 +105,8 @@ export function computeScorecards(
       improved += 1; // moved up
     } else if (previousPosition - position < 0) {
       declined += 1; // moved down
+    } else {
+      unchanged += 1; // ranked in both periods, same position
     }
   }
 
@@ -122,5 +127,52 @@ export function computeScorecards(
     top10,
     improved,
     declined,
+    unchanged,
   };
+}
+
+type BucketTransition = {
+  label: string;
+  previous: number;
+  current: number;
+};
+
+/**
+ * Ubersuggest-style "current search rankings" read: how many keywords sat in
+ * each position bucket previously vs now. Buckets are cumulative-exclusive
+ * (Top 3, 4–10, 11–20, not ranking within the tracked depth).
+ */
+export function computeBucketTransitions(
+  rows: RankTrackingRow[],
+  device: "desktop" | "mobile",
+): BucketTransition[] {
+  const buckets = [
+    { label: "Top 3", min: 1, max: 3 },
+    { label: "Top 4–10", min: 4, max: 10 },
+    { label: "Top 11–20", min: 11, max: 20 },
+  ];
+
+  const previous = [0, 0, 0, 0];
+  const current = [0, 0, 0, 0];
+  const bucketIndex = (position: number | null): number => {
+    if (position == null) return 3;
+    const index = buckets.findIndex(
+      (bucket) => position >= bucket.min && position <= bucket.max,
+    );
+    return index === -1 ? 3 : index;
+  };
+
+  for (const row of rows) {
+    previous[bucketIndex(row[device].previousPosition)] += 1;
+    current[bucketIndex(row[device].position)] += 1;
+  }
+
+  return [
+    ...buckets.map((bucket, index) => ({
+      label: bucket.label,
+      previous: previous[index],
+      current: current[index],
+    })),
+    { label: "Not ranking", previous: previous[3], current: current[3] },
+  ];
 }

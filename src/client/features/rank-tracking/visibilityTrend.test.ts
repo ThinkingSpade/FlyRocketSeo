@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeVisibilityTrend } from "./visibilityTrend";
+import {
+  computeAveragePositionTrend,
+  computeVisibilityTrend,
+} from "./visibilityTrend";
 
 const cell = (
   runId: string,
@@ -53,5 +56,29 @@ describe("computeVisibilityTrend", () => {
 
   it("handles an empty matrix", () => {
     expect(computeVisibilityTrend([], new Map())).toEqual([]);
+  });
+});
+
+describe("computeAveragePositionTrend", () => {
+  it("averages ranked positions per run, oldest first", () => {
+    const points = computeAveragePositionTrend([
+      cell("r2", "2026-07-15", "kw1", 4),
+      cell("r2", "2026-07-15", "kw2", 8),
+      cell("r1", "2026-07-01", "kw1", 10),
+      cell("r1", "2026-07-01", "kw2", null),
+    ]);
+
+    expect(points.map((p) => p.runId)).toEqual(["r1", "r2"]);
+    // Unranked keywords are excluded from the mean, not counted as zero.
+    expect(points[0]).toMatchObject({ averagePosition: 10, rankedCount: 1 });
+    expect(points[1]).toMatchObject({ averagePosition: 6, rankedCount: 2 });
+  });
+
+  it("returns null average for a run with nothing ranked", () => {
+    const points = computeAveragePositionTrend([
+      cell("r1", "2026-07-01", "kw1", null),
+    ]);
+    expect(points[0].averagePosition).toBeNull();
+    expect(points[0].rankedCount).toBe(0);
   });
 });
