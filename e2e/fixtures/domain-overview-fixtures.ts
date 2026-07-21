@@ -5,6 +5,13 @@ export function getFixtureOverview(domain: string) {
     organicKeywords: 307,
     backlinks: null,
     referringDomains: null,
+    positionBuckets: {
+      top3: 24,
+      pos4to10: 61,
+      pos11to20: 78,
+      pos21to50: 96,
+      pos51plus: 48,
+    },
     hasData: true,
     fetchedAt: "2026-05-19T00:00:00.000Z",
   };

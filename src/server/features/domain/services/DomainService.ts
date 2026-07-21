@@ -19,15 +19,75 @@ type MeteringOverrides = {
 /** Domain overview data is refreshed every 12 hours. */
 const DOMAIN_OVERVIEW_TTL_SECONDS = 12 * 60 * 60;
 
+const positionBucketsSchema = z.object({
+  top3: z.number(),
+  pos4to10: z.number(),
+  pos11to20: z.number(),
+  pos21to50: z.number(),
+  pos51plus: z.number(),
+});
+
 const domainOverviewResultSchema = z.object({
   domain: z.string(),
   organicTraffic: z.number().nullable(),
   organicKeywords: z.number().nullable(),
   backlinks: z.number().nullable(),
   referringDomains: z.number().nullable(),
+  /** Ranking-position distribution (Ahrefs-style buckets); null when Labs has
+   *  no per-position breakdown for the domain. */
+  positionBuckets: positionBucketsSchema.nullable(),
   hasData: z.boolean(),
   fetchedAt: z.string(),
 });
+
+// Per-position fields on the Labs rank-overview payload, read defensively.
+const organicPositionsSchema = z
+  .object({
+    pos_1: z.number().nullable().optional(),
+    pos_2_3: z.number().nullable().optional(),
+    pos_4_10: z.number().nullable().optional(),
+    pos_11_20: z.number().nullable().optional(),
+    pos_21_30: z.number().nullable().optional(),
+    pos_31_40: z.number().nullable().optional(),
+    pos_41_50: z.number().nullable().optional(),
+    pos_51_60: z.number().nullable().optional(),
+    pos_61_70: z.number().nullable().optional(),
+    pos_71_80: z.number().nullable().optional(),
+    pos_81_90: z.number().nullable().optional(),
+    pos_91_100: z.number().nullable().optional(),
+  })
+  .passthrough();
+
+const sum = (...values: Array<number | null | undefined>) =>
+  values.reduce<number>((total, value) => total + (value ?? 0), 0);
+
+function mapPositionBuckets(
+  organic: unknown,
+): z.infer<typeof positionBucketsSchema> | null {
+  const parsed = organicPositionsSchema.safeParse(organic ?? {});
+  if (!parsed.success) return null;
+  const p = parsed.data;
+  const buckets = {
+    top3: sum(p.pos_1, p.pos_2_3),
+    pos4to10: sum(p.pos_4_10),
+    pos11to20: sum(p.pos_11_20),
+    pos21to50: sum(p.pos_21_30, p.pos_31_40, p.pos_41_50),
+    pos51plus: sum(
+      p.pos_51_60,
+      p.pos_61_70,
+      p.pos_71_80,
+      p.pos_81_90,
+      p.pos_91_100,
+    ),
+  };
+  const total =
+    buckets.top3 +
+    buckets.pos4to10 +
+    buckets.pos11to20 +
+    buckets.pos21to50 +
+    buckets.pos51plus;
+  return total > 0 ? buckets : null;
+}
 
 type DomainOverviewResult = z.infer<typeof domainOverviewResultSchema>;
 
@@ -44,7 +104,7 @@ async function getOverview(
 ): Promise<DomainOverviewResult> {
   const domain = normalizeDomainInput(input.domain, input.includeSubdomains);
 
-  const cacheKey = await buildCacheKey("domain:overview", {
+  const cacheKey = await buildCacheKey("domain:overview:v2", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     domain,
@@ -86,6 +146,7 @@ async function getOverview(
     organicKeywords,
     backlinks: null,
     referringDomains: null,
+    positionBuckets: mapPositionBuckets(metrics?.metrics?.organic),
     hasData: organicKeywords != null && organicKeywords > 0,
     fetchedAt: nowIso,
   };

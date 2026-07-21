@@ -11,6 +11,7 @@ import {
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
 import { CompetitorOutlines } from "@/client/features/content/CompetitorOutlines";
+import { DraftGrader } from "@/client/features/content/DraftGrader";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -395,6 +396,8 @@ export function ContentOptimizerPage({
           </div>
 
           <CompetitorOutlines analyses={loadedAnalyses} />
+
+          <DraftGrader terms={brief.terms} questions={brief.paaQuestions} />
 
           <p className="text-xs text-base-content/40">
             Brief for &ldquo;{brief.keyword}&rdquo; · fetched{" "}
