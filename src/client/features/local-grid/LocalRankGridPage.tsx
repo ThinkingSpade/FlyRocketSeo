@@ -14,6 +14,7 @@ import {
   RankGridMap,
   type CellState,
 } from "@/client/features/local-grid/RankGridMap";
+import { computeGridShareOfVoice } from "@/client/features/local-grid/gridShareOfVoice";
 
 type LocalGridNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -93,15 +94,14 @@ export function LocalRankGridPage({
     });
   });
 
-  const resolved = [...cellStates.values()].filter(
-    (state) => !state.isLoading && !state.isError,
+  const shareOfVoice = computeGridShareOfVoice(
+    [...cellStates.values()]
+      .filter((state) => !state.isLoading && !state.isError)
+      .map((state) => ({
+        position: state.position,
+        topCompetitors: state.topCompetitors,
+      })),
   );
-  const ranked = resolved.filter((state) => state.position != null);
-  const averagePosition =
-    ranked.length > 0
-      ? ranked.reduce((sum, state) => sum + (state.position ?? 0), 0) /
-        ranked.length
-      : null;
 
   const gridCount = Number(gridInput) * Number(gridInput);
 
@@ -282,12 +282,12 @@ export function LocalRankGridPage({
           </span>
         </div>
 
-        {keyword && resolved.length > 0 ? (
+        {keyword && shareOfVoice.scannedPins > 0 ? (
           <div className="pointer-events-none absolute right-3 top-3 z-[1000] rounded-full border border-base-300 bg-base-100/95 px-3 py-1.5 text-xs shadow tabular-nums">
             <span className="font-medium">“{keyword}”</span> · visible at{" "}
-            {ranked.length}/{resolved.length} pins
-            {averagePosition != null
-              ? ` · avg #${averagePosition.toFixed(1)}`
+            {shareOfVoice.myVisibleCount}/{shareOfVoice.scannedPins} pins
+            {shareOfVoice.averagePosition != null
+              ? ` · avg #${shareOfVoice.averagePosition.toFixed(1)}`
               : ""}
           </div>
         ) : null}
@@ -309,6 +309,103 @@ export function LocalRankGridPage({
           </div>
         ) : null}
       </div>
+
+      {keyword && shareOfVoice.scannedPins > 0 ? (
+        <GridShareOfVoiceCards shareOfVoice={shareOfVoice} />
+      ) : null}
     </div>
+  );
+}
+
+function GridShareOfVoiceCards({
+  shareOfVoice,
+}: {
+  shareOfVoice: ReturnType<typeof computeGridShareOfVoice>;
+}) {
+  const { scannedPins, myTop3Count, myVisibleCount, averagePosition, leaders } =
+    shareOfVoice;
+  const top3Percent = Math.round((myTop3Count / scannedPins) * 100);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+          <div
+            className="text-xs font-medium uppercase tracking-wide text-base-content/50"
+            title="Share of the scanned pins where you rank in the local top 3"
+          >
+            Share of voice
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums">
+            {top3Percent}%
+          </div>
+        </div>
+        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+          <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+            Top-3 pins
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums">
+            {myTop3Count}
+            <span className="text-sm font-normal text-base-content/50">
+              {" "}
+              / {scannedPins}
+            </span>
+          </div>
+        </div>
+        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+          <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+            Visible pins
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums">
+            {myVisibleCount}
+            <span className="text-sm font-normal text-base-content/50">
+              {" "}
+              / {scannedPins}
+            </span>
+          </div>
+        </div>
+        <div className="rounded-lg border border-base-300 bg-base-100 p-3">
+          <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+            Avg rank
+          </div>
+          <div className="mt-1 text-xl font-semibold tabular-nums">
+            {averagePosition != null ? `#${averagePosition.toFixed(1)}` : "—"}
+          </div>
+        </div>
+      </div>
+
+      {leaders.length > 0 ? (
+        <div className="card border border-base-300 bg-base-100">
+          <div className="card-body gap-2 p-4">
+            <h2 className="text-sm font-semibold">Map leaders</h2>
+            <p className="-mt-1 text-xs text-base-content/50">
+              Who holds the local top 3 across your grid — including your own
+              listing when it ranks.
+            </p>
+            <ul className="space-y-1.5">
+              {leaders.map((leader) => (
+                <li
+                  key={leader.name}
+                  className="flex items-center gap-3 text-sm"
+                >
+                  <span className="w-44 shrink-0 truncate" title={leader.name}>
+                    {leader.name}
+                  </span>
+                  <span className="h-2 flex-1 overflow-hidden rounded-full bg-base-200">
+                    <span
+                      className="block h-full rounded-full bg-primary/70"
+                      style={{ width: `${Math.round(leader.share * 100)}%` }}
+                    />
+                  </span>
+                  <span className="w-24 shrink-0 text-right text-xs text-base-content/60 tabular-nums">
+                    {leader.appearances} of {scannedPins} pins
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

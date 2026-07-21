@@ -65,6 +65,7 @@ export function useLocalKeywordFilters() {
       "maxCpc",
       "minKd",
       "maxKd",
+      "questionsOnly",
     ];
 
     for (const key of keys) {

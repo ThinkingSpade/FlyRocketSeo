@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useRef, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
+import { extractKeywordGroups } from "@/client/features/keywords/keywordGroups";
 import {
   useKeywordControlsForm,
   type KeywordControlsValues,
@@ -65,8 +73,15 @@ export function useKeywordResearchController(
   const {
     filtersForm,
     values: filterValues,
-    resetFilters,
+    resetFilters: resetFilterFields,
   } = useLocalKeywordFilters();
+  // Keyword Magic-style group slice; lives beside the form filters so exports,
+  // pagination, and the mobile list all see the same filtered rows.
+  const [groupTerm, setGroupTerm] = useState<string | null>(null);
+  const resetFilters = useCallback(() => {
+    resetFilterFields();
+    setGroupTerm(null);
+  }, [resetFilterFields]);
   const uiState = useKeywordUiState(
     Object.values(filterValues).some((v) => v.trim() !== ""),
   );
@@ -142,6 +157,7 @@ export function useKeywordResearchController(
     uiState.setSelectedKeyword(null);
     setSerpKeyword(null);
     setSerpPage(0);
+    setGroupTerm(null);
   }, [clearSelection, setSerpKeyword, setSerpPage, uiState]);
 
   const onFormSubmit = input.onFormSubmit;
@@ -188,9 +204,17 @@ export function useKeywordResearchController(
   const { filteredRows, activeFilterCount } = useKeywordFiltering({
     rows,
     filters: filterValues,
+    groupTerm,
     sortField: input.sortField,
     sortDir: input.sortDir,
   });
+
+  // Term groups are cut from the full result set (not the filtered rows), so
+  // the rail stays stable while the user slices with it.
+  const keywordGroups = useMemo(
+    () => extractKeywordGroups(rows, searchedKeyword ?? ""),
+    [rows, searchedKeyword],
+  );
 
   const { showApproximateMatchNotice, overviewKeyword } =
     useKeywordOverviewState({
@@ -252,6 +276,9 @@ export function useKeywordResearchController(
     sheetsExportRows,
     filteredRows,
     filtersForm,
+    groupTerm,
+    setGroupTerm,
+    keywordGroups,
     handleRowClick,
     handleSaveKeywords,
     handleSearchSubmit,

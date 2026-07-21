@@ -17,6 +17,9 @@ import {
   KEYWORD_RESEARCH_HEADERS,
   keywordResearchExportRow,
 } from "@/client/features/keywords/state/keywordControllerActions";
+import { computeKeywordTotals } from "@/client/features/keywords/keywordGroups";
+import { formatCompactNumber } from "@/client/features/keywords/utils";
+import { KeywordGroupsRail } from "./KeywordGroupsRail";
 import { copyKeywordsAsMarkdown } from "@/client/features/keywords/state/keywordsMarkdown";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -123,7 +126,15 @@ function DesktopKeywordPanel({ controller }: Props) {
       {controller.overviewKeyword ? (
         <OverviewStats keyword={controller.overviewKeyword} />
       ) : null}
-      <DesktopTableCard controller={controller} />
+      <div className="flex flex-1 min-h-0 gap-2">
+        <KeywordGroupsRail
+          groups={controller.keywordGroups}
+          totalKeywords={controller.rows.length}
+          groupTerm={controller.groupTerm}
+          setGroupTerm={controller.setGroupTerm}
+        />
+        <DesktopTableCard controller={controller} />
+      </div>
     </div>
   );
 }
@@ -142,12 +153,14 @@ function DesktopTableCard({ controller }: Props) {
   const { projectId } = keywordsRoute.useParams();
   const [showTrackModal, setShowTrackModal] = useState(false);
 
+  const isSliced = activeFilterCount > 0 || controller.groupTerm != null;
   const keywordCountLabel =
     selectedRows.size > 0
       ? `${selectedRows.size} of ${filteredRows.length} selected`
-      : activeFilterCount > 0
+      : isSliced
         ? `Showing ${filteredRows.length} of ${rows.length} keywords`
         : `Showing ${filteredRows.length} keywords`;
+  const totals = computeKeywordTotals(filteredRows);
 
   const canExport = filteredRows.length > 0;
   const selectedExportRows = filteredRows
@@ -195,6 +208,17 @@ function DesktopTableCard({ controller }: Props) {
         <span className="text-sm text-base-content/60">
           {keywordCountLabel}
         </span>
+        {filteredRows.length > 0 ? (
+          <span
+            className="hidden xl:inline text-sm text-base-content/50 tabular-nums"
+            title="Summed monthly volume and average difficulty of the keywords shown"
+          >
+            · {formatCompactNumber(totals.totalVolume)} total vol
+            {totals.averageDifficulty != null
+              ? ` · avg KD ${totals.averageDifficulty}`
+              : ""}
+          </span>
+        ) : null}
         <div className="flex-1" />
         <div className="dropdown dropdown-end">
           <div

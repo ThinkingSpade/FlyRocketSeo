@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { sortBy } from "remeda";
 import { parseTerms } from "@/client/features/keywords/utils";
+import { keywordHasTerm } from "@/client/features/keywords/keywordGroups";
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordFilterValues } from "@/client/features/keywords/keywordResearchTypes";
 import type { SortDir, SortField } from "@/client/features/keywords/components";
@@ -12,16 +13,21 @@ const QUESTION_PATTERN =
 function applyKeywordFiltersAndSort(params: {
   rows: KeywordResearchRow[];
   filters: KeywordFilterValues;
+  groupTerm: string | null;
   sortField: SortField;
   sortDir: SortDir;
 }): KeywordResearchRow[] {
   const includeTerms = parseTerms(params.filters.include);
   const excludeTerms = parseTerms(params.filters.exclude);
   const questionsOnly = params.filters.questionsOnly.trim() !== "";
+  const groupTerm = params.groupTerm;
 
   const filtered = params.rows.filter((row) => {
     const haystack = row.keyword.toLowerCase();
     if (questionsOnly && !QUESTION_PATTERN.test(haystack)) {
+      return false;
+    }
+    if (groupTerm && !keywordHasTerm(row.keyword, groupTerm)) {
       return false;
     }
     if (
@@ -73,6 +79,7 @@ function applyKeywordFiltersAndSort(params: {
 export function useKeywordFiltering(params: {
   rows: KeywordResearchRow[];
   filters: KeywordFilterValues;
+  groupTerm: string | null;
   sortField: SortField;
   sortDir: SortDir;
 }) {
@@ -81,10 +88,17 @@ export function useKeywordFiltering(params: {
       applyKeywordFiltersAndSort({
         rows: params.rows,
         filters: params.filters,
+        groupTerm: params.groupTerm,
         sortField: params.sortField,
         sortDir: params.sortDir,
       }),
-    [params.filters, params.rows, params.sortDir, params.sortField],
+    [
+      params.filters,
+      params.groupTerm,
+      params.rows,
+      params.sortDir,
+      params.sortField,
+    ],
   );
 
   const activeFilterCount = useMemo(

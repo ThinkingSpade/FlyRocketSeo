@@ -3,7 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, ListOrdered, Search } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSerpOverview } from "@/serverFunctions/serp";
-import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
+import { estimateTrafficShare } from "@/client/features/serp/serpTrafficShare";
+import {
+  useAhrefsDomainRatings,
+  type DomainRatings,
+} from "@/client/features/backlinks/useAhrefsDomainRatings";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -212,71 +216,7 @@ export function SerpOverviewPage({
             </div>
           ) : null}
 
-          <div className="card border border-base-300 bg-base-100">
-            <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th className="w-14">#</th>
-                    <th>Result</th>
-                    <th className="text-right">DR</th>
-                    <th
-                      className="text-right"
-                      title="Estimated monthly organic traffic for the whole domain"
-                    >
-                      Domain traffic
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {result.results.map((item) => (
-                    <tr key={`${item.rank}-${item.url}`}>
-                      <td className="align-top">
-                        <div className="flex items-center gap-1 tabular-nums">
-                          {item.rank ?? "—"}
-                          {item.isNew ? (
-                            <span className="badge badge-success badge-xs">
-                              new
-                            </span>
-                          ) : item.isUp ? (
-                            <ArrowUp className="size-3 text-success" />
-                          ) : item.isDown ? (
-                            <ArrowDown className="size-3 text-error" />
-                          ) : null}
-                        </div>
-                      </td>
-                      <td className="max-w-xl align-top">
-                        <a
-                          href={item.url ?? undefined}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="line-clamp-1 font-medium hover:underline"
-                        >
-                          {item.title ?? item.url ?? "—"}
-                        </a>
-                        <div className="line-clamp-1 text-xs text-success/80">
-                          {item.url}
-                        </div>
-                        {item.description ? (
-                          <div className="line-clamp-2 text-xs text-base-content/60">
-                            {item.description}
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="text-right align-top tabular-nums">
-                        {item.domain != null && ratings?.[item.domain] != null
-                          ? ratings[item.domain]
-                          : "—"}
-                      </td>
-                      <td className="text-right align-top tabular-nums">
-                        {formatCount(item.domainEtv)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
+          <SerpResultsTable result={result} ratings={ratings} />
 
           {result.paaQuestions.length > 0 ? (
             <div className="card border border-base-300 bg-base-100">
@@ -304,6 +244,118 @@ export function SerpOverviewPage({
           <span className="loading loading-spinner loading-md" />
         </div>
       ) : null}
+    </div>
+  );
+}
+
+function SerpResultsTable({
+  result,
+  ratings,
+}: {
+  result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
+  ratings: DomainRatings | null;
+}) {
+  // Ahrefs-style estimate: keyword volume spread over a standard
+  // CTR-by-position curve. Client-side, no extra API spend.
+  const trafficShare = estimateTrafficShare(
+    result.keywordStats?.searchVolume,
+    result.results.map((item) => item.rank),
+  );
+
+  return (
+    <div className="card border border-base-300 bg-base-100">
+      <div className="overflow-x-auto">
+        <table className="table table-sm">
+          <thead>
+            <tr>
+              <th className="w-14">#</th>
+              <th>Result</th>
+              {trafficShare ? (
+                <th
+                  className="text-right"
+                  title="Estimated monthly clicks for this result: search volume × a standard CTR-by-position curve"
+                >
+                  Est. clicks
+                </th>
+              ) : null}
+              <th className="text-right">DR</th>
+              <th
+                className="text-right"
+                title="Estimated monthly organic traffic for the whole domain"
+              >
+                Domain traffic
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.results.map((item) => {
+              const estimate =
+                item.rank != null ? trafficShare?.get(item.rank) : undefined;
+              return (
+                <tr key={`${item.rank}-${item.url}`}>
+                  <td className="align-top">
+                    <div className="flex items-center gap-1 tabular-nums">
+                      {item.rank ?? "—"}
+                      {item.isNew ? (
+                        <span className="badge badge-success badge-xs">
+                          new
+                        </span>
+                      ) : item.isUp ? (
+                        <ArrowUp className="size-3 text-success" />
+                      ) : item.isDown ? (
+                        <ArrowDown className="size-3 text-error" />
+                      ) : null}
+                    </div>
+                  </td>
+                  <td className="max-w-xl align-top">
+                    <a
+                      href={item.url ?? undefined}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="line-clamp-1 font-medium hover:underline"
+                    >
+                      {item.title ?? item.url ?? "—"}
+                    </a>
+                    <div className="line-clamp-1 text-xs text-success/80">
+                      {item.url}
+                    </div>
+                    {item.description ? (
+                      <div className="line-clamp-2 text-xs text-base-content/60">
+                        {item.description}
+                      </div>
+                    ) : null}
+                  </td>
+                  {trafficShare ? (
+                    <td className="text-right align-top">
+                      <div className="tabular-nums">
+                        {estimate ? formatCount(estimate.clicks) : "—"}
+                      </div>
+                      {estimate ? (
+                        <div className="ml-auto mt-1 h-1 w-16 overflow-hidden rounded-full bg-base-200">
+                          <div
+                            className="h-full rounded-full bg-primary/60"
+                            style={{
+                              width: `${Math.round(estimate.relative * 100)}%`,
+                            }}
+                          />
+                        </div>
+                      ) : null}
+                    </td>
+                  ) : null}
+                  <td className="text-right align-top tabular-nums">
+                    {item.domain != null && ratings?.[item.domain] != null
+                      ? ratings[item.domain]
+                      : "—"}
+                  </td>
+                  <td className="text-right align-top tabular-nums">
+                    {formatCount(item.domainEtv)}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

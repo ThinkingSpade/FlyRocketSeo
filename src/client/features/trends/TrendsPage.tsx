@@ -14,6 +14,10 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getKeywordTrends } from "@/serverFunctions/trends";
 import { MAX_TRENDS_KEYWORDS } from "@/types/schemas/trends";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
+import {
+  SERIES_COLORS,
+  TrendsInsightsTable,
+} from "@/client/features/trends/TrendsInsightsTable";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -26,9 +30,6 @@ interface RechartsPayloadEntry {
   value?: number | string | null;
   color?: string;
 }
-
-// Series palette matching the rank-tracking charts.
-const SERIES_COLORS = ["#2563eb", "#16a34a", "#f59e0b", "#dc2626", "#9333ea"];
 
 function parseKeywords(query: string): string[] {
   return [
@@ -151,6 +152,13 @@ export function TrendsPage({
           )}
         </div>
       </div>
+
+      {result && result.points.length > 0 ? (
+        <TrendsInsightsTable
+          keywords={result.keywords}
+          points={result.points}
+        />
+      ) : null}
     </div>
   );
 }
