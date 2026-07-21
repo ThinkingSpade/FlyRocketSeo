@@ -4,6 +4,7 @@ import { ArrowDown, ArrowUp, ListOrdered, Search } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSerpOverview } from "@/serverFunctions/serp";
 import { estimateTrafficShare } from "@/client/features/serp/serpTrafficShare";
+import { SerpStrengthCards } from "@/client/features/serp/SerpStrengthCards";
 import {
   useAhrefsDomainRatings,
   type DomainRatings,
@@ -69,7 +70,7 @@ export function SerpOverviewPage({
   }, [result, loadRatings]);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
       <div>
         <h1 className="flex items-center gap-2 text-xl font-semibold">
           <ListOrdered className="size-5" />
@@ -215,6 +216,8 @@ export function SerpOverviewPage({
               ))}
             </div>
           ) : null}
+
+          <SerpStrengthCards results={result.results} ratings={ratings} />
 
           <SerpResultsTable result={result} ratings={ratings} />
 

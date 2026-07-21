@@ -147,7 +147,7 @@ export function LocalRankGridPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
       <div>
         <h1 className="flex items-center gap-2 text-xl font-semibold">
           <Grid3x3 className="size-5" />

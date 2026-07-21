@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeTrendInsights } from "./trendsInsights";
+import { computeMonthlyInterest, computeTrendInsights } from "./trendsInsights";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 // Fixed anchor keeps month math deterministic: Dec 15, 2025 UTC.
@@ -65,6 +65,32 @@ describe("computeTrendInsights", () => {
     expect(insight.momentum).toBeNull();
     expect(insight.yoyPercent).toBeNull();
     expect(insight.peakMonth).toBeNull();
+  });
+
+  it("computes a monthly interest matrix for the heatmap", () => {
+    const rows = computeMonthlyInterest(
+      ["vending"],
+      weeklySeries((weeksAgo) => {
+        const month = new Date(END - weeksAgo * 7 * DAY_MS).getUTCMonth();
+        return month === 2 ? 90 : 50;
+      }),
+    );
+    expect(rows).not.toBeNull();
+    expect(rows![0].months[2]).toBe(90);
+    expect(rows![0].months[5]).toBe(50);
+    expect(rows![0].months).toHaveLength(12);
+  });
+
+  it("returns null for short series instead of a misleading heatmap", () => {
+    expect(
+      computeMonthlyInterest(
+        ["thin"],
+        [
+          { timestamp: END - 7 * DAY_MS, values: [30] },
+          { timestamp: END, values: [40] },
+        ],
+      ),
+    ).toBeNull();
   });
 
   it("skips null gaps in one keyword without affecting another", () => {

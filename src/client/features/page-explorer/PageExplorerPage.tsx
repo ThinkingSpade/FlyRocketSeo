@@ -4,6 +4,12 @@ import { FileSearch, Search } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getPageExplorer } from "@/serverFunctions/page-explorer";
 import { analyzeContentCompetitor } from "@/serverFunctions/content";
+import { computePageRealEstate } from "./pageInsights";
+import {
+  PageDistributionCard,
+  StrikingDistanceCard,
+  TrafficConcentrationCard,
+} from "./PageInsightsCards";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -86,7 +92,7 @@ export function PageExplorerPage({
   const snapshot = snapshotQuery.data ?? null;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
       <div>
         <h1 className="flex items-center gap-2 text-xl font-semibold">
           <FileSearch className="size-5" />
@@ -186,30 +192,59 @@ export function PageExplorerPage({
       ) : null}
 
       {result ? (
-        <>
-          <div className="grid gap-3 sm:grid-cols-4">
-            <StatCard
-              label="Est. monthly traffic"
-              value={formatCount(result.estimatedTraffic)}
-              hint="Sum of keyword-level estimates"
-            />
-            <StatCard
-              label="Ranking keywords"
-              value={formatCount(
-                result.totalKeywords ?? result.keywords.length,
-              )}
-              hint={`Top ${result.keywords.length} shown`}
-            />
-            <StatCard
-              label="Backlinks"
-              value={formatCount(result.backlinks?.backlinks)}
-            />
-            <StatCard
-              label="Ref. domains"
-              value={formatCount(result.backlinks?.referringDomains)}
-            />
-          </div>
+        <PageExplorerResults result={result} snapshot={snapshot} />
+      ) : null}
+    </div>
+  );
+}
 
+type PageExplorerData = NonNullable<
+  Awaited<ReturnType<typeof getPageExplorer>>
+>;
+type SnapshotData = Awaited<ReturnType<typeof analyzeContentCompetitor>> | null;
+
+function PageExplorerResults({
+  result,
+  snapshot,
+}: {
+  result: PageExplorerData;
+  snapshot: SnapshotData;
+}) {
+  const realEstate = computePageRealEstate(result.keywords);
+
+  return (
+    <>
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-8">
+        <StatCard
+          label="Est. monthly traffic"
+          value={formatCount(result.estimatedTraffic)}
+          hint="Sum of keyword-level estimates"
+        />
+        <StatCard
+          label="Ranking keywords"
+          value={formatCount(result.totalKeywords ?? result.keywords.length)}
+          hint={`Top ${result.keywords.length} shown`}
+        />
+        <StatCard
+          label="Backlinks"
+          value={formatCount(result.backlinks?.backlinks)}
+        />
+        <StatCard
+          label="Ref. domains"
+          value={formatCount(result.backlinks?.referringDomains)}
+        />
+        <StatCard label="#1 rankings" value={String(realEstate.numberOne)} />
+        <StatCard label="Top 3" value={String(realEstate.top3)} />
+        <StatCard label="Top 10" value={String(realEstate.top10)} />
+        <StatCard
+          label="Striking distance"
+          value={String(realEstate.strikingDistance)}
+          hint="Ranked #4–15"
+        />
+      </div>
+
+      <div className="grid items-start gap-3 xl:grid-cols-5">
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
           <div className="card border border-base-300 bg-base-100">
             <div className="overflow-x-auto">
               <table className="table table-sm">
@@ -261,7 +296,15 @@ export function PageExplorerPage({
               </table>
             </div>
           </div>
+        </div>
 
+        <div className="flex min-w-0 flex-col gap-3 xl:col-span-2">
+          <PageDistributionCard keywords={result.keywords} />
+          <TrafficConcentrationCard
+            keywords={result.keywords}
+            estimatedTraffic={result.estimatedTraffic}
+          />
+          <StrikingDistanceCard keywords={result.keywords} />
           {snapshot ? (
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body gap-2 p-4">
@@ -286,12 +329,12 @@ export function PageExplorerPage({
               </div>
             </div>
           ) : null}
+        </div>
+      </div>
 
-          <p className="text-xs text-base-content/40">
-            {result.url} · fetched {new Date(result.fetchedAt).toLocaleString()}
-          </p>
-        </>
-      ) : null}
-    </div>
+      <p className="text-xs text-base-content/40">
+        {result.url} · fetched {new Date(result.fetchedAt).toLocaleString()}
+      </p>
+    </>
   );
 }

@@ -17,6 +17,7 @@ import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrend
 import {
   SERIES_COLORS,
   TrendsInsightsTable,
+  TrendsSeasonalHeatmap,
 } from "@/client/features/trends/TrendsInsightsTable";
 
 type TrendsNavigate = (args: {
@@ -70,7 +71,7 @@ export function TrendsPage({
   const result = trendsQuery.data;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
       <div>
         <h1 className="flex items-center gap-2 text-xl font-semibold">
           <Activity className="size-5" />
@@ -154,10 +155,16 @@ export function TrendsPage({
       </div>
 
       {result && result.points.length > 0 ? (
-        <TrendsInsightsTable
-          keywords={result.keywords}
-          points={result.points}
-        />
+        <div className="grid items-start gap-3 xl:grid-cols-2">
+          <TrendsInsightsTable
+            keywords={result.keywords}
+            points={result.points}
+          />
+          <TrendsSeasonalHeatmap
+            keywords={result.keywords}
+            points={result.points}
+          />
+        </div>
       ) : null}
     </div>
   );

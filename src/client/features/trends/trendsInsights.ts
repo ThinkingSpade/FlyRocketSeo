@@ -40,6 +40,46 @@ function average(values: number[]): number | null {
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
+type MonthlyInterestRow = {
+  keyword: string;
+  /** Average interest per calendar month (Jan..Dec), null when no data. */
+  months: Array<number | null>;
+};
+
+/**
+ * Keyword × calendar-month average interest, for the seasonal heatmap.
+ * Returns null when the series is too short for month-level reads.
+ */
+export function computeMonthlyInterest(
+  keywords: string[],
+  points: TrendsSeriesPoint[],
+): MonthlyInterestRow[] | null {
+  if (points.length === 0) return null;
+  const timestamps = points.map((point) => point.timestamp);
+  const span = Math.max(...timestamps) - Math.min(...timestamps);
+  if (span < SEASONALITY_MIN_SPAN_MS) return null;
+
+  return keywords.map((keyword, index) => {
+    const byMonth = new Map<number, number[]>();
+    for (const point of points) {
+      const value = point.values[index];
+      if (value == null) continue;
+      const month = new Date(point.timestamp).getUTCMonth();
+      const bucket = byMonth.get(month) ?? [];
+      bucket.push(value);
+      byMonth.set(month, bucket);
+    }
+    return {
+      keyword,
+      months: Array.from({ length: 12 }, (_, month) => {
+        const values = byMonth.get(month);
+        const avg = values ? average(values) : null;
+        return avg == null ? null : Math.round(avg);
+      }),
+    };
+  });
+}
+
 /** Compute per-keyword momentum and seasonality from a shared series. */
 export function computeTrendInsights(
   keywords: string[],

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { ArrowDownRight, ArrowUpRight, Minus } from "lucide-react";
 import {
+  computeMonthlyInterest,
   computeTrendInsights,
   type KeywordTrendInsight,
 } from "@/client/features/trends/trendsInsights";
@@ -136,6 +137,77 @@ export function TrendsInsightsTable({
         <p className="text-xs text-base-content/50">
           Momentum compares the last 90 days to the 90 before; peak and low
           months average the full charted range.
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Keyword × month heatmap: average interest per calendar month. */
+export function TrendsSeasonalHeatmap({
+  keywords,
+  points,
+}: {
+  keywords: string[];
+  points: Array<{ timestamp: number; values: (number | null)[] }>;
+}) {
+  const rows = useMemo(
+    () => computeMonthlyInterest(keywords, points),
+    [keywords, points],
+  );
+  if (!rows) return null;
+
+  return (
+    <div className="card border border-base-300 bg-base-100">
+      <div className="card-body gap-2 p-4">
+        <h2 className="text-sm font-semibold">Seasonal heatmap</h2>
+        <div className="overflow-x-auto">
+          <table className="table table-xs">
+            <thead>
+              <tr>
+                <th>Keyword</th>
+                {MONTH_LABELS.map((label) => (
+                  <th key={label} className="text-center">
+                    {label}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr key={row.keyword}>
+                  <td className="max-w-48 font-medium">
+                    <span className="line-clamp-1">{row.keyword}</span>
+                  </td>
+                  {row.months.map((value, month) => (
+                    <td key={month} className="p-1 text-center">
+                      {value == null ? (
+                        <span className="text-base-content/30">—</span>
+                      ) : (
+                        <span
+                          className="inline-flex h-7 w-9 items-center justify-center rounded text-xs font-medium tabular-nums"
+                          style={{
+                            backgroundColor: `oklch(62% 0.19 260 / ${
+                              0.08 + (value / 100) * 0.72
+                            })`,
+                            color: value >= 60 ? "white" : "var(--fallback-bc)",
+                          }}
+                          title={`${row.keyword} · ${MONTH_LABELS[month]}: ${value}`}
+                        >
+                          {value}
+                        </span>
+                      )}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="text-xs text-base-content/50">
+          Average Google Trends interest per calendar month across the charted
+          range — darker means stronger demand. Plan content a month or two
+          ahead of the peaks.
         </p>
       </div>
     </div>

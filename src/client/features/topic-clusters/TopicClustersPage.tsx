@@ -58,7 +58,7 @@ export function TopicClustersPage({
     : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
       <div>
         <h1 className="flex items-center gap-2 text-xl font-semibold">
           <Network className="size-5" />
@@ -267,7 +267,7 @@ function ClusterPlanBody({
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         {clusters.map((cluster) => {
           const topKeyword = cluster.keywords[0]?.keyword ?? plan.topic;
           return (
