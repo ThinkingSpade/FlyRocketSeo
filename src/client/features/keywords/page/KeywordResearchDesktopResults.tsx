@@ -28,8 +28,8 @@ import {
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordResearchControllerState } from "./types";
 import {
-  FilterRangeInputs,
-  FilterTextInput,
+  DesktopFilterFields,
+  SerpPanelActions,
 } from "./keywordResearchDesktopFilters";
 import { KeywordResearchDesktopTable } from "./KeywordResearchDesktopTable";
 import {
@@ -329,47 +329,13 @@ function DesktopFilters({ controller }: Props) {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
-        <FilterTextInput
-          form={filtersForm}
-          name="include"
-          label="Include Terms"
-          placeholder="audit, checker, template"
-        />
-        <FilterTextInput
-          form={filtersForm}
-          name="exclude"
-          label="Exclude Terms"
-          placeholder="jobs, salary, course"
-        />
-      </div>
-
-      <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
-        <FilterRangeInputs
-          form={filtersForm}
-          title="Search Volume"
-          minName="minVol"
-          maxName="maxVol"
-        />
-        <FilterRangeInputs
-          form={filtersForm}
-          title="CPC (USD)"
-          minName="minCpc"
-          maxName="maxCpc"
-          step="0.01"
-        />
-        <FilterRangeInputs
-          form={filtersForm}
-          title="Difficulty"
-          minName="minKd"
-          maxName="maxKd"
-        />
-      </div>
+      <DesktopFilterFields form={filtersForm} />
     </div>
   );
 }
 
 function DesktopSerpPanel({ controller }: Props) {
+  const { projectId } = keywordsRoute.useParams();
   const { overviewKeyword } = controller;
   const trendRangeLabel = overviewKeyword
     ? formatTrendRangeLabel(overviewKeyword.trend)
@@ -391,15 +357,23 @@ function DesktopSerpPanel({ controller }: Props) {
 
       <div className="flex flex-col overflow-hidden border border-base-300 rounded-xl bg-base-100">
         <div className="shrink-0 px-4 py-3 border-b border-base-300">
-          <h3 className="text-sm font-semibold flex items-center gap-1.5">
-            <Globe className="size-3.5" />
-            SERP Analysis
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold flex items-center gap-1.5">
+              <Globe className="size-3.5" />
+              SERP Analysis
+              {controller.activeSerpKeyword ? (
+                <span className="font-normal text-base-content/50 truncate">
+                  : {controller.activeSerpKeyword}
+                </span>
+              ) : null}
+            </h3>
             {controller.activeSerpKeyword ? (
-              <span className="font-normal text-base-content/50 truncate">
-                : {controller.activeSerpKeyword}
-              </span>
+              <SerpPanelActions
+                projectId={projectId}
+                keyword={controller.activeSerpKeyword}
+              />
             ) : null}
-          </h3>
+          </div>
         </div>
         <div className="p-4">
           <SerpAnalysisCard

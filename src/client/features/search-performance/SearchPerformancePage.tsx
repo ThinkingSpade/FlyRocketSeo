@@ -21,6 +21,7 @@ import {
   type ExportTarget,
   type Tab,
 } from "@/client/features/search-performance/SearchPerformanceParts";
+import { CtrOpportunitiesTable } from "@/client/features/search-performance/CtrOpportunitiesTable";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   exportSearchPerformanceTable,
@@ -178,6 +179,8 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         exportStriking(report, target);
         return;
       }
+      // CTR opportunities is a short, read-only list; no export needed.
+      if (tab === "ctr") return;
       const data = await exportSearchPerformanceTable({
         data: { projectId, dimension, ...filterInput },
       });
@@ -220,6 +223,11 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                     active={tab === "striking"}
                     onClick={() => setTab("striking")}
                     label={`Striking distance (${report.strikingDistance.length})`}
+                  />
+                  <TabButton
+                    active={tab === "ctr"}
+                    onClick={() => setTab("ctr")}
+                    label={`CTR opportunities (${report.ctrOpportunities.length})`}
                   />
                   <TabButton
                     active={tab === "queries"}
@@ -305,6 +313,8 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                   projectId={projectId}
                   rows={report.strikingDistance}
                 />
+              ) : tab === "ctr" ? (
+                <CtrOpportunitiesTable rows={report.ctrOpportunities} />
               ) : tableQuery.isPending ? (
                 <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
                   <Loader2 className="size-4 animate-spin" /> Loading…

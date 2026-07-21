@@ -17,6 +17,8 @@ const filterValuesSchema = z.object({
   maxCpc: z.string(),
   minKd: z.string(),
   maxKd: z.string(),
+  // Older saved filters predate this field; default keeps them loadable.
+  questionsOnly: z.string().default(""),
 });
 
 function loadFiltersFromStorage(): KeywordFilterValues {

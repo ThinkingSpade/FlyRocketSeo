@@ -17,6 +17,8 @@ export type KeywordFilterValues = {
   maxCpc: string;
   minKd: string;
   maxKd: string;
+  /** "1" limits results to question keywords (how/what/why/…); "" = off. */
+  questionsOnly: string;
 };
 
 export const EMPTY_FILTERS: KeywordFilterValues = {
@@ -28,4 +30,5 @@ export const EMPTY_FILTERS: KeywordFilterValues = {
   maxCpc: "",
   minKd: "",
   maxKd: "",
+  questionsOnly: "",
 };

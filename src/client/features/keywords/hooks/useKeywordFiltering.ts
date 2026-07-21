@@ -5,6 +5,10 @@ import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordFilterValues } from "@/client/features/keywords/keywordResearchTypes";
 import type { SortDir, SortField } from "@/client/features/keywords/components";
 
+// Ubersuggest-style "Questions" view: keywords phrased as a question.
+const QUESTION_PATTERN =
+  /^(how|what|why|when|where|which|who|whose|can|could|do|does|did|is|are|was|will|would|should)\b/;
+
 function applyKeywordFiltersAndSort(params: {
   rows: KeywordResearchRow[];
   filters: KeywordFilterValues;
@@ -13,9 +17,13 @@ function applyKeywordFiltersAndSort(params: {
 }): KeywordResearchRow[] {
   const includeTerms = parseTerms(params.filters.include);
   const excludeTerms = parseTerms(params.filters.exclude);
+  const questionsOnly = params.filters.questionsOnly.trim() !== "";
 
   const filtered = params.rows.filter((row) => {
     const haystack = row.keyword.toLowerCase();
+    if (questionsOnly && !QUESTION_PATTERN.test(haystack)) {
+      return false;
+    }
     if (
       includeTerms.length > 0 &&
       !includeTerms.every((term) => haystack.includes(term))

@@ -142,3 +142,58 @@ export function previousPeriod(
 function formatUtcDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
+
+export type CtrOpportunityRow = {
+  query: string;
+  page: string;
+  clicks: number;
+  impressions: number;
+  ctr: number;
+  position: number;
+  /** Estimated clicks left on the table each period at a healthy CTR. */
+  missedClicks: number;
+};
+
+// Rough organic CTR benchmarks by position — generous on the low side so only
+// clearly underperforming rows surface.
+function expectedCtr(position: number): number {
+  if (position <= 1) return 0.25;
+  if (position <= 2) return 0.15;
+  if (position <= 3) return 0.1;
+  if (position <= 5) return 0.06;
+  if (position <= 10) return 0.03;
+  return 0.015;
+}
+
+const CTR_OPPORTUNITY_MIN_IMPRESSIONS = 50;
+const CTR_OPPORTUNITY_MAX_POSITION = 12;
+const CTR_OPPORTUNITY_ROW_LIMIT = 10;
+
+/** Queries that rank well but get clicked far below the benchmark for their
+ *  position — the classic "rewrite the title/meta" list. */
+export function buildCtrOpportunityRows(
+  rows: GscSearchAnalyticsRow[],
+): CtrOpportunityRow[] {
+  const output: CtrOpportunityRow[] = [];
+  for (const row of rows) {
+    const query = row.keys?.[0];
+    const page = row.keys?.[1];
+    if (!query || !page) continue;
+    if (row.impressions < CTR_OPPORTUNITY_MIN_IMPRESSIONS) continue;
+    if (row.position > CTR_OPPORTUNITY_MAX_POSITION) continue;
+    const benchmark = expectedCtr(row.position);
+    if (row.ctr >= benchmark * 0.5) continue;
+    output.push({
+      query,
+      page,
+      clicks: row.clicks,
+      impressions: row.impressions,
+      ctr: row.ctr,
+      position: row.position,
+      missedClicks: Math.round(row.impressions * (benchmark - row.ctr)),
+    });
+  }
+  return output
+    .toSorted((a, b) => b.missedClicks - a.missedClicks)
+    .slice(0, CTR_OPPORTUNITY_ROW_LIMIT);
+}

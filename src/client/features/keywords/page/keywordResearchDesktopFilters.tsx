@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import type { KeywordResearchControllerState } from "./types";
 
 export function FilterTextInput({
@@ -111,5 +112,120 @@ export function EmptyFilterResults({
         </button>
       ) : null}
     </div>
+  );
+}
+
+export function FilterQuestionsToggle({
+  form,
+}: {
+  form: KeywordResearchControllerState["filtersForm"];
+}) {
+  return (
+    <form.Field name="questionsOnly">
+      {(field) => (
+        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
+          <input
+            type="checkbox"
+            className="toggle toggle-primary toggle-sm"
+            checked={field.state.value === "1"}
+            onChange={(event) =>
+              field.handleChange(event.target.checked ? "1" : "")
+            }
+          />
+          <span className="text-sm">
+            Questions only
+            <span className="ml-1 text-xs text-base-content/50">
+              (how, what, why…)
+            </span>
+          </span>
+        </label>
+      )}
+    </form.Field>
+  );
+}
+
+export function SerpPanelActions({
+  projectId,
+  keyword,
+}: {
+  projectId: string;
+  keyword: string;
+}) {
+  return (
+    <div className="flex shrink-0 gap-1">
+      <Link
+        to="/p/$projectId/serp"
+        params={{ projectId }}
+        search={{ q: keyword }}
+        className="btn btn-ghost btn-xs"
+      >
+        Full SERP
+      </Link>
+      <Link
+        to="/p/$projectId/content"
+        params={{ projectId }}
+        search={{ q: keyword }}
+        className="btn btn-ghost btn-xs"
+      >
+        Build brief
+      </Link>
+      <Link
+        to="/p/$projectId/trends"
+        params={{ projectId }}
+        search={{ q: keyword }}
+        className="btn btn-ghost btn-xs"
+      >
+        Trends
+      </Link>
+    </div>
+  );
+}
+
+export function DesktopFilterFields({
+  form,
+}: {
+  form: KeywordResearchControllerState["filtersForm"];
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+        <FilterTextInput
+          form={form}
+          name="include"
+          label="Include Terms"
+          placeholder="audit, checker, template"
+        />
+        <FilterTextInput
+          form={form}
+          name="exclude"
+          label="Exclude Terms"
+          placeholder="jobs, salary, course"
+        />
+      </div>
+
+      <div className="grid grid-cols-1 gap-2 lg:grid-cols-3">
+        <FilterRangeInputs
+          form={form}
+          title="Search Volume"
+          minName="minVol"
+          maxName="maxVol"
+        />
+        <FilterRangeInputs
+          form={form}
+          title="CPC (USD)"
+          minName="minCpc"
+          maxName="maxCpc"
+          step="0.01"
+        />
+        <FilterRangeInputs
+          form={form}
+          title="Difficulty"
+          minName="minKd"
+          maxName="maxKd"
+        />
+      </div>
+
+      <FilterQuestionsToggle form={form} />
+    </>
   );
 }
