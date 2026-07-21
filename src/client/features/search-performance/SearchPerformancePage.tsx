@@ -22,6 +22,7 @@ import {
   type Tab,
 } from "@/client/features/search-performance/SearchPerformanceParts";
 import { CtrOpportunitiesTable } from "@/client/features/search-performance/CtrOpportunitiesTable";
+import { BrandedSplitCard } from "@/client/features/search-performance/BrandedSplitCard";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   exportSearchPerformanceTable,
@@ -216,6 +217,10 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         ) : (
           <>
             <TotalsCards report={report} />
+            <BrandedSplitCard
+              projectId={projectId}
+              queryTotals={report.queryTotals}
+            />
             <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
               <div className="flex flex-col gap-3 border-b border-base-300 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
                 <div role="tablist" className="tabs tabs-border w-fit">

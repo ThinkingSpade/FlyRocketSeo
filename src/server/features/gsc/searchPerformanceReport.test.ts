@@ -1,11 +1,46 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCtrOpportunityRows,
+  buildQueryTotals,
   buildStrikingDistanceRows,
   previousPeriod,
   sumSearchTotals,
   toDimensionRows,
 } from "@/server/features/gsc/searchPerformanceReport";
+
+describe("buildQueryTotals", () => {
+  it("aggregates query x page rows per query, sorted by clicks", () => {
+    const totals = buildQueryTotals([
+      {
+        keys: ["vending dallas", "https://a/"],
+        clicks: 3,
+        impressions: 50,
+        ctr: 0.06,
+        position: 4,
+      },
+      {
+        keys: ["vending dallas", "https://b/"],
+        clicks: 2,
+        impressions: 30,
+        ctr: 0.07,
+        position: 6,
+      },
+      {
+        keys: ["delio vending", "https://a/"],
+        clicks: 10,
+        impressions: 40,
+        ctr: 0.25,
+        position: 1,
+      },
+      { clicks: 99, impressions: 99, ctr: 1, position: 1 },
+    ]);
+
+    expect(totals).toEqual([
+      { query: "delio vending", clicks: 10, impressions: 40 },
+      { query: "vending dallas", clicks: 5, impressions: 80 },
+    ]);
+  });
+});
 
 describe("sumSearchTotals", () => {
   it("sums clicks/impressions and impression-weights position", () => {
@@ -144,13 +179,37 @@ describe("buildCtrOpportunityRows", () => {
   it("flags well-ranking rows clicked far below benchmark, sized by missed clicks", () => {
     const rows = buildCtrOpportunityRows([
       // Position 2 with 1% CTR on 1000 impressions: big miss.
-      { keys: ["big miss", "https://x/a"], clicks: 10, impressions: 1000, ctr: 0.01, position: 2 },
+      {
+        keys: ["big miss", "https://x/a"],
+        clicks: 10,
+        impressions: 1000,
+        ctr: 0.01,
+        position: 2,
+      },
       // Healthy CTR for its position: not flagged.
-      { keys: ["healthy", "https://x/b"], clicks: 120, impressions: 1000, ctr: 0.12, position: 2 },
+      {
+        keys: ["healthy", "https://x/b"],
+        clicks: 120,
+        impressions: 1000,
+        ctr: 0.12,
+        position: 2,
+      },
       // Too few impressions: ignored.
-      { keys: ["tiny", "https://x/c"], clicks: 0, impressions: 20, ctr: 0, position: 1 },
+      {
+        keys: ["tiny", "https://x/c"],
+        clicks: 0,
+        impressions: 20,
+        ctr: 0,
+        position: 1,
+      },
       // Ranks too deep: ignored.
-      { keys: ["deep", "https://x/d"], clicks: 0, impressions: 500, ctr: 0, position: 30 },
+      {
+        keys: ["deep", "https://x/d"],
+        clicks: 0,
+        impressions: 500,
+        ctr: 0,
+        position: 30,
+      },
     ]);
     expect(rows).toHaveLength(1);
     expect(rows[0].query).toBe("big miss");

@@ -10,6 +10,7 @@ import {
 } from "@/server/features/gsc/searchAnalytics";
 import {
   buildCtrOpportunityRows,
+  buildQueryTotals,
   buildStrikingDistanceRows,
   previousPeriod,
   sumSearchTotals,
@@ -122,6 +123,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
         prevTotals: sumSearchTotals(previous.rows),
         strikingDistance: buildStrikingDistanceRows(queryPages.rows),
         ctrOpportunities: buildCtrOpportunityRows(queryPages.rows),
+        queryTotals: buildQueryTotals(queryPages.rows),
         countries: toDimensionRows(countries.rows),
       };
     } catch (error) {

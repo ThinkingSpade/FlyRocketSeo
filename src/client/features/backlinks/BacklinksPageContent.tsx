@@ -7,6 +7,7 @@ import {
   BacklinksLoadingState,
 } from "./BacklinksPageStates";
 import { BacklinksHistorySection } from "./BacklinksHistorySection";
+import { BacklinksTimelineSection } from "./BacklinksTimelineSection";
 import type { BacklinksSearchHistoryItem } from "@/client/hooks/useBacklinksSearchHistory";
 import type {
   BacklinksAnchorsData,
@@ -157,6 +158,10 @@ export function BacklinksBody({
         projectId={projectId}
         data={overviewData}
         summaryStats={summaryStats}
+      />
+      <BacklinksTimelineSection
+        projectId={projectId}
+        target={overviewData.displayTarget || searchState.target}
       />
       <BacklinksResultsCard
         projectId={projectId}

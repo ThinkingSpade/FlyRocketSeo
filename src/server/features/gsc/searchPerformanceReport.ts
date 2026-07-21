@@ -56,6 +56,36 @@ export function sumSearchTotals(
   };
 }
 
+type QueryTotalsRow = {
+  query: string;
+  clicks: number;
+  impressions: number;
+};
+
+const QUERY_TOTALS_ROW_LIMIT = 500;
+
+/**
+ * Aggregate query×page rows into per-query totals (top rows by clicks, then
+ * impressions) — the input for the client-side branded/non-branded split.
+ */
+export function buildQueryTotals(
+  rows: GscSearchAnalyticsRow[],
+): QueryTotalsRow[] {
+  const byQuery = new Map<string, { clicks: number; impressions: number }>();
+  for (const row of rows) {
+    const query = row.keys?.[0];
+    if (!query) continue;
+    const entry = byQuery.get(query) ?? { clicks: 0, impressions: 0 };
+    entry.clicks += row.clicks;
+    entry.impressions += row.impressions;
+    byQuery.set(query, entry);
+  }
+  return [...byQuery.entries()]
+    .map(([query, totals]) => ({ query, ...totals }))
+    .toSorted((a, b) => b.clicks - a.clicks || b.impressions - a.impressions)
+    .slice(0, QUERY_TOTALS_ROW_LIMIT);
+}
+
 /** Flatten single-dimension rows (query or page) into a keyed table row. */
 export function toDimensionRows(
   rows: GscSearchAnalyticsRow[],

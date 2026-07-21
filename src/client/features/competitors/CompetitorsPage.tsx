@@ -15,6 +15,7 @@ import {
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
 import { CompetitorsPositioningMap } from "./CompetitorsPositioningMap";
+import { KeywordGapOverview } from "./KeywordGapOverview";
 import { CompetitorsTable } from "./CompetitorsTable";
 import { KeywordGapTable } from "./KeywordGapTable";
 import { LinkGapTable } from "./LinkGapTable";
@@ -223,6 +224,17 @@ export function CompetitorsPage({
           projectId={projectId}
           target={target}
           rows={competitorsQuery.data?.rows ?? []}
+        />
+      ) : null}
+
+      {tab === "gap" && target && competitor ? (
+        <KeywordGapOverview
+          projectId={projectId}
+          target={target}
+          competitor={competitor}
+          pageSize={DEFAULT_KEYWORD_GAP_PAGE_SIZE}
+          activeMode={mode}
+          onModeChange={(nextMode) => updateSearch({ mode: nextMode, page: 1 })}
         />
       ) : null}
 
