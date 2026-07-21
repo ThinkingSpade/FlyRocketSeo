@@ -58,6 +58,10 @@ export default defineConfig(({ mode }) => {
     build: {
       sourcemap: emitSourcemaps,
       outDir: emitSourcemaps ? "dist-sourcemaps" : "dist",
+      // Vite leaves SSR output unminified by default; the Workers free plan
+      // validates script startup CPU, and parsing ~12MB of unminified server
+      // bundle sits right at that limit. Minifying keeps deploys passing.
+      minify: "esbuild",
     },
     plugins: [
       showDevtools
