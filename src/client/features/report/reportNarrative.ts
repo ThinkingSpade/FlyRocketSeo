@@ -167,7 +167,9 @@ export function buildTopPagesNarrative(
   const totalClicks = pages.reduce((sum, page) => sum + page.clicks, 0);
 
   return [
-    `Your top ${pages.length} pages account for ${count(totalClicks)} clicks this period, led by ${best.path} with ${count(best.clicks)} clicks from ${count(best.impressions)} impressions.`,
+    pages.length === 1
+      ? `Your best page this period is ${best.path}, with ${count(best.clicks)} clicks from ${count(best.impressions)} impressions.`
+      : `Your top ${pages.length} pages account for ${count(totalClicks)} clicks this period, led by ${best.path} with ${count(best.clicks)} clicks from ${count(best.impressions)} impressions.`,
     `These are the pages already carrying the site. They are the safest place to invest — improving a page that ranks is far more reliable than starting a new one from nothing.`,
   ];
 }

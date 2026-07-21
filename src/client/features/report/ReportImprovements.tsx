@@ -53,9 +53,9 @@ export function OnPageOptimizations({
       <p className="text-sm leading-relaxed text-base-content/80">
         The last crawl checked {formatCount(pagesCrawled)} pages and identified{" "}
         <span className="font-semibold">{formatCount(total)}</span> on-page
-        items worth fixing across {found.length} categories. These are the
-        changes that need no new content — only edits to pages that already
-        exist.
+        items worth fixing across {found.length}{" "}
+        {found.length === 1 ? "category" : "categories"}. These are the changes
+        that need no new content — only edits to pages that already exist.
       </p>
       <div className="overflow-x-auto rounded-lg border border-base-300">
         <table className="table table-sm">
@@ -112,9 +112,11 @@ export function ContentMovers({ rows }: { rows: MoverRow[] }) {
   return (
     <>
       <p className="text-sm leading-relaxed text-base-content/80">
-        These {rows.length} pages gained the most clicks against the previous
-        period. They show which topics are earning ground, and are the clearest
-        guide to what the next piece of content should be about.
+        {rows.length === 1
+          ? "This page gained clicks against the previous period."
+          : `These ${rows.length} pages gained the most clicks against the previous period.`}{" "}
+        They show which topics are earning ground, and are the clearest guide to
+        what the next piece of content should be about.
       </p>
       <div className="overflow-x-auto rounded-lg border border-base-300">
         <table className="table table-sm">

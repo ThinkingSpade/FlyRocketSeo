@@ -108,6 +108,14 @@ describe("buildTopPagesNarrative", () => {
   it("returns nothing when there are no pages", () => {
     expect(buildTopPagesNarrative([])).toEqual([]);
   });
+
+  it("reads correctly with a single page", () => {
+    const text = buildTopPagesNarrative([
+      { path: "/a", clicks: 27, impressions: 2580 },
+    ]).join(" ");
+    expect(text).toContain("Your best page this period is /a");
+    expect(text).not.toContain("top 1 pages");
+  });
 });
 
 describe("buildKeywordNarrative", () => {
