@@ -14,6 +14,25 @@ function ctr(position: number | null): number {
   return CTR_BY_POSITION[position] ?? 0.005;
 }
 
+/**
+ * The visibility formula shared with the trend chart: volume-weighted,
+ * CTR-weighted share of click potential captured (0–100). Null when no
+ * entry carries volume.
+ */
+export function computeVisibilityScore(
+  entries: Array<{ searchVolume: number | null; position: number | null }>,
+): number | null {
+  let numerator = 0;
+  let volume = 0;
+  for (const entry of entries) {
+    if (entry.searchVolume != null && entry.searchVolume > 0) {
+      volume += entry.searchVolume;
+      numerator += entry.searchVolume * ctr(entry.position);
+    }
+  }
+  return volume > 0 ? (numerator / (volume * TOP_CTR)) * 100 : null;
+}
+
 interface Scorecards {
   /**
    * Volume-weighted, CTR-weighted share of click potential captured (0–100):

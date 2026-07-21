@@ -19,6 +19,7 @@ import {
   countMatrixRuns,
   RankTrackingHistoryMatrix,
 } from "./RankTrackingHistoryMatrix";
+import { VisibilityTrendChart } from "./VisibilityTrendChart";
 import { RankTrackingTableToolbar } from "./RankTrackingTableToolbar";
 import {
   exportRankTrackingCsv,
@@ -305,14 +306,27 @@ export function RankTrackingDomainDetail({
         {/* Table */}
         <div className="p-4">
           {effectiveViewMode === "history" ? (
-            <RankTrackingHistoryMatrix
-              cells={matrixCells ?? []}
-              isLoading={matrixLoading}
-              keywords={filtered.map((r) => ({
-                trackingKeywordId: r.trackingKeywordId,
-                keyword: r.keyword,
-              }))}
-            />
+            <>
+              <VisibilityTrendChart
+                cells={matrixCells ?? []}
+                volumeByKeywordId={
+                  new Map(
+                    (rows ?? []).map((r) => [
+                      r.trackingKeywordId,
+                      r.searchVolume,
+                    ]),
+                  )
+                }
+              />
+              <RankTrackingHistoryMatrix
+                cells={matrixCells ?? []}
+                isLoading={matrixLoading}
+                keywords={filtered.map((r) => ({
+                  trackingKeywordId: r.trackingKeywordId,
+                  keyword: r.keyword,
+                }))}
+              />
+            </>
           ) : (
             <RankTrackingTable
               key={defaultSortId}

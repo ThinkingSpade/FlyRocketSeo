@@ -1,15 +1,44 @@
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { Split, Trophy } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import {
+  scoreCannibalization,
+  type CannibalizationSeverity,
+} from "@/client/features/link-insights/cannibalizationSeverity";
 import {
   toPath,
   useLinkInsights,
 } from "@/client/features/link-insights/useLinkInsights";
 
+const SEVERITY_BADGE: Record<
+  CannibalizationSeverity,
+  { label: string; className: string; hint: string }
+> = {
+  high: {
+    label: "High",
+    className: "badge-error",
+    hint: "Clicks split nearly evenly on a high-impression query — consolidate first",
+  },
+  medium: {
+    label: "Medium",
+    className: "badge-warning",
+    hint: "A meaningful share of traffic goes to the losing page",
+  },
+  low: {
+    label: "Low",
+    className: "badge-ghost",
+    hint: "One page clearly leads — keep an eye on it",
+  },
+};
+
 export function CannibalizationPage({ projectId }: { projectId: string }) {
   const insightsQuery = useLinkInsights(projectId);
   const data = insightsQuery.data;
-  const rows = data?.connected ? data.cannibalization : [];
+  const rows = useMemo(
+    () => scoreCannibalization(data?.connected ? data.cannibalization : []),
+    [data],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4">
@@ -76,10 +105,19 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
         >
           <div className="card-body gap-3 p-4">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="badge badge-primary badge-outline">
-                {row.query}
+              <span className="inline-flex items-center gap-2">
+                <span className="badge badge-primary badge-outline">
+                  {row.query}
+                </span>
+                <span
+                  className={`badge badge-sm ${SEVERITY_BADGE[row.severity].className}`}
+                  title={SEVERITY_BADGE[row.severity].hint}
+                >
+                  {SEVERITY_BADGE[row.severity].label}
+                </span>
               </span>
               <span className="text-xs text-base-content/50 tabular-nums">
+                {Math.round(row.splitShare * 100)}% of traffic off the leader ·{" "}
                 {row.totalImpressions.toLocaleString()} impressions ·{" "}
                 {row.totalClicks.toLocaleString()} clicks · {row.pages.length}{" "}
                 competing pages

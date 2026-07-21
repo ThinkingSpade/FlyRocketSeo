@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { DomainKeywordsPagination } from "@/client/features/domain/components/DomainKeywordsPagination";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
 import { DomainPagesTable } from "@/client/features/domain/components/DomainPagesTable";
+import { DomainPagesTreemap } from "@/client/features/domain/components/DomainPagesTreemap";
 import { DomainTableTabSurface } from "@/client/features/domain/components/DomainTableTabSurface";
 import {
   PAGE_FILTER_FIELDS,
@@ -179,6 +180,7 @@ export function PagesTab({
 
   return (
     <>
+      {routeState.page === 1 ? <DomainPagesTreemap rows={rows} /> : null}
       <DomainTableTabSurface
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((prev) => !prev)}
