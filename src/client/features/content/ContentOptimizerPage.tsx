@@ -143,12 +143,18 @@ export function ContentOptimizerPage({
     ? getStandardErrorMessage(briefQuery.error)
     : null;
 
-  // Remember successful briefs so the empty state can relink them.
+  // Remember successful briefs so the empty state can relink them. Keyed on
+  // the brief's identity, not the callback: addBrief changes identity with
+  // every history write, and each write re-stamps the item — depending on it
+  // would loop the effect forever.
+  const briefKeyword = brief?.keyword;
+  const briefLocationCode = brief?.locationCode;
   useEffect(() => {
-    if (brief) {
-      addBrief({ keyword: brief.keyword, locationCode: brief.locationCode });
+    if (briefKeyword != null && briefLocationCode != null) {
+      addBrief({ keyword: briefKeyword, locationCode: briefLocationCode });
     }
-  }, [brief, addBrief]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [briefKeyword, briefLocationCode]);
 
   // One analysis call per competitor page — each is its own Worker invocation
   // (CPU-bounded) and is cached server-side for a week.
