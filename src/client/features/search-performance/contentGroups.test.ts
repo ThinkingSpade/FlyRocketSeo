@@ -3,6 +3,7 @@ import {
   bucketDeltas,
   buildContentGroups,
   buildPageBuckets,
+  buildTopMovers,
   classifyContentGroup,
 } from "./contentGroups";
 
@@ -97,6 +98,45 @@ describe("buildPageBuckets", () => {
       top11to25: 1,
       top26to100: 1,
     });
+  });
+});
+
+describe("buildTopMovers", () => {
+  const current = [
+    page("https://x.com/a", 30, 300),
+    page("https://x.com/b", 12, 200),
+    page("https://x.com/c", 5, 100),
+    page("https://x.com/new", 8, 80),
+  ];
+  const previous = [
+    page("https://x.com/a", 10, 250),
+    page("https://x.com/b", 12, 180),
+    page("https://x.com/c", 20, 400),
+  ];
+
+  it("ranks pages by clicks gained, biggest first", () => {
+    const movers = buildTopMovers(current, previous);
+    expect(movers.map((row) => row.page)).toEqual([
+      "https://x.com/a",
+      "https://x.com/new",
+    ]);
+    expect(movers[0].clicksDelta).toBe(20);
+  });
+
+  it("counts a brand-new page's whole click total as its gain", () => {
+    const movers = buildTopMovers(current, previous);
+    expect(movers.find((row) => row.page.endsWith("/new"))?.clicksDelta).toBe(8);
+  });
+
+  it("drops flat and declining pages", () => {
+    const pages = buildTopMovers(current, previous).map((row) => row.page);
+    // /b was flat, /c declined.
+    expect(pages).not.toContain("https://x.com/b");
+    expect(pages).not.toContain("https://x.com/c");
+  });
+
+  it("respects the limit", () => {
+    expect(buildTopMovers(current, previous, 1)).toHaveLength(1);
   });
 });
 

@@ -165,6 +165,38 @@ export function buildPageBuckets(pages: PageMetrics[]): PageBuckets {
   return buckets;
 }
 
+type PageMover = {
+  page: string;
+  clicks: number;
+  impressions: number;
+  /** Clicks gained against the previous period; always positive here. */
+  clicksDelta: number;
+};
+
+/**
+ * Pages that gained the most clicks against the previous period. Pages absent
+ * last period count their whole click total as the gain, which is what "this
+ * page started working" should look like in a client report.
+ */
+export function buildTopMovers(
+  current: PageMetrics[],
+  previous: PageMetrics[],
+  limit = 10,
+): PageMover[] {
+  const before = new Map(previous.map((page) => [page.page, page.clicks]));
+
+  return current
+    .map((page) => ({
+      page: page.page,
+      clicks: page.clicks,
+      impressions: page.impressions,
+      clicksDelta: page.clicks - (before.get(page.page) ?? 0),
+    }))
+    .filter((page) => page.clicksDelta > 0)
+    .toSorted((a, b) => b.clicksDelta - a.clicksDelta)
+    .slice(0, limit);
+}
+
 /** Percent change per bucket, for the headline tiles' delta chips. */
 export function bucketDeltas(
   current: PageBuckets,

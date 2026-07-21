@@ -1,34 +1,37 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
 import { FileText, Printer } from "lucide-react";
-import { getProjects } from "@/serverFunctions/projects";
-import {
-  getSearchPerformanceReport,
-  getSearchPerformanceTable,
-} from "@/serverFunctions/searchPerformance";
-import { getLinkInsights } from "@/serverFunctions/link-insights";
-import {
-  getDomainKeywordSuggestions,
-  getDomainKeywordsPage,
-  getDomainOverview,
-} from "@/serverFunctions/domain";
-import {
-  getBacklinksOverview,
-  getBacklinksReferringDomains,
-  getBacklinksRows,
-} from "@/serverFunctions/backlinks";
-import { getAuditHistory } from "@/serverFunctions/audit";
+import { buildTechnicalIssues } from "@/client/features/opportunities/opportunityModel";
+import { buildTopMovers } from "@/client/features/search-performance/contentGroups";
 import { buildRecommendations } from "@/client/features/report/reportModel";
+import {
+  buildBacklinkNarrative,
+  buildClickNarrative,
+  buildKeywordNarrative,
+  buildPerformanceNarrative,
+  buildSummaryNarrative,
+  buildTopPagesNarrative,
+} from "@/client/features/report/reportNarrative";
+import {
+  ReportChapter,
+  ReportCover,
+  ReportNarrative,
+} from "@/client/features/report/ReportChrome";
+import {
+  BacklinkProfileBlock,
+  ContentMovers,
+  OnPageOptimizations,
+} from "@/client/features/report/ReportImprovements";
 import { ReportBody } from "@/client/features/report/ReportSections";
 import {
   KeywordDeepSections,
   LinkDeepSections,
 } from "@/client/features/report/ReportDeepSections";
-
-const STALE_TIME = 10 * 60_000;
+import { useClientReportData } from "@/client/features/report/useClientReportData";
+import { toPath } from "@/client/features/report/reportModel";
 
 // The classic print-only-section trick: everything hides except the report, so
 // the browser's Print → Save as PDF produces a clean client deliverable
-// regardless of the app shell around it.
+// regardless of the app shell around it. Chapters start on their own page.
 const PRINT_STYLES = `
 @media print {
   body * { visibility: hidden; }
@@ -36,9 +39,19 @@ const PRINT_STYLES = `
   #client-report { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
   .report-no-print { display: none !important; }
   .report-section { break-inside: avoid; }
+  .report-chapter { break-before: page; }
+  .report-cover { break-after: page; }
 }
 @page { margin: 14mm; }
 `;
+
+const PREPARED_BY_KEY = "flyrocket:report:preparedBy";
+const AGENCY_KEY = "flyrocket:report:agency";
+
+function readStored(key: string): string {
+  if (typeof localStorage === "undefined") return "";
+  return localStorage.getItem(key) ?? "";
+}
 
 function daysSince(iso: string | Date | null | undefined): number | null {
   if (!iso) return null;
@@ -48,110 +61,51 @@ function daysSince(iso: string | Date | null | undefined): number | null {
 }
 
 export function ClientReportPage({ projectId }: { projectId: string }) {
-  const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => getProjects(),
-    staleTime: STALE_TIME,
-  });
-  const project = projectsQuery.data?.find((entry) => entry.id === projectId);
-  const domain = project?.domain ?? null;
-
-  const gscQuery = useQuery({
-    queryKey: ["report-gsc", projectId],
-    queryFn: () => getSearchPerformanceReport({ data: { projectId } }),
-    staleTime: STALE_TIME,
-  });
-  const topQueriesQuery = useQuery({
-    queryKey: ["report-top-queries", projectId],
-    queryFn: () =>
-      getSearchPerformanceTable({
-        data: { projectId, dimension: "query", page: 1, pageSize: 25 },
-      }),
-    staleTime: STALE_TIME,
-  });
-  const topPagesQuery = useQuery({
-    queryKey: ["report-top-pages", projectId],
-    queryFn: () =>
-      getSearchPerformanceTable({
-        data: { projectId, dimension: "page", page: 1, pageSize: 25 },
-      }),
-    staleTime: STALE_TIME,
-  });
-  const insightsQuery = useQuery({
-    queryKey: ["link-insights", projectId],
-    queryFn: () => getLinkInsights({ data: { projectId } }),
-    staleTime: STALE_TIME,
-  });
-  const domainQuery = useQuery({
-    enabled: Boolean(domain),
-    queryKey: ["report-domain", projectId, domain],
-    queryFn: () =>
-      getDomainOverview({ data: { projectId, domain: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const backlinksQuery = useQuery({
-    enabled: Boolean(domain),
-    queryKey: ["report-backlinks", projectId, domain],
-    queryFn: () =>
-      getBacklinksOverview({ data: { projectId, target: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const auditsQuery = useQuery({
-    queryKey: ["report-audits", projectId],
-    queryFn: () => getAuditHistory({ data: { projectId } }),
-    staleTime: STALE_TIME,
-  });
-  const rankingsQuery = useQuery({
-    enabled: Boolean(domain),
-    queryKey: ["report-rankings", projectId, domain],
-    queryFn: () =>
-      getDomainKeywordsPage({ data: { projectId, domain: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const suggestionsQuery = useQuery({
-    enabled: Boolean(domain),
-    queryKey: ["report-suggestions", projectId, domain],
-    queryFn: () =>
-      getDomainKeywordSuggestions({
-        data: {
-          projectId,
-          domain: domain ?? "",
-          locationCode: 2840,
-          languageCode: "en",
-        },
-      }),
-    staleTime: STALE_TIME,
-  });
-  const backlinkRowsQuery = useQuery({
-    enabled: Boolean(domain),
-    queryKey: ["report-backlink-rows", projectId, domain],
-    queryFn: () =>
-      getBacklinksRows({ data: { projectId, target: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const referringDomainsQuery = useQuery({
-    enabled: Boolean(domain),
-    queryKey: ["report-ref-domains", projectId, domain],
-    queryFn: () =>
-      getBacklinksReferringDomains({
-        data: { projectId, target: domain ?? "" },
-      }),
-    staleTime: STALE_TIME,
-  });
-
-  const gsc = gscQuery.data?.connected ? gscQuery.data : null;
-  const insights = insightsQuery.data?.connected ? insightsQuery.data : null;
-  const backlinks = backlinksQuery.data ?? null;
-  const domainOverview = domainQuery.data ?? null;
-  const latestAudit = (auditsQuery.data ?? []).find(
-    (audit) => audit.status === "completed",
+  const data = useClientReportData(projectId);
+  const [preparedBy, setPreparedBy] = useState(() =>
+    readStored(PREPARED_BY_KEY),
   );
-  const topQueries = (
-    topQueriesQuery.data?.connected ? topQueriesQuery.data.rows : []
-  ).slice(0, 10);
-  const topPages = (
-    topPagesQuery.data?.connected ? topPagesQuery.data.rows : []
-  ).slice(0, 10);
+  const [agency, setAgency] = useState(() => readStored(AGENCY_KEY));
+
+  const {
+    project,
+    domain,
+    gsc,
+    insights,
+    backlinks,
+    latestAudit,
+    auditPages,
+    topQueries,
+    topPages,
+  } = data;
+
+  const technicalIssues = useMemo(
+    () => buildTechnicalIssues(auditPages),
+    [auditPages],
+  );
+  const movers = useMemo(
+    () => buildTopMovers(data.currentPages, data.previousPages, 8),
+    [data.currentPages, data.previousPages],
+  );
+
+  const narrativeInput = gsc
+    ? {
+        totals: gsc.totals,
+        prevTotals: gsc.prevTotals,
+        topPage: topPages[0]
+          ? {
+              path: toPath(topPages[0].key),
+              impressions: topPages[0].impressions,
+              clicks: topPages[0].clicks,
+            }
+          : null,
+        queriesTracked: gsc.queryTotals.length,
+      }
+    : null;
+
+  const positionMove = gsc
+    ? gsc.prevTotals.position - gsc.totals.position
+    : null;
 
   const recommendations = buildRecommendations({
     strikingDistanceCount: gsc?.strikingDistance.length ?? 0,
@@ -163,81 +117,217 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
     latestAuditFailed: latestAudit == null,
   });
 
-  const generatedAt = new Date().toLocaleDateString(undefined, {
+  const now = new Date();
+  const generatedAt = now.toLocaleDateString(undefined, {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+  const periodLabel = now
+    .toLocaleDateString(undefined, { month: "short", year: "numeric" })
+    .toUpperCase();
 
   return (
     <div className="mx-auto w-full max-w-4xl p-4">
       <style>{PRINT_STYLES}</style>
 
-      <div className="report-no-print mb-4 flex items-center justify-between gap-3">
+      <div className="report-no-print mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-xl font-semibold">
             <FileText className="size-5" />
             Client Report
           </h1>
           <p className="text-sm text-base-content/60">
-            A client-ready summary of everything this project's data says. Print
-            it (or Save as PDF) and send it.
+            A client-ready summary of everything this project&apos;s data says.
+            Print it (or Save as PDF) and send it.
           </p>
         </div>
-        <button
-          type="button"
-          className="btn btn-primary btn-sm gap-1.5"
-          onClick={() => window.print()}
-        >
-          <Printer className="size-4" /> Print / Save PDF
-        </button>
+        <div className="flex flex-wrap items-end gap-2">
+          <label className="form-control">
+            <span className="label-text text-xs text-base-content/60">
+              Prepared by
+            </span>
+            <input
+              className="input input-bordered input-sm w-40"
+              value={preparedBy}
+              placeholder="Your name"
+              onChange={(event) => {
+                setPreparedBy(event.target.value);
+                localStorage.setItem(PREPARED_BY_KEY, event.target.value);
+              }}
+            />
+          </label>
+          <label className="form-control">
+            <span className="label-text text-xs text-base-content/60">
+              Agency
+            </span>
+            <input
+              className="input input-bordered input-sm w-40"
+              value={agency}
+              placeholder="Company name"
+              onChange={(event) => {
+                setAgency(event.target.value);
+                localStorage.setItem(AGENCY_KEY, event.target.value);
+              }}
+            />
+          </label>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm gap-1.5"
+            onClick={() => window.print()}
+          >
+            <Printer className="size-4" /> Print / Save PDF
+          </button>
+        </div>
       </div>
 
-      <div id="client-report" className="space-y-6">
-        <header className="space-y-1 border-b border-base-300 pb-4">
-          <p className="text-xs font-medium uppercase tracking-widest text-base-content/50">
-            SEO Performance Report
-          </p>
-          <h1 className="text-2xl font-bold">{project?.name ?? "Project"}</h1>
-          <p className="text-sm text-base-content/60">
-            {domain ?? ""}
+      <div id="client-report" className="space-y-8">
+        <ReportCover
+          projectName={project?.name ?? "Project"}
+          domain={domain}
+          periodLabel={periodLabel}
+          preparedBy={preparedBy}
+          agency={agency}
+        />
+
+        <ReportChapter number="00" kicker="Summary" domain={domain}>
+          <h2 className="text-lg font-semibold">Overall summary</h2>
+          {narrativeInput ? (
+            <ReportNarrative
+              paragraphs={buildSummaryNarrative(narrativeInput)}
+            />
+          ) : (
+            <p className="text-sm text-base-content/60">
+              {data.gscPending
+                ? "Loading search data…"
+                : "Search Console isn't connected for this project, so the narrative summary is omitted."}
+            </p>
+          )}
+          <p className="text-xs text-base-content/50">
+            Search data{" "}
             {gsc
-              ? ` · Search data ${gsc.range.startDate} – ${gsc.range.endDate}`
-              : ""}{" "}
+              ? `${gsc.range.startDate} – ${gsc.range.endDate}`
+              : "unavailable"}{" "}
             · Generated {generatedAt}
           </p>
-        </header>
+        </ReportChapter>
 
-        <ReportBody
-          gsc={gsc}
-          gscPending={gscQuery.isLoading}
-          domainOverview={domainOverview}
-          backlinks={backlinks}
-          topQueries={topQueries}
-          topPages={topPages}
-          insights={insights}
-          latestAudit={latestAudit ?? null}
-          recommendations={recommendations}
-          keywordSections={
-            <KeywordDeepSections
-              rankings={(rankingsQuery.data?.keywords ?? []).slice(0, 10)}
-              suggestions={(suggestionsQuery.data ?? []).slice(0, 12)}
-            />
-          }
-          linkSections={
-            <LinkDeepSections
-              opportunities={insights?.opportunities ?? []}
-              backlinkRows={(backlinkRowsQuery.data?.rows ?? []).slice(0, 10)}
-              referringDomains={(referringDomainsQuery.data?.rows ?? []).slice(
-                0,
-                10,
-              )}
-            />
-          }
-        />
+        <ReportChapter number="01" kicker="Performance" domain={domain}>
+          {narrativeInput ? (
+            <>
+              <h2 className="text-lg font-semibold">Overall performance</h2>
+              <ReportNarrative
+                paragraphs={buildPerformanceNarrative(narrativeInput)}
+              />
+              <h3 className="pt-2 text-base font-semibold">
+                Click performance
+              </h3>
+              <ReportNarrative
+                paragraphs={buildClickNarrative(narrativeInput)}
+              />
+            </>
+          ) : null}
+          <ReportNarrative
+            paragraphs={buildTopPagesNarrative(
+              topPages.map((row) => ({
+                path: toPath(row.key),
+                clicks: row.clicks,
+                impressions: row.impressions,
+              })),
+            )}
+          />
+          <ReportNarrative
+            paragraphs={buildKeywordNarrative(
+              topQueries.map((row) => ({
+                query: row.key,
+                clicks: row.clicks,
+                impressions: row.impressions,
+              })),
+              positionMove,
+            )}
+          />
+
+          {/* Everything the report already carried, unchanged. */}
+          <ReportBody
+            gsc={gsc}
+            gscPending={data.gscPending}
+            domainOverview={data.domainOverview}
+            backlinks={backlinks}
+            topQueries={topQueries}
+            topPages={topPages}
+            insights={insights}
+            latestAudit={latestAudit}
+            recommendations={recommendations}
+            keywordSections={
+              <KeywordDeepSections
+                rankings={data.rankings}
+                suggestions={data.suggestions}
+              />
+            }
+            linkSections={
+              <LinkDeepSections
+                opportunities={insights?.opportunities ?? []}
+                backlinkRows={data.backlinkRows}
+                referringDomains={data.referringDomains}
+              />
+            }
+          />
+        </ReportChapter>
+
+        <ReportChapter number="02" kicker="Content" domain={domain}>
+          <h2 className="text-lg font-semibold">Pages gaining ground</h2>
+          <ContentMovers rows={movers} />
+        </ReportChapter>
+
+        <ReportChapter number="03" kicker="Improvements" domain={domain}>
+          <h2 className="text-lg font-semibold">On-page optimizations</h2>
+          <OnPageOptimizations
+            issues={technicalIssues}
+            pagesCrawled={latestAudit?.pagesCrawled ?? null}
+          />
+        </ReportChapter>
+
+        <ReportChapter number="04" kicker="Opportunities" domain={domain}>
+          <h2 className="text-lg font-semibold">Backlink profile</h2>
+          {backlinks ? (
+            <>
+              <ReportNarrative
+                paragraphs={buildBacklinkNarrative({
+                  rank: backlinks.summary.rank,
+                  backlinks: backlinks.summary.backlinks,
+                  referringDomains: backlinks.summary.referringDomains,
+                  spamScore: backlinks.summary.backlinksSpamScore,
+                  brokenBacklinks: backlinks.summary.brokenBacklinks,
+                })}
+              />
+              <BacklinkProfileBlock
+                profile={backlinks.summary}
+                topDomains={data.referringDomains.map((row) => ({
+                  domain: row.domain,
+                  backlinks: row.backlinks,
+                }))}
+              />
+            </>
+          ) : (
+            <p className="text-sm text-base-content/60">
+              Run a backlink analysis for this domain to include the link
+              profile in this report.
+            </p>
+          )}
+        </ReportChapter>
+
+        <ReportChapter number="05" kicker="Next steps" domain={domain}>
+          <h2 className="text-lg font-semibold">What we&apos;d do next</h2>
+          <ul className="list-inside list-disc space-y-1.5 text-sm leading-relaxed text-base-content/80">
+            {recommendations.map((recommendation) => (
+              <li key={recommendation}>{recommendation}</li>
+            ))}
+          </ul>
+        </ReportChapter>
 
         <footer className="border-t border-base-300 pt-3 text-xs text-base-content/50">
           Prepared with FlyRocketSEO · {generatedAt}
+          {agency ? ` · ${agency}` : ""}
         </footer>
       </div>
     </div>
