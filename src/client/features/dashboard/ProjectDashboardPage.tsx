@@ -4,6 +4,7 @@ import type { ProjectSummary } from "@/client/features/projects/types";
 import { BacklinksCard } from "./BacklinksCard";
 import { DashboardLoadingState } from "./DashboardLoadingState";
 import { GettingStartedCard } from "./GettingStartedCard";
+import { ProjectKeywordsCard } from "./ProjectKeywordsCard";
 import { QuickActionsCard } from "./QuickActionsCard";
 import { RankChangesCard } from "./RankChangesCard";
 import { RankTrackingCard } from "./RankTrackingCard";
@@ -45,6 +46,7 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
             <RankTrackingCard projectId={projectId} />
             <RankChangesCard projectId={projectId} />
             <SearchPerformanceCard projectId={projectId} />
+            <ProjectKeywordsCard projectId={projectId} />
             <div className="grid gap-4 lg:grid-cols-2">
               <SiteAuditCard projectId={projectId} />
               <BacklinksCard projectId={projectId} domain={domain} />

@@ -1,7 +1,13 @@
 /* eslint-disable max-lines, max-lines-per-function -- Domain Overview keeps page-only orchestration colocated to avoid fake indirection. */
 import { useCallback, useEffect, useMemo, useRef, type FormEvent } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { ArrowLeft } from "lucide-react";
+import {
+  ArrowLeft,
+  BarChart3,
+  FileText,
+  TrendingUp,
+  Users,
+} from "lucide-react";
 import { toast } from "sonner";
 import {
   DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
@@ -14,6 +20,11 @@ import {
   isLabsLocationCode,
 } from "@/client/features/keywords/locations";
 import { DataFreshness } from "@/client/components/DataFreshness";
+import {
+  AnalyzeDomainPrompt,
+  type AnalyzePreviewItem,
+} from "@/client/components/AnalyzeDomainPrompt";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { useDomainSearchHistory } from "@/client/hooks/useDomainSearchHistory";
 import type { DomainSearchHistoryItem } from "@/client/hooks/useDomainSearchHistory";
 import {
@@ -412,6 +423,29 @@ export type DomainOverviewControlsForm = ReturnType<
   typeof useDomainOverviewState
 >["controlsForm"];
 
+const DOMAIN_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
+  {
+    icon: TrendingUp,
+    title: "Traffic & keywords",
+    description: "Estimated organic traffic and how many keywords rank",
+  },
+  {
+    icon: BarChart3,
+    title: "Ranking distribution",
+    description: "How positions split across #1–3, #4–10, #11–20 and beyond",
+  },
+  {
+    icon: Users,
+    title: "Top competitors",
+    description: "The domains sharing the most keywords with this one",
+  },
+  {
+    icon: FileText,
+    title: "Keywords & pages",
+    description: "Full ranked-keyword and top-page tables with a traffic map",
+  },
+];
+
 export function DomainOverviewPage({
   projectId,
   routeState,
@@ -419,6 +453,7 @@ export function DomainOverviewPage({
   onShowRecentSearches,
 }: Props) {
   const state = useDomainOverviewState({ navigate, routeState, projectId });
+  const projectDomain = useProjectDomain(projectId);
   const urlTabInput = useMemo<SearchTabInput | null>(() => {
     if (routeState.domain.trim() === "") return null;
     return {
@@ -571,6 +606,18 @@ export function DomainOverviewPage({
           </>
         ) : state.overview === null ? (
           <div className="space-y-4 pt-1">
+            <AnalyzeDomainPrompt
+              domain={projectDomain}
+              title="Start with your own site"
+              description="Run a full organic profile for this project's domain — or search any competitor above."
+              preview={DOMAIN_ANALYZE_PREVIEW}
+              onAnalyze={() => {
+                if (!projectDomain) return;
+                state.controlsForm.setFieldValue("domain", projectDomain);
+                void state.controlsForm.handleSubmit();
+              }}
+              isBusy={state.isLoading}
+            />
             <DomainHistorySection
               history={state.history}
               historyLoaded={state.historyLoaded}

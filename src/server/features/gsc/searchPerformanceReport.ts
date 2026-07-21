@@ -60,25 +60,41 @@ type QueryTotalsRow = {
   query: string;
   clicks: number;
   impressions: number;
+  /** Best (lowest) position across the pages ranking for this query. */
+  position: number;
 };
 
 const QUERY_TOTALS_ROW_LIMIT = 500;
 
 /**
  * Aggregate query×page rows into per-query totals (top rows by clicks, then
- * impressions) — the input for the client-side branded/non-branded split.
+ * impressions). Position is the site's BEST page for the query — the honest
+ * answer to "where do I rank for this", since a query fans out across every
+ * page that surfaced for it. Feeds the branded split and the dashboard's
+ * ranking/opportunity lists.
  */
 export function buildQueryTotals(
   rows: GscSearchAnalyticsRow[],
 ): QueryTotalsRow[] {
-  const byQuery = new Map<string, { clicks: number; impressions: number }>();
+  const byQuery = new Map<
+    string,
+    { clicks: number; impressions: number; position: number }
+  >();
   for (const row of rows) {
     const query = row.keys?.[0];
     if (!query) continue;
-    const entry = byQuery.get(query) ?? { clicks: 0, impressions: 0 };
+    const entry = byQuery.get(query);
+    if (!entry) {
+      byQuery.set(query, {
+        clicks: row.clicks,
+        impressions: row.impressions,
+        position: row.position,
+      });
+      continue;
+    }
     entry.clicks += row.clicks;
     entry.impressions += row.impressions;
-    byQuery.set(query, entry);
+    if (row.position < entry.position) entry.position = row.position;
   }
   return [...byQuery.entries()]
     .map(([query, totals]) => ({ query, ...totals }))

@@ -1,5 +1,11 @@
 import { useCallback, useMemo } from "react";
 import type { SortingState, Updater } from "@tanstack/react-table";
+import { CalendarRange, Link2, Network, ShieldAlert } from "lucide-react";
+import {
+  AnalyzeDomainPrompt,
+  type AnalyzePreviewItem,
+} from "@/client/components/AnalyzeDomainPrompt";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
@@ -20,6 +26,29 @@ import {
   BACKLINKS_DEFAULT_SORT,
   DEFAULT_BACKLINKS_PAGE_SIZE,
 } from "@/types/schemas/backlinks";
+
+const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
+  {
+    icon: Link2,
+    title: "Backlinks & domains",
+    description: "Total links, referring domains, and authority rank",
+  },
+  {
+    icon: CalendarRange,
+    title: "Won vs lost",
+    description: "Referring domains gained and lost month by month",
+  },
+  {
+    icon: Network,
+    title: "Top pages & anchors",
+    description: "Which pages attract links and the anchor text used",
+  },
+  {
+    icon: ShieldAlert,
+    title: "Spam & broken links",
+    description: "Toxic-link exposure and links pointing at dead pages",
+  },
+];
 
 export function BacklinksPage({
   projectId,
@@ -180,6 +209,17 @@ export function BacklinksPage({
     }),
     [],
   );
+  const projectDomain = useProjectDomain(projectId);
+  // Shared by the search form and the "analyze my domain" prompt so both
+  // paths open a tab, navigate, and record history identically.
+  const runBacklinksSearch = useCallback(
+    (values: Pick<BacklinksSearchState, "target" | "scope">) => {
+      searchTabs.openTab(toBacklinksTabInput(values));
+      navigateToBacklinksSearch(navigate, values);
+      addSearch({ target: values.target, scope: values.scope });
+    },
+    [addSearch, navigate, searchTabs, toBacklinksTabInput],
+  );
   return (
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
       <div className="mx-auto max-w-7xl space-y-4">
@@ -198,12 +238,22 @@ export function BacklinksPage({
             searchTabs.canOpenTab(toBacklinksTabInput(values))
           }
           tabLimit={searchTabs.limit}
-          onSubmit={(values) => {
-            searchTabs.openTab(toBacklinksTabInput(values));
-            navigateToBacklinksSearch(navigate, values);
-            addSearch({ target: values.target, scope: values.scope });
-          }}
+          onSubmit={runBacklinksSearch}
         />
+
+        {searchState.target.trim() === "" ? (
+          <AnalyzeDomainPrompt
+            domain={projectDomain}
+            title="Check your own link profile"
+            description="See who links to this project's domain, what changed lately, and which pages earn the links."
+            preview={BACKLINKS_ANALYZE_PREVIEW}
+            onAnalyze={() => {
+              if (!projectDomain) return;
+              runBacklinksSearch({ target: projectDomain, scope: "domain" });
+            }}
+            isBusy={overviewQuery.isLoading}
+          />
+        ) : null}
 
         <BacklinksBody
           projectId={projectId}

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Users } from "lucide-react";
+import { Link2, Map, SearchX, Users } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";
@@ -14,6 +14,12 @@ import {
   type CompetitorsTab,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
+import {
+  AnalyzeDomainPrompt,
+  type AnalyzePreviewItem,
+} from "@/client/components/AnalyzeDomainPrompt";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { CompetitorsPositioningMap } from "./CompetitorsPositioningMap";
 import { KeywordGapOverview } from "./KeywordGapOverview";
 import { CompetitorsTable } from "./CompetitorsTable";
@@ -80,6 +86,29 @@ function useProjectDomainPrefill(
   }, [projectDomain]);
 }
 
+const COMPETITORS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
+  {
+    icon: Users,
+    title: "Organic rivals",
+    description: "Domains ranking for the same keywords, by overlap",
+  },
+  {
+    icon: Map,
+    title: "Positioning map",
+    description: "Keywords vs traffic, bubble-sized by shared keywords",
+  },
+  {
+    icon: SearchX,
+    title: "Keyword gap",
+    description: "What they rank for that you don't — your content roadmap",
+  },
+  {
+    icon: Link2,
+    title: "Link gap",
+    description: "Sites linking to them but not to you",
+  },
+];
+
 export function CompetitorsPage({
   projectId,
   navigate,
@@ -98,6 +127,7 @@ export function CompetitorsPage({
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
   useProjectDomainPrefill(projectId, target, targetInput, setTargetInput);
+  const projectDomain = useProjectDomain(projectId);
 
   const updateSearch = (update: Partial<CompetitorsSearchState>) => {
     navigate({
@@ -177,7 +207,7 @@ export function CompetitorsPage({
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
-          <SearchForm
+          <CompetitorsSearchForm
             targetInput={targetInput}
             competitorInput={competitorInput}
             needsCompetitor={needsCompetitor}
@@ -215,6 +245,21 @@ export function CompetitorsPage({
 
       {errorMessage ? (
         <div className="alert alert-error text-sm">{errorMessage}</div>
+      ) : null}
+
+      {!target ? (
+        <AnalyzeDomainPrompt
+          domain={projectDomain}
+          title="See who you're up against"
+          description="Find the domains competing for this project's keywords, then compare head-to-head."
+          preview={COMPETITORS_ANALYZE_PREVIEW}
+          onAnalyze={() => {
+            if (!projectDomain) return;
+            setTargetInput(projectDomain);
+            updateSearch({ target: projectDomain, page: 1 });
+          }}
+          isBusy={competitorsQuery.isFetching}
+        />
       ) : null}
 
       {tab === "competitors" &&
@@ -287,75 +332,6 @@ export function CompetitorsPage({
         ) : null}
       </div>
     </div>
-  );
-}
-
-function SearchForm({
-  targetInput,
-  competitorInput,
-  needsCompetitor,
-  isFetching,
-  onTargetChange,
-  onCompetitorChange,
-  onSubmit,
-}: {
-  targetInput: string;
-  competitorInput: string;
-  needsCompetitor: boolean;
-  isFetching: boolean;
-  onTargetChange: (value: string) => void;
-  onCompetitorChange: (value: string) => void;
-  onSubmit: () => void;
-}) {
-  return (
-    <form
-      className="flex flex-col gap-3 sm:flex-row sm:items-end"
-      onSubmit={(event) => {
-        event.preventDefault();
-        onSubmit();
-      }}
-    >
-      <label className="form-control w-full sm:max-w-xs">
-        <span className="label-text pb-1 text-xs font-medium">Your domain</span>
-        <input
-          type="text"
-          className="input input-bordered input-sm w-full"
-          placeholder="example.com"
-          value={targetInput}
-          onChange={(event) => onTargetChange(event.target.value)}
-        />
-      </label>
-      {needsCompetitor ? (
-        <label className="form-control w-full sm:max-w-xs">
-          <span className="label-text pb-1 text-xs font-medium">
-            Competitor domain
-          </span>
-          <input
-            type="text"
-            className="input input-bordered input-sm w-full"
-            placeholder="competitor.com"
-            value={competitorInput}
-            onChange={(event) => onCompetitorChange(event.target.value)}
-          />
-        </label>
-      ) : null}
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={
-          !targetInput.trim() ||
-          (needsCompetitor && !competitorInput.trim()) ||
-          isFetching
-        }
-      >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
-        Analyze
-      </button>
-    </form>
   );
 }
 
