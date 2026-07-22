@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "@/client/features/projects/types";
+import { AnalyzeProjectCard } from "./AnalyzeProjectCard";
 import { BacklinksCard } from "./BacklinksCard";
 import { DashboardLoadingState } from "./DashboardLoadingState";
 import { GettingStartedCard } from "./GettingStartedCard";
@@ -41,6 +42,7 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
 
             {/* Each card owns its own query, so one failing source degrades
                 just that card and never blanks the dashboard. */}
+            <AnalyzeProjectCard projectId={projectId} domain={domain} />
             <GettingStartedCard projectId={projectId} />
             <QuickActionsCard projectId={projectId} />
             <RankTrackingCard projectId={projectId} />
