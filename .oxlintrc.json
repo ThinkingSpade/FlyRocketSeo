@@ -64,6 +64,15 @@
       "rules": {
         "eslint/no-restricted-imports": "off"
       }
+    },
+    {
+      // Both dialect schemas must hold every table in one file (the `import *`
+      // barrel + the schema-parity test depend on it), so they legitimately
+      // exceed the per-file line cap.
+      "files": ["src/db/**"],
+      "rules": {
+        "eslint/max-lines": "off"
+      }
     }
   ]
 }

@@ -41,6 +41,50 @@ describe("planMerge", () => {
     expect(plan.rows[0].createdAt).toBe(NOW);
   });
 
+  it("keeps rows distinct when their fields would run together", () => {
+    // Concatenating url+element+target makes both of these
+    // "https://x.com/atitletitle", so a naive key silently merges two
+    // different suggestions and hands one of them the other's decision.
+    const plan = planMerge(
+      [
+        stored({
+          id: "row-a",
+          url: "https://x.com/atitle",
+          target: "",
+          suggestedValue: "SA",
+          status: "approved",
+        }),
+        stored({
+          id: "row-b",
+          url: "https://x.com/a",
+          target: "title",
+          suggestedValue: "SB",
+          status: "excluded",
+        }),
+      ],
+      [
+        suggestion({
+          url: "https://x.com/atitle",
+          target: null,
+          suggestedValue: "SA",
+        }),
+        suggestion({
+          url: "https://x.com/a",
+          target: "title",
+          suggestedValue: "SB",
+        }),
+      ],
+      NOW,
+      newId,
+    );
+
+    expect(plan.rows[0].id).toBe("row-a");
+    expect(plan.rows[0].status).toBe("approved");
+    expect(plan.rows[1].id).toBe("row-b");
+    expect(plan.rows[1].status).toBe("excluded");
+    expect(plan.staleIds).toEqual([]);
+  });
+
   it("preserves an approval when the wording is unchanged", () => {
     const plan = planMerge(
       [stored({ status: "approved" })],

@@ -88,7 +88,7 @@ async function analyze(
   return result;
 }
 
-export type BrandVisibilityHistory = {
+type BrandVisibilityHistory = {
   target: string | null;
   trend: BrandVisibilityTrend;
   latestResult: BrandLookupResult | null;

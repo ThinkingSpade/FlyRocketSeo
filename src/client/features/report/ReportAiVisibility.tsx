@@ -6,7 +6,7 @@ import type { BrandLookupResult } from "@/types/schemas/ai-search";
  * shows up — or where it doesn't yet — in ChatGPT and Google AI Overview.
  */
 
-export type ReportBrandVisibility = {
+type ReportBrandVisibility = {
   target: string | null;
   latestCapturedOn: string | null;
   latestResult: BrandLookupResult | null;
@@ -31,7 +31,7 @@ export function ReportAiVisibility({
   if (!result || !result.hasData) {
     return (
       <p className="text-sm text-base-content/60">
-        Run an AI brand analysis on the Brand Lookup tab to include AI-search
+        Run an AI brand analysis on the AI Visibility tab to include AI-search
         visibility — how ChatGPT and Google AI Overview cite this brand — in
         this report.
       </p>

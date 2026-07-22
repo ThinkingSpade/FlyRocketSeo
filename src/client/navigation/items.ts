@@ -129,7 +129,7 @@ const projectNavItems = [
   },
   {
     to: "/p/$projectId/brand-lookup" as const,
-    label: "Brand Lookup",
+    label: "AI Visibility",
     icon: Sparkles,
   },
   {

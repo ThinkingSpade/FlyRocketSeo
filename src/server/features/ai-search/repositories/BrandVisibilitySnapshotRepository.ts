@@ -9,8 +9,7 @@ import { db } from "@/db";
 import { brandVisibilitySnapshots } from "@/db/schema";
 import type { SnapshotFields } from "@/server/lib/brand-visibility/snapshot";
 
-export type BrandVisibilitySnapshotRow =
-  typeof brandVisibilitySnapshots.$inferSelect;
+type BrandVisibilitySnapshotRow = typeof brandVisibilitySnapshots.$inferSelect;
 
 /** Every snapshot for a project, oldest first (the trend sorts anyway). */
 async function listForProject(

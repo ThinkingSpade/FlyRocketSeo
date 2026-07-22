@@ -3,7 +3,6 @@
     // Detect Tanstack Start Routes
     "cli-auth.ts",
     "src/start.ts",
-    "src/server.ts",
     "src/router.tsx",
     "src/routes/**/*.ts",
     "src/routes/**/*.tsx",

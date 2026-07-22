@@ -85,7 +85,7 @@ function StatusPill({ status }: { status: FixRow["status"] }) {
 }
 
 /** One suggestion, with approve / exclude controls. */
-export function FixRowView({
+function FixRowView({
   row,
   onApprove,
   onExclude,

@@ -25,7 +25,7 @@ export const ELEMENT_LABEL: Record<OnPageElement, string> = {
   alt: "Image alt text",
 };
 
-export const ELEMENT_ORDER: OnPageElement[] = ["title", "meta", "h1", "alt"];
+const ELEMENT_ORDER: OnPageElement[] = ["title", "meta", "h1", "alt"];
 
 export type ElementProgress = {
   element: OnPageElement;

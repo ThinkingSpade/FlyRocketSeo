@@ -10,8 +10,6 @@ import { planMerge } from "@/server/lib/onpage/mergeSuggestions";
 import type { OptimizationStatus } from "@/server/lib/onpage/mergeSuggestions";
 import type { Suggestion } from "@/server/lib/onpage/suggestions";
 
-export type { OptimizationStatus };
-
 async function listForProject(projectId: string) {
   return db
     .select()

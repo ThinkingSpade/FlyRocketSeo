@@ -27,7 +27,7 @@ type RewriteTarget = {
 };
 
 /** Whether AI rewriting is available at all (key configured). */
-export async function isAiRewriteAvailable(): Promise<boolean> {
+async function isAiRewriteAvailable(): Promise<boolean> {
   return Boolean(await getOptionalEnvValue("OPENROUTER_API_KEY"));
 }
 

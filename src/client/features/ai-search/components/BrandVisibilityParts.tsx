@@ -24,7 +24,7 @@ import { formatCount } from "@/client/features/ai-search/platformLabels";
  * boundary stays clean, same convention as onPageModel).
  */
 
-export type TrendPointView = {
+type TrendPointView = {
   capturedOn: string;
   totalMentions: number | null;
   chatgptMentions: number | null;
@@ -32,13 +32,13 @@ export type TrendPointView = {
   targetSharePct: number | null;
 };
 
-export type DeltaView = {
+type DeltaView = {
   totalMentions: number | null;
   targetSharePct: number | null;
   previousCapturedOn: string;
 } | null;
 
-export type OpportunityView = {
+type OpportunityView = {
   kind: "share_of_voice" | "prompt_absence";
   title: string;
   detail: string;
