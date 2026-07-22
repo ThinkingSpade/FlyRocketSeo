@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "flyrocketseo",
+  "name": "flyrocketseo2",
   "main": "src/server.ts",
   // Hosted-mode login (Better Auth email/password + Google), private via the
   // HOSTED_ALLOWED_EMAILS allow-list. This is the RUNTIME half of the deploy-time
