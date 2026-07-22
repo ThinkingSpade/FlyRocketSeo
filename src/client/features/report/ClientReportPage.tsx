@@ -284,7 +284,9 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
         <ReportChapter number="03" kicker="Improvements" domain={domain}>
           {data.approvedFixes.length > 0 ? (
             <>
-              <h2 className="text-lg font-semibold">On-page optimizations done</h2>
+              <h2 className="text-lg font-semibold">
+                On-page optimizations done
+              </h2>
               <ApprovedFixesSection fixes={data.approvedFixes} />
               <h3 className="pt-2 text-base font-semibold">
                 Still recommended

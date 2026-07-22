@@ -125,7 +125,9 @@ describe("buildTopMovers", () => {
 
   it("counts a brand-new page's whole click total as its gain", () => {
     const movers = buildTopMovers(current, previous);
-    expect(movers.find((row) => row.page.endsWith("/new"))?.clicksDelta).toBe(8);
+    expect(movers.find((row) => row.page.endsWith("/new"))?.clicksDelta).toBe(
+      8,
+    );
   });
 
   it("drops flat and declining pages", () => {

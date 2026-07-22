@@ -168,8 +168,8 @@ function ConnectSearchConsoleStep({
         </h2>
         <p className="text-sm text-base-content/70">
           Bring {project.name}'s real Google clicks, impressions, and rankings
-          into FlyRocketSEO — it's free and never uses credits. Each client connects
-          its own property.
+          into FlyRocketSEO — it's free and never uses credits. Each client
+          connects its own property.
         </p>
       </div>
 

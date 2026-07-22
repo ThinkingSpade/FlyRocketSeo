@@ -52,9 +52,7 @@ const competitorPageSchema = z.object({
   h3: z.array(z.string()),
 });
 
-type CompetitorPageAnalysis = z.infer<
-  typeof competitorPageSchema
-> | null;
+type CompetitorPageAnalysis = z.infer<typeof competitorPageSchema> | null;
 
 /** The brief skeleton: who ranks (from the cached SERP overview), the related
  *  terms worth including, and the questions searchers ask. Competitor page

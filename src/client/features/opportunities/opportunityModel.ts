@@ -68,10 +68,7 @@ type CannibalizationRow = {
 };
 
 /** Clicks unlocked by lifting a page from where it sits into the top 3. */
-export function quickWinClicks(
-  impressions: number,
-  position: number,
-): number {
+export function quickWinClicks(impressions: number, position: number): number {
   const gain = TARGET_CTR - ctrFor(position);
   return gain <= 0 ? 0 : Math.round(impressions * gain);
 }
@@ -128,7 +125,10 @@ export function buildOpportunities(input: {
       position: 0,
       impressions: row.totalImpressions,
       clicksAtStake: Math.round(
-        row.totalImpressions * row.splitShare * CONSOLIDATION_RECOVERY * TARGET_CTR,
+        row.totalImpressions *
+          row.splitShare *
+          CONSOLIDATION_RECOVERY *
+          TARGET_CTR,
       ),
       detail: `${row.pages.length} pages competing — consolidate into one`,
     });
@@ -136,8 +136,7 @@ export function buildOpportunities(input: {
 
   return opportunities
     .filter(
-      (item) =>
-        item.clicksAtStake >= 1 && item.impressions >= MIN_IMPRESSIONS,
+      (item) => item.clicksAtStake >= 1 && item.impressions >= MIN_IMPRESSIONS,
     )
     .toSorted(
       (a, b) =>
@@ -145,13 +144,7 @@ export function buildOpportunities(input: {
     );
 }
 
-type TechnicalIssueKey =
-  | "status"
-  | "title"
-  | "meta"
-  | "h1"
-  | "thin"
-  | "alt";
+type TechnicalIssueKey = "status" | "title" | "meta" | "h1" | "thin" | "alt";
 
 type TechnicalIssue = {
   key: TechnicalIssueKey;
@@ -180,9 +173,7 @@ const EXAMPLE_LIMIT = 3;
  * Group crawled pages into the classic on-page problems. Counts come from
  * pages already stored by the last audit, so this costs nothing to show.
  */
-export function buildTechnicalIssues(
-  pages: AuditPageRow[],
-): TechnicalIssue[] {
+export function buildTechnicalIssues(pages: AuditPageRow[]): TechnicalIssue[] {
   const definitions: Array<{
     key: TechnicalIssueKey;
     label: string;
@@ -223,7 +214,8 @@ export function buildTechnicalIssues(
       label: "Thin content",
       description: `Under ${THIN_CONTENT_WORDS} words — usually too little to rank`,
       severity: "medium",
-      matches: (page) => page.wordCount > 0 && page.wordCount < THIN_CONTENT_WORDS,
+      matches: (page) =>
+        page.wordCount > 0 && page.wordCount < THIN_CONTENT_WORDS,
     },
     {
       key: "alt",

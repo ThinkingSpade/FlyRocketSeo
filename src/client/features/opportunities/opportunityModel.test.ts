@@ -5,7 +5,9 @@ import {
   quickWinClicks,
 } from "./opportunityModel";
 
-function auditPage(overrides: Partial<Parameters<typeof buildTechnicalIssues>[0][number]> = {}) {
+function auditPage(
+  overrides: Partial<Parameters<typeof buildTechnicalIssues>[0][number]> = {},
+) {
   return {
     url: "https://x.com/page",
     statusCode: 200,

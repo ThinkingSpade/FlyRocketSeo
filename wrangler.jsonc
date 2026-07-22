@@ -114,11 +114,11 @@
   // deploy` will fail without access to it. D1 stays the default when
   // DATABASE_PROVIDER is unset.
   // "hyperdrive": [
-    // {
-      // "binding": "HYPERDRIVE",
-      // "id": "9d64ccfb559f44449ce52a143912f898",
-      // "localConnectionString": "postgres://openseo:openseo@localhost:5433/openseo",
-    // },
+  // {
+  // "binding": "HYPERDRIVE",
+  // "id": "9d64ccfb559f44449ce52a143912f898",
+  // "localConnectionString": "postgres://openseo:openseo@localhost:5433/openseo",
+  // },
   // ],
   "r2_buckets": [
     {

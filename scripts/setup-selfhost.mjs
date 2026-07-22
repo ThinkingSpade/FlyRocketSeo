@@ -76,7 +76,11 @@ function wrangler(args, { allowFail = false } = {}) {
   log(`  $ ${cmd.replace(/postgres(ql)?:\/\/[^\s"']+/gi, "postgres://***")}`);
   if (DRY) return "";
   try {
-    return execSync(cmd, { cwd: REPO_ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] }).trim();
+    return execSync(cmd, {
+      cwd: REPO_ROOT,
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "pipe"],
+    }).trim();
   } catch (err) {
     if (allowFail) return String(err.stdout || "") + String(err.stderr || "");
     die(`command failed: ${cmd}\n${err.stdout || ""}${err.stderr || ""}`);
@@ -118,8 +122,11 @@ async function idFrom(output, pattern, label) {
 // ---- Resource provisioners (idempotent: reuse if the name already exists) ----
 
 async function ensureKv(title) {
-  const list = looseJson(wrangler(`kv namespace list`, { allowFail: true })) ?? [];
-  const found = Array.isArray(list) && list.find((n) => n.title === title || n.title?.endsWith(title));
+  const list =
+    looseJson(wrangler(`kv namespace list`, { allowFail: true })) ?? [];
+  const found =
+    Array.isArray(list) &&
+    list.find((n) => n.title === title || n.title?.endsWith(title));
   if (found?.id) {
     log(`  reusing existing KV "${title}" (${found.id})`);
     return found.id;
@@ -140,7 +147,9 @@ async function ensureD1(name) {
 }
 
 function ensureR2(name) {
-  const out = wrangler(`r2 bucket create ${JSON.stringify(name)}`, { allowFail: true });
+  const out = wrangler(`r2 bucket create ${JSON.stringify(name)}`, {
+    allowFail: true,
+  });
   if (/already exists|already owned/i.test(out)) {
     log(`  reusing existing R2 bucket "${name}"`);
     return;
@@ -173,20 +182,29 @@ async function ensureHyperdrive(name, connString) {
 
 /** Replace the `id` of the kv_namespaces object whose binding === bindingName. */
 function patchKvId(src, bindingName, newId) {
-  const re = new RegExp(`("binding"\\s*:\\s*"${bindingName}"[\\s\\S]{0,160}?"id"\\s*:\\s*")[^"]+(")`);
-  if (!re.test(src)) throw new Error(`could not locate KV binding "${bindingName}" in wrangler.jsonc`);
+  const re = new RegExp(
+    `("binding"\\s*:\\s*"${bindingName}"[\\s\\S]{0,160}?"id"\\s*:\\s*")[^"]+(")`,
+  );
+  if (!re.test(src))
+    throw new Error(
+      `could not locate KV binding "${bindingName}" in wrangler.jsonc`,
+    );
   return src.replace(re, `$1${newId}$2`);
 }
 
 function patchD1Id(src, newId) {
   const re = /("d1_databases"[\s\S]*?"database_id"\s*:\s*")[^"]+(")/;
-  if (!re.test(src)) throw new Error(`could not locate d1_databases.database_id in wrangler.jsonc`);
+  if (!re.test(src))
+    throw new Error(
+      `could not locate d1_databases.database_id in wrangler.jsonc`,
+    );
   return src.replace(re, `$1${newId}$2`);
 }
 
 function patchHyperdriveId(src, newId) {
   const re = /("hyperdrive"\s*:\s*\[\s*\{[\s\S]*?"id"\s*:\s*")[^"]+(")/;
-  if (!re.test(src)) throw new Error(`could not locate hyperdrive[0].id in wrangler.jsonc`);
+  if (!re.test(src))
+    throw new Error(`could not locate hyperdrive[0].id in wrangler.jsonc`);
   return src.replace(re, `$1${newId}$2`);
 }
 
@@ -199,7 +217,9 @@ function commentOutHyperdrive(src) {
   if (!m) return src;
   const commented = m[0]
     .split("\n")
-    .map((line) => (line.trim() === "" ? line : line.replace(/^(\s*)/, "$1// ")))
+    .map((line) =>
+      line.trim() === "" ? line : line.replace(/^(\s*)/, "$1// "),
+    )
     .join("\n");
   return src.replace(re, commented);
 }
@@ -218,13 +238,17 @@ function uncommentHyperdrive(src) {
 
 /** Replace the first top-level "name" (the Worker name, before any nested block). */
 function patchWorkerName(src, newName) {
-  return src.replace(/"name"\s*:\s*"[^"]+"/, `"name": ${JSON.stringify(newName)}`);
+  return src.replace(
+    /"name"\s*:\s*"[^"]+"/,
+    `"name": ${JSON.stringify(newName)}`,
+  );
 }
 
 // ---------------------------------- main ----------------------------------
 
 async function main() {
-  if (!existsSync(WRANGLER_PATH)) die(`wrangler.jsonc not found at ${WRANGLER_PATH}`);
+  if (!existsSync(WRANGLER_PATH))
+    die(`wrangler.jsonc not found at ${WRANGLER_PATH}`);
 
   const usePostgres = values.postgres;
   const pgUrl = process.env.POSTGRES_DATABASE_URL;
@@ -241,7 +265,9 @@ async function main() {
   if (!DRY && /not authenticated|run `?wrangler login/i.test(who)) {
     die("Not logged in to Cloudflare. Run:  pnpm exec wrangler login");
   }
-  log(DRY ? "  (dry run — no changes will be made)" : "  wrangler authenticated.");
+  log(
+    DRY ? "  (dry run — no changes will be made)" : "  wrangler authenticated.",
+  );
 
   step("Provisioning Cloudflare resources");
   const kvId = await ensureKv(values["kv-title"]);
@@ -250,7 +276,10 @@ async function main() {
   ensureR2(values["r2-name"]);
   let hyperdriveId;
   if (usePostgres) {
-    hyperdriveId = await ensureHyperdrive(values["hyperdrive-name"], pgUrl ?? "");
+    hyperdriveId = await ensureHyperdrive(
+      values["hyperdrive-name"],
+      pgUrl ?? "",
+    );
   }
 
   step("Planned wrangler.jsonc edits");
@@ -301,7 +330,10 @@ async function main() {
   log("1) Set Worker secrets:");
   if (usePostgres) log(`${put("DATABASE_PROVIDER")}      # value: postgres`);
   log(put("DATAFORSEO_API_KEY"));
-  log(put("TEAM_DOMAIN") + "            # e.g. https://your-team.cloudflareaccess.com");
+  log(
+    put("TEAM_DOMAIN") +
+      "            # e.g. https://your-team.cloudflareaccess.com",
+  );
   log(put("POLICY_AUD") + "             # from Cloudflare Access app");
   if (usePostgres) {
     log("\n2) Run Postgres migrations from your machine (direct connection):");
@@ -311,7 +343,9 @@ async function main() {
     log("   pnpm run db:migrate:prod");
   }
   log("\n3) In the Cloudflare Workers Builds settings for this Worker:");
-  log("   Build variable:  NODE_OPTIONS = --max-old-space-size=4096   (fixes the OOM)");
+  log(
+    "   Build variable:  NODE_OPTIONS = --max-old-space-size=4096   (fixes the OOM)",
+  );
   log("   Build command:   pnpm run build");
   log(
     usePostgres
@@ -319,8 +353,12 @@ async function main() {
       : "   Deploy command:  npm run deploy              (runs D1 migrations + build + deploy)",
   );
   log("   Version command: npx wrangler versions upload");
-  log("\n4) Enable Cloudflare Access on the Worker route, then push to deploy.");
-  log("\nReview `git diff wrangler.jsonc` before committing. Backup at wrangler.jsonc.bak.");
+  log(
+    "\n4) Enable Cloudflare Access on the Worker route, then push to deploy.",
+  );
+  log(
+    "\nReview `git diff wrangler.jsonc` before committing. Backup at wrangler.jsonc.bak.",
+  );
   rl?.close();
 }
 

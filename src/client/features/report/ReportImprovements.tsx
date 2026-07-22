@@ -179,15 +179,17 @@ export function ApprovedFixesSection({ fixes }: { fixes: ApprovedFix[] }) {
     byElement.set(fix.element, (byElement.get(fix.element) ?? 0) + 1);
   }
   const summary = [...byElement.entries()]
-    .map(([element, count]) => `${count} ${FIX_ELEMENT_LABEL[element] ?? element}`)
+    .map(
+      ([element, count]) => `${count} ${FIX_ELEMENT_LABEL[element] ?? element}`,
+    )
     .join(", ");
 
   return (
     <>
       <p className="text-sm leading-relaxed text-base-content/80">
         <span className="font-semibold">{fixes.length}</span> on-page{" "}
-        {fixes.length === 1 ? "fix has" : "fixes have"} been approved this period
-        ({summary}). Each is a specific rewrite ready to publish.
+        {fixes.length === 1 ? "fix has" : "fixes have"} been approved this
+        period ({summary}). Each is a specific rewrite ready to publish.
       </p>
       <div className="overflow-x-auto rounded-lg border border-base-300">
         <table className="table table-sm">

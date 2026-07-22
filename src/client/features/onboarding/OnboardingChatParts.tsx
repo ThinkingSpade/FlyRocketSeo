@@ -103,8 +103,8 @@ export function WelcomeMessage({
           <div className="rounded-box border border-base-300 bg-base-200/50 p-3 text-xs lg:hidden">
             <p className="font-medium">Want Sam to keep going?</p>
             <p className="mt-0.5 text-base-content/70">
-              Upgrade to run keyword research, rank tracking, and site audits
-              on {domain}.
+              Upgrade to run keyword research, rank tracking, and site audits on{" "}
+              {domain}.
             </p>
             <button
               type="button"
@@ -153,7 +153,9 @@ export function UpgradeSidebar({
           <Globe className="size-4" />
         </span>
         <div className="min-w-0">
-          <p className="font-medium text-base-content/80">Previewing FlyRocketSEO</p>
+          <p className="font-medium text-base-content/80">
+            Previewing FlyRocketSEO
+          </p>
           <p className="truncate" title={domain}>
             {domain}
           </p>

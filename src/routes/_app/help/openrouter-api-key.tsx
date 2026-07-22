@@ -16,9 +16,9 @@ function OpenrouterApiKeyHelpPage() {
               Set up your OpenRouter API key
             </h1>
             <p className="text-sm text-base-content/70">
-              FlyRocketSEO needs the <code>OPENROUTER_API_KEY</code> secret before AI
-              features like SAM, the in-app SEO agent, can run. It is optional —
-              everything else in FlyRocketSEO works without it.
+              FlyRocketSEO needs the <code>OPENROUTER_API_KEY</code> secret
+              before AI features like SAM, the in-app SEO agent, can run. It is
+              optional — everything else in FlyRocketSEO works without it.
             </p>
           </div>
         </div>

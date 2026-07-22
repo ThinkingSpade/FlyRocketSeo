@@ -40,7 +40,7 @@ DataForSEO metering are unchanged; nothing here adds an automatic spend.
   - **Prompt-absence gaps** — from `topQueries`: questions whose AI answers cite
     sources but none of them is the target's own domain or a subdomain of it —
     answers others get cited in and you don't.
-- Deriving competitors' *own* cited pages would need extra paid calls, so it is
+- Deriving competitors' _own_ cited pages would need extra paid calls, so it is
   deliberately out of scope — the two gap types above use data already paid for.
 
 ## Data flow

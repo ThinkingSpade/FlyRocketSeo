@@ -144,9 +144,12 @@ export async function runDataforseoFallbackCrawl(
               if (item) {
                 results.push(instantPageToStepPageResult(url, item));
               } else {
-                console.warn("[audit-fallback] instant_pages returned no item", {
-                  url,
-                });
+                console.warn(
+                  "[audit-fallback] instant_pages returned no item",
+                  {
+                    url,
+                  },
+                );
               }
             } catch (error) {
               // Sanitized: log the error class/message, never credentials.
