@@ -66,6 +66,17 @@ export const backlinksSummaryItemSchema = z
     new_referring_domains: z.number().nullable().optional(),
     lost_referring_domains: z.number().nullable().optional(),
     backlinks_spam_score: z.number().nullable().optional(),
+    // Label -> count splits, e.g. { BE: 1720 } and { anchor: 2115, image: 55 }.
+    // They ride along on the summary call we already make, so reading them
+    // costs nothing extra.
+    referring_links_countries: z
+      .record(z.string(), z.number().nullable())
+      .nullable()
+      .optional(),
+    referring_links_types: z
+      .record(z.string(), z.number().nullable())
+      .nullable()
+      .optional(),
     info: z
       .object({ target_spam_score: z.number().nullable().optional() })
       .passthrough()

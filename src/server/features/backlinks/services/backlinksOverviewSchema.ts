@@ -47,6 +47,11 @@ const anchorRowSchema = z.object({
   firstSeen: z.string().nullable(),
 });
 
+const linkBreakdownRowSchema = z.object({
+  label: z.string(),
+  value: z.number(),
+});
+
 const backlinksTrendRowSchema = z.object({
   date: z.string(),
   backlinks: z.number().nullable(),
@@ -79,6 +84,10 @@ export const backlinksOverviewSchema = z.object({
     lostBacklinks: z.number().nullable(),
     newReferringDomains: z.number().nullable(),
     lostReferringDomains: z.number().nullable(),
+    /** Ranked label/count splits from the same summary call. Empty when
+     *  DataForSEO didn't return them for this target. */
+    referringCountries: z.array(linkBreakdownRowSchema).default([]),
+    referringLinkTypes: z.array(linkBreakdownRowSchema).default([]),
   }),
   trends: z.array(backlinksTrendRowSchema),
   newLostTrends: z.array(backlinksNewLostTrendRowSchema),

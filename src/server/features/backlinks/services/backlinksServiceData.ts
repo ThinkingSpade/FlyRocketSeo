@@ -4,12 +4,8 @@ import type { CreditFeature } from "@/shared/billing-credit-features";
 import {
   createDataforseoClient,
   normalizeBacklinksTarget,
-  type BacklinksAnchorItem,
   type BacklinksHistoryItem,
-  type BacklinksItem,
   type BacklinksSummaryItem,
-  type DomainPageSummaryItem,
-  type ReferringDomainItem,
 } from "@/server/lib/dataforseo";
 import type {
   AnchorsPageInput,
@@ -42,6 +38,16 @@ import {
   buildTopPagesApiFilters,
   buildTopPagesOrderBy,
 } from "@/server/features/backlinks/services/backlinksApiFilters";
+import { toLinkBreakdown } from "@/server/features/backlinks/services/linkBreakdown";
+import {
+  mapAnchorsRows,
+  mapBacklinksRows,
+  mapReferringDomainsRows,
+  mapTopPagesRows,
+} from "@/server/features/backlinks/services/backlinksRowMappers";
+
+/** Enough to show a meaningful split without turning into a long tail. */
+const LINK_BREAKDOWN_LIMIT = 5;
 
 // The page-request schemas carry projectId for the web middleware; the
 // service layer is organization-scoped and never reads it.
@@ -358,6 +364,14 @@ function buildOverviewResult(args: {
         args.summary.lost_referring_domains ??
         args.summary.lost_reffering_domains ??
         null,
+      referringCountries: toLinkBreakdown(
+        args.summary.referring_links_countries,
+        LINK_BREAKDOWN_LIMIT,
+      ),
+      referringLinkTypes: toLinkBreakdown(
+        args.summary.referring_links_types,
+        LINK_BREAKDOWN_LIMIT,
+      ),
     },
     trends: historyRows.map((item) => ({
       date: item.date,
@@ -378,61 +392,6 @@ function buildOverviewResult(args: {
 
 function normalizeHistoryDate(value: string | null | undefined) {
   return value ? value.slice(0, 10) : null;
-}
-
-function mapBacklinksRows(rows: BacklinksItem[]) {
-  return rows.map((item) => ({
-    domainFrom: item.domain_from ?? null,
-    urlFrom: item.url_from ?? null,
-    urlTo: item.url_to ?? null,
-    anchor: item.anchor ?? null,
-    itemType: item.item_type ?? null,
-    isDofollow: item.dofollow ?? null,
-    relAttributes: item.rel_attributes ?? item.attributes ?? [],
-    rank: item.rank ?? null,
-    domainFromRank: item.domain_from_rank ?? null,
-    pageFromRank: item.page_from_rank ?? null,
-    spamScore: item.backlink_spam_score ?? item.backlinks_spam_score ?? null,
-    firstSeen: item.first_seen ?? null,
-    lastSeen: item.lost_date ?? item.last_visited ?? null,
-    isLost: item.is_lost ?? Boolean(item.lost_date),
-    isBroken: item.is_broken ?? false,
-    linksCount: item.links_count ?? null,
-  }));
-}
-
-function mapReferringDomainsRows(rows: ReferringDomainItem[]) {
-  return rows.map((item) => ({
-    domain: item.domain ?? null,
-    backlinks: item.backlinks ?? null,
-    referringPages: item.referring_pages ?? null,
-    rank: item.rank ?? null,
-    spamScore: item.backlinks_spam_score ?? null,
-    firstSeen: item.first_seen ?? null,
-    brokenBacklinks: item.broken_backlinks ?? null,
-    brokenPages: item.broken_pages ?? null,
-  }));
-}
-
-function mapTopPagesRows(rows: DomainPageSummaryItem[]) {
-  return rows.map((item) => ({
-    page: item.page ?? item.url ?? null,
-    backlinks: item.backlinks ?? null,
-    referringDomains: item.referring_domains ?? null,
-    rank: item.rank ?? null,
-    brokenBacklinks: item.broken_backlinks ?? null,
-  }));
-}
-
-function mapAnchorsRows(rows: BacklinksAnchorItem[]) {
-  return rows.map((item) => ({
-    anchor: item.anchor ?? null,
-    backlinks: item.backlinks ?? null,
-    referringDomains: item.referring_domains ?? null,
-    rank: item.rank ?? null,
-    spamScore: item.backlinks_spam_score ?? null,
-    firstSeen: item.first_seen ?? null,
-  }));
 }
 
 async function cacheValue(

@@ -244,6 +244,37 @@ export function ReportHeroStats({
   );
 }
 
+/** Two-up supporting breakdown (Top countries / Link types). */
+export function ReportBreakdownCard({
+  title,
+  rows,
+}: {
+  title: string;
+  rows: Array<{ label: string; value: number }>;
+}) {
+  if (rows.length === 0) return null;
+  return (
+    <div className="rounded-lg bg-base-200/60 p-4">
+      <p className="text-sm font-bold" style={{ color: BRAND }}>
+        {title}
+      </p>
+      <dl className="mt-2 space-y-1.5">
+        {rows.map((row) => (
+          <div key={row.label} className="flex items-center justify-between">
+            <dt className="text-sm text-base-content/70">{row.label}</dt>
+            <dd
+              className="text-sm font-semibold tabular-nums"
+              style={{ color: ACCENT }}
+            >
+              {row.value.toLocaleString("en-US")}
+            </dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  );
+}
+
 /** A smaller supporting stat, sitting under the hero figures. */
 export function StatBlock({
   label,
