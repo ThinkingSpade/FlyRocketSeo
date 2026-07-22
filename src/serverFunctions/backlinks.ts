@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
 import { BacklinksService } from "@/server/features/backlinks/services/BacklinksService";
 import {
   mapBacklinksTimeline,
@@ -11,6 +12,7 @@ import {
 } from "@/server/lib/dataforseo";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { requireProjectContext } from "@/serverFunctions/middleware";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import {
   anchorsPageRequestSchema,
   backlinksOverviewInputSchema,
@@ -36,6 +38,18 @@ export const getBacklinksOverview = createServerFn({
       },
       context,
     );
+
+    // Records this analysis for the tab's history / auto-restore. Free and best
+    // effort: one row pointing at the cache key this result already lives
+    // under, so reopening the tab can render it again without a metered fetch.
+    await AnalysisRunService.record({
+      projectId: context.projectId,
+      feature: RUN_FEATURES.backlinks,
+      params: { target: data.target, scope: data.scope },
+      label: data.target,
+      cacheKey: profile.cacheKey,
+    });
+
     return profile.overview;
   });
 

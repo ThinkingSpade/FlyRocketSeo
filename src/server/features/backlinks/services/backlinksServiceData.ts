@@ -1,4 +1,3 @@
-import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { CreditFeature } from "@/shared/billing-credit-features";
 import {
@@ -18,7 +17,7 @@ import type {
 
 import {
   anchorsPageResultSchema,
-  backlinksOverviewSchema,
+  backlinksOverviewCacheSchema,
   backlinksRowsPageResultSchema,
   referringDomainsPageResultSchema,
   topPagesPageResultSchema,
@@ -27,7 +26,7 @@ import {
   type BacklinksRowsPageResult,
   type ReferringDomainsPageResult,
   type TopPagesPageResult,
-} from "@/server/features/backlinks/services/backlinksOverviewSchema";
+} from "@/types/schemas/backlinks-results";
 import {
   buildAnchorsApiFilters,
   buildAnchorsOrderBy,
@@ -64,10 +63,6 @@ export type AnchorsPageServiceInput = Omit<AnchorsPageInput, "projectId">;
 
 const BACKLINKS_OVERVIEW_TTL_SECONDS = 6 * 60 * 60;
 const BACKLINKS_TAB_TTL_SECONDS = 6 * 60 * 60;
-
-const backlinksOverviewCacheSchema = z.object({
-  overview: backlinksOverviewSchema,
-});
 
 export type BacklinksCache = {
   get(key: string): Promise<unknown>;

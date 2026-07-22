@@ -51,13 +51,18 @@ function createBacklinksService(cache: BacklinksCache = defaultCache) {
         ...buildTargetCacheInput(input, billingCustomer),
       });
 
-      return profileBacklinksOverview(
+      const profile = await profileBacklinksOverview(
         cache,
         cacheKey,
         input,
         billingCustomer,
         creditFeature,
       );
+
+      // Returned so the caller can record this run against its project for the
+      // tab's history / auto-restore. This service is organization-scoped and
+      // has no project of its own to attribute the run to.
+      return { ...profile, cacheKey };
     },
     async profileBacklinksPage(
       input: BacklinksRowsPageServiceInput,

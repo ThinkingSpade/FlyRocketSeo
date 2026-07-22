@@ -1,10 +1,15 @@
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { SortingState, Updater } from "@tanstack/react-table";
 import { CalendarRange, Link2, Network, ShieldAlert } from "lucide-react";
 import {
   AnalyzeDomainPrompt,
   type AnalyzePreviewItem,
 } from "@/client/components/AnalyzeDomainPrompt";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { backlinksOverviewCacheSchema } from "@/types/schemas/backlinks-results";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
+import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
@@ -145,6 +150,26 @@ export function BacklinksPage({
     filters,
   });
 
+  // With no target in the URL every query above stays disabled, so the tab
+  // would otherwise show nothing but a prompt. Restoring the project's last run
+  // fills the overview in for free: it reads a stored row plus the R2 object
+  // that run already paid for, and can never trigger a metered fetch.
+  //
+  // Only the overview is restored. The four result sub-tabs are separately
+  // metered drill-downs that already gate on being the active tab, so they stay
+  // on demand rather than firing four paid calls behind a restore.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.backlinks,
+    schema: backlinksOverviewCacheSchema,
+    enabled: searchState.target.trim() === "",
+    runId: selectedRunId,
+  });
+
+  const overviewData = overviewQuery.data ?? restored?.result.overview;
+  const restoredRun = overviewQuery.data == null ? restored : null;
+
   const {
     history,
     isLoaded: historyLoaded,
@@ -242,6 +267,31 @@ export function BacklinksPage({
         />
 
         {searchState.target.trim() === "" ? (
+          <RecentRunsList
+            projectId={projectId}
+            feature={RUN_FEATURES.backlinks}
+            activeRunId={selectedRunId}
+            onSelect={setSelectedRunId}
+          />
+        ) : null}
+
+        {restoredRun ? (
+          <RestoredRunBanner
+            label={restoredRun.label}
+            lastRanAt={restoredRun.lastRanAt}
+            runCount={restoredRun.runCount}
+            onRunAgain={() => {
+              runBacklinksSearch({
+                // From the restored result rather than its label, so "run
+                // again" repeats the same scope it was originally run at.
+                target: restoredRun.result.overview.target,
+                scope: restoredRun.result.overview.scope,
+              });
+            }}
+          />
+        ) : null}
+
+        {searchState.target.trim() === "" && !restoredRun ? (
           <AnalyzeDomainPrompt
             domain={projectDomain}
             title="Check your own link profile"
@@ -259,7 +309,7 @@ export function BacklinksPage({
           projectId={projectId}
           history={history}
           historyLoaded={historyLoaded}
-          overviewData={overviewQuery.data}
+          overviewData={overviewData}
           overviewError={overviewErrorMessage}
           overviewLoading={overviewQuery.isLoading}
           backlinksRowsPage={rowsQuery.data}

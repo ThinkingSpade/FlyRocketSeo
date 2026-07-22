@@ -10,6 +10,7 @@ import {
   DEFAULT_COMPETITORS_PAGE_SIZE,
   DEFAULT_KEYWORD_GAP_PAGE_SIZE,
   DEFAULT_LINK_GAP_PAGE_SIZE,
+  competitorsPageSchema,
   keywordGapModes,
   type CompetitorsTab,
   type KeywordGapMode,
@@ -19,12 +20,14 @@ import {
   type AnalyzePreviewItem,
 } from "@/client/components/AnalyzeDomainPrompt";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
+import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
+import { TabBody } from "./CompetitorsTabBody";
 import { CompetitorsPositioningMap } from "./CompetitorsPositioningMap";
 import { KeywordGapOverview } from "./KeywordGapOverview";
-import { CompetitorsTable } from "./CompetitorsTable";
-import { KeywordGapTable } from "./KeywordGapTable";
-import { LinkGapTable } from "./LinkGapTable";
 import {
   useCompetitorsQuery,
   useKeywordGapQuery,
@@ -144,6 +147,25 @@ export function CompetitorsPage({
     enabled: tab === "competitors",
   });
 
+  // With no target in the URL the query above stays disabled, so the tab would
+  // otherwise show nothing but a prompt. Restoring the project's last run fills
+  // it in for free: it reads a stored row plus the R2 object that run already
+  // paid for, and can never trigger a metered fetch.
+  //
+  // Only the competitor list restores. Keyword gap and link gap need a chosen
+  // competitor and are separately metered, so they stay on demand.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.competitors,
+    schema: competitorsPageSchema,
+    enabled: target.trim() === "" && tab === "competitors",
+    runId: selectedRunId,
+  });
+  const restoredRun = competitorsQuery.data == null ? restored : null;
+  const competitorRows =
+    competitorsQuery.data?.rows ?? restored?.result.rows ?? [];
+
   const gapQuery = useKeywordGapQuery({
     projectId,
     target,
@@ -247,7 +269,28 @@ export function CompetitorsPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
-      {!target ? (
+      {!target && tab === "competitors" ? (
+        <RecentRunsList
+          projectId={projectId}
+          feature={RUN_FEATURES.competitors}
+          activeRunId={selectedRunId}
+          onSelect={setSelectedRunId}
+        />
+      ) : null}
+
+      {restoredRun ? (
+        <RestoredRunBanner
+          label={restoredRun.label}
+          lastRanAt={restoredRun.lastRanAt}
+          runCount={restoredRun.runCount}
+          onRunAgain={() => {
+            setTargetInput(restoredRun.label);
+            updateSearch({ target: restoredRun.label, page: 1 });
+          }}
+        />
+      ) : null}
+
+      {!target && !restoredRun ? (
         <AnalyzeDomainPrompt
           domain={projectDomain}
           title="See who you're up against"
@@ -262,13 +305,14 @@ export function CompetitorsPage({
         />
       ) : null}
 
-      {tab === "competitors" &&
-      target &&
-      (competitorsQuery.data?.rows.length ?? 0) > 0 ? (
+      {/* Deliberately keyed off the live target, not the restored one: the map
+          fetches a domain overview for its own bubble, which is metered. A
+          restored run must cost nothing, so the map waits for "Run again". */}
+      {tab === "competitors" && target && competitorRows.length > 0 ? (
         <CompetitorsPositioningMap
           projectId={projectId}
           target={target}
-          rows={competitorsQuery.data?.rows ?? []}
+          rows={competitorRows}
         />
       ) : null}
 
@@ -305,7 +349,7 @@ export function CompetitorsPage({
           tab={tab}
           target={target}
           competitor={competitor}
-          competitorsQuery={competitorsQuery}
+          competitorRows={competitorRows}
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}
           onCompareCompetitor={(domain) =>
@@ -331,70 +375,6 @@ export function CompetitorsPage({
           />
         ) : null}
       </div>
-    </div>
-  );
-}
-
-function TabBody({
-  tab,
-  target,
-  competitor,
-  competitorsQuery,
-  gapQuery,
-  linkGapQuery,
-  onCompareCompetitor,
-}: {
-  tab: CompetitorsTab;
-  target: string;
-  competitor: string;
-  competitorsQuery: ReturnType<typeof useCompetitorsQuery>;
-  gapQuery: ReturnType<typeof useKeywordGapQuery>;
-  linkGapQuery: ReturnType<typeof useLinkGapQuery>;
-  onCompareCompetitor: (domain: string) => void;
-}) {
-  if (tab === "competitors") {
-    if (target === "") {
-      return (
-        <EmptyState message="Enter your domain and hit Analyze to discover organic competitors." />
-      );
-    }
-    return (
-      <CompetitorsTable
-        rows={competitorsQuery.data?.rows ?? []}
-        onCompareCompetitor={onCompareCompetitor}
-      />
-    );
-  }
-
-  if (target === "" || competitor === "") {
-    return (
-      <EmptyState
-        message={
-          tab === "gap"
-            ? "Enter your domain and a competitor domain to compare keyword profiles."
-            : "Enter your domain and a competitor domain to find sites that link to them but not to you."
-        }
-      />
-    );
-  }
-
-  if (tab === "gap") {
-    return (
-      <KeywordGapTable
-        rows={gapQuery.data?.rows ?? []}
-        targetLabel={target}
-        competitorLabel={competitor}
-      />
-    );
-  }
-
-  return <LinkGapTable rows={linkGapQuery.data?.rows ?? []} />;
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="px-4 py-12 text-center text-sm text-base-content/60">
-      {message}
     </div>
   );
 }

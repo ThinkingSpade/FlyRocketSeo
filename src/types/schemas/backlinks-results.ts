@@ -96,6 +96,18 @@ export const backlinksOverviewSchema = z.object({
 
 export type BacklinksOverviewResult = z.infer<typeof backlinksOverviewSchema>;
 
+/**
+ * Exactly what the overview's cache object holds — the result nested under
+ * `overview`, not the result itself.
+ *
+ * Exported rather than declared next to the writer so auto-restore validates a
+ * stored payload against the same definition that wrote it; a hand-copied
+ * shape on the reading side is free to drift.
+ */
+export const backlinksOverviewCacheSchema = z.object({
+  overview: backlinksOverviewSchema,
+});
+
 function buildPageResultSchema<T extends z.ZodTypeAny>(rowSchema: T) {
   return z.object({
     rows: z.array(rowSchema),

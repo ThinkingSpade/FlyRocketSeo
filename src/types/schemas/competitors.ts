@@ -88,3 +88,28 @@ export const competitorsSearchSchema = z.object({
   mode: z.enum(keywordGapModes).optional(),
   page: optionalSearchPositiveIntParam,
 });
+
+const competitorRowSchema = z.object({
+  domain: z.string(),
+  avgPosition: z.number().nullable(),
+  intersections: z.number().nullable(),
+  organicKeywords: z.number().nullable(),
+  organicTraffic: z.number().nullable(),
+});
+
+export type CompetitorRow = z.infer<typeof competitorRowSchema>;
+
+/**
+ * A page of competitor rows, exactly as it is cached.
+ *
+ * Lives here rather than beside the service that writes it so auto-restore can
+ * validate a stored payload against the same definition from the client, where
+ * importing the service itself would drag DataForSEO code into the bundle.
+ */
+export const competitorsPageSchema = z.object({
+  rows: z.array(competitorRowSchema),
+  totalCount: z.number().nullable(),
+  fetchedAt: z.string(),
+});
+
+export type CompetitorsPage = z.infer<typeof competitorsPageSchema>;

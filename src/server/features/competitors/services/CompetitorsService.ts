@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
@@ -9,28 +11,19 @@ import type {
   DomainIntersectionItem,
 } from "@/server/lib/dataforseo/labs-competitors";
 import type { BacklinksIntersectionItem } from "@/server/lib/dataforseo/backlinks-insights";
-import type { KeywordGapMode } from "@/types/schemas/competitors";
+import {
+  competitorsPageSchema,
+  type CompetitorRow,
+  type CompetitorsPage,
+  type KeywordGapMode,
+} from "@/types/schemas/competitors";
 
 /** Competitor and keyword-gap data refresh cadence, matching domain overview. */
 const COMPETITORS_TTL_SECONDS = 12 * 60 * 60;
 
-const competitorRowSchema = z.object({
-  domain: z.string(),
-  avgPosition: z.number().nullable(),
-  intersections: z.number().nullable(),
-  organicKeywords: z.number().nullable(),
-  organicTraffic: z.number().nullable(),
-});
-
-export type CompetitorRow = z.infer<typeof competitorRowSchema>;
-
-const competitorsPageSchema = z.object({
-  rows: z.array(competitorRowSchema),
-  totalCount: z.number().nullable(),
-  fetchedAt: z.string(),
-});
-
-type CompetitorsPage = z.infer<typeof competitorsPageSchema>;
+// Re-exported so the tables that render these rows keep importing the type
+// from the service they came from.
+export type { CompetitorRow };
 
 const keywordGapRowSchema = z.object({
   keyword: z.string(),
@@ -96,8 +89,32 @@ async function getCompetitors(
     pageSize: input.pageSize,
   });
 
+  // Records this analysis for the tab's history / auto-restore. Free and best
+  // effort: one row pointing at the cache key we just used, so the tab can
+  // render this exact result again without a metered fetch.
+  //
+  // First page only. The cache key is page-specific, so recording deeper pages
+  // would let "your last run" restore page 3's rows into a tab that presents
+  // them as the first page.
+  const recordRun = async () => {
+    if (input.page !== 1) return;
+    await AnalysisRunService.record({
+      projectId: input.projectId,
+      feature: RUN_FEATURES.competitors,
+      params: {
+        target: input.target,
+        locationCode: input.locationCode,
+        languageCode: input.languageCode,
+        excludeTopDomains: input.excludeTopDomains,
+      },
+      cacheKey,
+      label: target,
+    });
+  };
+
   const cached = competitorsPageSchema.safeParse(await getCached(cacheKey));
   if (cached.success && cached.data.rows.length > 0) {
+    await recordRun();
     return cached.data;
   }
 
@@ -129,6 +146,7 @@ async function getCompetitors(
     void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
       console.error("competitors.list.cache-write failed:", error);
     });
+    await recordRun();
   }
 
   return result;

@@ -8,4 +8,6 @@
  */
 export const RUN_FEATURES = {
   domainOverview: "domain_overview",
+  backlinks: "backlinks",
+  competitors: "competitors",
 } as const;

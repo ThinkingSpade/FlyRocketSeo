@@ -119,7 +119,11 @@ export function BacklinksBody({
     />
   ) : null;
 
-  if (!searchState.target) {
+  // A restored run supplies overview data without a target in the URL, so the
+  // "get started" prompt is only right when there is nothing at all to show.
+  const isRestoredRun = !searchState.target && overviewData != null;
+
+  if (!searchState.target && !isRestoredRun) {
     return (
       <BacklinksHistorySection
         projectId={projectId}
@@ -159,34 +163,41 @@ export function BacklinksBody({
         data={overviewData}
         summaryStats={summaryStats}
       />
-      <BacklinksTimelineSection
-        projectId={projectId}
-        target={overviewData.displayTarget || searchState.target}
-      />
-      <BacklinksResultsCard
-        projectId={projectId}
-        activeTab={searchState.tab}
-        tabRows={tabRows}
-        filters={filters}
-        sorting={sorting}
-        view={searchState.view}
-        domainExpansion={domainExpansion}
-        isTabLoading={tabLoading}
-        tabErrorMessage={tabErrorMessage}
-        exportTarget={overviewData.displayTarget || searchState.target}
-        pagination={{
-          page: searchState.page,
-          pageSize: searchState.pageSize,
-          totalCount: activeTabPage?.totalCount ?? null,
-          hasNextPage: activeTabPage?.hasMore ?? false,
-          isFetching: tabFetching,
-        }}
-        onPageChange={onPageChange}
-        onPageSizeChange={onPageSizeChange}
-        onSortingChange={onSortingChange}
-        onTabChange={onTabChange}
-        onViewChange={onViewChange}
-      />
+      {/* Both of these fetch on their own — the timeline is a metered history
+          call, and the results card drives the paginated sub-tabs. A restored
+          run is meant to cost nothing, so they wait for "Run again". */}
+      {isRestoredRun ? null : (
+        <BacklinksTimelineSection
+          projectId={projectId}
+          target={overviewData.displayTarget || searchState.target}
+        />
+      )}
+      {isRestoredRun ? null : (
+        <BacklinksResultsCard
+          projectId={projectId}
+          activeTab={searchState.tab}
+          tabRows={tabRows}
+          filters={filters}
+          sorting={sorting}
+          view={searchState.view}
+          domainExpansion={domainExpansion}
+          isTabLoading={tabLoading}
+          tabErrorMessage={tabErrorMessage}
+          exportTarget={overviewData.displayTarget || searchState.target}
+          pagination={{
+            page: searchState.page,
+            pageSize: searchState.pageSize,
+            totalCount: activeTabPage?.totalCount ?? null,
+            hasNextPage: activeTabPage?.hasMore ?? false,
+            isFetching: tabFetching,
+          }}
+          onPageChange={onPageChange}
+          onPageSizeChange={onPageSizeChange}
+          onSortingChange={onSortingChange}
+          onTabChange={onTabChange}
+          onViewChange={onViewChange}
+        />
+      )}
     </>
   );
 }
