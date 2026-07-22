@@ -18,6 +18,7 @@ import {
 } from "@/serverFunctions/backlinks";
 import { getAuditHistory, getAuditResults } from "@/serverFunctions/audit";
 import { getOnPageFixes } from "@/serverFunctions/onPage";
+import { getBrandVisibilityHistory } from "@/serverFunctions/brandVisibility";
 
 const STALE_TIME = 10 * 60_000;
 
@@ -96,6 +97,13 @@ export function useClientReportData(projectId: string) {
     queryFn: () => getOnPageFixes({ data: { projectId } }),
     staleTime: STALE_TIME,
   });
+  // Shares the Brand Lookup tab's cache key; reads the latest stored AI
+  // visibility snapshot — no API spend.
+  const brandVisibilityQuery = useQuery({
+    queryKey: ["brandVisibility", projectId],
+    queryFn: () => getBrandVisibilityHistory({ data: { projectId } }),
+    staleTime: STALE_TIME,
+  });
 
   const domainQuery = useQuery({
     enabled: hasDomain,
@@ -164,6 +172,7 @@ export function useClientReportData(projectId: string) {
     approvedFixes: (onPageQuery.data?.rows ?? []).filter(
       (row) => row.status === "approved",
     ),
+    brandVisibility: brandVisibilityQuery.data ?? null,
     currentPages: content?.current ?? [],
     previousPages: content?.previous ?? [],
     topQueries: (topQueriesQuery.data?.connected

@@ -515,3 +515,48 @@ export const pageOptimizations = sqliteTable(
     ),
   ],
 );
+
+/**
+ * A dated snapshot of a project's AI-search visibility for its own brand or
+ * domain, captured each time the user runs the project analysis. Stateless
+ * Brand Lookup can only show a single point in time; these rows are what make
+ * the month-over-month trend and the Client Report's AI Visibility chapter
+ * possible. One row per day per target (see the unique index) so re-running the
+ * same day refreshes in place instead of piling up.
+ */
+export const brandVisibilitySnapshots = sqliteTable(
+  "brand_visibility_snapshots",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // The resolved brand/domain this snapshot is for (the project's own target).
+    target: text("target").notNull(),
+    // Capture date as YYYY-MM-DD, so one analysis per day upserts in place.
+    capturedOn: text("captured_on").notNull(),
+    totalMentions: integer("total_mentions"),
+    chatgptMentions: integer("chatgpt_mentions"),
+    googleMentions: integer("google_mentions"),
+    // The target's share of voice among the compared competitors, 0..100.
+    targetSharePct: real("target_share_pct"),
+    // The full shaped BrandLookupResult, so the report and opportunities render
+    // without re-charging a lookup.
+    resultJson: text("result_json").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("brand_visibility_snapshots_project_id_idx").on(table.projectId),
+    // One live snapshot per target per day, so a same-day re-run upserts.
+    uniqueIndex("brand_visibility_snapshots_unique_day_idx").on(
+      table.projectId,
+      table.target,
+      table.capturedOn,
+    ),
+  ],
+);

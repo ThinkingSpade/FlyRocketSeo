@@ -59,6 +59,7 @@ export const {
   auditPages,
   auditLighthouseResults,
   pageOptimizations,
+  brandVisibilitySnapshots,
   samSessions,
   samProjectMemory,
   user,

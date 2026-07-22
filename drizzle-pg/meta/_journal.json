@@ -57,6 +57,13 @@
       "when": 1784673376870,
       "tag": "0007_damp_daimon_hellstrom",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1784688361435,
+      "tag": "0008_smart_wolfpack",
+      "breakpoints": true
     }
   ]
 }

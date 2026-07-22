@@ -22,6 +22,7 @@ import {
   ContentMovers,
   OnPageOptimizations,
 } from "@/client/features/report/ReportImprovements";
+import { ReportAiVisibility } from "@/client/features/report/ReportAiVisibility";
 import { ReportBody } from "@/client/features/report/ReportSections";
 import {
   KeywordDeepSections,
@@ -327,7 +328,12 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
           )}
         </ReportChapter>
 
-        <ReportChapter number="05" kicker="Next steps" domain={domain}>
+        <ReportChapter number="05" kicker="AI Visibility" domain={domain}>
+          <h2 className="text-lg font-semibold">AI search visibility</h2>
+          <ReportAiVisibility visibility={data.brandVisibility} />
+        </ReportChapter>
+
+        <ReportChapter number="06" kicker="Next steps" domain={domain}>
           <h2 className="text-lg font-semibold">What we&apos;d do next</h2>
           <ul className="list-inside list-disc space-y-1.5 text-sm leading-relaxed text-base-content/80">
             {recommendations.map((recommendation) => (
