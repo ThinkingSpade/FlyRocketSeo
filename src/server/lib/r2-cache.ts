@@ -46,6 +46,23 @@ export async function getCached(key: string): Promise<unknown> {
 }
 
 /**
+ * Read a cached value even if its soft TTL has lapsed.
+ *
+ * The TTL here is advisory — `setCached` never deletes, it just stamps
+ * `expiresAt`, so an expired object is still sitting in R2. Restoring a past
+ * analysis run reads through this: the user gets their previous result back for
+ * free instead of triggering a fresh (metered) fetch. Returns null only when
+ * the object is genuinely gone or unparseable.
+ */
+export async function getCachedRawIgnoringTtl(
+  key: string,
+): Promise<string | null> {
+  const obj = await env.R2.get(`${CACHE_PREFIX}${key}`);
+  if (!obj) return null;
+  return obj.text();
+}
+
+/**
  * Store a JSON value in R2 with a soft TTL via custom metadata.
  */
 export async function setCached<T>(

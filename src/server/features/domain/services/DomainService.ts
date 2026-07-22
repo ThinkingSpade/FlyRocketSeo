@@ -4,6 +4,13 @@ import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { CreditFeature } from "@/shared/billing-credit-features";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import {
+  domainOverviewResultSchema,
+  type DomainOverviewResult,
+  type PositionBuckets,
+} from "@/types/schemas/domain";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
 import { getKeywordsPage } from "@/server/features/domain/services/domainKeywordsPage";
 import { getPagesPage } from "@/server/features/domain/services/domainPagesPage";
@@ -18,27 +25,6 @@ type MeteringOverrides = {
 
 /** Domain overview data is refreshed every 12 hours. */
 const DOMAIN_OVERVIEW_TTL_SECONDS = 12 * 60 * 60;
-
-const positionBucketsSchema = z.object({
-  top3: z.number(),
-  pos4to10: z.number(),
-  pos11to20: z.number(),
-  pos21to50: z.number(),
-  pos51plus: z.number(),
-});
-
-const domainOverviewResultSchema = z.object({
-  domain: z.string(),
-  organicTraffic: z.number().nullable(),
-  organicKeywords: z.number().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  /** Ranking-position distribution (Ahrefs-style buckets); null when Labs has
-   *  no per-position breakdown for the domain. */
-  positionBuckets: positionBucketsSchema.nullable(),
-  hasData: z.boolean(),
-  fetchedAt: z.string(),
-});
 
 // Per-position fields on the Labs rank-overview payload, read defensively.
 const organicPositionsSchema = z
@@ -61,9 +47,7 @@ const organicPositionsSchema = z
 const sum = (...values: Array<number | null | undefined>) =>
   values.reduce<number>((total, value) => total + (value ?? 0), 0);
 
-function mapPositionBuckets(
-  organic: unknown,
-): z.infer<typeof positionBucketsSchema> | null {
+function mapPositionBuckets(organic: unknown): PositionBuckets | null {
   const parsed = organicPositionsSchema.safeParse(organic ?? {});
   if (!parsed.success) return null;
   const p = parsed.data;
@@ -89,8 +73,6 @@ function mapPositionBuckets(
   return total > 0 ? buckets : null;
 }
 
-type DomainOverviewResult = z.infer<typeof domainOverviewResultSchema>;
-
 async function getOverview(
   input: {
     projectId: string;
@@ -113,9 +95,27 @@ async function getOverview(
     languageCode: input.languageCode,
   });
 
+  // Records this analysis for the tab's history / auto-restore. Free and best
+  // effort: it writes one row pointing at the cache key we just used, so the
+  // tab can render this exact result again without a metered fetch.
+  const recordRun = () =>
+    AnalysisRunService.record({
+      projectId: input.projectId,
+      feature: RUN_FEATURES.domainOverview,
+      params: {
+        domain: input.domain,
+        includeSubdomains: input.includeSubdomains,
+        locationCode: input.locationCode,
+        languageCode: input.languageCode,
+      },
+      cacheKey,
+      label: domain,
+    });
+
   const cachedRaw = await getCached(cacheKey);
   const cached = domainOverviewResultSchema.safeParse(cachedRaw);
   if (cached.success && cached.data.hasData) {
+    await recordRun();
     return cached.data;
   }
 
@@ -157,6 +157,7 @@ async function getOverview(
         console.error("domain.overview.cache-write failed:", error);
       },
     );
+    await recordRun();
   }
 
   return result;

@@ -11,8 +11,12 @@ import {
 import { toast } from "sonner";
 import {
   DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
+  domainOverviewResultSchema,
   type DomainSearchParams,
 } from "@/types/schemas/domain";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATIONS,
@@ -274,7 +278,19 @@ function useDomainOverviewState({
     locationCode: routeState.locationCode,
     languageCode,
   });
-  const overview = overviewQuery.data ?? null;
+  // With no domain in the URL the live query above stays disabled, so the tab
+  // would otherwise show a blank prompt. Restoring the project's last run fills
+  // it in for free: it reads a stored row plus the R2 object that run already
+  // paid for, and can never trigger a metered fetch.
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.domainOverview,
+    schema: domainOverviewResultSchema,
+    enabled: routeState.domain.trim() === "",
+  });
+
+  const overview = overviewQuery.data ?? restored?.result ?? null;
+  const restoredRun = overviewQuery.data == null ? restored : null;
   const isLoading = overviewQuery.isLoading;
 
   const controlsForm = useForm({
@@ -400,6 +416,8 @@ function useDomainOverviewState({
     controlsForm,
     isLoading,
     overview,
+    /** Set when `overview` came from a stored past run rather than a live one. */
+    restoredRun,
     refetchOverview: overviewQuery.refetch,
     overviewRefreshing: overviewQuery.isFetching && !overviewQuery.isPending,
     canSaveKeywords,
@@ -627,6 +645,20 @@ export function DomainOverviewPage({
           </div>
         ) : (
           <>
+            {state.restoredRun ? (
+              <RestoredRunBanner
+                label={state.restoredRun.label}
+                lastRanAt={state.restoredRun.lastRanAt}
+                runCount={state.restoredRun.runCount}
+                onRunAgain={() => {
+                  state.controlsForm.setFieldValue(
+                    "domain",
+                    state.restoredRun?.label ?? "",
+                  );
+                  void state.controlsForm.handleSubmit();
+                }}
+              />
+            ) : null}
             {tabControls}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <StatCard

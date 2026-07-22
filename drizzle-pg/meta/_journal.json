@@ -64,6 +64,13 @@
       "when": 1784688361435,
       "tag": "0008_smart_wolfpack",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1784702100478,
+      "tag": "0009_crazy_stature",
+      "breakpoints": true
     }
   ]
 }

@@ -534,3 +534,53 @@ export const brandVisibilitySnapshots = pgTable(
     ),
   ],
 );
+
+/**
+ * A durable, team-visible record of every analysis a project has run, so a tab
+ * can show "you last ran this 2 hours ago" and restore that result instead of
+ * starting a fresh (metered) run.
+ *
+ * Deliberately lightweight: the result payload is NOT stored here. `cacheKey`
+ * points at the R2 object the run already wrote, which stays readable past its
+ * soft TTL — so restoring costs nothing and no payload is duplicated (and rows
+ * can't approach D1's per-row size limit).
+ *
+ * One row per distinct set of inputs (see the unique index): re-running the
+ * same analysis bumps `runCount` and `lastRanAt` rather than appending, which
+ * keeps the list a bounded "things you've analyzed, most recent first".
+ */
+export const analysisRuns = pgTable(
+  "analysis_runs",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Stable tab/feature slug, e.g. "domain_overview" or "backlinks".
+    feature: text("feature").notNull(),
+    // Canonicalized inputs, so a restored run can repopulate the tab's form.
+    paramsJson: text("params_json").notNull(),
+    // The R2 cache key holding this run's result.
+    cacheKey: text("cache_key").notNull(),
+    // Short human summary for the history list, e.g. the domain or keyword.
+    label: text("label").notNull(),
+    ranBy: text("ran_by"),
+    runCount: integer("run_count").notNull().default(1),
+    createdAt: text("created_at").notNull().default(isoNow),
+    lastRanAt: text("last_ran_at").notNull().default(isoNow),
+  },
+  (table) => [
+    // Drives both "latest run for this tab" and the recent-runs list.
+    index("analysis_runs_project_feature_idx").on(
+      table.projectId,
+      table.feature,
+      table.lastRanAt,
+    ),
+    // One row per distinct input set, so a re-run updates instead of piling up.
+    uniqueIndex("analysis_runs_unique_inputs_idx").on(
+      table.projectId,
+      table.feature,
+      table.cacheKey,
+    ),
+  ],
+);

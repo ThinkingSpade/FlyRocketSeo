@@ -211,3 +211,33 @@ export const domainSearchSchema = z.object({
 });
 
 export type DomainSearchParams = z.infer<typeof domainSearchSchema>;
+
+/** Ranking-position distribution (Ahrefs-style buckets). */
+export const positionBucketsSchema = z.object({
+  top3: z.number(),
+  pos4to10: z.number(),
+  pos11to20: z.number(),
+  pos21to50: z.number(),
+  pos51plus: z.number(),
+});
+
+export type PositionBuckets = z.infer<typeof positionBucketsSchema>;
+
+/**
+ * Shape of a Domain Overview result. Lives here rather than in the service
+ * because both sides need it: the service validates what it reads back out of
+ * the cache, and the client validates a restored past run before rendering it.
+ */
+export const domainOverviewResultSchema = z.object({
+  domain: z.string(),
+  organicTraffic: z.number().nullable(),
+  organicKeywords: z.number().nullable(),
+  backlinks: z.number().nullable(),
+  referringDomains: z.number().nullable(),
+  /** Null when Labs has no per-position breakdown for the domain. */
+  positionBuckets: positionBucketsSchema.nullable(),
+  hasData: z.boolean(),
+  fetchedAt: z.string(),
+});
+
+export type DomainOverviewResult = z.infer<typeof domainOverviewResultSchema>;
