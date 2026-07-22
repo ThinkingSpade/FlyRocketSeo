@@ -60,11 +60,15 @@ type RestoredRun = {
  * there is no run yet, or when the payload is no longer in R2 — either way the
  * tab falls back to its normal empty state.
  */
-async function restoreLatest(
-  projectId: string,
-  feature: string,
+async function hydrate(
+  row: {
+    label: string;
+    paramsJson: string;
+    cacheKey: string;
+    lastRanAt: string;
+    runCount: number;
+  } | null,
 ): Promise<RestoredRun | null> {
-  const row = await AnalysisRunRepository.latest(projectId, feature);
   if (!row) return null;
 
   const resultJson = await getCachedRawIgnoringTtl(row.cacheKey);
@@ -79,7 +83,23 @@ async function restoreLatest(
   };
 }
 
+async function restoreLatest(
+  projectId: string,
+  feature: string,
+): Promise<RestoredRun | null> {
+  return hydrate(await AnalysisRunRepository.latest(projectId, feature));
+}
+
+/** Re-open one specific past run. Free, same as restoring the latest. */
+async function restoreRun(
+  projectId: string,
+  runId: string,
+): Promise<RestoredRun | null> {
+  return hydrate(await AnalysisRunRepository.getById(projectId, runId));
+}
+
 type RecentRun = {
+  id: string;
   label: string;
   paramsJson: string;
   lastRanAt: string;
@@ -98,6 +118,7 @@ async function listRecent(
     limit,
   );
   return rows.map((row) => ({
+    id: row.id,
     label: row.label,
     paramsJson: row.paramsJson,
     lastRanAt: row.lastRanAt,
@@ -108,5 +129,6 @@ async function listRecent(
 export const AnalysisRunService = {
   record,
   restoreLatest,
+  restoreRun,
   listRecent,
 } as const;

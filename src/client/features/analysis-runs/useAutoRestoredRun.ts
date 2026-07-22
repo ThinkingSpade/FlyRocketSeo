@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { ZodType } from "zod";
-import { restoreLatestRun } from "@/serverFunctions/analysisRuns";
+import { restoreLatestRun, restoreRun } from "@/serverFunctions/analysisRuns";
 
 /**
  * Restores a tab's last analysis so it opens showing real data instead of a
@@ -24,6 +24,7 @@ export function useAutoRestoredRun<T>({
   feature,
   schema,
   enabled,
+  runId,
 }: {
   projectId: string;
   feature: string;
@@ -31,10 +32,15 @@ export function useAutoRestoredRun<T>({
   schema: ZodType<T>;
   /** Typically "the tab has no active query of its own". */
   enabled: boolean;
+  /** Restore this specific past run instead of the most recent one. */
+  runId?: string | null;
 }): { restored: AutoRestoredRun<T> | null; isRestoring: boolean } {
   const query = useQuery({
-    queryKey: ["analysisRun", "latest", projectId, feature],
-    queryFn: () => restoreLatestRun({ data: { projectId, feature } }),
+    queryKey: ["analysisRun", runId ?? "latest", projectId, feature],
+    queryFn: () =>
+      runId
+        ? restoreRun({ data: { projectId, runId } })
+        : restoreLatestRun({ data: { projectId, feature } }),
     enabled,
     staleTime: 60_000,
   });

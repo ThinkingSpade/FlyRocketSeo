@@ -74,6 +74,21 @@ async function listRecent(
     .limit(limit);
 }
 
+/** One run by id, scoped to its project so ids can't be probed across tenants. */
+async function getById(
+  projectId: string,
+  runId: string,
+): Promise<AnalysisRunRow | null> {
+  const rows = await db
+    .select()
+    .from(analysisRuns)
+    .where(
+      and(eq(analysisRuns.projectId, projectId), eq(analysisRuns.id, runId)),
+    )
+    .limit(1);
+  return rows[0] ?? null;
+}
+
 /** The single most recent run for a tab — what auto-restore renders. */
 async function latest(
   projectId: string,
@@ -87,4 +102,5 @@ export const AnalysisRunRepository = {
   record,
   listRecent,
   latest,
+  getById,
 } as const;

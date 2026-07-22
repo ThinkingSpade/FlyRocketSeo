@@ -1,5 +1,12 @@
 /* eslint-disable max-lines, max-lines-per-function -- Domain Overview keeps page-only orchestration colocated to avoid fake indirection. */
-import { useCallback, useEffect, useMemo, useRef, type FormEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FormEvent,
+} from "react";
 import { useForm, useStore } from "@tanstack/react-form";
 import {
   ArrowLeft,
@@ -17,6 +24,7 @@ import {
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
+import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATIONS,
@@ -282,11 +290,14 @@ function useDomainOverviewState({
   // would otherwise show a blank prompt. Restoring the project's last run fills
   // it in for free: it reads a stored row plus the R2 object that run already
   // paid for, and can never trigger a metered fetch.
+  // Which past run the user is looking at; null means "the most recent".
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const { restored } = useAutoRestoredRun({
     projectId,
     feature: RUN_FEATURES.domainOverview,
     schema: domainOverviewResultSchema,
     enabled: routeState.domain.trim() === "",
+    runId: selectedRunId,
   });
 
   const overview = overviewQuery.data ?? restored?.result ?? null;
@@ -418,6 +429,8 @@ function useDomainOverviewState({
     overview,
     /** Set when `overview` came from a stored past run rather than a live one. */
     restoredRun,
+    selectedRunId,
+    setSelectedRunId,
     refetchOverview: overviewQuery.refetch,
     overviewRefreshing: overviewQuery.isFetching && !overviewQuery.isPending,
     canSaveKeywords,
@@ -645,6 +658,14 @@ export function DomainOverviewPage({
           </div>
         ) : (
           <>
+            {state.restoredRun ? (
+              <RecentRunsList
+                projectId={projectId}
+                feature={RUN_FEATURES.domainOverview}
+                activeRunId={state.selectedRunId}
+                onSelect={state.setSelectedRunId}
+              />
+            ) : null}
             {state.restoredRun ? (
               <RestoredRunBanner
                 label={state.restoredRun.label}
