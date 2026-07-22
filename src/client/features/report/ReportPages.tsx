@@ -240,6 +240,7 @@ export function ReportPages({
         <OnPageOptimizations
           issues={technicalIssues}
           pagesCrawled={latestAudit?.pagesCrawled ?? null}
+          pagesAnalyzed={auditPages.length}
         />
       </ReportPage>
 

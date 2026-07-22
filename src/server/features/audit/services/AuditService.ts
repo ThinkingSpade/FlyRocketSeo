@@ -122,10 +122,12 @@ async function getResults(auditId: string, projectId: string) {
 
   if (!audit) throw new AppError("NOT_FOUND");
 
+  // A config we can't parse is not worth discarding an entire crawl over: the
+  // page rows are still valid, and throwing here made the whole audit fail to
+  // load — which the report then rendered as "a clean bill of health". Surface
+  // it as null (getHistory already treats it as optional) and let callers say
+  // honestly that the details are unavailable.
   const parsedConfig = parseAuditConfig(audit.config);
-  if (!parsedConfig) {
-    throw new AppError("INTERNAL_ERROR", "Invalid audit configuration");
-  }
 
   return {
     audit: {

@@ -1,5 +1,6 @@
 import { formatCount, toPath } from "@/client/features/report/reportModel";
 import { StatBlock } from "@/client/features/report/ReportChrome";
+import { describeOnPageStatus } from "@/client/features/report/onPageStatus";
 
 /**
  * The "what's wrong and what's worth doing" chapters of the Client Report:
@@ -31,19 +32,29 @@ const SEVERITY_TONE: Record<ReportTechnicalIssue["severity"], string> = {
 export function OnPageOptimizations({
   issues,
   pagesCrawled,
+  pagesAnalyzed,
 }: {
   issues: ReportTechnicalIssue[];
   pagesCrawled: number | null;
+  /** Page rows actually available — 0 means the crawl's details didn't load. */
+  pagesAnalyzed: number;
 }) {
   const found = issues.filter((issue) => issue.pageCount > 0);
   const total = found.reduce((sum, issue) => sum + issue.pageCount, 0);
+  const status = describeOnPageStatus({
+    pagesCrawled,
+    pagesAnalyzed,
+    issuesFound: found.length,
+  });
 
-  if (found.length === 0) {
+  if (status !== "issues") {
     return (
       <p className="text-sm text-base-content/70">
-        {pagesCrawled == null
+        {status === "no-audit"
           ? "No completed site audit yet, so on-page issues could not be counted for this period."
-          : `The last crawl checked ${formatCount(pagesCrawled)} pages and found no missing titles, descriptions, H1s, or alt text. That is a clean bill of health on the basics.`}
+          : status === "unavailable"
+            ? `The last audit recorded ${formatCount(pagesCrawled)} crawled pages, but their details could not be loaded — on-page issues could not be checked for this period.`
+            : `The last crawl checked ${formatCount(pagesCrawled)} pages and found no missing titles, descriptions, H1s, or alt text. That is a clean bill of health on the basics.`}
       </p>
     );
   }
