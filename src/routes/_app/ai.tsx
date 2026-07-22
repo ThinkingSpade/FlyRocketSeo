@@ -9,7 +9,7 @@ import {
 } from "@/client/features/ai-mcp/SetupControls";
 
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
-const SUPPORT_EMAIL = "ben@openseo.so";
+const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 const SAM_GITHUB_URL = "https://github.com/every-app/sam";
 const SKILL_NAMES = [
   "seo-project-setup",
@@ -39,9 +39,11 @@ export const Route = createFileRoute("/_app/ai")({
 });
 
 function AiPage() {
+  // Server-rendered fallback is this deployment's own origin: copying the URL
+  // before hydration should never hand out another install's MCP endpoint.
   const mcpUrl =
     typeof window === "undefined"
-      ? "https://app.openseo.so/mcp"
+      ? "https://flyrocketseo.huy1999nguyen.workers.dev/mcp"
       : `${window.location.origin}/mcp`;
 
   return (

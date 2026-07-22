@@ -17,7 +17,7 @@ import {
 } from "@/shared/billing";
 import { captureRedditConversionEvent } from "@/serverFunctions/redditConversions";
 
-const SUPPORT_EMAIL = "ben@openseo.so";
+const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 
 const PLAN_FEATURES = [
   "Keyword research, backlinks, rank tracking, and site audits",

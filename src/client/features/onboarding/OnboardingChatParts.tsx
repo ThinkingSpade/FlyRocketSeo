@@ -86,8 +86,11 @@ export function WelcomeMessage({
               join the Discord
             </a>{" "}
             or email{" "}
-            <a href="mailto:ben@openseo.so" className="link link-primary">
-              ben@openseo.so
+            <a
+              href="mailto:huy1999nguyen@gmail.com"
+              className="link link-primary"
+            >
+              huy1999nguyen@gmail.com
             </a>{" "}
             if you have any questions I can’t help you with.
           </p>

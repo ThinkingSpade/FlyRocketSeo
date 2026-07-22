@@ -246,9 +246,11 @@ export class SamChatAgent extends Think {
         this.turnMonthlyRemaining = monthlyRemaining;
       }
 
+      // Falls back to this deployment's own origin, not the upstream hosted
+      // one — a stale fallback would point Sam's MCP calls at another install.
       const baseUrl =
         (await this.ctx.storage.get<string>(PUBLIC_ORIGIN_KEY)) ??
-        "https://app.openseo.so";
+        "https://flyrocketseo.huy1999nguyen.workers.dev";
       const authContext = buildFirstPartyMcpAuthContext({
         userId: ctx.row.userId,
         userEmail: ctx.userEmail,

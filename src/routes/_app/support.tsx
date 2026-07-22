@@ -3,9 +3,11 @@ import { Check, Copy } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-const SUPPORT_EMAIL = "ben@openseo.so";
+const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
-const GITHUB_URL = "https://github.com/every-app/open-seo";
+// This deployment's own repo — issues about it belong here, not on the
+// upstream OpenSEO tracker.
+const GITHUB_URL = "https://github.com/ThinkingSpade/FlyRocketSeo";
 
 export const Route = createFileRoute("/_app/support")({
   component: SupportPage,
