@@ -9,7 +9,7 @@ import {
 } from "@/serverFunctions/gsc";
 
 const SETUP_DOCS_URL =
-  "https://github.com/every-app/open-seo/blob/main/docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md";
+  "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md";
 
 function formatUpdatedAt(value: string): string {
   const date = new Date(value);

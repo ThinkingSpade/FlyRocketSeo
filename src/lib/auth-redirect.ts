@@ -61,7 +61,7 @@ export function getCurrentAuthRedirect(
 }
 
 export function getCurrentAuthRedirectFromHref(href: string) {
-  const url = new URL(href, "https://openseo.local");
+  const url = new URL(href, "https://flyrocketseo.local");
   return normalizeAuthRedirect(`${url.pathname}${url.search}${url.hash}`);
 }
 

@@ -31,13 +31,9 @@
   "placement": {
     "mode": "smart",
   },
-  // Uncomment when deploying to the openseo.so Cloudflare account. Self-hosters
-  // should leave this commented (or replace with their own zone) — otherwise
-  // `wrangler deploy` fails with "Could not find zone for app.openseo.so".
-  // "routes": [
-  //   { "pattern": "app.openseo.so", "custom_domain": true },
-  //   { "pattern": "www.app.openseo.so", "custom_domain": true },
-  // ],
+  // Serving on the default workers.dev hostname. To move to a custom domain,
+  // add a "routes" block with a zone this Cloudflare account controls —
+  // `wrangler deploy` fails on a zone the account cannot see.
   "workflows": [
     {
       "name": "site-audit-workflow",
@@ -90,6 +86,13 @@
       "id": "641adbc7a31d40eab5640ab31bd429ce",
     },
   ],
+  // This deployment runs on D1. There is no Postgres/Hyperdrive binding and no
+  // DATABASE_PROVIDER secret — the Postgres scale path is unused here.
+  //
+  // NOTE: `database_name` and the R2 `bucket_name` below are the *actual*
+  // resource names in this Cloudflare account. They predate the rename and are
+  // deliberately left alone: changing them here does not rename the resource,
+  // it just points the binding at something that does not exist.
   "d1_databases": [
     {
       "binding": "DB",
@@ -98,28 +101,6 @@
       "migrations_dir": "drizzle",
     },
   ],
-  // Postgres scale path. Production runs on Postgres: DATABASE_PROVIDER is set as
-  // a worker *secret* (`wrangler secret put DATABASE_PROVIDER` -> "postgres") so it
-  // survives `wrangler deploy` — which resets plain vars/bindings and is what
-  // reverted prod to the D1 default before. This Hyperdrive binding points the
-  // pooled connection at that Postgres. Hyperdrive is the ONLY way the app
-  // connects to Postgres — there is no direct-connection fallback.
-  //
-  // `localConnectionString` is local-dev only (ignored by `wrangler deploy`):
-  // it's the throwaway Docker Postgres from docs/LOCAL_POSTGRES.md, and nothing
-  // connects to it unless DATABASE_PROVIDER=postgres is set in .env.local.
-  //
-  // SELF-HOSTERS on the free D1 default: DELETE this hyperdrive block before
-  // deploying. The id below lives in OpenSEO's Cloudflare account, so `wrangler
-  // deploy` will fail without access to it. D1 stays the default when
-  // DATABASE_PROVIDER is unset.
-  // "hyperdrive": [
-  // {
-  // "binding": "HYPERDRIVE",
-  // "id": "9d64ccfb559f44449ce52a143912f898",
-  // "localConnectionString": "postgres://openseo:openseo@localhost:5433/openseo",
-  // },
-  // ],
   "r2_buckets": [
     {
       "bucket_name": "open-seo",

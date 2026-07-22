@@ -1,6 +1,6 @@
-# Deploying OpenSEO internet-facing (with login)
+# Deploying FlyRocketSEO internet-facing (with login)
 
-This guide is for the common case: you want OpenSEO reachable over the internet,
+This guide is for the common case: you want FlyRocketSEO reachable over the internet,
 **behind a login**, for yourself and optionally a few teammates or clients.
 
 The short version of the recommended setup:
@@ -52,11 +52,11 @@ With this path you own `wrangler.jsonc`, so:
 
 - **Create your own D1** and set its id:
   ```bash
-  npx wrangler d1 create open-seo
+  npx wrangler d1 create flyrocketseo
   ```
   Put the returned `database_id` in the `d1_databases` block of `wrangler.jsonc`.
 - **Delete the `hyperdrive` block** in `wrangler.jsonc` unless you're using
-  Postgres (Step 3, Option B). Its id belongs to the OpenSEO project's account
+  Postgres (Step 3, Option B). Its id belongs to the FlyRocketSEO project's account
   and `wrangler deploy` will fail on it otherwise. The block is already marked
   with a "SELF-HOSTERS ... DELETE this hyperdrive block" comment.
 - **Run migrations against your D1:**
@@ -83,7 +83,7 @@ With this path you own `wrangler.jsonc`, so:
    `AUTH_MODE` defaults to `cloudflare_access` when unset, so you don't have to
    set it — but you can set `AUTH_MODE=cloudflare_access` explicitly if you like.
 
-3. Open your Worker URL, sign in through Cloudflare Access, and OpenSEO should
+3. Open your Worker URL, sign in through Cloudflare Access, and FlyRocketSEO should
    load. If login fails, re-check the two Access values and the Access toggle.
 
 ---
@@ -115,7 +115,7 @@ database here (the app uses Better Auth, not Supabase Auth).
 
 2. Create a **Hyperdrive** config pointing at that connection string
    (`npx wrangler hyperdrive create ...`) and set its id in the `hyperdrive`
-   block of `wrangler.jsonc` (replace the OpenSEO-owned id that ships in the
+   block of `wrangler.jsonc` (replace the FlyRocketSEO-owned id that ships in the
    repo). Hyperdrive is the **only** way the app reaches Postgres — there is no
    direct-connection fallback.
 3. Set `DATABASE_PROVIDER=postgres` as a Worker **secret** (a secret, not a plain
@@ -133,9 +133,9 @@ no application code changes are needed to switch.
 ## Step 4 — Add or remove teammates
 
 Everyone is managed by your **Cloudflare Access policy** — no user management
-inside OpenSEO. Add or remove emails there; all allowed users share one
+inside FlyRocketSEO. Add or remove emails there; all allowed users share one
 workspace. See
-[`SELF_HOSTING_CLOUDFLARE.md` → Give teammates access](./SELF_HOSTING_CLOUDFLARE.md#give-teammates-access-to-openseo).
+[`SELF_HOSTING_CLOUDFLARE.md` → Give teammates access](./SELF_HOSTING_CLOUDFLARE.md#give-teammates-access-to-flyrocketseo).
 
 ---
 
@@ -159,7 +159,7 @@ DataForSEO, so it costs nothing to run. One-time setup:
    https://<your-worker-domain>/api/gsc/oauth/callback
    ```
 
-   e.g. `https://open-seo.<you>.workers.dev/api/gsc/oauth/callback` or your
+   e.g. `https://flyrocketseo.<you>.workers.dev/api/gsc/oauth/callback` or your
    custom domain. A mismatch here is the #1 cause of Google's
    `redirect_uri_mismatch`.
 

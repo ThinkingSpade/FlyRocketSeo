@@ -3,7 +3,7 @@ name: competitor-analysis
 description: "Analyze one competitor's organic footprint, ranking keywords, content themes, backlinks, and gaps."
 ---
 
-# OpenSEO Competitor Analysis
+# FlyRocketSEO Competitor Analysis
 
 ## Goal
 
@@ -18,7 +18,7 @@ Use this for a named competitor. For identifying the market leaders first, use `
 - User's domain when comparison is requested
 - Optional topic/category/location/language
 
-## OpenSEO MCP tools
+## FlyRocketSEO MCP tools
 
 - `get_domain_overview`: baseline organic traffic and keyword count.
 - `get_domain_rank_history`: month-by-month organic keyword and traffic trend for the competitor — use to see whether they are gaining or losing visibility, and to spot algorithm-update impact.
@@ -66,8 +66,8 @@ Start with:
 
 Then include:
 
-| Area | Competitor pattern | Evidence | OpenSEO opportunity |
-| ---- | ------------------ | -------- | ------------------- |
+| Area | Competitor pattern | Evidence | FlyRocketSEO opportunity |
+| ---- | ------------------ | -------- | ------------------------ |
 
 Include sections for:
 

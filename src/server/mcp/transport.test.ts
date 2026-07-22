@@ -27,7 +27,7 @@ vi.mock("@/middleware/ensure-user/delegated", () => ({
 }));
 
 vi.mock("@/server/mcp/server", () => ({
-  registerOpenSeoMcpTools: vi.fn(),
+  registerFlyRocketSeoMcpTools: vi.fn(),
 }));
 
 vi.mock("agents/mcp", () => ({
@@ -70,7 +70,7 @@ const transportOptionsSchema = z.object({
 });
 
 function createMcpRequest() {
-  return new Request("https://open-seo.test/mcp", {
+  return new Request("https://flyrocketseo.test/mcp", {
     method: "POST",
     headers: {
       Accept: "application/json, text/event-stream",
@@ -84,7 +84,7 @@ function createMcpRequest() {
   });
 }
 
-describe("handleSelfHostedOpenSeoMcpRequest", () => {
+describe("handleSelfHostedFlyRocketSeoMcpRequest", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     serverMocks.nextServerId = 0;
@@ -103,10 +103,10 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
   });
 
   it("accepts local no-auth MCP requests with the local admin context", async () => {
-    const { handleSelfHostedOpenSeoMcpRequest } =
+    const { handleSelfHostedFlyRocketSeoMcpRequest } =
       await import("@/server/mcp/transport");
 
-    const response = await handleSelfHostedOpenSeoMcpRequest(
+    const response = await handleSelfHostedFlyRocketSeoMcpRequest(
       createMcpRequest(),
       "local_noauth",
       {},
@@ -124,17 +124,17 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
       organizationId: "delegated-local-admin",
       clientId: null,
       scopes: [],
-      audience: "https://open-seo.test/mcp",
+      audience: "https://flyrocketseo.test/mcp",
       subject: "local-admin",
-      baseUrl: "https://open-seo.test",
+      baseUrl: "https://flyrocketseo.test",
     });
   });
 
   it("accepts Cloudflare Access MCP requests through the existing Access resolver", async () => {
-    const { handleSelfHostedOpenSeoMcpRequest } =
+    const { handleSelfHostedFlyRocketSeoMcpRequest } =
       await import("@/server/mcp/transport");
 
-    const response = await handleSelfHostedOpenSeoMcpRequest(
+    const response = await handleSelfHostedFlyRocketSeoMcpRequest(
       createMcpRequest(),
       "cloudflare_access",
       {},
@@ -154,20 +154,20 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
       organizationId: "delegated-cloudflare-user",
       clientId: null,
       scopes: [],
-      audience: "https://open-seo.test/mcp",
+      audience: "https://flyrocketseo.test/mcp",
       subject: "cloudflare-user",
-      baseUrl: "https://open-seo.test",
+      baseUrl: "https://flyrocketseo.test",
     });
   });
 
   // The OOM came from the GET SSE stream pinning a per-request McpServer, so
   // GET must 405 without ever building one.
   it("returns 405 for the standalone GET SSE stream without building a server", async () => {
-    const { handleSelfHostedOpenSeoMcpRequest } =
+    const { handleSelfHostedFlyRocketSeoMcpRequest } =
       await import("@/server/mcp/transport");
 
-    const response = await handleSelfHostedOpenSeoMcpRequest(
-      new Request("https://open-seo.test/mcp", {
+    const response = await handleSelfHostedFlyRocketSeoMcpRequest(
+      new Request("https://flyrocketseo.test/mcp", {
         method: "GET",
         headers: { Accept: "text/event-stream" },
       }),
@@ -183,11 +183,11 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
   });
 
   it("lets the MCP transport handle OPTIONS without auth context", async () => {
-    const { handleSelfHostedOpenSeoMcpRequest } =
+    const { handleSelfHostedFlyRocketSeoMcpRequest } =
       await import("@/server/mcp/transport");
 
-    const response = await handleSelfHostedOpenSeoMcpRequest(
-      new Request("https://open-seo.test/mcp", { method: "OPTIONS" }),
+    const response = await handleSelfHostedFlyRocketSeoMcpRequest(
+      new Request("https://flyrocketseo.test/mcp", { method: "OPTIONS" }),
       "cloudflare_access",
       {},
       ctx,
@@ -203,10 +203,10 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
 
   // Directory scanners (e.g. Smithery) read server metadata from initialize.
   it("serves directory metadata in the initialize response", async () => {
-    const { handleSelfHostedOpenSeoMcpRequest } =
+    const { handleSelfHostedFlyRocketSeoMcpRequest } =
       await import("@/server/mcp/transport");
 
-    await handleSelfHostedOpenSeoMcpRequest(
+    await handleSelfHostedFlyRocketSeoMcpRequest(
       createMcpRequest(),
       "local_noauth",
       {},
@@ -227,10 +227,10 @@ describe("handleSelfHostedOpenSeoMcpRequest", () => {
     expect(serverInfo).toMatchObject({
       name: "FlyRocketSEO MCP",
       title: "FlyRocketSEO",
-      websiteUrl: "https://openseo.so",
+      websiteUrl: "https://flyrocketseo.huy1999nguyen.workers.dev",
       icons: [
         {
-          src: "https://openseo.so/android-chrome-512x512.png",
+          src: "https://flyrocketseo.huy1999nguyen.workers.dev/android-chrome-512x512.png",
           mimeType: "image/png",
           sizes: ["512x512"],
         },

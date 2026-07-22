@@ -4,15 +4,15 @@ This guide covers:
 
 1. [Initial setup after clicking Deploy to Cloudflare](#initial-setup)
 2. [Manual deploy with Wrangler](#manual-deploy-with-wrangler)
-3. [How to connect the OpenSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
-4. [How to update to the latest OpenSEO version](#how-to-update-to-the-latest-openseo-version)
-5. [How to add teammates](#give-teammates-access-to-openseo)
+3. [How to connect the FlyRocketSEO MCP server through Cloudflare Access](#connect-the-mcp-server-through-cloudflare-access)
+4. [How to update to the latest FlyRocketSEO version](#how-to-update-to-the-latest-flyrocketseo-version)
+5. [How to add teammates](#give-teammates-access-to-flyrocketseo)
 
 ## Initial setup
 
 ### 1) Deploy from GitHub
 
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/every-app/open-seo)
+[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/ThinkingSpade/FlyRocketSeo)
 
 Click the deploy button, there are lots of fields on the deploy form, but you only need to do the below steps.
 
@@ -21,13 +21,13 @@ Click the deploy button, there are lots of fields on the deploy form, but you on
 3. Click `Create and Deploy`.
 4. Wait 1-2 minutes for deployment to finish.
 
-If deploy fails with `Cannot provision a KV Namespace with the title "open-seo" because it already exists`, use the [manual deploy with Wrangler](#manual-deploy-with-wrangler) flow instead.
+If deploy fails with `Cannot provision a KV Namespace with the title "flyrocketseo" because it already exists`, use the [manual deploy with Wrangler](#manual-deploy-with-wrangler) flow instead.
 
 ### 2) Configure authentication and secrets
 
 In the Cloudflare dashboard:
 
-1. Go to `Compute` -> `Workers & Pages` -> your OpenSEO Worker.
+1. Go to `Compute` -> `Workers & Pages` -> your FlyRocketSEO Worker.
 2. Open `Settings`.
 3. In `Domains & Routes`, enable `Cloudflare Access` for the `workers.dev` route.
 4. Save the values shown by Cloudflare Access.
@@ -41,10 +41,10 @@ In the Cloudflare dashboard:
 DataForSEO API responses are cached in R2 under the `dataforseo-cache/` prefix. This step is optional, but recommended to automatically clean up expired cache objects:
 
 ```bash
-npx wrangler r2 bucket lifecycle add open-seo dataforseo-cache-expiry dataforseo-cache/ --expire-days 7
+npx wrangler r2 bucket lifecycle add flyrocketseo dataforseo-cache-expiry dataforseo-cache/ --expire-days 7
 ```
 
-If you changed the R2 bucket name during deploy, replace `open-seo` with your bucket name.
+If you changed the R2 bucket name during deploy, replace `flyrocketseo` with your bucket name.
 
 Without a lifecycle rule, cached objects under `dataforseo-cache/` will accumulate indefinitely and increase storage costs over time.
 
@@ -52,18 +52,18 @@ Without a lifecycle rule, cached objects under `dataforseo-cache/` will accumula
 
 1. Open your Worker URL again.
 2. Sign in with Cloudflare Access.
-3. OpenSEO should load after login.
+3. FlyRocketSEO should load after login.
 
 If login fails, re-check the three secrets and Access toggle.
 
 ## Connect the MCP server through Cloudflare Access
 
-Use the same Cloudflare Access application that protects your OpenSEO Worker.
+Use the same Cloudflare Access application that protects your FlyRocketSEO Worker.
 Managed OAuth is required for MCP clients and is not enabled by default.
 
 1. Open Cloudflare Zero Trust.
 2. Go to `Access controls` -> `Applications`.
-3. Find your OpenSEO application, then select `Edit`.
+3. Find your FlyRocketSEO application, then select `Edit`.
 4. Go to `Additional settings` -> `OAuth`.
 5. Turn on `Managed OAuth`.
 6. In `Managed OAuth settings`, allow the redirect URIs your MCP clients use:
@@ -80,7 +80,7 @@ MCP clients should connect to:
 https://YOUR_WORKER_HOSTNAME/mcp
 ```
 
-## How to update to the latest OpenSEO version
+## How to update to the latest FlyRocketSEO version
 
 If your repo was created from the Cloudflare Deploy button, use this flow.
 
@@ -89,7 +89,7 @@ If your repo was created from the Cloudflare Deploy button, use this flow.
 Run this once in your local repo:
 
 ```bash
-git remote add upstream https://github.com/every-app/open-seo.git
+git remote add upstream https://github.com/ThinkingSpade/FlyRocketSeo.git
 git fetch upstream
 ```
 
@@ -109,13 +109,13 @@ git push --force-with-lease origin main
 Why this is needed:
 
 - `wrangler.jsonc` has your Cloudflare resource IDs.
-- The update step keeps your IDs while pulling the newest OpenSEO code.
+- The update step keeps your IDs while pulling the newest FlyRocketSEO code.
 
-## Give teammates access to OpenSEO
+## Give teammates access to FlyRocketSEO
 
 1. Open Cloudflare Zero Trust.
 2. Go to Access -> Applications.
-3. Open your OpenSEO application.
+3. Open your FlyRocketSEO application.
 4. Edit the `Allow` policy.
 5. Add teammate emails (or your company email domain / group).
 6. Save.
@@ -125,20 +125,20 @@ Screenshots from the setup flow:
 - [Edit the Access policy](https://github.com/user-attachments/assets/c7bbc7b4-a18e-4ae4-9fe5-3b33c72048a7)
 - [Add teammate emails to the allow list](https://github.com/user-attachments/assets/fa4ecaf2-31f7-4a64-9001-210cf729747b)
 
-After saving, teammates can open your OpenSEO URL and sign in through Cloudflare
-Access. OpenSEO will use a shared workspace for everyone allowed by the policy.
+After saving, teammates can open your FlyRocketSEO URL and sign in through Cloudflare
+Access. FlyRocketSEO will use a shared workspace for everyone allowed by the policy.
 
 ## Manual deploy with Wrangler
 
-Use this flow if the Deploy to Cloudflare button fails with `Cannot provision a KV Namespace with the title "open-seo" because it already exists`. The reliable path is to create Cloudflare resources yourself, put their IDs into `wrangler.jsonc`, then deploy with Wrangler.
+Use this flow if the Deploy to Cloudflare button fails with `Cannot provision a KV Namespace with the title "flyrocketseo" because it already exists`. The reliable path is to create Cloudflare resources yourself, put their IDs into `wrangler.jsonc`, then deploy with Wrangler.
 
-### 1) Clone your OpenSEO repo
+### 1) Clone your FlyRocketSEO repo
 
-Fork `every-app/open-seo` on GitHub if you want a repo you control for future updates, then clone it locally:
+Fork `ThinkingSpade/FlyRocketSeo` on GitHub if you want a repo you control for future updates, then clone it locally:
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USER/open-seo.git
-cd open-seo
+git clone https://github.com/YOUR_GITHUB_USER/flyrocketseo.git
+cd flyrocketseo
 corepack enable
 pnpm install
 ```
@@ -146,8 +146,8 @@ pnpm install
 If you do not need a fork, clone the upstream repo instead:
 
 ```bash
-git clone https://github.com/every-app/open-seo.git
-cd open-seo
+git clone https://github.com/ThinkingSpade/FlyRocketSeo.git
+cd flyrocketseo
 corepack enable
 pnpm install
 ```
@@ -163,10 +163,10 @@ pnpm exec wrangler login
 Use unique names so they do not collide with resources that already exist in your Cloudflare account. Replace `YOUR_SUFFIX` with something unique to you, for example your GitHub username or company name.
 
 ```bash
-pnpm exec wrangler kv namespace create open-seo-YOUR_SUFFIX
-pnpm exec wrangler kv namespace create open-seo-oauth-YOUR_SUFFIX
-pnpm exec wrangler d1 create open-seo-YOUR_SUFFIX
-pnpm exec wrangler r2 bucket create open-seo-YOUR_SUFFIX
+pnpm exec wrangler kv namespace create flyrocketseo-YOUR_SUFFIX
+pnpm exec wrangler kv namespace create flyrocketseo-oauth-YOUR_SUFFIX
+pnpm exec wrangler d1 create flyrocketseo-YOUR_SUFFIX
+pnpm exec wrangler r2 bucket create flyrocketseo-YOUR_SUFFIX
 ```
 
 Save the IDs and names printed by Wrangler:
@@ -194,14 +194,14 @@ Open `wrangler.jsonc` and replace only your Cloudflare resource values. Keep the
 "d1_databases": [
   {
     "binding": "DB",
-    "database_name": "open-seo-YOUR_SUFFIX",
+    "database_name": "flyrocketseo-YOUR_SUFFIX",
     "database_id": "YOUR_D1_DATABASE_ID",
     "migrations_dir": "drizzle",
   },
 ],
 "r2_buckets": [
   {
-    "bucket_name": "open-seo-YOUR_SUFFIX",
+    "bucket_name": "flyrocketseo-YOUR_SUFFIX",
     "binding": "R2",
   },
 ],
@@ -219,7 +219,7 @@ pnpm run deploy
 
 In the Cloudflare dashboard:
 
-1. Go to `Compute` -> `Workers & Pages` -> your OpenSEO Worker.
+1. Go to `Compute` -> `Workers & Pages` -> your FlyRocketSEO Worker.
 2. Open `Settings`.
 3. In `Domains & Routes`, enable `Cloudflare Access` for the `workers.dev` route.
 4. Save the values shown by Cloudflare Access.
@@ -239,13 +239,13 @@ Use the domain from `JWKS_URL` for `TEAM_DOMAIN`, for example `https://your-team
 DataForSEO API responses are cached in R2 under the `dataforseo-cache/` prefix. This step is optional, but recommended to automatically clean up expired cache objects:
 
 ```bash
-pnpm exec wrangler r2 bucket lifecycle add open-seo-YOUR_SUFFIX dataforseo-cache-expiry dataforseo-cache/ --expire-days 7
+pnpm exec wrangler r2 bucket lifecycle add flyrocketseo-YOUR_SUFFIX dataforseo-cache-expiry dataforseo-cache/ --expire-days 7
 ```
 
 ### 8) Validate setup
 
 1. Open your Worker URL again.
 2. Sign in with Cloudflare Access.
-3. OpenSEO should load after login.
+3. FlyRocketSEO should load after login.
 
 If login fails, re-check the three secrets, the Access toggle, and the binding values in `wrangler.jsonc`.

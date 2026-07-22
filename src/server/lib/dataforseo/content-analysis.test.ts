@@ -51,13 +51,16 @@ describe("DataForSEO content analysis + domain analytics endpoints", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
 
-    const result = await fetchBrandMentions({ keyword: "openseo", limit: 25 });
+    const result = await fetchBrandMentions({
+      keyword: "flyrocketseo",
+      limit: 25,
+    });
 
     expect(result.data.totalCount).toBe(1200);
     expect(result.data.items[0]).toMatchObject({ domain: "news.example" });
     expect(parseDataforseoRequestBody(fetchMock.mock.calls[0][1])).toEqual([
       {
-        keyword: "openseo",
+        keyword: "flyrocketseo",
         search_mode: "one_per_domain",
         limit: 25,
         order_by: ["content_info.sentence_score,desc"],

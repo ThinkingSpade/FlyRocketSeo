@@ -1,241 +1,129 @@
-# OpenSEO
+# FlyRocketSEO
 
-> Open source alternative to Semrush and Ahrefs
+A private, self-hosted SEO research and reporting tool for one team. It runs on
+Cloudflare Workers with D1, R2 and KV, and pulls paid SEO data from DataForSEO
+on this team's own API key.
 
-OpenSEO is an SEO tool for _the people_. If tools like Semrush or Ahrefs are too expensive or bloated, OpenSEO is a pay-as-you-go alternative that you actually control.
-
-> All-in-one SEO tool for you and your AI agent.
-
-Connect with any agent like Claude Code, OpenClaw or Hermes. We have pre-built skills, but you can build your own to tailor OpenSEO to your needs.
-
-<img width="1385" height="794" alt="Image" src="https://github.com/user-attachments/assets/fd208249-44ea-4849-bb4b-5fc896aeab73" />
+Live at `https://flyrocketseo.huy1999nguyen.workers.dev`. Access is restricted to
+an email allow-list plus invited teammates; the allow-list fails closed, so an
+address that is not on it and holds no invite cannot sign in.
 
 ## Table of Contents
 
-- [Why use OpenSEO?](#why-use-openseo)
-- [Main SEO Workflows](#main-seo-workflows)
-- [OpenSEO MCP](#openseo-mcp)
-- [OpenSEO Agent Skills](#openseo-agent-skills)
-- [Roadmap](#roadmap)
-- [Community](#community)
-- [Pricing / Costs (Free + API costs)](#pricing--costs)
-- [DataForSEO API Key Setup](#dataforseo-api-key-setup)
-- [Google Search Console](#google-search-console)
-- [Self-hosting](#self-hosting)
-  - [Docker Self Hosting](#docker-self-hosting)
-  - [Cloudflare Self-Hosting](#cloudflare-self-hosting)
-- [Local Development](#local-development)
-- [Contributing](#contributing)
-- [SEO API Cost Reference](#seo-api-cost-reference)
+- [What it does](#what-it-does)
+- [Spending](#spending)
+- [Setup](#setup)
+- [Deploying](#deploying)
+- [Local development](#local-development)
+- [MCP and agent skills](#mcp-and-agent-skills)
+- [DataForSEO cost reference](#dataforseo-cost-reference)
 
-## Hosted Version
+## What it does
 
-If you're not interested in self hosting, or just want to support the project, we also have a hosted version:
+**Research** — keyword research and trends, SERP overview, content optimizer,
+page explorer, topic clusters, domain overview, competitors, backlinks, AI
+visibility, prompt explorer, local SEO.
 
-[openseo.so](https://openseo.so)
+**Your own site** — SEO opportunities (a ranked action plan), Google Search
+Console insights, link opportunities, cannibalization, local rank grid, rank
+tracking, saved keywords, site audit, on-page fixes, and a print-ready client
+report.
 
-## Why use OpenSEO?
+Each project maps to one domain. Analyses are recorded per project, so a tab you
+have run before reopens showing that result instead of a blank form.
 
-- Best in class MCP and AI Skills.
-- Modern, simple UI.
-  - Focused workflows instead of a bloated, complex SEO suite.
-- No subscriptions.
-  - Bring your own DataForSEO API key and pay only for what you use.
-- Fork and vibe code your own custom tool.
+## Spending
 
-## Main SEO Workflows
+There is no subscription, no plan tiers and no credit balance. Paid lookups go
+straight to DataForSEO on this account's key, at DataForSEO's rates.
 
-- Keyword research
-- Keyword trends
-- Rank tracking
-- Competitor insights (competitor discovery, keyword gap, link gap)
-- Backlinks
-- Site audits (plus instant single-page audits via MCP)
-- AI Visibility
-- Local SEO (business profile + reviews)
-- Brand monitoring (web mentions via MCP)
+**Nothing metered ever runs on its own.** Every paid lookup happens because
+someone clicked a control that said it would spend, and the app shows the cost
+before it runs. Re-opening a past analysis restores the stored result from R2
+and never re-spends. Google Search Console data is free.
 
-## Community
+## Setup
 
-Join Discord to chat: [Discord](https://discord.gg/c9uGs3cFXr)
+Secrets are set with `npx wrangler secret put <NAME>` from this directory, or in
+the Cloudflare dashboard under the Worker's Variables & Secrets.
 
-Follow along for updates:
+| Secret                  | Required | What it unlocks                                     |
+| ----------------------- | -------- | --------------------------------------------------- |
+| `DATAFORSEO_API_KEY`    | yes      | All paid SEO data                                   |
+| `HOSTED_ALLOWED_EMAILS` | yes      | Comma-separated sign-in allow-list                  |
+| `GOOGLE_CLIENT_ID`      | for GSC  | Google sign-in and Search Console                   |
+| `GOOGLE_CLIENT_SECRET`  | for GSC  | Google sign-in and Search Console                   |
+| `OPENROUTER_API_KEY`    | optional | SAM, the onboarding chat, and one-click AI rewrites |
 
-- Follow on X: https://x.com/bensenescu
-- Sign up for the mailing list on our website: [openseo.so](https://openseo.so)
+Without `OPENROUTER_API_KEY` every SEO feature still works — only the three AI
+features above are unavailable. There is an in-app guide at
+`/help/openrouter-api-key`.
 
-## OpenSEO MCP
-
-OpenSEO exposes an MCP server so AI agents can use your SEO data directly.
-
-Connect Claude Code, OpenClaw, Hermes or any other agent.
-
-### Setup
-
-- Set up the app
-- Click "AI & Agents" in the header
-- Follow the instructions to connect to your agent
-
-## OpenSEO Agent Skills
-
-OpenSEO Agent Skills are reusable workflows for your agent
-
-They guide your agent through SEO tasks and use the OpenSEO MCP so your agent makes better recommendations.
-
-### Available Skills
-
-- `seo-project-setup`
-- `seo-coach`
-- `keyword-research`
-- `keyword-clustering`
-- `competitive-landscape`
-- `competitor-analysis`
-- `link-prospecting`
-
-### Installation Guide
-
-Read our docs for how to install the skills:
-
-https://openseo.so/docs/skills/setup
-
-## Roadmap
-
-Top priorities:
-
-- Improved and Scheduled Site Audits
-- Custom Reports for Clients
-- Local SEO
-- In App AI Agent
-
-Our top priority is always refining the current product and making existing features better based on user feedback.
-
-If something important is missing, please join the [Discord](https://discord.gg/c9uGs3cFXr) or email me at ben@openseo.so and request it.
-
-## Pricing / Costs
-
-OpenSEO is totally free to use. It works by using DataForSEO's APIs, which is a paid third-party service unaffiliated with OpenSEO.
-
-There are two separate things:
-
-1. OpenSEO app cost: $0, you host it yourself.
-2. DataForSEO API: pay-as-you-go based on usage.
-
-For cost estimates, see [DataForSEO API Cost Reference](#seo-api-cost-reference).
-
-## DataForSEO API Key Setup
-
-OpenSEO uses DataForSEO to fetch SEO data. You need an API key to connect OpenSEO to the service.
-
-1. Go to [DataForSEO API Access](https://app.dataforseo.com/api-access?aff=255379).
-2. Click "Send by email" to get set your credentials.
-3. Copy the longer crendentials labelled "Base64" credentials.
-4. Set this as `DATAFORSEO_API_KEY` in your environment file:
-
-- Docker self-hosting: `.env`
-- Cloudflare: Set it in the workers UI
-- Local development: `.env.local`
-
-## Google Search Console
-
-Search Console is optional and works in self-hosted deployments using your own
-Google OAuth client. It takes ~10 minutes of one-time setup — see
+For Google Search Console, see
 [`docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md`](./docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md).
 
-## AI Features (SAM)
+## Deploying
 
-AI features like SAM, the in-app SEO agent, are optional — set the `OPENROUTER_API_KEY` environment variable to enable them (create a key at [openrouter.ai/settings/keys](https://openrouter.ai/settings/keys)).
-
-## Self-hosting
-
-OpenSEO supports two self-hosting paths:
-
-- Docker for personal use and testing (Recommended for local use).
-- Cloudflare for internet-facing self-hosting across multiple devices or for your team.
-
-_Docker_
-
-Docker is recommended for getting started. It's super easy to get up and running once you install Docker.
-
-_Cloudflare_
-
-If you love OpenSEO and want to use it across multiple devices or with your team, you can host it on Cloudflare which we'll be a SaaS-like experience. Also, this will have automatic database backups and other nice convenience features. It's just a bit more effort to get started if you're unfamiliar with Cloudflare.
-
-## Docker Self Hosting
-
-> [!WARNING]
-> By default, the Docker version is intended for local use only. It runs in single-user mode with no authentication. For internet-facing self-hosting, use Cloudflare (free plan compatible). Or read [`docs/SELF_HOSTING_DOCKER.md`](./docs/SELF_HOSTING_DOCKER.md) before exposing to the internet.
-
-Prerequisites:
-
-- Install Docker: https://www.docker.com/products/docker-desktop/
-
-Quickstart:
-
-1. `cp .env.example .env`
-2. Set `DATAFORSEO_API_KEY` in `.env`
-3. `docker compose up -d`
-4. Open `http://localhost:<PORT>` (default `3001`)
-
-To update to the newest published image, pull first and then restart:
-
-```sh
-docker compose pull
-docker compose up -d
+```bash
+npm run deploy
 ```
 
-For more info, see [`docs/SELF_HOSTING_DOCKER.md`](./docs/SELF_HOSTING_DOCKER.md).
+Run `npm run ci:check` first — CI enforces it on push to `main`. Database
+migrations live in `drizzle/` and are applied with
+`npx wrangler d1 migrations apply DB --remote`.
 
-## Cloudflare Self-Hosting
+The Cloudflare account is on the **free plan**, which has a fixed CPU ceiling per
+invocation. That is why site-audit crawls run in small batches with a DataForSEO
+fallback, and why the run-all button on the dashboard issues one request per
+analysis instead of looping server-side.
 
-### Deploy the Worker
+Deployment details: [`docs/SELF_HOSTING_CLOUDFLARE.md`](./docs/SELF_HOSTING_CLOUDFLARE.md).
+Auth modes: [`docs/DEPLOY_INTERNET_FACING.md`](./docs/DEPLOY_INTERNET_FACING.md).
 
-Clicking this button opens a page to deploy OpenSEO in your Cloudflare account. If you do not have an account yet, it will take you to account creation first (OpenSEO works great on the free plan).
-
-Reference these docs while deploying since the Cloudflare UI doesn't indicate what steps you need to take: [`docs/SELF_HOSTING_CLOUDFLARE.md`](./docs/SELF_HOSTING_CLOUDFLARE.md).
-
-Putting OpenSEO on the internet behind a login? See [`docs/DEPLOY_INTERNET_FACING.md`](./docs/DEPLOY_INTERNET_FACING.md) for the recommended setup (Cloudflare Access + D1 or Supabase).
-
-[![Deploy to Cloudflare](https://deploy.workers.cloudflare.com/button)](https://deploy.workers.cloudflare.com/?url=https://github.com/every-app/open-seo)
-
-## Local Development
+## Local development
 
 See [`docs/LOCAL_DEVELOPMENT.md`](./docs/LOCAL_DEVELOPMENT.md).
 
-## Contributing
+```bash
+npm run dev          # vite dev on :3000
+npm test             # vitest
+npm run ci:check     # prettier + knip + tsc + oxlint
+```
 
-Contributions are very welcome.
+## MCP and agent skills
 
-- Open an issue for bugs, UX friction, or feature requests.
-- Open a PR if you want to implement a feature directly.
-- Community-driven improvements are prioritized, and high-quality PRs are encouraged.
+The app exposes an MCP server so AI clients can call its tools:
 
-If you want to contribute but are unsure where to start, open an issue and describe what you want to build.
+```txt
+https://flyrocketseo.huy1999nguyen.workers.dev/mcp
+```
 
-## SEO API Cost Reference
+The first connection sends you through login and authorization. Agent skills for
+SEO workflows live in `.agents/skills/` and can be installed with
+`npx skills add ThinkingSpade/FlyRocketSeo`. The in-app **AI & MCP** page has
+copy-paste commands for Claude Code, Claude Desktop, Cursor and Codex.
 
-Use this section to estimate DataForSEO spend per request type. OpenSEO itself remains free; these are API usage costs only.
+## DataForSEO cost reference
 
-As of February 26, 2026, DataForSEO’s public docs/pricing pages say:
-
-- New accounts include **$1 free credit** to test the API.
-- The minimum top-up/payment is **$50**.
-
-That means you can try OpenSEO for free with the starter credit, then decide if/when to top up.
-
-### Planning examples
+Rough planning figures for DataForSEO spend:
 
 - Track 100 keywords weekly at depth 50: `~$1.20/month`
 - 100 keyword research requests at the default 150 results: `$3.50`
 - 100 keyword research requests at 500 results each: `$7.00`
 - 100 domain overviews (200 ranked keywords each): `$4.01`
-- 100 backlinks domain searches at current defaults before opening extra tabs: about `$6.34`
-- 100 backlinks page searches at current defaults before opening extra tabs: about `$4.30`
+- 100 backlinks domain searches at current defaults: about `$6.34`
+- 100 backlinks page searches at current defaults: about `$4.30`
 - 100 fully explored backlinks domain searches: about `$10.94`
 - 100 fully explored backlinks page searches: about `$8.61`
 
-### Pricing sources
+Sources:
 
-- DataForSEO SERP API pricing: https://dataforseo.com/apis/serp-api/pricing
-- DataForSEO Keywords Data API pricing: https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api
-- DataForSEO Backlinks pricing: https://dataforseo.com/pricing/backlinks/backlinks
-- DataForSEO Lighthouse API docs: https://docs.dataforseo.com/v3/on_page/lighthouse/overview/
+- SERP API: https://dataforseo.com/apis/serp-api/pricing
+- Keywords Data / Labs: https://dataforseo.com/pricing/dataforseo-labs/dataforseo-google-api
+- Backlinks: https://dataforseo.com/pricing/backlinks/backlinks
+- Lighthouse: https://docs.dataforseo.com/v3/on_page/lighthouse/overview/
+
+---
+
+Built on the open-source project this was forked from, with substantial changes
+for this deployment.

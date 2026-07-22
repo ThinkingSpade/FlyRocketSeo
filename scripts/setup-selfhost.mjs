@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * One-command self-host provisioning for a forked OpenSEO deploy.
+ * One-command self-host provisioning for a forked FlyRocketSEO deploy.
  *
  * Creates the Cloudflare account-scoped resources this Worker needs (2x KV, D1,
  * R2, and — on the Postgres path — a Hyperdrive config), then patches their IDs
@@ -47,13 +47,16 @@ const { values } = parseArgs({
     "dry-run": { type: "boolean", default: false },
     yes: { type: "boolean", default: false },
     wrangler: { type: "string", default: "pnpm exec wrangler" },
-    // Resource names. Defaults match the names already in wrangler.jsonc so that
-    // only IDs need patching. Override if those names already exist in your account.
-    "d1-name": { type: "string", default: "open-seo" },
-    "r2-name": { type: "string", default: "open-seo" },
-    "kv-title": { type: "string", default: "open-seo" },
-    "oauth-kv-title": { type: "string", default: "open-seo-oauth" },
-    "hyperdrive-name": { type: "string", default: "open-seo" },
+    // Resource names for a FRESH install. This deployment's own D1 and R2 were
+    // provisioned before the rename and are still literally named "open-seo" in
+    // wrangler.jsonc — that is deliberate and must not be "fixed", since the
+    // name identifies a live resource. Override these if the names already
+    // exist in your account.
+    "d1-name": { type: "string", default: "flyrocketseo" },
+    "r2-name": { type: "string", default: "flyrocketseo" },
+    "kv-title": { type: "string", default: "flyrocketseo" },
+    "oauth-kv-title": { type: "string", default: "flyrocketseo-oauth" },
+    "hyperdrive-name": { type: "string", default: "flyrocketseo" },
   },
 });
 

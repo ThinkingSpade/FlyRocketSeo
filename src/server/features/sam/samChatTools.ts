@@ -30,7 +30,7 @@ import {
 } from "@/server/mcp/tools/search-console-tools";
 import { whoamiTool } from "@/server/mcp/tools/whoami";
 import { discoverSiteUrls, readPages, readSite } from "@/server/lib/scrape";
-import openSeoFactSheet from "@/server/features/onboarding/openseo-fact-sheet.md?raw";
+import productFactSheet from "@/server/features/onboarding/product-fact-sheet.md?raw";
 
 // SAM reads more of a site than the onboarding preview: enough pages to work
 // out what a business does, sells, and positions against on its own.
@@ -211,7 +211,7 @@ export function buildSamMcpTools(
       description:
         "The FlyRocketSEO fact sheet: what the product does, plans/pricing, credit costs, integrations, MCP setup. Call before answering questions about FlyRocketSEO itself. Uses no credits.",
       inputSchema: z.object({}),
-      execute: () => Promise.resolve({ factSheet: openSeoFactSheet }),
+      execute: () => Promise.resolve({ factSheet: productFactSheet }),
     }),
     ...scrapeTools(project.domain),
     whoami: adaptMcpTool(whoamiTool, extra, projectId),

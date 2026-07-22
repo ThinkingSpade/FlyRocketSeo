@@ -40,10 +40,12 @@ describe("normalizeBacklinksTarget", () => {
 
   it("trims trailing slashes from non-root page URLs", () => {
     expect(
-      normalizeBacklinksTarget("https://github.com/every-app/open-seo/"),
+      normalizeBacklinksTarget(
+        "https://github.com/ThinkingSpade/FlyRocketSeo/",
+      ),
     ).toEqual({
-      apiTarget: "https://github.com/every-app/open-seo",
-      displayTarget: "https://github.com/every-app/open-seo",
+      apiTarget: "https://github.com/ThinkingSpade/FlyRocketSeo",
+      displayTarget: "https://github.com/ThinkingSpade/FlyRocketSeo",
       scope: "page",
     });
   });

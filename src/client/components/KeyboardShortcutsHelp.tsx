@@ -6,7 +6,7 @@ import { useSession } from "@/lib/auth-client";
 // listener lives inside the overlay, but other surfaces (the command palette)
 // need to open it without a shared store. They dispatch this window event; the
 // mounted overlay listens.
-const OPEN_EVENT = "openseo:open-keyboard-shortcuts";
+const OPEN_EVENT = "flyrocketseo:open-keyboard-shortcuts";
 
 /** Open the keyboard-shortcuts help from anywhere (e.g. the command palette). */
 export function openKeyboardShortcuts() {

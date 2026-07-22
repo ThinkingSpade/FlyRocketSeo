@@ -11,12 +11,12 @@ import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { getAuthMode, isHostedAuthMode } from "@/lib/auth-mode";
 import {
-  createOpenSeoOAuthProvider,
-  type OpenSeoOAuthEnv,
+  createFlyRocketSeoOAuthProvider,
+  type FlyRocketSeoOAuthEnv,
 } from "@/server/mcp/oauth-provider";
 import { requestWithPublicOrigin } from "@/server/mcp/public-origin";
 import { MCP_ROUTE } from "@/server/mcp/context";
-import { handleSelfHostedOpenSeoMcpRequest } from "@/server/mcp/transport";
+import { handleSelfHostedFlyRocketSeoMcpRequest } from "@/server/mcp/transport";
 import { withPgClient } from "@/db";
 import {
   AUTUMN_WEBHOOK_PATH,
@@ -24,7 +24,7 @@ import {
 } from "@/server/billing/autumn-webhook";
 
 const appFetch = createStartHandler(defaultStreamHandler);
-const openSeoOAuthProvider = createOpenSeoOAuthProvider(appFetch);
+const flyRocketSeoOAuthProvider = createFlyRocketSeoOAuthProvider(appFetch);
 
 // Authorize an onboarding-chat connection in the Worker, before it reaches the
 // Durable Object. The DO instance name is the projectId (set client-side); we
@@ -150,9 +150,9 @@ function handleFetch(
       return handleAutumnWebhookRequest(publicRequest);
     }
 
-    return openSeoOAuthProvider.fetch(
+    return flyRocketSeoOAuthProvider.fetch(
       publicRequest,
-      env as OpenSeoOAuthEnv,
+      env as FlyRocketSeoOAuthEnv,
       ctx,
     );
   }
@@ -161,7 +161,12 @@ function handleFetch(
     (authMode === "cloudflare_access" || authMode === "local_noauth") &&
     pathname === MCP_ROUTE
   ) {
-    return handleSelfHostedOpenSeoMcpRequest(publicRequest, authMode, env, ctx);
+    return handleSelfHostedFlyRocketSeoMcpRequest(
+      publicRequest,
+      authMode,
+      env,
+      ctx,
+    );
   }
 
   return appFetch(request);

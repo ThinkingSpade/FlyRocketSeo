@@ -18,7 +18,7 @@ const brandKeywordSchema = z
   .string()
   .min(1)
   .max(200)
-  .describe('Brand or phrase to search for (e.g. "openseo").');
+  .describe('Brand or phrase to search for (e.g. "notion").');
 
 const dateSchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
 

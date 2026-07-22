@@ -107,7 +107,7 @@ export async function upsertHostedSignupContact({
     payload: {
       email,
       userId,
-      source: "openseo-signup",
+      source: "flyrocketseo-signup",
       userGroup: "app-user",
       ...getContactNameParts(name),
     },

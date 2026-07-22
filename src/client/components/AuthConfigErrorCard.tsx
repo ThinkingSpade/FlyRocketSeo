@@ -1,7 +1,7 @@
 import { ShieldAlert } from "lucide-react";
 
 const README_CLOUDFLARE_ACCESS_URL =
-  "https://github.com/every-app/open-seo#cloudflare-deployment--access-setup";
+  "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/DEPLOY_INTERNET_FACING.md";
 
 type AuthConfigErrorCardProps = {
   message: string;

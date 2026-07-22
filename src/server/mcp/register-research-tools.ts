@@ -39,7 +39,7 @@ import {
 import { auditPageTool } from "@/server/mcp/tools/onpage-tools";
 
 // Competitor, backlink-insight, trends, and local SEO research tools, split
-// from registerOpenSeoMcpTools to keep each registration function readable.
+// from registerFlyRocketSeoMcpTools to keep each registration function readable.
 export function registerResearchExpansionTools(server: McpServer) {
   server.registerTool(
     findCompetitorsTool.name,

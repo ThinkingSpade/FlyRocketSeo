@@ -12,9 +12,9 @@ const mcpContext = {
   organizationId: "org_123",
   clientId: "client_123",
   scopes: ["offline_access", "mcp"],
-  audience: "https://open-seo.test/mcp",
+  audience: "https://flyrocketseo.test/mcp",
   subject: "user_123",
-  baseUrl: "https://open-seo.test",
+  baseUrl: "https://flyrocketseo.test",
 };
 
 describe("withWorkersOAuthMcpScopes", () => {

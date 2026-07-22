@@ -26,9 +26,9 @@ const authContext = {
   organizationId: "org_123",
   clientId: "client_123",
   scopes: ["mcp"],
-  audience: "https://open-seo.test/mcp",
+  audience: "https://flyrocketseo.test/mcp",
   subject: "user_123",
-  baseUrl: "https://open-seo.test",
+  baseUrl: "https://flyrocketseo.test",
 };
 
 const toolExtra: ToolExtra = {
@@ -40,7 +40,7 @@ const toolExtra: ToolExtra = {
     token: "token",
     clientId: "client_123",
     scopes: ["mcp"],
-    resource: new URL("https://open-seo.test/mcp"),
+    resource: new URL("https://flyrocketseo.test/mcp"),
     extra: { [MCP_AUTH_CONTEXT_PROP]: authContext },
   } satisfies AuthInfo,
 };

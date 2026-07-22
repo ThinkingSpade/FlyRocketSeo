@@ -44,7 +44,7 @@ describe("DataForSEO backlinks insight endpoints", () => {
         total_count: 90,
         items: [
           {
-            anchor: "openseo",
+            anchor: "flyrocketseo",
             backlinks: 120,
             referring_domains: 45,
             rank: 62,
@@ -61,7 +61,7 @@ describe("DataForSEO backlinks insight endpoints", () => {
 
     expect(result.data.totalCount).toBe(90);
     expect(result.data.items[0]).toMatchObject({
-      anchor: "openseo",
+      anchor: "flyrocketseo",
       backlinks: 120,
     });
     expect(result.billing.path).toEqual(["v3", "backlinks", "anchors", "live"]);

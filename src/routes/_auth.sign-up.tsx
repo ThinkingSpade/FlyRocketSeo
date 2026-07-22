@@ -171,26 +171,12 @@ function SignUpPage() {
             </button>
           ) : (
             <div className="space-y-4">
+              {/* No Terms/Privacy links here on purpose: this is a private
+                  install for one team, not a public service, and linking to
+                  another company's legal pages would misstate who the
+                  agreement is with. */}
               <p className="text-sm leading-relaxed text-base-content/60">
-                By signing up, you agree to our{" "}
-                <a
-                  href="https://openseo.so/terms-and-conditions"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-base-content underline underline-offset-2 hover:text-base-content/80 transition-colors"
-                >
-                  Terms
-                </a>{" "}
-                and{" "}
-                <a
-                  href="https://openseo.so/privacy"
-                  target="_blank"
-                  rel="noreferrer"
-                  className="text-base-content underline underline-offset-2 hover:text-base-content/80 transition-colors"
-                >
-                  Privacy Policy
-                </a>
-                .
+                Access is limited to people invited to this workspace.
               </p>
 
               <p className="text-sm text-base-content/50">

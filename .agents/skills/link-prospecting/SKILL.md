@@ -3,11 +3,11 @@ name: link-prospecting
 description: Find link prospects, discover contact paths, and draft outreach from SERPs and backlink signals.
 ---
 
-# OpenSEO Link Prospecting
+# FlyRocketSEO Link Prospecting
 
 ## Goal
 
-Find realistic pages, sites, and authors that might reference the user's page, product, study, guide, or tool. Use OpenSEO for prospect discovery, then use available web/search/browser tools for contact discovery.
+Find realistic pages, sites, and authors that might reference the user's page, product, study, guide, or tool. Use FlyRocketSEO for prospect discovery, then use available web/search/browser tools for contact discovery.
 
 ## Required inputs
 
@@ -17,7 +17,7 @@ Find realistic pages, sites, and authors that might reference the user's page, p
 - Optional competitors
 - Optional market/location/language
 
-## OpenSEO MCP tools
+## FlyRocketSEO MCP tools
 
 - `get_serp_results`: find ranking articles, listicles, resource pages, comparisons, and topical publishers.
 - `get_link_gap`: the fastest prospecting path — pass the user's domain and a competitor to get referring domains that link to the competitor but not the user, sorted by domain rank. Each row is a vetted prospect that already links to a peer.
@@ -32,7 +32,7 @@ Find realistic pages, sites, and authors that might reference the user's page, p
 
 ## Contact discovery tools
 
-After OpenSEO identifies good prospects, use available non-OpenSEO browsing or search tools for public contact discovery. Depending on the client, this may be web search, page fetches, browser automation, or a search API.
+After FlyRocketSEO identifies good prospects, use available non-FlyRocketSEO browsing or search tools for public contact discovery. Depending on the client, this may be web search, page fetches, browser automation, or a search API.
 
 Look for:
 
@@ -105,7 +105,7 @@ Then provide 2-3 reusable outreach drafts:
 ## Guardrails
 
 - Do not invent email addresses, social handles, or contact names.
-- Do not say OpenSEO found contact details unless an OpenSEO tool returned them. Attribute contact discovery to the web/search/browser source used.
+- Do not say FlyRocketSEO found contact details unless an FlyRocketSEO tool returned them. Attribute contact discovery to the web/search/browser source used.
 - If contact details are not available after a reasonable search, recommend specific discovery steps such as checking the author page, contact page, LinkedIn, X, or a reputable contact-enrichment tool.
 - Avoid spammy mass outreach. Personalize by page and reason.
 - Flag prospects that are direct competitors or likely paid placements.

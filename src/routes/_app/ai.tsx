@@ -20,19 +20,19 @@ const SKILL_NAMES = [
   "competitor-analysis",
   "link-prospecting",
 ];
-const SKILLS_INSTALL = `npx skills add every-app/open-seo`;
-const ALL_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*'`;
-const CLAUDE_CODE_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*' --agent claude-code`;
-const CODEX_SKILLS_INSTALL = `npx skills add every-app/open-seo --skill '*' --agent codex`;
-const SKILLS_MANUAL_INSTALL = `git clone https://github.com/every-app/open-seo.git
+const SKILLS_INSTALL = `npx skills add ThinkingSpade/FlyRocketSeo`;
+const ALL_SKILLS_INSTALL = `npx skills add ThinkingSpade/FlyRocketSeo --skill '*'`;
+const CLAUDE_CODE_SKILLS_INSTALL = `npx skills add ThinkingSpade/FlyRocketSeo --skill '*' --agent claude-code`;
+const CODEX_SKILLS_INSTALL = `npx skills add ThinkingSpade/FlyRocketSeo --skill '*' --agent codex`;
+const SKILLS_MANUAL_INSTALL = `git clone https://github.com/ThinkingSpade/FlyRocketSeo.git
 
 # Codex
 mkdir -p ~/.codex/skills
-cp -R open-seo/.agents/skills/* ~/.codex/skills/
+cp -R FlyRocketSeo/.agents/skills/* ~/.codex/skills/
 
 # Claude Code
 mkdir -p ~/.claude/skills
-cp -R open-seo/.agents/skills/* ~/.claude/skills/`;
+cp -R FlyRocketSeo/.agents/skills/* ~/.claude/skills/`;
 
 export const Route = createFileRoute("/_app/ai")({
   component: AiPage,
@@ -91,7 +91,7 @@ function AiPage() {
                 Run this in your terminal:
               </p>
               <CodeBlock
-                code={`claude mcp add --transport http --scope user openseo ${mcpUrl}`}
+                code={`claude mcp add --transport http --scope user flyrocketseo ${mcpUrl}`}
               />
               <p className="text-sm text-base-content/70">
                 Approve the login when prompted.
@@ -144,7 +144,7 @@ function AiPage() {
               <p className="text-sm text-base-content/70">
                 Run this in your terminal:
               </p>
-              <CodeBlock code={`codex mcp add openseo --url ${mcpUrl}`} />
+              <CodeBlock code={`codex mcp add flyrocketseo --url ${mcpUrl}`} />
               <p className="text-sm text-base-content/70">
                 Approve the login when prompted.
               </p>

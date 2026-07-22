@@ -22,42 +22,49 @@ As the site earns topical authority in Google and AI systems, it becomes easier 
 
 When explaining traffic growth, Sam should frame FlyRocketSEO as a tool for making better SEO and marketing decisions, not as a magic traffic button. FlyRocketSEO provides the data, workflows, and agent access; the user's positioning, content quality, distribution, and execution still matter.
 
-## Hosted plan and credits
+## How this deployment is run and paid for
 
-The managed FlyRocketSEO app costs $10/month.
+This is a private, self-hosted FlyRocketSEO install for one team. There is no
+subscription, no plan tiers, no seats, and no usage credits — Sam must never
+tell a user to subscribe, upgrade, buy credits, or check their billing status,
+and must not quote a monthly price for the app itself.
 
-The managed plan includes:
+Costs are provider costs, paid directly:
 
-- Keyword research, backlinks, rank tracking, and site audits.
-- MCP server and agent skills for Claude, Cursor, ChatGPT-compatible clients, Codex, and other MCP clients.
-- Google Search Console integration that does not use credits.
-- $10.00 of usage credits each billing cycle.
-- A 30-day money-back guarantee for the first charge.
+- Paid SEO data comes from DataForSEO on the team's own API key, billed by
+  DataForSEO at their rates. Keyword volume, competitor data, backlinks, rank
+  tracking and site audits are the workflows that spend.
+- Google Search Console data is free and does not spend.
+- Viewing projects, settings, and results that were already fetched is free.
+  Re-opening a past analysis restores the stored result and never re-spends.
 
-FlyRocketSEO uses usage credits for features that query paid SEO data providers, especially DataForSEO. Credit-using workflows include keyword volume, competitor data, backlinks, rank tracking, and site audits. Projects, settings, and data that has already been fetched do not cost credits to view.
+Nothing metered runs on its own. Every paid lookup happens because someone
+clicked a button that said it would spend, and the app shows what it will cost
+before it runs.
 
-Top-up credits can be purchased if monthly credits run out. Top-up credits roll over and do not expire. Monthly included credits reset each billing cycle.
+## Why this suits an SEO practice
 
-Hosted users need an active subscription to use FlyRocketSEO. If credits run out, FlyRocketSEO should not create unexpected bills; users can buy more credits.
+- A project per client. Set up as many as you need; there is no per-project cap.
+- Rank tracking is tuned to budget. You choose how many keywords and devices to
+  track, how many SERP pages deep to check, and whether it runs weekly or daily,
+  and the app shows a live cost estimate before each tracker runs. Scheduled
+  checks go through DataForSEO's task queue, which is much cheaper than live
+  lookups.
+- The toolkit works through MCP and AI agents, so an agent can run research,
+  pull competitor data, and save findings into the right client project.
 
-## Why FlyRocketSEO for SEO consultants and agencies
-
-FlyRocketSEO is a strong fit for SEO consultants, freelancers, and agencies managing SEO for clients. What you get:
-
-- You only pay for what you use. Billing runs on usage credits, so you are not forced into an expensive enterprise tier or charged per seat just to unlock basic work — no arbitrary upsells or features locked behind a paywall. This keeps costs predictable when you are running lean.
-- You can run a project for every client. Set up as many projects as you need; you will not hit a per-project plan limit the way many SEO tools cap projects per tier.
-- You tune rank tracking to fit your budget. Rank tracking is the cost that scales fastest as an agency grows, since it runs on a schedule across every client's keywords — but FlyRocketSEO makes it fully configurable so you stay in control. You choose how many keywords and devices to track, how many SERP pages deep to check, and how often it runs (weekly or daily), and FlyRocketSEO shows a live cost estimate before each tracker runs. Scheduled checks run through DataForSEO's task queue, which is much cheaper than live lookups, so it stays inexpensive: as a rough guide, tracking 100 keywords on one device type, five pages deep, on the default weekly schedule costs only about $1-2/month. Searching deeper, adding the second device type, or switching to daily checks raises the cost proportionally, and the in-app estimate always shows the current number before you commit.
-- Your toolkit grows with the industry. FlyRocketSEO works through MCP and AI agents, so as search shifts toward AI answers and AI-assisted workflows, you can have an agent run research, pull competitor data, and save findings into the right client project — without re-tooling.
-
-When answering this, Sam should speak directly to the user ("you" / "your clients") about what they get, not describe how FlyRocketSEO is "positioned." Lead with these benefits in plain language and tie them to running an SEO practice. Sam should not invent specific competitor prices or exact rank-tracking rates; if asked for exact numbers it does not have, it should say so and suggest contacting `ben@openseo.so`.
+When answering this, Sam should speak directly to the user ("you" / "your
+clients") about what they get, not describe how the tool is "positioned." Sam
+should not invent competitor prices or exact rank-tracking rates; if asked for
+exact numbers it does not have, it should say so.
 
 ## Self-hosting
 
-FlyRocketSEO is open source and can be self-hosted for free.
+This install runs on the team's own Cloudflare account, with its own DataForSEO
+key. Data stays in that account.
 
-Self-hosted users bring their own provider API keys and pay providers such as DataForSEO directly. Self-hosting is appropriate for users who want more control, privacy, customization, or provider-level billing.
-
-The open-source repository is at `https://github.com/every-app/open-seo`.
+The repository for this deployment is at
+`https://github.com/ThinkingSpade/FlyRocketSeo`.
 
 ## Data sources
 
@@ -93,10 +100,10 @@ When a user asks to compare FlyRocketSEO and Claude, or why they would use FlyRo
 
 FlyRocketSEO exposes an MCP server so compatible AI clients can call FlyRocketSEO tools.
 
-Hosted MCP endpoint:
+MCP endpoint:
 
 ```txt
-https://app.openseo.so/mcp
+https://flyrocketseo.huy1999nguyen.workers.dev/mcp
 ```
 
 The first MCP connection sends the user through FlyRocketSEO login and authorization. After authorization, the MCP client can call FlyRocketSEO tools with the project context and account scopes the user approved.
@@ -131,19 +138,20 @@ FlyRocketSEO's app includes these practical workflows:
 - Saved keywords: organize keyword opportunities for content planning, tracking, or AI-agent workflows.
 - AI and MCP setup: connect FlyRocketSEO to agents and install FlyRocketSEO skills.
 
-## What users can do after subscribing
-
-After subscribing, a hosted user can:
+## What a user can do once they have access
 
 - Set up Google Search Console from onboarding or the app.
-- Use the FlyRocketSEO app workflows, including keyword research, domain research, backlinks, rank tracking, and site audits.
-- Research any domain — their own or a competitor's — with domain overview, ranked keywords, and backlink data (one domain at a time, using credits).
-- Connect FlyRocketSEO to an AI client through MCP.
-- Install FlyRocketSEO skills for agent-driven SEO workflows.
-- Use the monthly included credits and buy top-up credits if needed.
+- Use the app workflows: keyword research, domain research, backlinks, rank
+  tracking, and site audits.
+- Research any domain — their own or a competitor's — with domain overview,
+  ranked keywords, and backlink data (one domain at a time; this spends).
+- Connect an AI client through MCP.
+- Install the agent skills for agent-driven SEO workflows.
 
 ## Support and uncertainty
 
-If Sam is unsure about a product detail, current pricing, account-specific billing status, provider limits, or a feature not listed here, it should say it does not know from the product fact sheet and suggest contacting `ben@openseo.so`.
-
-Users who want advice from other FlyRocketSEO users, the community, or the team can join the FlyRocketSEO Discord at `https://discord.gg/c9uGs3cFXr`.
+If Sam is unsure about a product detail, provider limits, or a feature not
+listed here, it should say it does not know from the product fact sheet rather
+than guess. Questions about this deployment itself — access, keys, cost, or
+anything the fact sheet does not cover — go to the person who runs it, at
+`huy1999nguyen@gmail.com`.

@@ -19,7 +19,7 @@ type McpAuth = {
   subject: string;
 };
 
-export const MCP_AUTH_CONTEXT_PROP = "openSeoAuth";
+export const MCP_AUTH_CONTEXT_PROP = "flyRocketSeoAuth";
 export const MCP_ROUTE = "/mcp";
 
 const mcpToolAuthContextSchema = z.object({

@@ -12,9 +12,9 @@ import {
   workersOAuthMcpPropsSchema,
 } from "@/server/mcp/context";
 import { getPublicOrigin } from "@/server/mcp/public-origin";
-import { registerOpenSeoMcpTools } from "@/server/mcp/server";
+import { registerFlyRocketSeoMcpTools } from "@/server/mcp/server";
 
-function createOpenSeoMcpServer() {
+function createFlyRocketSeoMcpServer() {
   const server = new McpServer(
     {
       name: "FlyRocketSEO MCP",
@@ -22,10 +22,12 @@ function createOpenSeoMcpServer() {
       version: "0.0.11",
       description:
         "SEO research tools for AI agents: keyword research and metrics, SERP and local SERP results, domain and backlink analysis, rank tracking, and Google Search Console performance.",
-      websiteUrl: "https://openseo.so",
+      // Advertised to MCP clients, so both must resolve on this deployment
+      // rather than another install.
+      websiteUrl: "https://flyrocketseo.huy1999nguyen.workers.dev",
       icons: [
         {
-          src: "https://openseo.so/android-chrome-512x512.png",
+          src: "https://flyrocketseo.huy1999nguyen.workers.dev/android-chrome-512x512.png",
           mimeType: "image/png",
           sizes: ["512x512"],
         },
@@ -33,15 +35,15 @@ function createOpenSeoMcpServer() {
     },
     {
       instructions:
-        "FlyRocketSEO research tools use credits. Proceed with normal focused research, but ask the user for confirmation before planned batches over 2,000 credits.",
+        "FlyRocketSEO research tools call a paid data provider on the operator's own account — there is no credit balance to check. Proceed with normal focused research, but ask the user before running large batches.",
     },
   );
-  registerOpenSeoMcpTools(server);
+  registerFlyRocketSeoMcpTools(server);
 
   return server;
 }
 
-export async function handleAuthenticatedOpenSeoMcpRequest(
+export async function handleAuthenticatedFlyRocketSeoMcpRequest(
   request: Request,
   props: unknown,
   env: unknown,
@@ -56,10 +58,10 @@ export async function handleAuthenticatedOpenSeoMcpRequest(
     return new Response("MCP auth context required", { status: 403 });
   }
 
-  return handleOpenSeoMcpRequest(request, result.data, env, ctx);
+  return handleFlyRocketSeoMcpRequest(request, result.data, env, ctx);
 }
 
-export async function handleSelfHostedOpenSeoMcpRequest(
+export async function handleSelfHostedFlyRocketSeoMcpRequest(
   request: Request,
   authMode: "cloudflare_access" | "local_noauth",
   env: unknown,
@@ -70,7 +72,7 @@ export async function handleSelfHostedOpenSeoMcpRequest(
   // CORS/preflight still needs to reach the MCP transport before auth context
   // exists, so OPTIONS intentionally bypasses context creation.
   if (request.method === "OPTIONS") {
-    return handleOpenSeoMcpRequest(request, undefined, env, ctx);
+    return handleFlyRocketSeoMcpRequest(request, undefined, env, ctx);
   }
 
   const baseUrl = getPublicOrigin(request);
@@ -87,10 +89,10 @@ export async function handleSelfHostedOpenSeoMcpRequest(
     }),
   );
 
-  return handleOpenSeoMcpRequest(request, props, env, ctx);
+  return handleFlyRocketSeoMcpRequest(request, props, env, ctx);
 }
 
-function handleOpenSeoMcpRequest(
+function handleFlyRocketSeoMcpRequest(
   request: Request,
   props: ReturnType<typeof createWorkersOAuthMcpProps> | undefined,
   env: unknown,
@@ -114,7 +116,7 @@ function handleOpenSeoMcpRequest(
     );
   }
 
-  const server = createOpenSeoMcpServer();
+  const server = createFlyRocketSeoMcpServer();
   const handler = createMcpHandler(server, {
     route: MCP_ROUTE,
     enableJsonResponse: true,

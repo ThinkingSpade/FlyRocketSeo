@@ -6,7 +6,7 @@ import { toast } from "sonner";
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
 // This deployment's own repo — issues about it belong here, not on the
-// upstream OpenSEO tracker.
+// upstream project tracker.
 const GITHUB_URL = "https://github.com/ThinkingSpade/FlyRocketSeo";
 
 export const Route = createFileRoute("/_app/support")({

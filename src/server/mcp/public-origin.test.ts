@@ -22,14 +22,19 @@ describe("getPublicOrigin", () => {
   });
 
   it("ignores forwarded hosts when the request is already public https", () => {
-    const request = new Request("https://app.openseo.so/api/oauth/consent", {
-      headers: {
-        "x-forwarded-proto": "https",
-        "x-forwarded-host": "evil.test",
+    const request = new Request(
+      "https://flyrocketseo.huy1999nguyen.workers.dev/api/oauth/consent",
+      {
+        headers: {
+          "x-forwarded-proto": "https",
+          "x-forwarded-host": "evil.test",
+        },
       },
-    });
+    );
 
-    expect(getPublicOrigin(request)).toBe("https://app.openseo.so");
+    expect(getPublicOrigin(request)).toBe(
+      "https://flyrocketseo.huy1999nguyen.workers.dev",
+    );
   });
 });
 

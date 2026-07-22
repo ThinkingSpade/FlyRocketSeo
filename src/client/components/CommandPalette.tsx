@@ -33,7 +33,7 @@ import { useSession } from "@/lib/auth-client";
 // Module-level open channel: the global keydown listener lives inside the
 // palette, but other surfaces (the sidebar trigger) need to open it without a
 // shared store. They dispatch this window event; the mounted palette listens.
-const OPEN_EVENT = "openseo:open-command-palette";
+const OPEN_EVENT = "flyrocketseo:open-command-palette";
 
 /** Open the command palette from anywhere (e.g. the sidebar trigger button). */
 export function openCommandPalette() {

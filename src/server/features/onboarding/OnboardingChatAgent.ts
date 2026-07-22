@@ -21,7 +21,7 @@ import {
   trackUsageCreditSpend,
 } from "@/server/billing/subscription";
 import { FREE_ONBOARDING_QUESTION_LIMIT } from "@/shared/onboardingChat";
-import openSeoFactSheet from "@/server/features/onboarding/openseo-fact-sheet.md?raw";
+import productFactSheet from "@/server/features/onboarding/product-fact-sheet.md?raw";
 
 function buildSystemPrompt(domain: string | null): string {
   return [
@@ -55,7 +55,7 @@ function buildSystemPrompt(domain: string | null): string {
     domain
       ? `The user's website is ${domain}.`
       : "If you need the user's website before answering, ask for it briefly.",
-    `FlyRocketSEO Fact Sheet:\n\n${openSeoFactSheet}`,
+    `FlyRocketSEO Fact Sheet:\n\n${productFactSheet}`,
   ].join("\n\n");
 }
 
@@ -114,7 +114,7 @@ export class OnboardingChatAgent extends AIChatAgent {
       // — Autumn rejects an empty string. Mirrors the scheduled rank-check job's
       // user-less metering, but onboarding-specific so it's identifiable in
       // Autumn logs.
-      userEmail: "system-onboarding@openseo.so",
+      userEmail: "system-onboarding@flyrocketseo.local",
       organizationId,
       projectId: project.id,
     };

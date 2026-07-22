@@ -61,7 +61,7 @@ function base64UrlToBytes(value: string) {
 async function getStateKey(clientSecret: string) {
   return crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(`openseo:gsc:${clientSecret}`),
+    new TextEncoder().encode(`flyrocketseo:gsc:${clientSecret}`),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"],
