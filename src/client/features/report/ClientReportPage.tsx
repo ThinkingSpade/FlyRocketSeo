@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { FileText, Printer } from "lucide-react";
+import { ReportToolbar } from "@/client/features/report/ReportToolbar";
 import { buildTechnicalIssues } from "@/client/features/opportunities/opportunityModel";
 import { buildTopMovers } from "@/client/features/search-performance/contentGroups";
 import { buildRecommendations } from "@/client/features/report/reportModel";
@@ -12,9 +12,11 @@ import {
   buildTopPagesNarrative,
 } from "@/client/features/report/reportNarrative";
 import {
-  ReportChapter,
+  ReportCallout,
   ReportCover,
+  ReportHeroStats,
   ReportNarrative,
+  ReportPage,
 } from "@/client/features/report/ReportChrome";
 import {
   ApprovedFixesSection,
@@ -35,16 +37,35 @@ import { toPath } from "@/client/features/report/reportModel";
 // the browser's Print → Save as PDF produces a clean client deliverable
 // regardless of the app shell around it. Chapters start on their own page.
 const PRINT_STYLES = `
+/* Table styling is applied at the report root so every existing section picks
+   it up without each one re-implementing the look. */
+#client-report table { width: 100%; border-collapse: collapse; }
+#client-report thead tr { background: #4934c7; }
+#client-report thead th {
+  padding: 10px 12px; text-align: left; color: #ffffff;
+  font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em;
+}
+#client-report tbody td {
+  padding: 9px 12px; font-size: 12.5px; color: #2f2b52;
+  border-bottom: 1px solid #ece9f8;
+}
+#client-report tbody tr:nth-child(even) { background: #f7f6fd; }
+#client-report .report-page:first-of-type { break-before: auto; }
+
 @media print {
   body * { visibility: hidden; }
   #client-report, #client-report * { visibility: visible; }
   #client-report { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
   .report-no-print { display: none !important; }
   .report-section { break-inside: avoid; }
-  .report-chapter { break-before: page; }
+  /* One topic per sheet, mirroring how a chaptered report paginates. */
+  .report-page { break-before: page; }
   .report-cover { break-after: page; }
 }
-@page { margin: 14mm; }
+/* Colour bands and tinted rows must survive the print pipeline — Chrome drops
+   backgrounds otherwise, which would flatten the whole design to white. */
+#client-report { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+@page { margin: 0; }
 `;
 
 const PREPARED_BY_KEY = "flyrocket:report:preparedBy";
@@ -133,55 +154,18 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
     <div className="mx-auto w-full max-w-4xl p-4">
       <style>{PRINT_STYLES}</style>
 
-      <div className="report-no-print mb-4 flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <FileText className="size-5" />
-            Client Report
-          </h1>
-          <p className="text-sm text-base-content/60">
-            A client-ready summary of everything this project&apos;s data says.
-            Print it (or Save as PDF) and send it.
-          </p>
-        </div>
-        <div className="flex flex-wrap items-end gap-2">
-          <label className="form-control">
-            <span className="label-text text-xs text-base-content/60">
-              Prepared by
-            </span>
-            <input
-              className="input input-bordered input-sm w-40"
-              value={preparedBy}
-              placeholder="Your name"
-              onChange={(event) => {
-                setPreparedBy(event.target.value);
-                localStorage.setItem(PREPARED_BY_KEY, event.target.value);
-              }}
-            />
-          </label>
-          <label className="form-control">
-            <span className="label-text text-xs text-base-content/60">
-              Agency
-            </span>
-            <input
-              className="input input-bordered input-sm w-40"
-              value={agency}
-              placeholder="Company name"
-              onChange={(event) => {
-                setAgency(event.target.value);
-                localStorage.setItem(AGENCY_KEY, event.target.value);
-              }}
-            />
-          </label>
-          <button
-            type="button"
-            className="btn btn-primary btn-sm gap-1.5"
-            onClick={() => window.print()}
-          >
-            <Printer className="size-4" /> Print / Save PDF
-          </button>
-        </div>
-      </div>
+      <ReportToolbar
+        preparedBy={preparedBy}
+        agency={agency}
+        onPreparedByChange={(value) => {
+          setPreparedBy(value);
+          localStorage.setItem(PREPARED_BY_KEY, value);
+        }}
+        onAgencyChange={(value) => {
+          setAgency(value);
+          localStorage.setItem(AGENCY_KEY, value);
+        }}
+      />
 
       <div id="client-report" className="space-y-8">
         <ReportCover
@@ -192,8 +176,13 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
           agency={agency}
         />
 
-        <ReportChapter number="00" kicker="Summary" domain={domain}>
-          <h2 className="text-lg font-semibold">Overall summary</h2>
+        <ReportPage
+          number="00"
+          kicker="Summary"
+          domain={domain}
+          title="Overall summary"
+          pageNumber={2}
+        >
           {narrativeInput ? (
             <ReportNarrative
               paragraphs={buildSummaryNarrative(narrativeInput)}
@@ -212,23 +201,39 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
               : "unavailable"}{" "}
             · Generated {generatedAt}
           </p>
-        </ReportChapter>
+        </ReportPage>
 
-        <ReportChapter number="01" kicker="Performance" domain={domain}>
+        <ReportPage
+          number="01"
+          kicker="Performance"
+          domain={domain}
+          title="Overall performance"
+          pageNumber={3}
+        >
           {narrativeInput ? (
             <>
-              <h2 className="text-lg font-semibold">Overall performance</h2>
               <ReportNarrative
                 paragraphs={buildPerformanceNarrative(narrativeInput)}
               />
-              <h3 className="pt-2 text-base font-semibold">
-                Click performance
-              </h3>
+              <ReportCallout>
+                FlyRocketSEO read this period&apos;s Search Console data and
+                compared it against the previous period to build every figure on
+                this page.
+              </ReportCallout>
               <ReportNarrative
                 paragraphs={buildClickNarrative(narrativeInput)}
               />
             </>
           ) : null}
+        </ReportPage>
+
+        <ReportPage
+          number="01"
+          kicker="Performance"
+          domain={domain}
+          title="Top pages & keyword rankings"
+          pageNumber={4}
+        >
           <ReportNarrative
             paragraphs={buildTopPagesNarrative(
               topPages.map((row) => ({
@@ -274,37 +279,71 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
               />
             }
           />
-        </ReportChapter>
+        </ReportPage>
 
-        <ReportChapter number="02" kicker="Content" domain={domain}>
-          <h2 className="text-lg font-semibold">Pages gaining ground</h2>
+        <ReportPage
+          number="02"
+          kicker="Content"
+          domain={domain}
+          title="Pages gaining ground"
+          pageNumber={5}
+        >
           <ContentMovers rows={movers} />
-        </ReportChapter>
+        </ReportPage>
 
-        <ReportChapter number="03" kicker="Improvements" domain={domain}>
+        <ReportPage
+          number="03"
+          kicker="Improvements"
+          domain={domain}
+          title={
+            data.approvedFixes.length > 0
+              ? "On-page optimizations approved"
+              : "On-page optimizations"
+          }
+          pageNumber={6}
+        >
           {data.approvedFixes.length > 0 ? (
             <>
-              <h2 className="text-lg font-semibold">
-                On-page optimizations done
-              </h2>
               <ApprovedFixesSection fixes={data.approvedFixes} />
+              <ReportCallout>
+                These rewrites were generated from your crawl and Search Console
+                data, then approved by you — ready to publish.
+              </ReportCallout>
               <h3 className="pt-2 text-base font-semibold">
                 Still recommended
               </h3>
             </>
-          ) : (
-            <h2 className="text-lg font-semibold">On-page optimizations</h2>
-          )}
+          ) : null}
           <OnPageOptimizations
             issues={technicalIssues}
             pagesCrawled={latestAudit?.pagesCrawled ?? null}
           />
-        </ReportChapter>
+        </ReportPage>
 
-        <ReportChapter number="04" kicker="Opportunities" domain={domain}>
-          <h2 className="text-lg font-semibold">Backlink profile</h2>
+        <ReportPage
+          number="04"
+          kicker="Opportunities"
+          domain={domain}
+          title="Backlink profile"
+          pageNumber={7}
+        >
           {backlinks ? (
             <>
+              <ReportHeroStats
+                items={[
+                  {
+                    label: "Domain Rank",
+                    value:
+                      backlinks.summary.rank?.toLocaleString("en-US") ?? "—",
+                  },
+                  {
+                    label: "Total Backlinks",
+                    value:
+                      backlinks.summary.backlinks?.toLocaleString("en-US") ??
+                      "—",
+                  },
+                ]}
+              />
               <ReportNarrative
                 paragraphs={buildBacklinkNarrative({
                   rank: backlinks.summary.rank,
@@ -328,21 +367,31 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
               profile in this report.
             </p>
           )}
-        </ReportChapter>
+        </ReportPage>
 
-        <ReportChapter number="05" kicker="AI Visibility" domain={domain}>
-          <h2 className="text-lg font-semibold">AI search visibility</h2>
+        <ReportPage
+          number="05"
+          kicker="AI Visibility"
+          domain={domain}
+          title="AI search visibility"
+          pageNumber={8}
+        >
           <ReportAiVisibility visibility={data.brandVisibility} />
-        </ReportChapter>
+        </ReportPage>
 
-        <ReportChapter number="06" kicker="Next steps" domain={domain}>
-          <h2 className="text-lg font-semibold">What we&apos;d do next</h2>
-          <ul className="list-inside list-disc space-y-1.5 text-sm leading-relaxed text-base-content/80">
+        <ReportPage
+          number="06"
+          kicker="Next steps"
+          domain={domain}
+          title="What we'd do next"
+          pageNumber={9}
+        >
+          <ul className="list-inside list-disc space-y-1.5 text-[15px] leading-relaxed text-base-content/80">
             {recommendations.map((recommendation) => (
               <li key={recommendation}>{recommendation}</li>
             ))}
           </ul>
-        </ReportChapter>
+        </ReportPage>
 
         <footer className="border-t border-base-300 pt-3 text-xs text-base-content/50">
           Prepared with FlyRocketSEO · {generatedAt}
