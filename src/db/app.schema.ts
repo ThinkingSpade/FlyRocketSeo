@@ -463,3 +463,55 @@ export const auditLighthouseResults = sqliteTable(
   },
   (table) => [index("audit_lighthouse_results_audit_id_idx").on(table.auditId)],
 );
+
+/**
+ * One suggested on-page fix: a rewritten title, meta description, H1, or image
+ * alt for a specific URL. Rows are regenerated in place (see the unique index)
+ * so re-running generation refreshes suggestions without losing the user's
+ * approve/exclude decisions on elements that haven't changed.
+ */
+export const pageOptimizations = sqliteTable(
+  "page_optimizations",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    element: text("element", {
+      enum: ["title", "meta", "h1", "alt"],
+    }).notNull(),
+    // Which image an "alt" suggestion is for; empty for page-level elements.
+    // NOT NULL because both SQLite and Postgres treat NULLs as distinct in a
+    // unique index, which would let duplicate page-level rows through.
+    target: text("target").notNull().default(""),
+    currentValue: text("current_value"),
+    suggestedValue: text("suggested_value").notNull(),
+    // Why we suggest it, shown to the user next to the diff.
+    reason: text("reason").notNull(),
+    // "rules" is the free keyword-informed generator; "ai" is the metered
+    // OpenRouter rewrite.
+    source: text("source", { enum: ["rules", "ai"] })
+      .notNull()
+      .default("rules"),
+    status: text("status", { enum: ["pending", "approved", "excluded"] })
+      .notNull()
+      .default("pending"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("page_optimizations_project_id_idx").on(table.projectId),
+    // One live suggestion per element per URL, so regeneration upserts.
+    uniqueIndex("page_optimizations_unique_element_idx").on(
+      table.projectId,
+      table.url,
+      table.element,
+      table.target,
+    ),
+  ],
+);

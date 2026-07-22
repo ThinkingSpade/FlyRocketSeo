@@ -48,6 +48,7 @@ import { Route as ProjectPProjectIdRankTrackingRouteImport } from './routes/_pro
 import { Route as ProjectPProjectIdPromptExplorerRouteImport } from './routes/_project/p/$projectId/prompt-explorer'
 import { Route as ProjectPProjectIdPageRouteImport } from './routes/_project/p/$projectId/page'
 import { Route as ProjectPProjectIdOpportunitiesRouteImport } from './routes/_project/p/$projectId/opportunities'
+import { Route as ProjectPProjectIdOnPageRouteImport } from './routes/_project/p/$projectId/on-page'
 import { Route as ProjectPProjectIdLocalGridRouteImport } from './routes/_project/p/$projectId/local-grid'
 import { Route as ProjectPProjectIdLocalRouteImport } from './routes/_project/p/$projectId/local'
 import { Route as ProjectPProjectIdLinksRouteImport } from './routes/_project/p/$projectId/links'
@@ -265,6 +266,11 @@ const ProjectPProjectIdOpportunitiesRoute =
     path: '/opportunities',
     getParentRoute: () => ProjectPProjectIdRouteRoute,
   } as any)
+const ProjectPProjectIdOnPageRoute = ProjectPProjectIdOnPageRouteImport.update({
+  id: '/on-page',
+  path: '/on-page',
+  getParentRoute: () => ProjectPProjectIdRouteRoute,
+} as any)
 const ProjectPProjectIdLocalGridRoute =
   ProjectPProjectIdLocalGridRouteImport.update({
     id: '/local-grid',
@@ -393,6 +399,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
   '/p/$projectId/local-grid': typeof ProjectPProjectIdLocalGridRoute
+  '/p/$projectId/on-page': typeof ProjectPProjectIdOnPageRoute
   '/p/$projectId/opportunities': typeof ProjectPProjectIdOpportunitiesRoute
   '/p/$projectId/page': typeof ProjectPProjectIdPageRoute
   '/p/$projectId/prompt-explorer': typeof ProjectPProjectIdPromptExplorerRoute
@@ -444,6 +451,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
   '/p/$projectId/local-grid': typeof ProjectPProjectIdLocalGridRoute
+  '/p/$projectId/on-page': typeof ProjectPProjectIdOnPageRoute
   '/p/$projectId/opportunities': typeof ProjectPProjectIdOpportunitiesRoute
   '/p/$projectId/page': typeof ProjectPProjectIdPageRoute
   '/p/$projectId/prompt-explorer': typeof ProjectPProjectIdPromptExplorerRoute
@@ -501,6 +509,7 @@ export interface FileRoutesById {
   '/_project/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/_project/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
   '/_project/p/$projectId/local-grid': typeof ProjectPProjectIdLocalGridRoute
+  '/_project/p/$projectId/on-page': typeof ProjectPProjectIdOnPageRoute
   '/_project/p/$projectId/opportunities': typeof ProjectPProjectIdOpportunitiesRoute
   '/_project/p/$projectId/page': typeof ProjectPProjectIdPageRoute
   '/_project/p/$projectId/prompt-explorer': typeof ProjectPProjectIdPromptExplorerRoute
@@ -556,6 +565,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/links'
     | '/p/$projectId/local'
     | '/p/$projectId/local-grid'
+    | '/p/$projectId/on-page'
     | '/p/$projectId/opportunities'
     | '/p/$projectId/page'
     | '/p/$projectId/prompt-explorer'
@@ -607,6 +617,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/links'
     | '/p/$projectId/local'
     | '/p/$projectId/local-grid'
+    | '/p/$projectId/on-page'
     | '/p/$projectId/opportunities'
     | '/p/$projectId/page'
     | '/p/$projectId/prompt-explorer'
@@ -663,6 +674,7 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/links'
     | '/_project/p/$projectId/local'
     | '/_project/p/$projectId/local-grid'
+    | '/_project/p/$projectId/on-page'
     | '/_project/p/$projectId/opportunities'
     | '/_project/p/$projectId/page'
     | '/_project/p/$projectId/prompt-explorer'
@@ -971,6 +983,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPProjectIdOpportunitiesRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
+    '/_project/p/$projectId/on-page': {
+      id: '/_project/p/$projectId/on-page'
+      path: '/on-page'
+      fullPath: '/p/$projectId/on-page'
+      preLoaderRoute: typeof ProjectPProjectIdOnPageRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
     '/_project/p/$projectId/local-grid': {
       id: '/_project/p/$projectId/local-grid'
       path: '/local-grid'
@@ -1162,6 +1181,7 @@ interface ProjectPProjectIdRouteRouteChildren {
   ProjectPProjectIdLinksRoute: typeof ProjectPProjectIdLinksRoute
   ProjectPProjectIdLocalRoute: typeof ProjectPProjectIdLocalRoute
   ProjectPProjectIdLocalGridRoute: typeof ProjectPProjectIdLocalGridRoute
+  ProjectPProjectIdOnPageRoute: typeof ProjectPProjectIdOnPageRoute
   ProjectPProjectIdOpportunitiesRoute: typeof ProjectPProjectIdOpportunitiesRoute
   ProjectPProjectIdPageRoute: typeof ProjectPProjectIdPageRoute
   ProjectPProjectIdPromptExplorerRoute: typeof ProjectPProjectIdPromptExplorerRoute
@@ -1191,6 +1211,7 @@ const ProjectPProjectIdRouteRouteChildren: ProjectPProjectIdRouteRouteChildren =
     ProjectPProjectIdLinksRoute: ProjectPProjectIdLinksRoute,
     ProjectPProjectIdLocalRoute: ProjectPProjectIdLocalRoute,
     ProjectPProjectIdLocalGridRoute: ProjectPProjectIdLocalGridRoute,
+    ProjectPProjectIdOnPageRoute: ProjectPProjectIdOnPageRoute,
     ProjectPProjectIdOpportunitiesRoute: ProjectPProjectIdOpportunitiesRoute,
     ProjectPProjectIdPageRoute: ProjectPProjectIdPageRoute,
     ProjectPProjectIdPromptExplorerRoute: ProjectPProjectIdPromptExplorerRoute,

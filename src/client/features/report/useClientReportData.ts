@@ -17,6 +17,7 @@ import {
   getBacklinksRows,
 } from "@/serverFunctions/backlinks";
 import { getAuditHistory, getAuditResults } from "@/serverFunctions/audit";
+import { getOnPageFixes } from "@/serverFunctions/onPage";
 
 const STALE_TIME = 10 * 60_000;
 
@@ -89,6 +90,12 @@ export function useClientReportData(projectId: string) {
       getAuditResults({ data: { projectId, auditId: latestAudit?.id ?? "" } }),
     staleTime: STALE_TIME,
   });
+  // Shares the On-Page Fixes tab's cache key, so the report reuses it.
+  const onPageQuery = useQuery({
+    queryKey: ["onPageFixes", projectId],
+    queryFn: () => getOnPageFixes({ data: { projectId } }),
+    staleTime: STALE_TIME,
+  });
 
   const domainQuery = useQuery({
     enabled: hasDomain,
@@ -154,6 +161,9 @@ export function useClientReportData(projectId: string) {
     domainOverview: domainQuery.data ?? null,
     latestAudit: latestAudit ?? null,
     auditPages: auditResultsQuery.data?.pages ?? [],
+    approvedFixes: (onPageQuery.data?.rows ?? []).filter(
+      (row) => row.status === "approved",
+    ),
     currentPages: content?.current ?? [],
     previousPages: content?.previous ?? [],
     topQueries: (topQueriesQuery.data?.connected

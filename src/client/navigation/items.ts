@@ -15,6 +15,7 @@ import {
   MessageSquare,
   Network,
   NotebookPen,
+  PencilRuler,
   Search,
   Sparkles,
   Split,
@@ -117,6 +118,11 @@ const projectNavItems = [
     icon: ClipboardCheck,
   },
   {
+    to: "/p/$projectId/on-page" as const,
+    label: "On-Page Fixes",
+    icon: PencilRuler,
+  },
+  {
     to: "/p/$projectId/report" as const,
     label: "Client Report",
     icon: FileText,
@@ -197,6 +203,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/rank-tracking"),
         byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),
+        byPath("/p/$projectId/on-page"),
         byPath("/p/$projectId/report"),
       ],
     },

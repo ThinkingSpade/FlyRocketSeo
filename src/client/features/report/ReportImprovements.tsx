@@ -152,6 +152,78 @@ export function ContentMovers({ rows }: { rows: MoverRow[] }) {
   );
 }
 
+const FIX_ELEMENT_LABEL: Record<string, string> = {
+  title: "Title",
+  meta: "Meta",
+  h1: "H1",
+  alt: "Alt",
+};
+
+type ApprovedFix = {
+  id: string;
+  url: string;
+  element: string;
+  suggestedValue: string;
+};
+
+/**
+ * On-page fixes the user approved this period — the report's proof of work.
+ * Grouped counts plus a sample, so a client sees what changed without a wall
+ * of rows.
+ */
+export function ApprovedFixesSection({ fixes }: { fixes: ApprovedFix[] }) {
+  if (fixes.length === 0) return null;
+
+  const byElement = new Map<string, number>();
+  for (const fix of fixes) {
+    byElement.set(fix.element, (byElement.get(fix.element) ?? 0) + 1);
+  }
+  const summary = [...byElement.entries()]
+    .map(([element, count]) => `${count} ${FIX_ELEMENT_LABEL[element] ?? element}`)
+    .join(", ");
+
+  return (
+    <>
+      <p className="text-sm leading-relaxed text-base-content/80">
+        <span className="font-semibold">{fixes.length}</span> on-page{" "}
+        {fixes.length === 1 ? "fix has" : "fixes have"} been approved this period
+        ({summary}). Each is a specific rewrite ready to publish.
+      </p>
+      <div className="overflow-x-auto rounded-lg border border-base-300">
+        <table className="table table-sm">
+          <thead>
+            <tr>
+              <th>Page</th>
+              <th>Element</th>
+              <th>Approved change</th>
+            </tr>
+          </thead>
+          <tbody>
+            {fixes.slice(0, 15).map((fix) => (
+              <tr key={fix.id}>
+                <td className="max-w-[12rem]">
+                  <span className="line-clamp-1">{toPath(fix.url)}</span>
+                </td>
+                <td className="text-base-content/70">
+                  {FIX_ELEMENT_LABEL[fix.element] ?? fix.element}
+                </td>
+                <td className="max-w-sm">
+                  <span className="line-clamp-1">{fix.suggestedValue}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {fixes.length > 15 ? (
+        <p className="text-xs text-base-content/50">
+          Showing 15 of {fixes.length} approved fixes.
+        </p>
+      ) : null}
+    </>
+  );
+}
+
 type BacklinkProfile = {
   rank: number | null;
   backlinks: number | null;

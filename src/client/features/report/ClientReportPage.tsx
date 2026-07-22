@@ -17,6 +17,7 @@ import {
   ReportNarrative,
 } from "@/client/features/report/ReportChrome";
 import {
+  ApprovedFixesSection,
   BacklinkProfileBlock,
   ContentMovers,
   OnPageOptimizations,
@@ -280,7 +281,17 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
         </ReportChapter>
 
         <ReportChapter number="03" kicker="Improvements" domain={domain}>
-          <h2 className="text-lg font-semibold">On-page optimizations</h2>
+          {data.approvedFixes.length > 0 ? (
+            <>
+              <h2 className="text-lg font-semibold">On-page optimizations done</h2>
+              <ApprovedFixesSection fixes={data.approvedFixes} />
+              <h3 className="pt-2 text-base font-semibold">
+                Still recommended
+              </h3>
+            </>
+          ) : (
+            <h2 className="text-lg font-semibold">On-page optimizations</h2>
+          )}
           <OnPageOptimizations
             issues={technicalIssues}
             pagesCrawled={latestAudit?.pagesCrawled ?? null}
