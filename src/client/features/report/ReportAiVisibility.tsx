@@ -40,10 +40,10 @@ export function ReportAiVisibility({
 
   const sov = result.shareOfVoice;
   const sovEntries = sov
-    ? [...sov.entries].sort((a, b) => (b.mentions ?? 0) - (a.mentions ?? 0))
+    ? sov.entries.toSorted((a, b) => (b.mentions ?? 0) - (a.mentions ?? 0))
     : [];
-  const topPages = [...result.topPages]
-    .sort((a, b) => (b.mentions ?? 0) - (a.mentions ?? 0))
+  const topPages = result.topPages
+    .toSorted((a, b) => (b.mentions ?? 0) - (a.mentions ?? 0))
     .slice(0, 5);
 
   return (
@@ -66,9 +66,7 @@ export function ReportAiVisibility({
               {PLATFORM_LABEL[platform.platform]}
             </p>
             <p className="mt-1 text-2xl font-semibold tabular-nums">
-              {platform.status === "error"
-                ? "—"
-                : count(platform.mentions)}
+              {platform.status === "error" ? "—" : count(platform.mentions)}
             </p>
             <p className="text-xs text-base-content/50">mentions</p>
           </div>

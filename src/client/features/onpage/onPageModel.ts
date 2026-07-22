@@ -120,7 +120,8 @@ export function groupByPage(
       pendingCount: groupRows.filter((row) => row.status === "pending").length,
     }))
     .toSorted(
-      (a, b) => b.pendingCount - a.pendingCount || b.rows.length - a.rows.length,
+      (a, b) =>
+        b.pendingCount - a.pendingCount || b.rows.length - a.rows.length,
     );
 }
 

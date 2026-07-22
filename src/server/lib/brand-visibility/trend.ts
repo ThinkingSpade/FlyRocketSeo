@@ -36,7 +36,7 @@ function diff(latest: number | null, previous: number | null): number | null {
 }
 
 export function buildTrend(rows: TrendInputRow[]): BrandVisibilityTrend {
-  const series = [...rows].sort((a, b) =>
+  const series = rows.toSorted((a, b) =>
     a.capturedOn < b.capturedOn ? -1 : a.capturedOn > b.capturedOn ? 1 : 0,
   );
   const latest = series.at(-1) ?? null;

@@ -48,7 +48,13 @@ export type OpportunityView = {
 };
 
 /** A signed change, green when up (more visibility is always the good direction). */
-function DeltaPill({ value, suffix = "" }: { value: number | null; suffix?: string }) {
+function DeltaPill({
+  value,
+  suffix = "",
+}: {
+  value: number | null;
+  suffix?: string;
+}) {
   if (value == null || value === 0) return null;
   const up = value > 0;
   const Icon = up ? ArrowUpRight : ArrowDownRight;
@@ -97,7 +103,9 @@ export function VisibilityStatTiles({
   delta: DeltaView;
 }) {
   const share =
-    latest.targetSharePct == null ? "—" : `${Math.round(latest.targetSharePct)}%`;
+    latest.targetSharePct == null
+      ? "—"
+      : `${Math.round(latest.targetSharePct)}%`;
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
       <StatTile

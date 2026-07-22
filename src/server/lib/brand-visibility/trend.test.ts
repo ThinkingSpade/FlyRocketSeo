@@ -45,7 +45,11 @@ describe("buildTrend", () => {
 
   it("leaves a delta metric null when either side is missing", () => {
     const trend = buildTrend([
-      row({ capturedOn: "2026-07-01", totalMentions: null, targetSharePct: 30 }),
+      row({
+        capturedOn: "2026-07-01",
+        totalMentions: null,
+        targetSharePct: 30,
+      }),
       row({ capturedOn: "2026-07-08", totalMentions: 140, targetSharePct: 45 }),
     ]);
     expect(trend.delta?.totalMentions).toBeNull();

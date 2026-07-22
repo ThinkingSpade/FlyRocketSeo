@@ -27,7 +27,9 @@ import {
 export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [competitorsInput, setCompetitorsInput] = useState("");
-  const [freshResult, setFreshResult] = useState<BrandLookupResult | null>(null);
+  const [freshResult, setFreshResult] = useState<BrandLookupResult | null>(
+    null,
+  );
 
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -76,7 +78,9 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
         <div className="flex items-start gap-2.5">
           <Radar className="mt-0.5 size-5 text-base-content/50" />
           <div>
-            <h2 className="text-lg font-semibold">AI visibility for {domain}</h2>
+            <h2 className="text-lg font-semibold">
+              AI visibility for {domain}
+            </h2>
             <p className="text-sm text-base-content/60">
               Track how ChatGPT and Google AI Overview cite you. Runs on click —
               no automatic spend.
@@ -117,13 +121,19 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
 
       {historyQuery.isPending && Boolean(domain) ? (
         <div className="flex items-center gap-2 py-4 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" /> Loading tracked visibility…
+          <Loader2 className="size-4 animate-spin" /> Loading tracked
+          visibility…
         </div>
       ) : latest ? (
         <div className="space-y-4">
-          <VisibilityStatTiles latest={latest} delta={history?.trend.delta ?? null} />
+          <VisibilityStatTiles
+            latest={latest}
+            delta={history?.trend.delta ?? null}
+          />
           <VisibilityTrendChart series={history?.trend.series ?? []} />
-          <VisibilityOpportunities opportunities={history?.opportunities ?? []} />
+          <VisibilityOpportunities
+            opportunities={history?.opportunities ?? []}
+          />
         </div>
       ) : !analyzing ? (
         <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-6 text-center text-sm text-base-content/70">

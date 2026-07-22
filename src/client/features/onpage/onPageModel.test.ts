@@ -73,9 +73,24 @@ describe("summarize", () => {
 
 describe("groupByPage", () => {
   const rows = [
-    fix({ id: "a1", url: "https://x.com/a", element: "title", status: "pending" }),
-    fix({ id: "a2", url: "https://x.com/a", element: "alt", status: "pending" }),
-    fix({ id: "b1", url: "https://x.com/b", element: "meta", status: "approved" }),
+    fix({
+      id: "a1",
+      url: "https://x.com/a",
+      element: "title",
+      status: "pending",
+    }),
+    fix({
+      id: "a2",
+      url: "https://x.com/a",
+      element: "alt",
+      status: "pending",
+    }),
+    fix({
+      id: "b1",
+      url: "https://x.com/b",
+      element: "meta",
+      status: "approved",
+    }),
   ];
 
   it("groups by url and orders pages by pending count", () => {
@@ -106,10 +121,10 @@ describe("id selectors", () => {
   ];
 
   it("pendingIds returns every pending row", () => {
-    expect(pendingIds(rows).sort()).toEqual(["a", "h", "m", "t"]);
+    expect(pendingIds(rows).toSorted()).toEqual(["a", "h", "m", "t"]);
   });
 
   it("aiRewritableIds returns only pending title/meta", () => {
-    expect(aiRewritableIds(rows).sort()).toEqual(["m", "t"]);
+    expect(aiRewritableIds(rows).toSorted()).toEqual(["m", "t"]);
   });
 });

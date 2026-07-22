@@ -81,10 +81,7 @@ async function analyze(
         snapshotFromResult(result, captureDate()),
       );
     } catch (error) {
-      console.error(
-        "ai-search.brand-visibility.snapshot-write failed:",
-        error,
-      );
+      console.error("ai-search.brand-visibility.snapshot-write failed:", error);
     }
   }
 

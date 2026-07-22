@@ -1,6 +1,9 @@
 import { describe, it, expect } from "vitest";
 import { snapshotFromResult } from "./snapshot";
-import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import {
+  brandLookupResultSchema,
+  type BrandLookupResult,
+} from "@/types/schemas/ai-search";
 
 function baseResult(
   overrides: Partial<BrandLookupResult> = {},
@@ -77,7 +80,7 @@ describe("snapshotFromResult", () => {
   });
 
   it("caps stored topPages and topQueries so the row stays within DB limits", () => {
-    const stored = JSON.parse(
+    const parsedJson: unknown = JSON.parse(
       snapshotFromResult(
         baseResult({
           topPages: Array.from({ length: 40 }, (_, i) => ({
@@ -101,6 +104,7 @@ describe("snapshotFromResult", () => {
         "2026-07-21",
       ).resultJson,
     );
+    const stored = brandLookupResultSchema.parse(parsedJson);
     expect(stored.topPages).toHaveLength(15);
     expect(stored.topQueries).toHaveLength(20);
   });

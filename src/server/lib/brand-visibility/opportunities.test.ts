@@ -47,7 +47,10 @@ describe("buildOpportunities — share of voice", () => {
     const sov = buildOpportunities(result()).filter(
       (o) => o.kind === "share_of_voice",
     );
-    expect(sov.map((o) => o.competitor)).toEqual(["rival-b.com", "rival-a.com"]);
+    expect(sov.map((o) => o.competitor)).toEqual([
+      "rival-b.com",
+      "rival-a.com",
+    ]);
     expect(sov[0].metric).toBe(80); // 200 − 120
     expect(sov[1].metric).toBe(60); // 180 − 120
   });
@@ -82,7 +85,11 @@ describe("buildOpportunities — prompt absence", () => {
             question: "top project tools",
             aiSearchVolume: 900,
             citedSources: [
-              { url: "https://rival-a.com/x", domain: "rival-a.com", title: null },
+              {
+                url: "https://rival-a.com/x",
+                domain: "rival-a.com",
+                title: null,
+              },
             ],
           }),
         ],
@@ -101,7 +108,11 @@ describe("buildOpportunities — prompt absence", () => {
         topQueries: [
           query({
             citedSources: [
-              { url: "https://docs.acme.com/x", domain: "docs.acme.com", title: null },
+              {
+                url: "https://docs.acme.com/x",
+                domain: "docs.acme.com",
+                title: null,
+              },
             ],
           }),
         ],
@@ -117,7 +128,11 @@ describe("buildOpportunities — prompt absence", () => {
         topQueries: [
           query({
             citedSources: [
-              { url: "https://www.acme.com/a", domain: "www.acme.com", title: null },
+              {
+                url: "https://www.acme.com/a",
+                domain: "www.acme.com",
+                title: null,
+              },
             ],
           }),
         ],
@@ -145,7 +160,11 @@ describe("buildOpportunities — prompt absence", () => {
         topQueries: [
           query({
             citedSources: [
-              { url: "https://rival-a.com/x", domain: "rival-a.com", title: null },
+              {
+                url: "https://rival-a.com/x",
+                domain: "rival-a.com",
+                title: null,
+              },
             ],
           }),
         ],

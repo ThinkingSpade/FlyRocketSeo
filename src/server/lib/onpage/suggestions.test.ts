@@ -171,7 +171,9 @@ describe("h1 rules", () => {
     const h1 = buildPageSuggestions(page({ h1Count: 0 })).find(
       (s) => s.element === "h1",
     );
-    expect(h1?.suggestedValue).toBe("Office Coffee Service for Modern Workplaces");
+    expect(h1?.suggestedValue).toBe(
+      "Office Coffee Service for Modern Workplaces",
+    );
     expect(h1?.currentValue).toBeNull();
   });
 

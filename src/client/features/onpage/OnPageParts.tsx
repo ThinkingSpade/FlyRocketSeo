@@ -66,7 +66,9 @@ function FixDiff({ row }: { row: FixRow }) {
       <p className="text-sm font-medium">{row.suggestedValue}</p>
       <p className="text-xs text-base-content/55">{row.reason}</p>
       {row.element === "alt" && row.target ? (
-        <p className="truncate text-[11px] text-base-content/40">{row.target}</p>
+        <p className="truncate text-[11px] text-base-content/40">
+          {row.target}
+        </p>
       ) : null}
     </div>
   );
@@ -233,8 +235,8 @@ export function RecommendedFixesBanner({
   return (
     <p className="text-sm text-base-content/70">
       We found <span className="font-semibold">{total}</span> recommended fixes
-      across {label.toLowerCase()}. Approve the ones you want, exclude the rest —
-      approved fixes flow into your client report.
+      across {label.toLowerCase()}. Approve the ones you want, exclude the rest
+      — approved fixes flow into your client report.
     </p>
   );
 }

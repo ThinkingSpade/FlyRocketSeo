@@ -25,7 +25,8 @@ function parseImages(json: string | null): ImageRow[] {
   try {
     const parsed: unknown = JSON.parse(json);
     if (!Array.isArray(parsed)) return [];
-    return parsed.flatMap((entry): ImageRow[] => {
+    const items: unknown[] = parsed;
+    return items.flatMap((entry): ImageRow[] => {
       if (typeof entry !== "object" || entry === null) return [];
       const record: Record<string, unknown> = { ...entry };
       const src = record.src;
@@ -61,7 +62,9 @@ function groupQueriesByPage(
   for (const [page, list] of byPage) {
     byPage.set(
       page,
-      list.toSorted((a, b) => b.impressions - a.impressions).slice(0, QUERIES_PER_PAGE),
+      list
+        .toSorted((a, b) => b.impressions - a.impressions)
+        .slice(0, QUERIES_PER_PAGE),
     );
   }
   return byPage;
@@ -76,7 +79,9 @@ function queriesFor(
   byPage: Map<string, Array<{ query: string; impressions: number }>>,
 ) {
   const trimmed = url.replace(/\/$/, "");
-  return byPage.get(url) ?? byPage.get(trimmed) ?? byPage.get(`${trimmed}/`) ?? [];
+  return (
+    byPage.get(url) ?? byPage.get(trimmed) ?? byPage.get(`${trimmed}/`) ?? []
+  );
 }
 
 /** Search Console data is free but optional — never block generation on it. */

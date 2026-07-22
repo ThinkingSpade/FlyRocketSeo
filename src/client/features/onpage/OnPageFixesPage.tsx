@@ -36,7 +36,12 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
     queryFn: () => getOnPageFixes({ data: { projectId } }),
     staleTime: 60_000,
   });
-  const rows: FixRow[] = fixesQuery.data?.rows ?? [];
+  // Memoized so its identity is stable across renders — the derived useMemos
+  // below depend on it.
+  const rows: FixRow[] = useMemo(
+    () => fixesQuery.data?.rows ?? [],
+    [fixesQuery.data],
+  );
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["onPageFixes", projectId] });
@@ -73,9 +78,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
       void invalidate();
     },
     onError: (error) =>
-      toast.error(
-        getStandardErrorMessage(error, "AI rewrite is unavailable"),
-      ),
+      toast.error(getStandardErrorMessage(error, "AI rewrite is unavailable")),
   });
 
   const busy = statusMutation.isPending || generateMutation.isPending;
@@ -179,7 +182,11 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
             />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <StatusFilter value={filter} onChange={setFilter} counts={counts} />
+              <StatusFilter
+                value={filter}
+                onChange={setFilter}
+                counts={counts}
+              />
               {summary.pending > 0 ? (
                 <button
                   type="button"

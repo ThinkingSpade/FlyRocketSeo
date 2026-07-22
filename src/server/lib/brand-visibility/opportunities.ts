@@ -32,7 +32,10 @@ const MAX_PER_KIND = 5;
 
 /** Lowercase and drop a leading www. so citation domains match the target. */
 function normalizeDomain(value: string): string {
-  return value.trim().toLowerCase().replace(/^www\./, "");
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
 }
 
 /**
@@ -75,7 +78,7 @@ function shareOfVoiceGaps(result: BrandLookupResult): Opportunity[] {
         competitor: entry.label,
       };
     })
-    .sort((a, b) => b.metric - a.metric)
+    .toSorted((a, b) => b.metric - a.metric)
     .slice(0, MAX_PER_KIND);
 }
 
@@ -99,7 +102,7 @@ function promptAbsenceGaps(result: BrandLookupResult): Opportunity[] {
         question: row.question,
       }),
     )
-    .sort((a, b) => b.metric - a.metric)
+    .toSorted((a, b) => b.metric - a.metric)
     .slice(0, MAX_PER_KIND);
 }
 
