@@ -1,13 +1,23 @@
 import { describe, expect, it } from "vitest";
 import {
+  DEFAULT_LOCATION_CODE,
   LABS_LOCATION_OPTIONS,
   LOCATION_OPTIONS,
+  US_STATE_OPTIONS,
   getKeywordDataProvider,
   getLanguageCode,
   isLabsLocationCode,
   isSupportedLanguageCode,
   isSupportedLocationCode,
+  loadUsCityOptions,
 } from "./keyword-locations";
+
+// Real values verified against the source CSV (see
+// .superpowers/sdd/task-8-brief.md) -- do not change them to make a failing
+// implementation pass.
+const TEXAS = 21176;
+const DALLAS_TX = 1026339;
+const DISTRICT_OF_COLUMBIA = 21140;
 
 describe("keyword locations", () => {
   it("routes Labs-supported countries to labs", () => {
@@ -61,5 +71,60 @@ describe("keyword locations", () => {
     expect(labels).toEqual(labels.toSorted((a, b) => a.localeCompare(b)));
     const codes = LOCATION_OPTIONS.map((option) => option.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe("US states", () => {
+  // 51, because the District of Columbia is a targetable location.
+  it("includes all 51 state-level locations", () => {
+    expect(US_STATE_OPTIONS).toHaveLength(51);
+  });
+
+  it("includes the District of Columbia", () => {
+    expect(US_STATE_OPTIONS.some((o) => o.code === DISTRICT_OF_COLUMBIA)).toBe(
+      true,
+    );
+  });
+
+  it("parents every state to the United States", () => {
+    for (const option of US_STATE_OPTIONS) {
+      expect(option.parentCode).toBe(DEFAULT_LOCATION_CODE);
+    }
+  });
+
+  it("gives every state a unique code", () => {
+    const codes = US_STATE_OPTIONS.map((o) => o.code);
+    expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe("US cities", () => {
+  it("loads every city without bundling them eagerly", async () => {
+    const cities = await loadUsCityOptions();
+    expect(cities).toHaveLength(19654);
+  });
+
+  // Cities hang off their state, NOT off the country.
+  it("parents Dallas to Texas rather than to the country", async () => {
+    const cities = await loadUsCityOptions();
+    const dallas = cities.find((c) => c.code === DALLAS_TX);
+    expect(dallas?.parentCode).toBe(TEXAS);
+  });
+
+  // Six US cities are called Dallas; a bare city name is ambiguous.
+  it("disambiguates same-named cities in the label", async () => {
+    const cities = await loadUsCityOptions();
+    const dallases = cities.filter((c) => c.label.startsWith("Dallas"));
+    expect(dallases.length).toBeGreaterThan(1);
+    expect(new Set(dallases.map((c) => c.label)).size).toBe(dallases.length);
+  });
+});
+
+describe("getLanguageCode", () => {
+  // Every sublocation in this task is American; the existing ?? "en"
+  // fallback already covers codes it doesn't have an entry for, so no chain
+  // walk was added here -- verified directly against a real US city code.
+  it("resolves a US city through the existing fallback", () => {
+    expect(getLanguageCode(DALLAS_TX)).toBe("en");
   });
 });

@@ -11,3 +11,10 @@ planning/
 worker-configuration.d.ts
 web/
 .superpowers/
+
+# Generated location data tables (scripts/generate-us-locations.ts). One row
+# per line, ~1.5 MB for the city table -- prettier would reflow every object
+# literal onto multiple lines, bloating the file further and adding a slow
+# step to every `ci:check` for a file no one reads by hand.
+src/shared/us-states.generated.ts
+src/shared/us-cities.generated.ts

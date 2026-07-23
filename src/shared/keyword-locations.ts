@@ -1,4 +1,6 @@
 /* eslint-disable max-lines -- country data table */
+import { US_STATES } from "./us-states.generated";
+
 /**
  * Supported keyword-data countries and their data provider.
  *
@@ -30,9 +32,15 @@ type LocationOption = {
   languageCode: string;
   /** Set when DataForSEO Labs does not support this country. */
   googleAdsOnly?: true;
+  kind: "country" | "state" | "city";
+  /** DataForSEO's location_code_parent, walked by resolveLabsLocationCode.
+   * Absent on countries, which are the top of the chain. */
+  parentCode?: number;
 };
 
-export const LOCATION_OPTIONS: readonly LocationOption[] = [
+type RawCountryOption = Omit<LocationOption, "kind" | "parentCode">;
+
+const RAW_COUNTRY_OPTIONS: readonly RawCountryOption[] = [
   { code: 2008, label: "Albania", shortLabel: "AL", languageCode: "sq" },
   { code: 2012, label: "Algeria", shortLabel: "DZ", languageCode: "fr" },
   {
@@ -490,6 +498,15 @@ export const LOCATION_OPTIONS: readonly LocationOption[] = [
   },
 ] as const;
 
+// Every existing entry is a country; applying the default here (rather than
+// adding `kind: "country"` to all ~130 literals above) keeps the hand-written
+// table untouched by this feature.
+export const LOCATION_OPTIONS: readonly LocationOption[] =
+  RAW_COUNTRY_OPTIONS.map((option) => ({
+    ...option,
+    kind: "country" as const,
+  }));
+
 /**
  * Languages selectable for rank tracking, which runs against the DataForSEO
  * SERP (Google) API. This is the full set of language codes that API accepts;
@@ -641,6 +658,44 @@ const LANGUAGE_OPTIONS = [
 export const LABS_LOCATION_OPTIONS = LOCATION_OPTIONS.filter(
   (option) => !option.googleAdsOnly,
 );
+
+/**
+ * US states (plus the District of Columbia, a real targetable location --
+ * 51 rows, not 50) for sub-country keyword/content targeting. Small enough
+ * (~1 KB) to stay in the main bundle, unlike the city table below.
+ */
+export const US_STATE_OPTIONS: readonly LocationOption[] = US_STATES.map(
+  (state) => ({
+    code: state.code,
+    label: state.name,
+    shortLabel: state.name,
+    languageCode: "en",
+    kind: "state" as const,
+    parentCode: state.parentCode,
+  }),
+);
+
+/**
+ * All 19,654 US cities, loaded from a dynamically-imported chunk so this
+ * ~1.5 MB table never lands in the main client bundle. There is no
+ * population column in the source data to justify shipping a "top N" subset
+ * instead -- see scripts/generate-us-locations.ts.
+ *
+ * City names are not unique (six US cities are named Dallas), so the label
+ * carries the state; `parentCode` is the city's STATE code, not the
+ * country's -- DataForSEO parents cities to their state.
+ */
+export async function loadUsCityOptions(): Promise<readonly LocationOption[]> {
+  const { US_CITIES } = await import("./us-cities.generated");
+  return US_CITIES.map((city) => ({
+    code: city.code,
+    label: `${city.name}, ${city.state}`,
+    shortLabel: city.name,
+    languageCode: "en",
+    kind: "city" as const,
+    parentCode: city.parentCode,
+  }));
+}
 
 const LOCATION_CODES = new Set<number>(
   LOCATION_OPTIONS.map((option) => option.code),
