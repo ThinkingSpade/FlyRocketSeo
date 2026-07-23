@@ -18,6 +18,8 @@ import { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchT
 import { KeywordResearchEmptyState } from "./KeywordResearchEmptyState";
 import { KeywordResearchLoadingState } from "./KeywordResearchLoadingState";
 import { KeywordResearchResults } from "./KeywordResearchResults";
+import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
 
@@ -199,6 +201,24 @@ export function KeywordResearchPage(input: Props) {
         </div>
 
         <KeywordResearchSearchBar controller={controller} />
+
+        <RestoreRail
+          projectId={projectId}
+          feature={RUN_FEATURES.keywordResearch}
+          selectedRunId={controller.selectedRunId}
+          onSelectRun={controller.setSelectedRunId}
+          idle={!controller.hasSearched || controller.restoredRun != null}
+          restoredRun={controller.restoredRun}
+          onRunAgain={() => {
+            if (!controller.restoredRun) return;
+            controller.controlsForm.setFieldValue(
+              "keyword",
+              controller.restoredRun.label,
+            );
+            void controller.controlsForm.handleSubmit();
+          }}
+        />
+
         {controller.hasSearched ? (
           <div className="flex flex-col gap-2">
             <button

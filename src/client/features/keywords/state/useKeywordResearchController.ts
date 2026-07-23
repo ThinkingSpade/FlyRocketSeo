@@ -125,6 +125,9 @@ export function useKeywordResearchController(
     searchedKeyword,
     isLoading,
     retryResearch,
+    restoredRun,
+    selectedRunId,
+    setSelectedRunId,
   } = useKeywordResearchData(
     {
       projectId: input.projectId,
@@ -268,6 +271,9 @@ export function useKeywordResearchController(
   };
 
   return {
+    restoredRun,
+    selectedRunId,
+    setSelectedRunId,
     activeFilterCount,
     activeSerpKeyword,
     confirmSave,

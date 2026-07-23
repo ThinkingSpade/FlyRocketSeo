@@ -207,3 +207,45 @@ export const keywordsSearchSchema = z.object({
   include: z.string().optional(),
   exclude: z.string().optional(),
 });
+
+const cachedKeywordRowSchema = z.object({
+  keyword: z.string(),
+  searchVolume: z.number().nullable(),
+  trend: z.array(
+    z.object({
+      year: z.number(),
+      month: z.number(),
+      searchVolume: z.number(),
+    }),
+  ),
+  cpc: z.number().nullable(),
+  competition: z.number().nullable(),
+  keywordDifficulty: z.number().nullable(),
+  intent: z.enum([
+    "informational",
+    "commercial",
+    "transactional",
+    "navigational",
+    "unknown",
+  ]),
+});
+
+const sourceAttemptSchema = z.object({
+  source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
+  rowCount: z.number(),
+  nonSeedCount: z.number(),
+});
+
+/** A keyword-research result exactly as it is cached. Lives here rather than
+ *  beside the service that writes it so auto-restore can validate a stored
+ *  payload from the client against the same definition. */
+export const keywordResearchResultSchema = z.object({
+  rows: z.array(cachedKeywordRowSchema),
+  source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
+  usedFallback: z.boolean(),
+  diagnostics: z.object({
+    requestedMode: z.enum(["auto", "related", "suggestions", "ideas"]),
+    threshold: z.number(),
+    sourceAttempts: z.array(sourceAttemptSchema),
+  }),
+});

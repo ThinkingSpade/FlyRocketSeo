@@ -10,7 +10,6 @@ import {
 import { KeywordResearchRepository } from "@/server/features/keywords/repositories/KeywordResearchRepository";
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { ResearchKeywordsInput } from "@/types/schemas/keywords";
-import { z } from "zod";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { type EnrichedKeyword, normalizeKeyword } from "./helpers";
 import {
@@ -50,44 +49,7 @@ type ResearchResult = {
 
 type CachedResult = ResearchResult;
 
-const cachedKeywordRowSchema = z.object({
-  keyword: z.string(),
-  searchVolume: z.number().nullable(),
-  trend: z.array(
-    z.object({
-      year: z.number(),
-      month: z.number(),
-      searchVolume: z.number(),
-    }),
-  ),
-  cpc: z.number().nullable(),
-  competition: z.number().nullable(),
-  keywordDifficulty: z.number().nullable(),
-  intent: z.enum([
-    "informational",
-    "commercial",
-    "transactional",
-    "navigational",
-    "unknown",
-  ]),
-});
-
-const sourceAttemptSchema = z.object({
-  source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
-  rowCount: z.number(),
-  nonSeedCount: z.number(),
-});
-
-const cachedResultSchema = z.object({
-  rows: z.array(cachedKeywordRowSchema),
-  source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
-  usedFallback: z.boolean(),
-  diagnostics: z.object({
-    requestedMode: z.enum(["auto", "related", "suggestions", "ideas"]),
-    threshold: z.number(),
-    sourceAttempts: z.array(sourceAttemptSchema),
-  }),
-});
+import { keywordResearchResultSchema as cachedResultSchema } from "@/types/schemas/keywords";
 
 // v3: research volumes are no longer clickstream-refined, and Google-Ads-only
 // locations route to keywords_for_keywords.
