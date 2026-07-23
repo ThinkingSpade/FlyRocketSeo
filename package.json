@@ -7,6 +7,8 @@
   "packageManager": "pnpm@10.30.1",
   "scripts": {
     "dev": "vite dev",
+    "perf:startup": "rm -rf dist-sourcemaps && AUTH_MODE=hosted POSTHOG_SOURCEMAPS=true node scripts/build.mjs && node scripts/measure-startup-bundle.mjs",
+    "perf:guard": "node scripts/measure-startup-bundle.mjs",
     "dev:clear-chat": "rm -rf .wrangler/state/v3/do/flyrocketseo-OnboardingChatAgent .wrangler/state/v3/do/flyrocketseo-SamChatAgent",
     "dev:agents": "mkdir -p .logs && portless run vite dev 2>&1 | tee .logs/dev-server.log",
     "dev:agents:force": "mkdir -p .logs && portless --force run vite dev 2>&1 | tee .logs/dev-server.log",
