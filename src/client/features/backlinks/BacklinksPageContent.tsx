@@ -1,6 +1,11 @@
 import { useMemo } from "react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { BacklinksOverviewPanels } from "./BacklinksOverviewPanels";
+import {
+  BacklinksProfileBreakdowns,
+  BrokenLinkReclaimCard,
+  LinkVelocityCard,
+} from "./BacklinksProfileSections";
 import { BacklinksResultsCard } from "./BacklinksPageSections";
 import {
   BacklinksErrorState,
@@ -163,6 +168,12 @@ export function BacklinksBody({
         data={overviewData}
         summaryStats={summaryStats}
       />
+
+      {/* All three read numbers the overview and Top Pages calls already
+          returned, so none of them spends. */}
+      <LinkVelocityCard trends={overviewData.newLostTrends} />
+      <BacklinksProfileBreakdowns summary={overviewData.summary} />
+      {isRestoredRun ? null : <BrokenLinkReclaimCard topPages={topPagesPage} />}
       {/* Both of these fetch on their own — the timeline is a metered history
           call, and the results card drives the paginated sub-tabs. A restored
           run is meant to cost nothing, so they wait for "Run again". */}

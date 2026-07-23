@@ -77,6 +77,10 @@ export const backlinksSummaryItemSchema = z
       .record(z.string(), z.number().nullable())
       .nullable()
       .optional(),
+    referring_links_tld: z
+      .record(z.string(), z.number().nullable())
+      .nullable()
+      .optional(),
     info: z
       .object({ target_spam_score: z.number().nullable().optional() })
       .passthrough()

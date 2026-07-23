@@ -293,10 +293,14 @@ export function ReportPages({
                 backlinks: row.backlinks,
               }))}
             />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
               <ReportBreakdownCard
                 title="Top countries"
                 rows={backlinks.summary.referringCountries}
+              />
+              <ReportBreakdownCard
+                title="Top domains"
+                rows={backlinks.summary.referringTlds}
               />
               <ReportBreakdownCard
                 title="Link types"

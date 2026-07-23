@@ -88,6 +88,8 @@ export const backlinksOverviewSchema = z.object({
      *  DataForSEO didn't return them for this target. */
     referringCountries: z.array(linkBreakdownRowSchema).default([]),
     referringLinkTypes: z.array(linkBreakdownRowSchema).default([]),
+    /** Referring-domain split by top-level domain (.com, .org, .edu…). */
+    referringTlds: z.array(linkBreakdownRowSchema).default([]),
   }),
   trends: z.array(backlinksTrendRowSchema),
   newLostTrends: z.array(backlinksNewLostTrendRowSchema),

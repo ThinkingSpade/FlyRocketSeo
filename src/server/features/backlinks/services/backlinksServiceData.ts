@@ -367,6 +367,10 @@ function buildOverviewResult(args: {
         args.summary.referring_links_types,
         LINK_BREAKDOWN_LIMIT,
       ),
+      referringTlds: toLinkBreakdown(
+        args.summary.referring_links_tld,
+        LINK_BREAKDOWN_LIMIT,
+      ),
     },
     trends: historyRows.map((item) => ({
       date: item.date,
