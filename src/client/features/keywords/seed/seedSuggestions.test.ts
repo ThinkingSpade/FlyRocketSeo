@@ -68,6 +68,24 @@ describe("rankSeedSuggestions", () => {
     expect(ranked[0].hint).toContain("2.4k");
   });
 
+  // A project with no Search Console data is the likeliest to have saved its
+  // own brand as a keyword, so this path needs the same ordering as the GSC one.
+  it("ranks branded saved keywords last too", () => {
+    const ranked = rankSeedSuggestions({
+      gscQueries: [],
+      savedKeywords: [
+        { keyword: "deliotx reviews", searchVolume: 90 },
+        { keyword: "office coffee service", searchVolume: 1600 },
+      ],
+      domain,
+    });
+    expect(ranked[0].keyword).toBe("office coffee service");
+    expect(ranked.at(-1)).toMatchObject({
+      keyword: "deliotx reviews",
+      branded: true,
+    });
+  });
+
   it("returns nothing rather than a useless seed", () => {
     expect(
       rankSeedSuggestions({ gscQueries: [], savedKeywords: [], domain }),

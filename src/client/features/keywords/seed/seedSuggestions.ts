@@ -28,6 +28,14 @@ function compact(value: number): string {
   return String(Math.round(value));
 }
 
+/** Keeps each side in its incoming order, so the ranking within a side holds. */
+function nonBrandedFirst(rows: SeedSuggestion[]): SeedSuggestion[] {
+  return [
+    ...rows.filter((row) => !row.branded),
+    ...rows.filter((row) => row.branded),
+  ];
+}
+
 export function rankSeedSuggestions({
   gscQueries,
   savedKeywords,
@@ -50,13 +58,9 @@ export function rankSeedSuggestions({
     branded: isBrandedQuery(row.query, terms),
   }));
 
-  const ordered = [
-    ...fromGsc.filter((row) => !row.branded),
-    ...fromGsc.filter((row) => row.branded),
-  ];
-  if (ordered.length > 0) return ordered.slice(0, limit);
+  if (fromGsc.length > 0) return nonBrandedFirst(fromGsc).slice(0, limit);
 
-  return savedKeywords.slice(0, limit).map((row) => ({
+  const fromSaved = savedKeywords.map((row) => ({
     keyword: row.keyword,
     hint:
       row.searchVolume != null
@@ -64,4 +68,9 @@ export function rankSeedSuggestions({
         : "saved keyword",
     branded: isBrandedQuery(row.keyword, terms),
   }));
+
+  // Ordered the same way as the Search Console path. A project with no Search
+  // Console data yet is the one most likely to have saved its own brand as a
+  // keyword, so this fallback is where leading with the brand would hurt most.
+  return nonBrandedFirst(fromSaved).slice(0, limit);
 }

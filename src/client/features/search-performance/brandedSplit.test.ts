@@ -53,6 +53,23 @@ describe("isBrandedQuery", () => {
   it("still rejects a word that only shares a prefix mid-term", () => {
     expect(isBrandedQuery("delicious coffee", ["deliotx"])).toBe(false);
   });
+
+  // Service businesses name themselves after the plural of what they do, so
+  // the singular is their most valuable NON-branded query. Treating it as a
+  // clipped brand would repeat the bug this rule exists to fix.
+  it("does not treat a term's own plural as a clipped brand", () => {
+    expect(isBrandedQuery("roofer near me", ["roofers"])).toBe(false);
+    expect(isBrandedQuery("mover quotes", ["movers"])).toBe(false);
+    expect(isBrandedQuery("office cleaner cost", ["cleaners"])).toBe(false);
+    // "dishes" minus "dish" is "es" — still just a plural.
+    expect(isBrandedQuery("dish rack", ["dishes"])).toBe(false);
+  });
+
+  it("still matches a clipped brand whose tail is not a plural", () => {
+    expect(isBrandedQuery("delio", ["deliotx"])).toBe(true);
+    // "-co" is a company suffix, not an inflection.
+    expect(isBrandedQuery("acme pricing", ["acmeco"])).toBe(true);
+  });
 });
 
 describe("computeBrandedSplit", () => {

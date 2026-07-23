@@ -53,6 +53,9 @@ export function parseBrandTerms(value: string): string[] {
 const MIN_CLIPPED_BRAND = 4;
 const MAX_CLIPPED_SUFFIX = 2;
 
+/** A tail that only pluralises the word it follows. */
+const INFLECTIONAL_PLURAL = /^e?s$/;
+
 /**
  * A query is branded when any term appears with spaces ignored ("delio tx"
  * matches the term "deliotx"), or when a word in the query is the term minus a
@@ -74,12 +77,18 @@ export function isBrandedQuery(query: string, terms: string[]): boolean {
     if (normalized.includes(term)) return true;
     const squashedTerm = term.replace(/\s+/g, "");
     if (squashed.includes(squashedTerm)) return true;
-    return words.some(
-      (word) =>
-        word.length >= MIN_CLIPPED_BRAND &&
-        squashedTerm.startsWith(word) &&
-        squashedTerm.length - word.length <= MAX_CLIPPED_SUFFIX,
-    );
+    return words.some((word) => {
+      if (word.length < MIN_CLIPPED_BRAND) return false;
+      if (!squashedTerm.startsWith(word)) return false;
+      const removed = squashedTerm.slice(word.length);
+      if (removed.length > MAX_CLIPPED_SUFFIX) return false;
+      // "roofers" minus "roofer" is the term's own plural, not a clipped
+      // brand. Service businesses name themselves after the plural of what
+      // they do, so without this a roofers.com project would file "roofer
+      // near me" -- its single most valuable non-branded query -- as brand
+      // traffic, which is the very mistake this function exists to avoid.
+      return !INFLECTIONAL_PLURAL.test(removed);
+    });
   });
 }
 
