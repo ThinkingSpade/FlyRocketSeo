@@ -49,7 +49,10 @@ const STOPWORDS = new Set([
 function tokenize(input: string): string[] {
   return input
     .toLowerCase()
-    .split(/[^a-z0-9]+/)
+    .replace(/['’]/g, "") // an apostrophe is punctuation, not a word boundary
+    .normalize("NFD")
+    .replace(/\p{M}/gu, "") // accents shouldn't fork a word into a new token
+    .split(/[^\p{L}\p{N}]+/u) // \p{L}/\p{N}, not a-z0-9 — seeds aren't all Latin
     .filter((token) => token.length > 0);
 }
 
@@ -57,7 +60,10 @@ export function tokenizeSeed(seed: string): string[] {
   const tokens = tokenize(seed);
   const meaningful = tokens.filter((token) => !STOPWORDS.has(token));
   // A seed made entirely of stopwords ("how to") still has to match something.
-  return meaningful.length > 0 ? meaningful : tokens;
+  const relevant = meaningful.length > 0 ? meaningful : tokens;
+  // "new york new york hotel" shouldn't let a repeated word inflate the
+  // denominator scoreRelevance divides by.
+  return [...new Set(relevant)];
 }
 
 function tokensMatch(seedToken: string, keywordToken: string): boolean {

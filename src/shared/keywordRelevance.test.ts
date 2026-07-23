@@ -17,6 +17,28 @@ describe("tokenizeSeed", () => {
       "service",
     ]);
   });
+
+  it("tokenizes non-Latin scripts instead of collapsing to an empty seed", () => {
+    expect(tokenizeSeed("быстрая доставка")).toEqual(["быстрая", "доставка"]);
+  });
+
+  it("folds accents so café and cafe tokenize the same way", () => {
+    expect(tokenizeSeed("café")).toEqual(["cafe"]);
+  });
+
+  it("strips a possessive apostrophe instead of splitting on it", () => {
+    expect(tokenizeSeed("women's shoes")).toEqual(["womens", "shoes"]);
+    // Curly apostrophe, the one word processors actually produce.
+    expect(tokenizeSeed("women’s shoes")).toEqual(["womens", "shoes"]);
+  });
+
+  it("de-duplicates repeated seed words, preserving first-appearance order", () => {
+    expect(tokenizeSeed("new york new york hotel")).toEqual([
+      "new",
+      "york",
+      "hotel",
+    ]);
+  });
 });
 
 describe("scoreRelevance", () => {
@@ -32,6 +54,11 @@ describe("scoreRelevance", () => {
 
   it("matches singular against plural via a shared prefix", () => {
     expect(scoreRelevance("office coffee services", seed)).toBe(1);
+  });
+
+  it("matches an accented seed against an unaccented keyword and back", () => {
+    expect(scoreRelevance("cafe", tokenizeSeed("café"))).toBe(1);
+    expect(scoreRelevance("café", tokenizeSeed("cafe"))).toBe(1);
   });
 
   it("scores an unrelated keyword 0", () => {
@@ -58,6 +85,14 @@ describe("isOffTopic", () => {
   // A 2-char shared prefix is a coincidence, not a stem.
   it("does not treat a near-miss spelling as a match", () => {
     expect(isOffTopic("dealio meaning", brandSeed)).toBe(true);
+  });
+
+  // The exact regression this task fixes: a non-Latin seed used to tokenize
+  // to [], which silently turned the filter off (empty seed = match nothing).
+  it("filters a non-Latin seed the same way as a Latin one", () => {
+    const seed = tokenizeSeed("быстрая доставка");
+    expect(isOffTopic("значение имени", seed)).toBe(true);
+    expect(isOffTopic("быстрая доставка еды", seed)).toBe(false);
   });
 
   it("treats an empty seed as matching nothing off-topic", () => {
