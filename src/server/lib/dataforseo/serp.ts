@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { MAX_TASKS_PER_POST } from "@/server/lib/dataforseoLimits";
 import {
   SerpApiStopCrawlOnMatchInfo,
   SerpGoogleLocalFinderLiveAdvancedRequestInfo,
@@ -179,9 +180,6 @@ export async function fetchRankCheckSerp(input: {
 // is task_post (charged) -> poll task_get (free) -> live fallback for
 // stragglers, orchestrated by the rank check workflow.
 // ---------------------------------------------------------------------------
-
-/** Max tasks DataForSEO accepts in a single task_post request. */
-export const MAX_TASKS_PER_POST = 100;
 
 export interface RankCheckTaskInput {
   keyword: string;

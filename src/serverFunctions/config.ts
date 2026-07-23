@@ -2,7 +2,6 @@ import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
-import { fetchDataforseoBalance } from "@/server/lib/dataforseo/account";
 
 export const getSeoApiKeyStatus = createServerFn({ method: "GET" })
   .middleware(requireAuthenticatedContext)
@@ -34,6 +33,9 @@ export const getDataforseoAccountStatus = createServerFn({ method: "GET" })
     }
 
     try {
+      // Loaded lazily to keep the DataForSEO SDK out of the Worker startup graph.
+      const { fetchDataforseoBalance } =
+        await import("@/server/lib/dataforseo/account");
       const balance = await fetchDataforseoBalance();
       return { supported: true as const, configured: true as const, balance };
     } catch {

@@ -9,80 +9,6 @@ import {
 } from "@/server/billing/subscription";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import {
-  fetchBusinessListingsSearch,
-  fetchMyBusinessInfo,
-  fetchQuestionsAnswers,
-  postGoogleReviewsTask,
-} from "@/server/lib/dataforseo/business";
-import {
-  fetchBacklinksHistory,
-  fetchBacklinksRows,
-  fetchBacklinksSummary,
-  fetchDomainPagesSummary,
-  fetchReferringDomains,
-} from "@/server/lib/dataforseo/backlinks";
-import {
-  fetchBacklinksAnchors,
-  fetchBacklinksCompetitors,
-  fetchBacklinksDomainIntersection,
-  fetchBacklinksNewLostTimeseries,
-  fetchBulkSpamScores,
-} from "@/server/lib/dataforseo/backlinks-insights";
-import {
-  fetchDomainRankOverview,
-  fetchKeywordIdeas,
-  fetchKeywordOverview,
-  fetchKeywordSuggestions,
-  fetchRankedKeywords,
-  fetchRelatedKeywords,
-  fetchRelevantPages,
-  fetchSerpCompetitors,
-} from "@/server/lib/dataforseo/labs";
-import {
-  fetchBulkKeywordDifficulty,
-  fetchBulkTrafficEstimation,
-  fetchCompetitorsDomain,
-  fetchDomainIntersection,
-  fetchHistoricalRankOverview,
-  fetchKeywordsForSite,
-  fetchSearchIntent,
-  fetchSubdomains,
-} from "@/server/lib/dataforseo/labs-competitors";
-import {
-  fetchAdsKeywordIdeas,
-  fetchAdsSearchVolume,
-} from "@/server/lib/dataforseo/google-ads";
-import {
-  fetchClickstreamSearchVolume,
-  fetchGlobalSearchVolume,
-  fetchGoogleTrendsExplore,
-} from "@/server/lib/dataforseo/trends";
-import {
-  fetchBrandMentions,
-  fetchBrandMentionsSummary,
-  fetchBrandMentionTrends,
-} from "@/server/lib/dataforseo/content-analysis";
-import {
-  fetchDomainTechnologies,
-  fetchDomainWhois,
-} from "@/server/lib/dataforseo/domain-analytics";
-import { fetchAiKeywordVolume } from "@/server/lib/dataforseo/ai-keyword-data";
-import { fetchInstantPageAudit } from "@/server/lib/dataforseo/onpage";
-import {
-  fetchLiveSerp,
-  fetchLocalSerp,
-  fetchRankCheckSerp,
-  postRankCheckTasks,
-} from "@/server/lib/dataforseo/serp";
-import { fetchLighthouseResult } from "@/server/lib/dataforseo/lighthouse";
-import {
-  fetchLlmAggregatedMetrics,
-  fetchLlmCrossAggregatedMetrics,
-  fetchLlmMentionsSearch,
-  fetchLlmResponse,
-  fetchLlmTopPages,
-} from "@/server/lib/dataforseo/ai";
-import {
   DataforseoChargedTaskError,
   type DataforseoApiCallCost,
   type DataforseoApiResponse,
@@ -93,24 +19,36 @@ import { AppError } from "@/server/lib/errors";
 export { mapDataforseoPathToCreditFeature };
 
 /**
+ * Loads the section fetchers on first use. This dynamic import() is the whole
+ * point of the file: it keeps fetchers.ts — and the 1.6 MB dataforseo-client
+ * SDK the leaf modules pull in — in an on-demand chunk, so a cold isolate never
+ * parses the SDK just to serve an unrelated request. The module resolves once
+ * per isolate and the runtime caches it thereafter.
+ */
+const loadFetchers = () => import("@/server/lib/dataforseo/fetchers");
+type Fetchers = Awaited<ReturnType<typeof loadFetchers>>;
+
+/**
  * Wraps a section fetcher with billing metering. Each entry on the client is
- * `meter(customer, fetcher, defaultFeature?)`, which returns a function with the
- * fetcher's own input type and resolves to its unwrapped `.data`.
+ * `lazyMeter(customer, (f) => f.fetcher, defaultFeature?)`, which returns a
+ * function with the fetcher's own input type and resolves to its unwrapped
+ * `.data`. The fetcher is picked from the lazily-loaded module, so it — and the
+ * SDK behind it — never enters the startup graph.
  *
  * `defaultFeature` is the fallback credit feature; a caller can override it per
  * call by passing `creditFeature` in the input (e.g. an MCP tool attributing
  * spend to its own feature). The extra field is ignored by the fetchers, which
  * read named fields rather than spreading the input.
  */
-function meter<I, T>(
+function lazyMeter<I, T>(
   customer: BillingCustomerContext,
-  fetcher: (input: I) => Promise<DataforseoApiResponse<T>>,
+  pick: (f: Fetchers) => (input: I) => Promise<DataforseoApiResponse<T>>,
   defaultFeature?: CreditFeature,
 ): (input: I & { creditFeature?: CreditFeature }) => Promise<T> {
   return (input) =>
     meterDataforseoCall(
       customer,
-      () => fetcher(input),
+      async () => pick(await loadFetchers())(input),
       input.creditFeature ?? defaultFeature,
     );
 }
@@ -118,93 +56,138 @@ function meter<I, T>(
 export function createDataforseoClient(customer: BillingCustomerContext) {
   return {
     business: {
-      businessListings: meter(
+      businessListings: lazyMeter(
         customer,
-        fetchBusinessListingsSearch,
+        (f) => f.fetchBusinessListingsSearch,
         "local_seo",
       ),
-      questionsAnswers: meter(customer, fetchQuestionsAnswers, "local_seo"),
-      myBusinessInfo: meter(customer, fetchMyBusinessInfo, "local_seo"),
+      questionsAnswers: lazyMeter(
+        customer,
+        (f) => f.fetchQuestionsAnswers,
+        "local_seo",
+      ),
+      myBusinessInfo: lazyMeter(
+        customer,
+        (f) => f.fetchMyBusinessInfo,
+        "local_seo",
+      ),
       // Charged at post time; results are collected for free via
       // fetchGoogleReviewsResult (not metered, so not on the client).
-      postReviewsTask: meter(customer, postGoogleReviewsTask, "local_seo"),
+      postReviewsTask: lazyMeter(
+        customer,
+        (f) => f.postGoogleReviewsTask,
+        "local_seo",
+      ),
     },
     backlinks: {
-      summary: meter(customer, fetchBacklinksSummary),
-      rows: meter(customer, fetchBacklinksRows),
-      referringDomains: meter(customer, fetchReferringDomains),
-      domainPages: meter(customer, fetchDomainPagesSummary),
-      history: meter(customer, fetchBacklinksHistory),
-      anchors: meter(customer, fetchBacklinksAnchors),
-      competitors: meter(customer, fetchBacklinksCompetitors),
-      domainIntersection: meter(customer, fetchBacklinksDomainIntersection),
-      bulkSpamScores: meter(customer, fetchBulkSpamScores),
-      newLostTimeseries: meter(customer, fetchBacklinksNewLostTimeseries),
+      summary: lazyMeter(customer, (f) => f.fetchBacklinksSummary),
+      rows: lazyMeter(customer, (f) => f.fetchBacklinksRows),
+      referringDomains: lazyMeter(customer, (f) => f.fetchReferringDomains),
+      domainPages: lazyMeter(customer, (f) => f.fetchDomainPagesSummary),
+      history: lazyMeter(customer, (f) => f.fetchBacklinksHistory),
+      anchors: lazyMeter(customer, (f) => f.fetchBacklinksAnchors),
+      competitors: lazyMeter(customer, (f) => f.fetchBacklinksCompetitors),
+      domainIntersection: lazyMeter(
+        customer,
+        (f) => f.fetchBacklinksDomainIntersection,
+      ),
+      bulkSpamScores: lazyMeter(customer, (f) => f.fetchBulkSpamScores),
+      newLostTimeseries: lazyMeter(
+        customer,
+        (f) => f.fetchBacklinksNewLostTimeseries,
+      ),
     },
     keywords: {
-      related: meter(customer, fetchRelatedKeywords),
-      suggestions: meter(customer, fetchKeywordSuggestions),
-      ideas: meter(customer, fetchKeywordIdeas),
-      forSite: meter(customer, fetchKeywordsForSite),
-      bulkDifficulty: meter(customer, fetchBulkKeywordDifficulty),
-      searchIntent: meter(customer, fetchSearchIntent),
-      trends: meter(customer, fetchGoogleTrendsExplore),
-      clickstreamVolume: meter(customer, fetchClickstreamSearchVolume),
-      globalVolume: meter(customer, fetchGlobalSearchVolume),
+      related: lazyMeter(customer, (f) => f.fetchRelatedKeywords),
+      suggestions: lazyMeter(customer, (f) => f.fetchKeywordSuggestions),
+      ideas: lazyMeter(customer, (f) => f.fetchKeywordIdeas),
+      forSite: lazyMeter(customer, (f) => f.fetchKeywordsForSite),
+      bulkDifficulty: lazyMeter(customer, (f) => f.fetchBulkKeywordDifficulty),
+      searchIntent: lazyMeter(customer, (f) => f.fetchSearchIntent),
+      trends: lazyMeter(customer, (f) => f.fetchGoogleTrendsExplore),
+      clickstreamVolume: lazyMeter(
+        customer,
+        (f) => f.fetchClickstreamSearchVolume,
+      ),
+      globalVolume: lazyMeter(customer, (f) => f.fetchGlobalSearchVolume),
       // Google Ads endpoints for countries Labs doesn't support.
-      adsIdeas: meter(customer, fetchAdsKeywordIdeas),
-      adsSearchVolume: meter(customer, fetchAdsSearchVolume),
+      adsIdeas: lazyMeter(customer, (f) => f.fetchAdsKeywordIdeas),
+      adsSearchVolume: lazyMeter(customer, (f) => f.fetchAdsSearchVolume),
     },
     domain: {
-      rankOverview: meter(customer, fetchDomainRankOverview),
-      rankedKeywords: meter(customer, fetchRankedKeywords),
-      relevantPages: meter(customer, fetchRelevantPages),
-      historicalRankOverview: meter(customer, fetchHistoricalRankOverview),
+      rankOverview: lazyMeter(customer, (f) => f.fetchDomainRankOverview),
+      rankedKeywords: lazyMeter(customer, (f) => f.fetchRankedKeywords),
+      relevantPages: lazyMeter(customer, (f) => f.fetchRelevantPages),
+      historicalRankOverview: lazyMeter(
+        customer,
+        (f) => f.fetchHistoricalRankOverview,
+      ),
     },
     competitors: {
-      domainCompetitors: meter(customer, fetchCompetitorsDomain),
-      keywordGap: meter(customer, fetchDomainIntersection),
-      trafficEstimation: meter(customer, fetchBulkTrafficEstimation),
-      subdomains: meter(customer, fetchSubdomains),
+      domainCompetitors: lazyMeter(customer, (f) => f.fetchCompetitorsDomain),
+      keywordGap: lazyMeter(customer, (f) => f.fetchDomainIntersection),
+      trafficEstimation: lazyMeter(
+        customer,
+        (f) => f.fetchBulkTrafficEstimation,
+      ),
+      subdomains: lazyMeter(customer, (f) => f.fetchSubdomains),
     },
     serp: {
-      live: meter(customer, fetchLiveSerp),
-      rankCheck: meter(customer, fetchRankCheckSerp, "rank_tracking"),
+      live: lazyMeter(customer, (f) => f.fetchLiveSerp),
+      rankCheck: lazyMeter(
+        customer,
+        (f) => f.fetchRankCheckSerp,
+        "rank_tracking",
+      ),
       // Posts up to 100 queued rank check tasks; one metered charge covers the
       // whole batch (DataForSEO bills task_post at post time, collection is
       // free).
-      rankCheckTaskPost: meter(customer, postRankCheckTasks, "rank_tracking"),
-      local: meter(customer, fetchLocalSerp, "local_seo"),
+      rankCheckTaskPost: lazyMeter(
+        customer,
+        (f) => f.postRankCheckTasks,
+        "rank_tracking",
+      ),
+      local: lazyMeter(customer, (f) => f.fetchLocalSerp, "local_seo"),
     },
     labs: {
       // Callers (e.g. the keyword-metrics MCP tool) can attribute the spend to
       // their own feature by passing `creditFeature` in the input; defaults to
       // rank_tracking when omitted.
-      keywordOverview: meter(customer, fetchKeywordOverview, "rank_tracking"),
-      serpCompetitors: meter(customer, fetchSerpCompetitors),
+      keywordOverview: lazyMeter(
+        customer,
+        (f) => f.fetchKeywordOverview,
+        "rank_tracking",
+      ),
+      serpCompetitors: lazyMeter(customer, (f) => f.fetchSerpCompetitors),
     },
     lighthouse: {
-      live: meter(customer, fetchLighthouseResult),
+      live: lazyMeter(customer, (f) => f.fetchLighthouseResult),
     },
     onPage: {
-      instantPage: meter(customer, fetchInstantPageAudit),
+      instantPage: lazyMeter(customer, (f) => f.fetchInstantPageAudit),
     },
     aiSearch: {
-      mentionsSearch: meter(customer, fetchLlmMentionsSearch),
-      aggregatedMetrics: meter(customer, fetchLlmAggregatedMetrics),
-      topPages: meter(customer, fetchLlmTopPages),
-      crossAggregatedMetrics: meter(customer, fetchLlmCrossAggregatedMetrics),
-      llmResponse: meter(customer, fetchLlmResponse),
-      keywordVolume: meter(customer, fetchAiKeywordVolume),
+      mentionsSearch: lazyMeter(customer, (f) => f.fetchLlmMentionsSearch),
+      aggregatedMetrics: lazyMeter(
+        customer,
+        (f) => f.fetchLlmAggregatedMetrics,
+      ),
+      topPages: lazyMeter(customer, (f) => f.fetchLlmTopPages),
+      crossAggregatedMetrics: lazyMeter(
+        customer,
+        (f) => f.fetchLlmCrossAggregatedMetrics,
+      ),
+      llmResponse: lazyMeter(customer, (f) => f.fetchLlmResponse),
+      keywordVolume: lazyMeter(customer, (f) => f.fetchAiKeywordVolume),
     },
     brandMonitoring: {
-      mentions: meter(customer, fetchBrandMentions),
-      summary: meter(customer, fetchBrandMentionsSummary),
-      trends: meter(customer, fetchBrandMentionTrends),
+      mentions: lazyMeter(customer, (f) => f.fetchBrandMentions),
+      summary: lazyMeter(customer, (f) => f.fetchBrandMentionsSummary),
+      trends: lazyMeter(customer, (f) => f.fetchBrandMentionTrends),
     },
     domainAnalytics: {
-      technologies: meter(customer, fetchDomainTechnologies),
-      whois: meter(customer, fetchDomainWhois),
+      technologies: lazyMeter(customer, (f) => f.fetchDomainTechnologies),
+      whois: lazyMeter(customer, (f) => f.fetchDomainWhois),
     },
   } as const;
 }

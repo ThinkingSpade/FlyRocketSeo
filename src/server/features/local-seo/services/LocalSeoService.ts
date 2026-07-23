@@ -2,10 +2,9 @@ import { z } from "zod";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
-import {
-  fetchGoogleReviewsResult,
-  type GoogleBusinessInfoItem,
-  type GoogleReviewItem,
+import type {
+  GoogleBusinessInfoItem,
+  GoogleReviewItem,
 } from "@/server/lib/dataforseo/business";
 
 /** Business profiles change slowly; refresh twice a day. */
@@ -184,7 +183,10 @@ function mapReviewItem(item: GoogleReviewItem): ReviewRow {
 
 async function getReviewsResult(taskId: string): Promise<ReviewsOutcome> {
   // Collection is free and unmetered; completed payloads are served straight
-  // from DataForSEO, which retains finished tasks for collection.
+  // from DataForSEO, which retains finished tasks for collection. Loaded lazily
+  // to keep the DataForSEO SDK out of the Worker startup graph.
+  const { fetchGoogleReviewsResult } =
+    await import("@/server/lib/dataforseo/business");
   const outcome = await fetchGoogleReviewsResult(taskId);
   if (outcome.status !== "completed") return outcome;
   return {

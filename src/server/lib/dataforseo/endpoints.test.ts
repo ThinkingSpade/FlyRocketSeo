@@ -5,8 +5,8 @@ vi.mock("@/server/lib/runtime-env", () => ({
 }));
 
 import { fetchQuestionsAnswers } from "@/server/lib/dataforseo/business";
+import { buildLlmTarget } from "@/server/lib/dataforseoAiTarget";
 import {
-  buildLlmTarget,
   fetchLlmAggregatedMetrics,
   fetchLlmCrossAggregatedMetrics,
   fetchLlmMentionsSearch,
