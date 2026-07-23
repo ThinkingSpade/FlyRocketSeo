@@ -17,6 +17,8 @@ import {
   fetchGoogleAdsResearchRows,
   fetchResearchRowsBySource,
 } from "./research-data";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import {
   AUTO_KEYWORD_SOURCES,
   MIN_NON_SEED_FOR_AUTO,
@@ -312,6 +314,24 @@ export async function research(
     billingCustomer,
   );
 
+  // Records this analysis for the tab's history / auto-restore. Free and best
+  // effort: one row pointing at the cache key this result already lives under.
+  const recordRun = () =>
+    AnalysisRunService.record({
+      projectId: effectiveInput.projectId,
+      feature: RUN_FEATURES.keywordResearch,
+      params: {
+        keywords: uniqueKeywords,
+        locationCode: effectiveInput.locationCode,
+        languageCode: effectiveInput.languageCode,
+        resultLimit: effectiveInput.resultLimit,
+        mode,
+        clickstream: effectiveInput.clickstream,
+      },
+      cacheKey,
+      label: uniqueKeywords.join(", "),
+    });
+
   const cachedRaw = await getCached(cacheKey);
   const cachedResult = cachedResultSchema.safeParse(cachedRaw);
   const cached: CachedResult | null = cachedResult.success
@@ -319,6 +339,7 @@ export async function research(
     : null;
 
   if (cached && cached.rows.length > 0) {
+    await recordRun();
     return cached;
   }
 
@@ -347,6 +368,7 @@ export async function research(
 
   await setCached(cacheKey, result, CACHE_TTL.researchResult);
   persistRows(effectiveInput, result.rows);
+  if (result.rows.length > 0) await recordRun();
 
   return result;
 }

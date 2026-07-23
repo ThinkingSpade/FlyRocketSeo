@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
@@ -77,8 +79,18 @@ async function getContentBrief(
     locationCode,
     languageCode,
   });
+  const recordRun = () =>
+    AnalysisRunService.record({
+      projectId: input.projectId,
+      feature: RUN_FEATURES.contentBrief,
+      params: { keyword, locationCode },
+      cacheKey,
+      label: keyword,
+    });
+
   const cached = contentBriefSchema.safeParse(await getCached(cacheKey));
   if (cached.success && cached.data.competitors.length > 0) {
+    await recordRun();
     return cached.data;
   }
 
@@ -119,6 +131,7 @@ async function getContentBrief(
   void setCached(cacheKey, result, BRIEF_TTL_SECONDS).catch((error) => {
     console.error("content:brief cache-write failed:", error);
   });
+  await recordRun();
 
   return result;
 }

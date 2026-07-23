@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
@@ -109,8 +111,18 @@ async function getSerpOverview(
     languageCode,
   });
 
+  const recordRun = () =>
+    AnalysisRunService.record({
+      projectId: input.projectId,
+      feature: RUN_FEATURES.serpOverview,
+      params: { keyword, locationCode, languageCode },
+      cacheKey,
+      label: keyword,
+    });
+
   const cached = serpOverviewSchema.safeParse(await getCached(cacheKey));
   if (cached.success && cached.data.results.length > 0) {
+    await recordRun();
     return cached.data;
   }
 
@@ -191,6 +203,7 @@ async function getSerpOverview(
   void setCached(cacheKey, result, SERP_OVERVIEW_TTL_SECONDS).catch((error) => {
     console.error("serp:overview cache-write failed:", error);
   });
+  await recordRun();
 
   return result;
 }

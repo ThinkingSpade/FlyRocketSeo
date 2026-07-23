@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
@@ -86,8 +88,20 @@ async function getPageExplorer(
     locationCode,
     languageCode,
   });
+  // Records this analysis for the tab's history / auto-restore. Free and best
+  // effort: one row pointing at the cache key this result already lives under.
+  const recordRun = () =>
+    AnalysisRunService.record({
+      projectId: input.projectId,
+      feature: RUN_FEATURES.pageExplorer,
+      params: { url: input.url, locationCode },
+      cacheKey,
+      label: `${domain}${path}`,
+    });
+
   const cached = pageExplorerSchema.safeParse(await getCached(cacheKey));
   if (cached.success) {
+    await recordRun();
     return cached.data;
   }
 
@@ -155,6 +169,7 @@ async function getPageExplorer(
   void setCached(cacheKey, result, PAGE_EXPLORER_TTL_SECONDS).catch((error) => {
     console.error("page-explorer cache-write failed:", error);
   });
+  await recordRun();
 
   return result;
 }

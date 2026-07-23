@@ -1,5 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import {
@@ -55,8 +57,20 @@ export const getTopicClusters = createServerFn({ method: "POST" })
       locationCode,
       languageCode,
     });
+    // Records this analysis for the tab's history / auto-restore. Free and best
+    // effort: one row pointing at the cache key this result already lives under.
+    const recordRun = () =>
+      AnalysisRunService.record({
+        projectId: context.projectId,
+        feature: RUN_FEATURES.topicClusters,
+        params: { topic, locationCode },
+        cacheKey,
+        label: topic,
+      });
+
     const cached = planSchema.safeParse(await getCached(cacheKey));
     if (cached.success && cached.data.clusters.length > 0) {
+      await recordRun();
       return cached.data;
     }
 
@@ -79,6 +93,7 @@ export const getTopicClusters = createServerFn({ method: "POST" })
     void setCached(cacheKey, result, CLUSTERS_TTL_SECONDS).catch((error) => {
       console.error("topic-clusters cache-write failed:", error);
     });
+    await recordRun();
 
     return result;
   });
