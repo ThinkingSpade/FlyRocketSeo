@@ -21,7 +21,7 @@ import { startAudit } from "@/serverFunctions/audit";
 import {
   SeedKeywordField,
   useSeedSuggestions,
-} from "@/client/features/dashboard/SeedKeywordField";
+} from "@/client/features/keywords/seed/SeedKeywordField";
 
 /**
  * Runs the project's analyses in one go, so a new project stops being a grid of

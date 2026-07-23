@@ -2,32 +2,17 @@ import { useQuery } from "@tanstack/react-query";
 import { Lightbulb } from "lucide-react";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import { getSavedKeywords } from "@/serverFunctions/keywords";
+import { getProjects } from "@/serverFunctions/projects";
+import { rankSeedSuggestions, type SeedSuggestion } from "./seedSuggestions";
 
 /**
- * Picks the keyword the keyword-driven analyses run on.
- *
- * Both suggestion sources are FREE — Search Console, and the project's own
- * saved keywords out of D1 — so offering them costs nothing. The Search
- * Console call reuses the exact query key the dashboard's other cards already
- * populate, so it adds no request of its own.
- *
- * Suggestions carry the number that justifies them (impressions, or search
- * volume) rather than appearing as bare words, so the choice is informed
- * rather than arbitrary.
+ * Wires the free suggestion sources into `rankSeedSuggestions`. The Search
+ * Console query key matches the dashboard's other cards exactly, so this adds
+ * no request of its own; the projects query key matches `BrandedSplitCard`'s,
+ * for the same reason — both just want the domain out of an already-fetched
+ * list.
  */
-
-type SeedSuggestion = {
-  keyword: string;
-  hint: string;
-};
-
-function compact(value: number): string {
-  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
-  return String(Math.round(value));
-}
-
 export function useSeedSuggestions(projectId: string): SeedSuggestion[] {
-  // Free: Search Console. Same query key the dashboard's other cards use.
   const gscQuery = useQuery({
     queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
     queryFn: () =>
@@ -37,30 +22,28 @@ export function useSeedSuggestions(projectId: string): SeedSuggestion[] {
     staleTime: 5 * 60_000,
   });
 
-  // Free: the project's own saved keywords. Only consulted as a fallback, so
-  // a connected Search Console keeps this off the critical path.
+  // Only consulted as a fallback, so a connected Search Console keeps this
+  // off the critical path.
   const savedQuery = useQuery({
     queryKey: ["savedKeywords", projectId, "seed-suggestions"],
     queryFn: () => getSavedKeywords({ data: { projectId, pageSize: 50 } }),
     staleTime: 5 * 60_000,
   });
 
-  const fromGsc = (gscQuery.data?.queryTotals ?? [])
-    .toSorted((a, b) => b.impressions - a.impressions)
-    .slice(0, 5)
-    .map((row) => ({
-      keyword: row.query,
-      hint: `${compact(row.impressions)} impressions · pos ${row.position.toFixed(1)}`,
-    }));
-  if (fromGsc.length > 0) return fromGsc;
+  const projectsQuery = useQuery({
+    queryKey: ["projects"],
+    queryFn: () => getProjects(),
+    staleTime: 60_000,
+  });
+  const domain =
+    projectsQuery.data?.find((project) => project.id === projectId)?.domain ??
+    "";
 
-  return (savedQuery.data?.rows ?? []).slice(0, 5).map((row) => ({
-    keyword: row.keyword,
-    hint:
-      row.searchVolume != null
-        ? `${compact(row.searchVolume)}/mo saved`
-        : "saved keyword",
-  }));
+  return rankSeedSuggestions({
+    gscQueries: gscQuery.data?.queryTotals ?? [],
+    savedKeywords: savedQuery.data?.rows ?? [],
+    domain,
+  });
 }
 
 export function SeedKeywordField({
@@ -110,6 +93,20 @@ export function SeedKeywordField({
                 <span className="max-w-[14rem] truncate">
                   {suggestion.keyword}
                 </span>
+                {suggestion.branded ? (
+                  // A brand term still ranks last (see rankSeedSuggestions),
+                  // but stays offered — this just makes picking one a visible
+                  // choice rather than an accident.
+                  <span
+                    className={`text-[10px] font-medium uppercase tracking-wide ${
+                      active
+                        ? "text-primary-content/60"
+                        : "text-base-content/40"
+                    }`}
+                  >
+                    brand
+                  </span>
+                ) : null}
                 <span
                   className={
                     active
@@ -128,7 +125,7 @@ export function SeedKeywordField({
       <span className="text-xs text-base-content/50">
         {suggestions.length > 0
           ? "Suggested from your own Search Console and saved keywords — free, and only a starting point."
-          : "Used by the keyword, SERP, content and cluster analyses below."}
+          : "No Search Console queries or saved keywords yet — type a keyword your customers would search for."}
       </span>
     </div>
   );
