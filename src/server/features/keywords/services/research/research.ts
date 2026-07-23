@@ -34,7 +34,8 @@ type SourceAttempt = {
   source: ResearchSource;
   rowCount: number;
   nonSeedCount: number;
-  relevantCount: number;
+  /** Absent on runs stored before this field existed; every new run sets it. */
+  relevantCount?: number;
 };
 
 type ResearchDiagnostics = {

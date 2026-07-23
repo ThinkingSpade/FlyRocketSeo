@@ -234,7 +234,12 @@ const sourceAttemptSchema = z.object({
   source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
   rowCount: z.number(),
   nonSeedCount: z.number(),
-  relevantCount: z.number(),
+  // Optional because this schema also validates runs stored before the field
+  // existed, and a failed parse discards the whole payload rather than the one
+  // field — a required version would silently blank the tab for every older
+  // run. Absent means "not recorded", which is why there is no default: 0 here
+  // would read as "no relevant keywords found".
+  relevantCount: z.number().optional(),
 });
 
 /** A keyword-research result exactly as it is cached. Lives here rather than
