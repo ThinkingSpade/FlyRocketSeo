@@ -13,6 +13,7 @@ import type { ResearchKeywordsInput } from "@/types/schemas/keywords";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { type EnrichedKeyword, normalizeKeyword } from "./helpers";
 import {
+  RELATED_KEYWORDS_DEPTH,
   fetchGoogleAdsResearchRows,
   fetchResearchRowsBySource,
 } from "./research-data";
@@ -225,7 +226,7 @@ async function buildResearchCacheKey(
     languageCode: input.languageCode,
     resultLimit: input.resultLimit,
     mode,
-    depth: 3,
+    depth: RELATED_KEYWORDS_DEPTH,
     clickstream: input.clickstream,
   });
 }

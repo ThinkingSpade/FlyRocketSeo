@@ -115,6 +115,17 @@ export async function fetchGoogleAdsResearchRows(
   );
 }
 
+/**
+ * One hop is Google's actual "searches related to <seed>". Hops two and three
+ * change the subject — a depth-3 walk from "delio" reached "obnoxious meaning"
+ * — so the extra reach was only ever drift.
+ *
+ * Exported because the research cache key has to be built from the same number
+ * the request uses; a hardcoded copy there would keep serving results from a
+ * depth the request no longer asks for.
+ */
+export const RELATED_KEYWORDS_DEPTH = 1;
+
 async function fetchRelatedRows(
   params: Omit<FetchResearchRowsParams, "source">,
   dataforseo: ReturnType<typeof createDataforseoClient>,
@@ -124,10 +135,7 @@ async function fetchRelatedRows(
     locationCode: params.locationCode,
     languageCode: params.languageCode,
     limit: params.resultLimit,
-    // One hop is Google's actual "searches related to <seed>". Hops two and
-    // three change the subject — a depth-3 walk from "delio" reached
-    // "obnoxious meaning" — so the extra reach was only ever drift.
-    depth: 1,
+    depth: RELATED_KEYWORDS_DEPTH,
     includeClickstreamData: params.includeClickstreamData,
     creditFeature: params.creditFeature,
   });

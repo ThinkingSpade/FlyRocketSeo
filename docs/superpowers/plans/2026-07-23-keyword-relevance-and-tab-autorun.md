@@ -16,7 +16,7 @@
 - **Never invent a DataForSEO location code.** Codes come from the live locations endpoint via the generator script in Task 8, never from memory.
 - **`knip` fails on unused exports.** Every new export must have a consumer in the same task, or the task is not done.
 - Icons: bare muted lucide glyphs, no chips, per repo convention.
-- Comments explain *why*, not *what* — match surrounding density. No comment restates its code.
+- Comments explain _why_, not _what_ — match surrounding density. No comment restates its code.
 - Do not change `database_name`/`bucket_name` in `wrangler.jsonc` — they are live resource names.
 - Commit after each task with a descriptive message. Do not push.
 
@@ -40,19 +40,21 @@ Three independent roots — **1, 4 and 8 can start at the same time**. Tasks 2 a
 The judgement that "Obnoxious Meaning" is not about "delio". Kept pure and server-side so both the `Auto` source gate and the results table read one definition.
 
 **Files:**
+
 - Create: `src/shared/keywordRelevance.ts`
 - Test: `src/shared/keywordRelevance.test.ts`
 
 Lives in `src/shared/` because both the server's `Auto` source gate and the client's results table read it. That is what `src/shared/` is for in this repo — `keyword-locations.ts` is imported by both sides the same way — and it avoids a client→server import, which is rare here and would drag a server path into the browser bundle.
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces:
   - `tokenizeSeed(seed: string): string[]`
   - `scoreRelevance(keyword: string, seedTokens: string[]): number` — 0..1, share of seed tokens matched.
   - `isOffTopic(keyword: string, seedTokens: string[]): boolean` — true when zero seed tokens match.
 
-**Design note for the implementer:** the rule is deliberately *"shares at least one meaningful word with the seed"*, not a similarity threshold. A stricter rule would delete genuinely useful lateral keywords (seed `office coffee service` → `break room coffee` shares only `coffee` and must survive). The rule is also explainable in UI copy as a fact rather than a fuzzy score.
+**Design note for the implementer:** the rule is deliberately _"shares at least one meaningful word with the seed"_, not a similarity threshold. A stricter rule would delete genuinely useful lateral keywords (seed `office coffee service` → `break room coffee` shares only `coffee` and must survive). The rule is also explainable in UI copy as a fact rather than a fuzzy score.
 
 - [ ] **Step 1: Write the failing test**
 
@@ -243,12 +245,14 @@ Note: `knip` will flag these exports as unused until Task 2 consumes them. That 
 ### Task 2: Auto stops accepting drifted keywords
 
 **Files:**
+
 - Modify: `src/server/features/keywords/services/research/selection.ts`
 - Modify: `src/server/features/keywords/services/research/research-data.ts` (the `depth: 3` in `fetchRelatedRows`)
 - Modify: `src/server/features/keywords/services/research/research.ts` (`fetchAutoRows` passes the seed through)
 - Test: `src/server/features/keywords/services/research/selection.test.ts`
 
 **Interfaces:**
+
 - Consumes: `tokenizeSeed`, `isOffTopic` from Task 1.
 - Produces:
   - `AUTO_KEYWORD_SOURCES` reordered to `["suggestions", "ideas", "related"]`.
@@ -428,11 +432,13 @@ git commit -m "Stop Auto accepting keywords that drifted off the seed"
 Low-relevance rows stay in the payload and stay countable. Deleting them server-side would hide the judgement; this makes it auditable.
 
 **Files:**
+
 - Create: `src/client/features/keywords/offTopicKeywords.ts`
 - Test: `src/client/features/keywords/offTopicKeywords.test.ts`
 - Modify: `src/client/features/keywords/page/KeywordResearchResults.tsx`
 
 **Interfaces:**
+
 - Consumes: `tokenizeSeed`, `isOffTopic` from Task 1, via `@/shared/keywordRelevance`.
 - Produces: `partitionByRelevance<T extends { keyword: string }>(rows: T[], seedKeyword: string): { onTopic: T[]; offTopic: T[] }`
 
@@ -451,7 +457,10 @@ describe("partitionByRelevance", () => {
       { keyword: "aria name meaning" },
     ];
     const { onTopic, offTopic } = partitionByRelevance(rows, "delio");
-    expect(onTopic.map((r) => r.keyword)).toEqual(["delio pro", "delio meaning"]);
+    expect(onTopic.map((r) => r.keyword)).toEqual([
+      "delio pro",
+      "delio meaning",
+    ]);
     expect(offTopic.map((r) => r.keyword)).toEqual([
       "obnoxious meaning",
       "aria name meaning",
@@ -465,10 +474,9 @@ describe("partitionByRelevance", () => {
 
   it("preserves the incoming order within each side", () => {
     const rows = [{ keyword: "b delio" }, { keyword: "a delio" }];
-    expect(partitionByRelevance(rows, "delio").onTopic.map((r) => r.keyword)).toEqual([
-      "b delio",
-      "a delio",
-    ]);
+    expect(
+      partitionByRelevance(rows, "delio").onTopic.map((r) => r.keyword),
+    ).toEqual(["b delio", "a delio"]);
   });
 });
 ```
@@ -542,6 +550,7 @@ git commit -m "Collapse off-topic keywords in the results instead of dropping th
 ### Task 4: Seed suggestions stop leading with the brand
 
 **Files:**
+
 - Create: `src/client/features/keywords/seed/seedSuggestions.ts` (pure ranking)
 - Test: `src/client/features/keywords/seed/seedSuggestions.test.ts`
 - Create: `src/client/features/keywords/seed/SeedKeywordField.tsx` (moved from `dashboard/`)
@@ -549,6 +558,7 @@ git commit -m "Collapse off-topic keywords in the results instead of dropping th
 - Modify: `src/client/features/dashboard/AnalyzeProjectCard.tsx` (import path only)
 
 **Interfaces:**
+
 - Consumes: `defaultBrandTerms`, `isBrandedQuery` from `@/client/features/search-performance/brandedSplit`.
 - Produces:
   - `type SeedSuggestion = { keyword: string; hint: string; branded: boolean }`
@@ -637,7 +647,9 @@ describe("rankSeedSuggestions", () => {
 
   it("carries the number that justifies each suggestion", () => {
     const ranked = rankSeedSuggestions({
-      gscQueries: [{ query: "office coffee service", impressions: 1200, position: 14.34 }],
+      gscQueries: [
+        { query: "office coffee service", impressions: 1200, position: 14.34 },
+      ],
       savedKeywords: [],
       domain,
     });
@@ -747,7 +759,7 @@ Move `src/client/features/dashboard/SeedKeywordField.tsx` to `src/client/feature
 - `SeedKeywordField` renders a muted `brand` label inside any chip whose `branded` is true. No icon, no chip styling beyond what the component already uses.
 - When `suggestions.length === 0`, the helper line reads: `No Search Console queries or saved keywords yet — type a keyword your customers would search for.`
 - Update the import in `src/client/features/dashboard/AnalyzeProjectCard.tsx` to `@/client/features/keywords/seed/SeedKeywordField`.
-- `AnalyzeProjectCard` pre-fills `suggestions[0]?.keyword` as today. That is now the top *non-branded* query, which is the entire point of the task.
+- `AnalyzeProjectCard` pre-fills `suggestions[0]?.keyword` as today. That is now the top _non-branded_ query, which is the entire point of the task.
 
 - [ ] **Step 6: Verify in the browser**
 
@@ -770,10 +782,12 @@ git commit -m "Rank seed suggestions by topic rather than by brand"
 ### Task 5: `useTabAutoRun`
 
 **Files:**
+
 - Create: `src/client/features/analysis-runs/useTabAutoRun.ts`
 - Test: `src/client/features/analysis-runs/useTabAutoRun.test.ts`
 
 **Interfaces:**
+
 - Consumes: `useAutoRestoredRun` (unchanged), `useSeedSuggestions` from Task 4.
 - Produces:
 
@@ -791,13 +805,19 @@ export function useTabAutoRun<T>(params: {
   canAutoRun: boolean;
   seed: string;
 }): {
-  restored: { result: T; label: string; lastRanAt: string; runCount: number } | null;
+  restored: {
+    result: T;
+    label: string;
+    lastRanAt: string;
+    runCount: number;
+  } | null;
   isRestoring: boolean;
   didAutoRun: boolean;
 };
 ```
 
 **Behaviour the tests must pin:**
+
 - Auto-run fires only when `idle`, `canAutoRun`, the restore query has **settled**, `restored === null`, and `seed !== ""`.
 - It fires **at most once per mount** — guard with a ref, not with state, and never put the `autoRun` callback in an effect dependency array. (A callback in the deps caused the wave-9 render loop; it must not be repeated.)
 - It never fires while `isRestoring` is true. Firing on a pending restore would pay for a run that already exists — the exact spend leak this design is bounded by.
@@ -847,6 +867,7 @@ git commit -m "Add a hook that runs a tab once when a project has never run it"
 ### Task 6: Four tabs stop opening blank
 
 **Files:**
+
 - Modify: `src/client/features/trends/TrendsPage.tsx`
 - Modify: `src/client/features/serp/SerpOverviewPage.tsx`
 - Modify: `src/client/features/content/ContentOptimizerPage.tsx`
@@ -854,6 +875,7 @@ git commit -m "Add a hook that runs a tab once when a project has never run it"
 - Modify: `src/client/features/page-explorer/PageExplorerPage.tsx`
 
 **Interfaces:**
+
 - Consumes: `useTabAutoRun` (Task 5), `useSeedSuggestions` + `SeedKeywordField` (Task 4).
 
 Per tab:
@@ -886,6 +908,7 @@ Run: `npm run ci:check && npm run test`
 ### Task 7: The run control gets quiet
 
 **Files:**
+
 - Modify: `src/client/features/analysis-runs/RestoreRail.tsx`
 - Modify: `src/client/features/analysis-runs/RestoredRunBanner.tsx`
 - Modify: the six tabs that render `RestoreRail`
@@ -913,6 +936,7 @@ git commit -m "Make the re-run control an inline header action"
 ### Task 8: Generate the US city and state location table
 
 **Files:**
+
 - Create: `scripts/generate-us-locations.ts`
 - Modify: `src/shared/keyword-locations.ts`
 - Test: `src/shared/keyword-locations.test.ts`
@@ -920,6 +944,7 @@ git commit -m "Make the re-run control an inline header action"
 **Do not hand-write location codes.** DataForSEO geotarget codes are not derivable and a wrong one silently returns data for the wrong place. The script fetches them.
 
 **Interfaces:**
+
 - Produces:
   - `LocationOption` gains `kind: "country" | "state" | "city"` and `parentCode?: number`. Existing entries are `kind: "country"` — add it to the type with a default applied where the table is built rather than editing 700 literal rows by hand.
   - `US_SUBLOCATION_OPTIONS: readonly LocationOption[]`
@@ -1008,6 +1033,7 @@ git commit -m "Generate US state and city location codes from DataForSEO"
 ### Task 9: City and state reach the pickers
 
 **Files:**
+
 - Modify: `src/client/components/LocationSelect.tsx`
 - Modify: `src/client/features/content/ContentOptimizerPage.tsx`
 - Modify: `src/server/features/content/services/ContentBriefService.ts`

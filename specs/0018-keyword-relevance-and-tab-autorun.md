@@ -1,7 +1,7 @@
 # 0018 — Keyword relevance, tab auto-run, and city/state locations
 
-Keyword Research on deliotx.com returned 46 keywords about the *meaning of
-names* — "Obnoxious Meaning", "Aria Name Meaning", "Zella Name Meaning". Nothing
+Keyword Research on deliotx.com returned 46 keywords about the _meaning of
+names_ — "Obnoxious Meaning", "Aria Name Meaning", "Zella Name Meaning". Nothing
 to do with the site. At the same time Keyword Trends, SERP Overview and Content
 Optimizer all opened as blank forms with invented placeholder text.
 
@@ -38,7 +38,7 @@ something useless silently is worse than seeding nothing.
 ## Relevance (part B)
 
 1. `AUTO_KEYWORD_SOURCES` reorders to `suggestions → ideas → related`.
-   `keyword_suggestions` returns keywords *containing* the seed phrase, so it
+   `keyword_suggestions` returns keywords _containing_ the seed phrase, so it
    cannot drift by construction. `related` becomes the lateral fallback it
    should always have been.
 2. `depth: 3` → `depth: 1`. One hop is Google's actual related searches; hops
@@ -48,7 +48,7 @@ something useless silently is worse than seeding nothing.
    deleted** — they collapse behind an `N off-topic keywords hidden` toggle in
    the results table. Nothing vanishes silently and the judgement stays
    auditable.
-4. `hasSufficientCoverage` counts *relevant* non-seed keywords, so Auto keeps
+4. `hasSufficientCoverage` counts _relevant_ non-seed keywords, so Auto keeps
    falling through sources instead of stopping on junk.
 
 ## Auto-run (part C)
@@ -59,7 +59,7 @@ restore when a run exists (free), otherwise fire that tab's run **once** with th
 best seed and record it.
 
 Wired into Keyword Trends, SERP Overview, Content Optimizer and Topic Clusters.
-Page Explorer gets top-GSC-*page* chips instead of keyword chips.
+Page Explorer gets top-GSC-_page_ chips instead of keyword chips.
 
 Guards: requires a domain and a seed, fires once per `(project, feature)` ever,
 never while another auto-run is in flight.
