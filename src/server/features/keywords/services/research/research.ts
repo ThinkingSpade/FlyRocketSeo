@@ -22,6 +22,7 @@ import {
   AUTO_KEYWORD_SOURCES,
   MIN_NON_SEED_FOR_AUTO,
   countNonSeedKeywords,
+  countRelevantKeywords,
   hasSufficientCoverage,
   type KeywordMode,
   type KeywordSource,
@@ -32,6 +33,7 @@ type SourceAttempt = {
   source: ResearchSource;
   rowCount: number;
   nonSeedCount: number;
+  relevantCount: number;
 };
 
 type ResearchDiagnostics = {
@@ -51,9 +53,9 @@ type CachedResult = ResearchResult;
 
 import { keywordResearchResultSchema as cachedResultSchema } from "@/types/schemas/keywords";
 
-// v3: research volumes are no longer clickstream-refined, and Google-Ads-only
-// locations route to keywords_for_keywords.
-const CACHE_VERSION = 3;
+// v4: Auto tries suggestions before related and related walks one hop, so the
+// same request no longer returns the drifted rows a v3 entry cached.
+const CACHE_VERSION = 4;
 
 async function fetchRowsFromSource(
   source: KeywordSource,
@@ -106,6 +108,7 @@ async function fetchAutoRows(
       source,
       rowCount: rows.length,
       nonSeedCount: countNonSeedKeywords(rows, seedKeyword),
+      relevantCount: countRelevantKeywords(rows, seedKeyword),
     });
 
     lastSource = source;
@@ -167,6 +170,7 @@ async function fetchGoogleAdsRows(
           source: "google_ads",
           rowCount: rows.length,
           nonSeedCount: countNonSeedKeywords(rows, seedKeyword),
+          relevantCount: countRelevantKeywords(rows, seedKeyword),
         },
       ],
     },
@@ -191,6 +195,7 @@ async function fetchManualRows(
     source: mode,
     rowCount: rows.length,
     nonSeedCount: countNonSeedKeywords(rows, seedKeyword),
+    relevantCount: countRelevantKeywords(rows, seedKeyword),
   };
 
   return {

@@ -124,7 +124,10 @@ async function fetchRelatedRows(
     locationCode: params.locationCode,
     languageCode: params.languageCode,
     limit: params.resultLimit,
-    depth: 3,
+    // One hop is Google's actual "searches related to <seed>". Hops two and
+    // three change the subject — a depth-3 walk from "delio" reached
+    // "obnoxious meaning" — so the extra reach was only ever drift.
+    depth: 1,
     includeClickstreamData: params.includeClickstreamData,
     creditFeature: params.creditFeature,
   });

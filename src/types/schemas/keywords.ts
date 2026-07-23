@@ -234,6 +234,7 @@ const sourceAttemptSchema = z.object({
   source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
   rowCount: z.number(),
   nonSeedCount: z.number(),
+  relevantCount: z.number(),
 });
 
 /** A keyword-research result exactly as it is cached. Lives here rather than
