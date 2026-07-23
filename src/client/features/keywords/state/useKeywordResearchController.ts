@@ -6,8 +6,6 @@ import {
   useState,
   type FormEvent,
 } from "react";
-import { extractKeywordGroups } from "@/client/features/keywords/keywordGroups";
-import { partitionByRelevance } from "@/client/features/keywords/offTopicKeywords";
 import {
   useKeywordControlsForm,
   type KeywordControlsValues,
@@ -30,6 +28,10 @@ import {
   getNextSortParams,
   useSaveAndExportActions,
 } from "./keywordControllerActions";
+import {
+  buildKeywordRelevanceView,
+  isHiddenByOffTopicCollapse,
+} from "./keywordRelevanceView";
 import {
   useKeywordSaveMutation,
   useKeywordSearchParams,
@@ -212,13 +214,14 @@ export function useKeywordResearchController(
 
   // Partitioned from the full fetch, before filters/sort/grouping ever see the
   // rows, so a search's off-topic drift can't leak into the table by default.
-  const { onTopic, offTopic } = useMemo(
-    () => partitionByRelevance(rows, searchedKeyword),
-    [rows, searchedKeyword],
+  // Everything relevance-derived (the rail's groups, the PPC panel, the
+  // overview fallback below) reads relevanceVisibleRows — never raw rows —
+  // so the Show/Hide toggle moves every one of those views together instead
+  // of only the table.
+  const { offTopic, relevanceVisibleRows, keywordGroups } = useMemo(
+    () => buildKeywordRelevanceView(rows, searchedKeyword, showOffTopic),
+    [rows, searchedKeyword, showOffTopic],
   );
-  const relevanceVisibleRows = showOffTopic
-    ? [...onTopic, ...offTopic]
-    : onTopic;
 
   const { filteredRows, activeFilterCount } = useKeywordFiltering({
     rows: relevanceVisibleRows,
@@ -228,16 +231,19 @@ export function useKeywordResearchController(
     sortDir: input.sortDir,
   });
 
-  // Term groups are cut from the full result set (not the filtered rows), so
-  // the rail stays stable while the user slices with it.
-  const keywordGroups = useMemo(
-    () => extractKeywordGroups(rows, searchedKeyword ?? ""),
-    [rows, searchedKeyword],
-  );
+  // See isHiddenByOffTopicCollapse: distinguishes "a filter matched nothing"
+  // from "the collapse hid every row" so the table's empty state can say the
+  // right one instead of blaming filters that were never touched.
+  const hiddenByOffTopicCollapse = isHiddenByOffTopicCollapse({
+    offTopicCount: offTopic.length,
+    visibleRowCount: relevanceVisibleRows.length,
+    activeFilterCount,
+    groupTerm,
+  });
 
   const { showApproximateMatchNotice, overviewKeyword } =
     useKeywordOverviewState({
-      rows,
+      visibleRows: relevanceVisibleRows,
       searchedKeyword,
       selectedKeyword: uiState.selectedKeyword,
       hasSearched,
@@ -305,6 +311,7 @@ export function useKeywordResearchController(
     handleSaveKeywords,
     handleSearchSubmit,
     hasSearched,
+    hiddenByOffTopicCollapse,
     history,
     historyLoaded,
     isLoading,
@@ -316,6 +323,7 @@ export function useKeywordResearchController(
     mobileTab: uiState.mobileTab,
     offTopicCount: offTopic.length,
     overviewKeyword,
+    relevanceVisibleRows,
     removeHistoryItem,
     researchError,
     researchMutationError,

@@ -95,7 +95,7 @@ function MobileKeywordResults({ controller }: Props) {
   const {
     activeFilterCount,
     filteredRows,
-    rows,
+    relevanceVisibleRows,
     selectedRows,
     sheetsExportRows,
     showFilters,
@@ -109,7 +109,7 @@ function MobileKeywordResults({ controller }: Props) {
     selectedRows.size > 0
       ? `${selectedRows.size} selected`
       : activeFilterCount > 0
-        ? `Showing ${filteredRows.length} of ${rows.length}`
+        ? `Showing ${filteredRows.length} of ${relevanceVisibleRows.length}`
         : `Showing ${filteredRows.length} keywords`;
 
   const canExport = filteredRows.length > 0;
@@ -252,6 +252,7 @@ function MobileKeywordResults({ controller }: Props) {
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}
         filteredRows={pageRows}
+        hiddenByOffTopicCollapse={controller.hiddenByOffTopicCollapse}
         overviewKeyword={controller.overviewKeyword}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}

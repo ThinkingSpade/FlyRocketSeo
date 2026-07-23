@@ -25,6 +25,7 @@ import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
 type Props = {
   activeFilterCount: number;
   filteredRows: KeywordResearchRow[];
+  hiddenByOffTopicCollapse: boolean;
   overviewKeyword: KeywordResearchRow | null;
   selectedRows: Set<string>;
   setSelectedRows: (rows: Set<string>) => void;
@@ -40,6 +41,7 @@ const keywordColumnHelper = createColumnHelper<KeywordResearchRow>();
 export function KeywordResearchDesktopTable({
   activeFilterCount,
   filteredRows,
+  hiddenByOffTopicCollapse,
   overviewKeyword,
   selectedRows,
   setSelectedRows,
@@ -210,6 +212,7 @@ export function KeywordResearchDesktopTable({
       {filteredRows.length === 0 ? (
         <EmptyFilterResults
           activeFilterCount={activeFilterCount}
+          hiddenByOffTopicCollapse={hiddenByOffTopicCollapse}
           resetFilters={resetFilters}
         />
       ) : (

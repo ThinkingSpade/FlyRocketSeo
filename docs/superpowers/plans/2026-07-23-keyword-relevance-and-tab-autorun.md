@@ -13,7 +13,7 @@
 - Spec: `specs/0018-keyword-relevance-and-tab-autorun.md`. Read it before starting.
 - Test runner is **Vitest**. Unit tests live beside the module as `<name>.test.ts`.
 - Full gate before any "done" claim: `npm run ci:check` (prettier + knip + tsc + oxlint) and `npm run test`.
-- **Never invent a DataForSEO location code.** Codes come from the live locations endpoint via the generator script in Task 8, never from memory.
+- **Never invent a DataForSEO location code.** Codes come from DataForSEO's public locations CSV via the generator script in Task 8, never from memory. No API key is required for it.
 - **`knip` fails on unused exports.** Every new export must have a consumer in the same task, or the task is not done.
 - Icons: bare muted lucide glyphs, no chips, per repo convention.
 - Comments explain _why_, not _what_ — match surrounding density. No comment restates its code.
@@ -943,24 +943,41 @@ git commit -m "Make the re-run control an inline header action"
 
 **Do not hand-write location codes.** DataForSEO geotarget codes are not derivable and a wrong one silently returns data for the wrong place. The script fetches them.
 
+**No API key is needed.** DataForSEO publishes its supported-location tables as public CDN CSVs. Verified: `https://cdn.dataforseo.com/v3/locations/locations_serp_google_2026_07_20.csv` returns HTTP 200 over plain HTTPS with no credentials — 16 MB, 266,897 rows, columns `location_code,location_name,location_code_parent,country_iso_code,location_type`. Use the SERP table, because city precision only applies to SERP-derived calls.
+
+**Four facts confirmed against that file. The earlier draft of this task got all four wrong; do not "correct" them back.**
+
+1. There are **51** US rows of type `State`, not 50 — the extra is `21140 = District of Columbia`. Do not filter it out; it is a real, targetable location.
+2. **Cities are parented to their state, not to the country.** `1026339 = Dallas,Texas,United States` has `location_code_parent = 21176` (Texas), whose parent is `2840`. Resolution to a country must therefore **walk the chain**, not read a single `parentCode`.
+3. **City names are not unique.** There are six `Dallas` rows (GA, NC, OR, PA, TX, WI). The picker label must carry the state or the user cannot tell them apart. Store the state name alongside the city.
+4. There are **19,654** US cities, which is 553 KB of JSON in compact form. That is too much for the main bundle and too arbitrary to trim to a "top 300" — this file carries no population column, so any such cut would be invented. Ship **all** of them from a lazily-imported module instead. States are 1 KB and stay inline.
+
 **Interfaces:**
 
 - Produces:
-  - `LocationOption` gains `kind: "country" | "state" | "city"` and `parentCode?: number`. Existing entries are `kind: "country"` — add it to the type with a default applied where the table is built rather than editing 700 literal rows by hand.
-  - `US_SUBLOCATION_OPTIONS: readonly LocationOption[]`
-  - `resolveLabsLocationCode(locationCode: number): number` — returns the code itself when Labs supports it, otherwise the `parentCode`, otherwise `DEFAULT_LOCATION_CODE`.
-  - `getLanguageCode` resolves through `parentCode` for sub-country codes.
+  - `LocationOption` gains `kind: "country" | "state" | "city"` and `parentCode?: number`. Existing entries are `kind: "country"` — apply the default where the table is built rather than editing 700 literal rows by hand.
+  - `US_STATE_OPTIONS: readonly LocationOption[]` — 51 entries, inline, `parentCode: 2840`.
+  - `loadUsCityOptions(): Promise<readonly LocationOption[]>` — dynamic `import()` of the generated module, so the 553 KB never enters the main chunk.
+  - `resolveLabsLocationCode(locationCode: number): number` — walks `parentCode` upward until it reaches a Labs-supported code; returns `DEFAULT_LOCATION_CODE` if the chain runs out. Must terminate on a cycle rather than hang.
+  - `getLanguageCode` resolves through the same chain for sub-country codes.
 
 - [ ] **Step 1: Write the generator script**
 
-`scripts/generate-us-locations.ts`, run with `tsx`, reading `DATAFORSEO_API_KEY` from the environment the way the existing `scripts/*.ts` cost-profile scripts do (read one and copy the pattern). It requests `GET /v3/serp/google/locations/US`, keeps rows whose `location_type` is `State` or `City`, keeps the 50 states plus the 300 largest cities by `location_code` presence, and writes a generated TypeScript literal into `src/shared/us-locations.generated.ts` with a header comment naming the script and the endpoint.
+`scripts/generate-us-locations.ts`, run with `tsx`. It downloads the CSV URL above (no auth header), parses it with a **quote-aware** CSV reader — `location_name` values contain commas and are quoted, so a naive `split(",")` silently corrupts every row — filters to `country_iso_code === "US"`, and emits two files:
+
+- `src/shared/us-states.generated.ts` — the 51 `State` rows.
+- `src/shared/us-cities.generated.ts` — all `City` rows, each carrying its code, bare city name, and parent state code.
+
+Both get a header comment naming the script, the source URL, and the CSV's date stamp, plus a note that the file is generated and must not be hand-edited.
+
+Pin the CSV URL as a constant in the script so a regeneration is reproducible, and log the row counts it wrote so a silently-empty parse is visible rather than committed.
 
 Add an npm script: `"locations:generate": "tsx scripts/generate-us-locations.ts"`.
 
 - [ ] **Step 2: Run the generator**
 
 Run: `npm run locations:generate`
-Expected: `src/shared/us-locations.generated.ts` written with 350 entries. **If `DATAFORSEO_API_KEY` is not set, stop and report that — do not fabricate the file.**
+Expected output: 51 states and 19,654 cities. If either count is 0 or the state count is not 51, the parse is wrong — stop and report it. **Never hand-write or invent rows to make the counts match.**
 
 - [ ] **Step 3: Write the failing test**
 
@@ -973,22 +990,55 @@ import {
   US_SUBLOCATION_OPTIONS,
 } from "./keyword-locations";
 
-describe("US sublocations", () => {
-  it("includes the 50 states", () => {
-    expect(
-      US_SUBLOCATION_OPTIONS.filter((o) => o.kind === "state"),
-    ).toHaveLength(50);
+// Codes below are real values verified against the source CSV. Do not change
+// them to make a failing implementation pass.
+const TEXAS = 21176;
+const DALLAS_TX = 1026339;
+const DISTRICT_OF_COLUMBIA = 21140;
+
+describe("US states", () => {
+  // 51, because the District of Columbia is a targetable location.
+  it("includes all 51 state-level locations", () => {
+    expect(US_STATE_OPTIONS).toHaveLength(51);
   });
 
-  it("parents every sublocation to the United States", () => {
-    for (const option of US_SUBLOCATION_OPTIONS) {
+  it("includes the District of Columbia", () => {
+    expect(US_STATE_OPTIONS.some((o) => o.code === DISTRICT_OF_COLUMBIA)).toBe(
+      true,
+    );
+  });
+
+  it("parents every state to the United States", () => {
+    for (const option of US_STATE_OPTIONS) {
       expect(option.parentCode).toBe(DEFAULT_LOCATION_CODE);
     }
   });
 
-  it("gives every sublocation a unique code", () => {
-    const codes = US_SUBLOCATION_OPTIONS.map((o) => o.code);
+  it("gives every state a unique code", () => {
+    const codes = US_STATE_OPTIONS.map((o) => o.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe("US cities", () => {
+  it("loads every city without bundling them eagerly", async () => {
+    const cities = await loadUsCityOptions();
+    expect(cities).toHaveLength(19654);
+  });
+
+  // Cities hang off their state, NOT off the country.
+  it("parents Dallas to Texas rather than to the country", async () => {
+    const cities = await loadUsCityOptions();
+    const dallas = cities.find((c) => c.code === DALLAS_TX);
+    expect(dallas?.parentCode).toBe(TEXAS);
+  });
+
+  // Six US cities are called Dallas; a bare city name is ambiguous.
+  it("disambiguates same-named cities in the label", async () => {
+    const cities = await loadUsCityOptions();
+    const dallases = cities.filter((c) => c.label.startsWith("Dallas"));
+    expect(dallases.length).toBeGreaterThan(1);
+    expect(new Set(dallases.map((c) => c.label)).size).toBe(dallases.length);
   });
 });
 
@@ -999,9 +1049,13 @@ describe("resolveLabsLocationCode", () => {
     );
   });
 
-  it("resolves a US city up to the United States", () => {
-    const city = US_SUBLOCATION_OPTIONS.find((o) => o.kind === "city");
-    expect(resolveLabsLocationCode(city!.code)).toBe(DEFAULT_LOCATION_CODE);
+  it("resolves a state up to its country", () => {
+    expect(resolveLabsLocationCode(TEXAS)).toBe(DEFAULT_LOCATION_CODE);
+  });
+
+  // Two hops: city -> state -> country. A single-parent read fails this.
+  it("walks a city all the way up to its country", () => {
+    expect(resolveLabsLocationCode(DALLAS_TX)).toBe(DEFAULT_LOCATION_CODE);
   });
 
   it("falls back to the default for an unknown code", () => {
@@ -1010,12 +1064,26 @@ describe("resolveLabsLocationCode", () => {
 });
 
 describe("getLanguageCode", () => {
-  it("resolves a US city through its parent country", () => {
-    const city = US_SUBLOCATION_OPTIONS.find((o) => o.kind === "city");
-    expect(getLanguageCode(city!.code)).toBe("en");
+  it("resolves a US city through its parent chain", () => {
+    expect(getLanguageCode(DALLAS_TX)).toBe("en");
   });
 });
 ```
+
+**Where the resolver lives, and why it is not in `keyword-locations.ts`.**
+
+`resolveLabsLocationCode` must be synchronous — it sits on a server request path and cannot `await` a dynamic import. It also needs the full city→parent map, which is the thing too big to ship to browsers.
+
+Both constraints are satisfied by putting it on the server only. The 553 KB is a **client bundle** problem; a Worker bundle has no such pressure. So:
+
+- `src/shared/us-cities.generated.ts` holds the full list.
+- The **client** reaches it only through `loadUsCityOptions()`'s dynamic `import()`, which keeps it in its own chunk that loads when the picker opens.
+- The **server** gets `resolveLabsLocationCode` in a new `src/server/lib/labs-location.ts` that imports the generated module statically. Server-only, so the size is irrelevant and the function stays synchronous.
+- `keyword-locations.ts` therefore stays client-safe and gains only `US_STATE_OPTIONS` (1 KB) and `loadUsCityOptions`.
+
+Put the `resolveLabsLocationCode` tests in `src/server/lib/labs-location.test.ts` and import from there, not from `./keyword-locations`.
+
+**`getLanguageCode` needs no change.** Every sublocation in this task is American, and its existing `LOCATION_LANGUAGE[locationCode] ?? "en"` fallback already returns `"en"` for any code it does not know. Verify that with the test above rather than adding a chain walk that would do the same thing more slowly. Delete the `getLanguageCode` entry from this task's Interfaces list.
 
 - [ ] **Step 4: Run the test and verify it fails, then implement, then verify it passes**
 
@@ -1043,9 +1111,15 @@ git commit -m "Generate US state and city location codes from DataForSEO"
 
 `LocationSelect` gains an optional `includeSubLocations?: boolean` (default `false`, so no existing caller changes behaviour). When true, the list renders three labelled groups — `Countries`, `United States — States`, `United States — Cities` — and the search box filters across all of them.
 
+Three requirements specific to the city group, all of which follow from the data:
+
+- **Load cities lazily.** Call `loadUsCityOptions()` when the menu first opens with `includeSubLocations`, not at module scope, or the 553 KB lands in the main bundle and defeats the whole arrangement. Show the countries and states immediately while it resolves; do not block the menu on it.
+- **Label every city with its state.** Six US cities are named `Dallas`. A bare city name gives the user no way to pick the right one, and picking the wrong one silently returns a SERP for another state. Render `Dallas, Texas`.
+- **Do not render 19,654 rows.** The existing list is unvirtualized. Cap the city group to the first ~50 matches and show `Keep typing to narrow…` when there are more, so an empty query cannot mount twenty thousand nodes. Verify the menu opens without jank.
+
 - [ ] **Step 2: Split precise from resolved on the server**
 
-In `ContentBriefService`, the SERP-derived leg passes the user's exact `locationCode`. The Labs `dataforseo.keywords.related` leg passes `resolveLabsLocationCode(locationCode)`. Add a comment stating why the two differ — a future reader will otherwise "fix" the inconsistency and start sending city codes to an endpoint that rejects them.
+In `ContentBriefService`, the SERP-derived leg passes the user's exact `locationCode`. The Labs `dataforseo.keywords.related` leg passes `resolveLabsLocationCode(locationCode)` from `@/server/lib/labs-location`. Add a comment stating why the two differ — a future reader will otherwise "fix" the inconsistency and start sending city codes to an endpoint that rejects them.
 
 - [ ] **Step 3: Say so in the UI**
 
@@ -1057,7 +1131,9 @@ Pass `includeSubLocations` on those two pickers only. Keyword Research stays cou
 
 - [ ] **Step 5: Verify in the browser**
 
-Search `dallas` in the Content Optimizer picker, select the city, build a brief, and confirm from the network log that the SERP call carries the city code while the related-keywords call carries `2840`.
+Search `dallas` in the Content Optimizer picker. Confirm all six Dallases appear, each distinguishable by state. Select `Dallas, Texas` (code `1026339`) and confirm from the network log that the SERP call carries `1026339` while the related-keywords call carries `2840`.
+
+Also confirm from the Network panel that the city chunk is a **separate request made when the menu opens**, not part of the initial page load. If it is in the main bundle, Step 1's lazy load is not working regardless of what the code looks like.
 
 - [ ] **Step 6: Full gate and commit**
 

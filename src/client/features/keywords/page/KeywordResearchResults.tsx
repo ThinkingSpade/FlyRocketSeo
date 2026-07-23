@@ -13,8 +13,10 @@ export function KeywordResearchResults({ controller }: Props) {
       <KeywordResearchDesktopResults controller={controller} />
       <KeywordResearchMobileResults controller={controller} />
       {/* Derived from the volume/CPC/difficulty already on these rows — no
-          extra call, so it costs nothing to show. */}
-      <PpcValuePanel rows={controller.rows} />
+          extra call, so it costs nothing to show. Reads the same on-topic
+          -aware rows as the table, so it never prices a keyword the table
+          is hiding. */}
+      <PpcValuePanel rows={controller.relevanceVisibleRows} />
     </div>
   );
 }

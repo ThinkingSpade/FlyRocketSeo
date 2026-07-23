@@ -129,7 +129,7 @@ function DesktopKeywordPanel({ controller }: Props) {
       <div className="flex flex-1 min-h-0 gap-2">
         <KeywordGroupsRail
           groups={controller.keywordGroups}
-          totalKeywords={controller.rows.length}
+          totalKeywords={controller.relevanceVisibleRows.length}
           groupTerm={controller.groupTerm}
           setGroupTerm={controller.setGroupTerm}
         />
@@ -143,7 +143,7 @@ function DesktopTableCard({ controller }: Props) {
   const {
     activeFilterCount,
     filteredRows,
-    rows,
+    relevanceVisibleRows,
     selectedRows,
     sheetsExportRows,
     showFilters,
@@ -158,7 +158,7 @@ function DesktopTableCard({ controller }: Props) {
     selectedRows.size > 0
       ? `${selectedRows.size} of ${filteredRows.length} selected`
       : isSliced
-        ? `Showing ${filteredRows.length} of ${rows.length} keywords`
+        ? `Showing ${filteredRows.length} of ${relevanceVisibleRows.length} keywords`
         : `Showing ${filteredRows.length} keywords`;
   const totals = computeKeywordTotals(filteredRows);
 
@@ -301,6 +301,7 @@ function DesktopTableCard({ controller }: Props) {
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}
         filteredRows={pageRows}
+        hiddenByOffTopicCollapse={controller.hiddenByOffTopicCollapse}
         overviewKeyword={controller.overviewKeyword}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}

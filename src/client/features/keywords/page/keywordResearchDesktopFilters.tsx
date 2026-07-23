@@ -97,15 +97,23 @@ function CompactRangeInput({
 
 export function EmptyFilterResults({
   activeFilterCount,
+  hiddenByOffTopicCollapse,
   resetFilters,
 }: {
   activeFilterCount: number;
+  // Distinguishes "a filter matched nothing" from "every row is off-topic
+  // and the collapse hid them" — the OffTopicNotice bar above already names
+  // the real reason for the second case, so this copy must not contradict it
+  // by blaming filters that were never touched.
+  hiddenByOffTopicCollapse: boolean;
   resetFilters: () => void;
 }) {
   return (
     <div className="h-full flex flex-col items-center justify-center text-center px-4 text-base-content/50 gap-3">
       <p className="text-sm font-medium">
-        No keywords match your current filters.
+        {hiddenByOffTopicCollapse
+          ? "Every keyword here is off-topic and currently hidden. Use Show above to bring them back."
+          : "No keywords match your current filters."}
       </p>
       {activeFilterCount > 0 ? (
         <button className="btn btn-ghost btn-sm" onClick={resetFilters}>
