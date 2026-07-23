@@ -3,6 +3,7 @@ import {
   computeBrandedSplit,
   defaultBrandTerms,
   isBrandedQuery,
+  looksLikeClippedBrand,
   parseBrandTerms,
 } from "./brandedSplit";
 
@@ -33,42 +34,42 @@ describe("isBrandedQuery", () => {
     expect(isBrandedQuery("anything", [])).toBe(false);
   });
 
-  // The regression this rule exists for: the term comes from the domain stem
-  // but people search the brand, so the real top query is shorter than the
-  // term and containment alone called it non-branded.
-  it("matches a query that is the term minus a short tail", () => {
-    expect(isBrandedQuery("delio", ["deliotx"])).toBe(true);
-    expect(isBrandedQuery("delio reviews", ["deliotx"])).toBe(true);
-    expect(isBrandedQuery("best delio pricing", ["deliotx"])).toBe(true);
-  });
-
-  it("does not swallow generic words that merely start a brand", () => {
-    // Three characters short of "shopify", and a word in its own right.
-    expect(isBrandedQuery("shop", ["shopify"])).toBe(false);
-    expect(isBrandedQuery("car insurance", ["carpetworld"])).toBe(false);
-    // Too short to be a clipped brand at all.
-    expect(isBrandedQuery("nik", ["nike"])).toBe(false);
-  });
-
-  it("still rejects a word that only shares a prefix mid-term", () => {
-    expect(isBrandedQuery("delicious coffee", ["deliotx"])).toBe(false);
-  });
-
-  // Service businesses name themselves after the plural of what they do, so
-  // the singular is their most valuable NON-branded query. Treating it as a
-  // clipped brand would repeat the bug this rule exists to fix.
-  it("does not treat a term's own plural as a clipped brand", () => {
+  // Shape-based clipping lives in looksLikeClippedBrand, deliberately outside
+  // this function, so the analytics card is never moved by a guess.
+  it("leaves a clipped brand to the caller to corroborate", () => {
+    expect(isBrandedQuery("delio", ["deliotx"])).toBe(false);
     expect(isBrandedQuery("roofer near me", ["roofers"])).toBe(false);
-    expect(isBrandedQuery("mover quotes", ["movers"])).toBe(false);
-    expect(isBrandedQuery("office cleaner cost", ["cleaners"])).toBe(false);
-    // "dishes" minus "dish" is "es" — still just a plural.
-    expect(isBrandedQuery("dish rack", ["dishes"])).toBe(false);
+  });
+});
+
+describe("looksLikeClippedBrand", () => {
+  it("spots the brand with a short tail removed", () => {
+    expect(looksLikeClippedBrand("delio", ["deliotx"])).toBe(true);
+    expect(looksLikeClippedBrand("delio reviews", ["deliotx"])).toBe(true);
+    expect(looksLikeClippedBrand("acme pricing", ["acmeco"])).toBe(true);
   });
 
-  it("still matches a clipped brand whose tail is not a plural", () => {
-    expect(isBrandedQuery("delio", ["deliotx"])).toBe(true);
-    // "-co" is a company suffix, not an inflection.
-    expect(isBrandedQuery("acme pricing", ["acmeco"])).toBe(true);
+  it("does not fire on words that merely start a longer brand", () => {
+    // Three characters short of "shopify", and a word in its own right.
+    expect(looksLikeClippedBrand("shop", ["shopify"])).toBe(false);
+    expect(looksLikeClippedBrand("car insurance", ["carpetworld"])).toBe(false);
+    // Too short to be a clipped brand at all.
+    expect(looksLikeClippedBrand("nik", ["nike"])).toBe(false);
+    expect(looksLikeClippedBrand("delicious coffee", ["deliotx"])).toBe(false);
+  });
+
+  /**
+   * The reason this is shape-only and needs a second signal. Every case here
+   * is textually identical to "delio"/"deliotx" and semantically its opposite:
+   * a generic head plus a two-character suffix, where the head is the site's
+   * most valuable NON-branded query. rankSeedSuggestions separates them with
+   * Search Console position, which is why this predicate must never be used
+   * on its own.
+   */
+  it("cannot tell a generic head from a real clipped brand", () => {
+    expect(looksLikeClippedBrand("coffee near me", ["coffeeco"])).toBe(true);
+    expect(looksLikeClippedBrand("bakery near me", ["bakerytx"])).toBe(true);
+    expect(looksLikeClippedBrand("plumbing repair", ["plumbingco"])).toBe(true);
   });
 });
 

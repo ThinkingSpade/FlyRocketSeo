@@ -53,42 +53,49 @@ export function parseBrandTerms(value: string): string[] {
 const MIN_CLIPPED_BRAND = 4;
 const MAX_CLIPPED_SUFFIX = 2;
 
-/** A tail that only pluralises the word it follows. */
-const INFLECTIONAL_PLURAL = /^e?s$/;
-
-/**
- * A query is branded when any term appears with spaces ignored ("delio tx"
- * matches the term "deliotx"), or when a word in the query is the term minus a
- * short tail.
- *
- * That second rule exists because the brand term comes from the domain stem,
- * and people search the brand, not the domain: deliotx.com yields the term
- * "deliotx" while the actual top Search Console query is "delio". Containment
- * alone reads that as non-branded, which is how brand traffic came to be
- * ranked as the best topic to research.
- */
+/** A query is branded when any term appears with spaces ignored ("delio tx"
+ *  matches the term "deliotx"). */
 export function isBrandedQuery(query: string, terms: string[]): boolean {
   if (terms.length === 0) return false;
   const normalized = query.toLowerCase();
   const squashed = normalized.replace(/\s+/g, "");
-  const words = normalized.split(/\s+/).filter(Boolean);
+  return terms.some(
+    (term) =>
+      normalized.includes(term) || squashed.includes(term.replace(/\s+/g, "")),
+  );
+}
 
+/**
+ * Whether a query word looks like the brand term with a short tail removed —
+ * "delio" against the term "deliotx".
+ *
+ * This is needed because the term is the domain stem while people search the
+ * brand: deliotx.com yields "deliotx" but its top query is "delio", which
+ * containment alone reads as non-branded.
+ *
+ * **Shape alone cannot decide it, which is why this is deliberately separate
+ * from `isBrandedQuery`.** "deliotx" minus "tx" is a clipped brand; "bakerytx"
+ * minus "tx" is the word bakery. Identical shape, opposite answer — and
+ * `<generic word> + co / tx / hq / us` is one of the commonest small-business
+ * domain patterns, where that generic head is the single most valuable
+ * NON-branded query a site has. Folding this into `isBrandedQuery` therefore
+ * filed "coffee near me" as brand traffic for coffeeco.com.
+ *
+ * A caller must corroborate it with evidence that the query really is the
+ * brand. `rankSeedSuggestions` uses Search Console position: a site ranks at
+ * the top for its own name, and nowhere near it for "bakery near me".
+ */
+export function looksLikeClippedBrand(query: string, terms: string[]): boolean {
+  if (terms.length === 0) return false;
+  const words = query.toLowerCase().split(/\s+/).filter(Boolean);
   return terms.some((term) => {
-    if (normalized.includes(term)) return true;
     const squashedTerm = term.replace(/\s+/g, "");
-    if (squashed.includes(squashedTerm)) return true;
-    return words.some((word) => {
-      if (word.length < MIN_CLIPPED_BRAND) return false;
-      if (!squashedTerm.startsWith(word)) return false;
-      const removed = squashedTerm.slice(word.length);
-      if (removed.length > MAX_CLIPPED_SUFFIX) return false;
-      // "roofers" minus "roofer" is the term's own plural, not a clipped
-      // brand. Service businesses name themselves after the plural of what
-      // they do, so without this a roofers.com project would file "roofer
-      // near me" -- its single most valuable non-branded query -- as brand
-      // traffic, which is the very mistake this function exists to avoid.
-      return !INFLECTIONAL_PLURAL.test(removed);
-    });
+    return words.some(
+      (word) =>
+        word.length >= MIN_CLIPPED_BRAND &&
+        squashedTerm.startsWith(word) &&
+        squashedTerm.length - word.length <= MAX_CLIPPED_SUFFIX,
+    );
   });
 }
 

@@ -115,7 +115,14 @@ async function fetchAutoRows(
 
     lastSource = source;
 
+    // Coverage counts RELEVANT rows, so a source can fill the result limit
+    // with rows that are mostly off-topic and still leave coverage false.
+    // Without this the loop would pay for the next source and then discard
+    // every row it returned, because there is no room left to accumulate.
+    const full = accumulatedRows.length >= input.resultLimit;
+
     if (
+      full ||
       hasSufficientCoverage(accumulatedRows, seedKeyword, MIN_NON_SEED_FOR_AUTO)
     ) {
       return {

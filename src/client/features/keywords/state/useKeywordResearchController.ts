@@ -223,6 +223,24 @@ export function useKeywordResearchController(
     [rows, searchedKeyword, showOffTopic],
   );
 
+  // Collapsing has to drop any off-topic row the user selected while they were
+  // revealed. Otherwise the count reads "3 of 2 selected" and Save persists a
+  // keyword the table is no longer showing.
+  const toggleOffTopic = useCallback(() => {
+    setShowOffTopic((current) => {
+      if (current) {
+        const hidden = new Set(offTopic.map((row) => row.keyword));
+        setSelectedRows((previous) => {
+          const next = new Set(
+            [...previous].filter((keyword) => !hidden.has(keyword)),
+          );
+          return next.size === previous.size ? previous : next;
+        });
+      }
+      return !current;
+    });
+  }, [offTopic, setSelectedRows]);
+
   const { filteredRows, activeFilterCount } = useKeywordFiltering({
     rows: relevanceVisibleRows,
     filters: filterValues,
@@ -341,7 +359,7 @@ export function useKeywordResearchController(
     setSelectedRows,
     setSerpPage,
     setShowFilters: uiState.setShowFilters,
-    setShowOffTopic,
+    toggleOffTopic,
     setShowSaveDialog: uiState.setShowSaveDialog,
     showApproximateMatchNotice,
     showFilters: uiState.showFilters,

@@ -31,6 +31,41 @@ describe("rankSeedSuggestions", () => {
     expect(ranked.at(-1)).toMatchObject({ keyword: "delio", branded: true });
   });
 
+  // The clipped brand "delio" for deliotx.com ranks first, as a site does for
+  // its own name, so position corroborates the shape.
+  it("treats a top-ranking clipped brand as branded", () => {
+    const ranked = rankSeedSuggestions({
+      gscQueries: [
+        { query: "delio", impressions: 5000, position: 1.2 },
+        { query: "office coffee service", impressions: 120, position: 14.3 },
+      ],
+      savedKeywords: [],
+      domain,
+    });
+    expect(ranked[0].keyword).toBe("office coffee service");
+    expect(ranked.at(-1)).toMatchObject({ keyword: "delio", branded: true });
+  });
+
+  /**
+   * The regression the shared rule caused: "bakery"/"bakerytx" is the same
+   * string shape as "delio"/"deliotx", but it is the site's best non-branded
+   * query, not its name. It ranks like one too, which is the tell.
+   */
+  it("does not treat a generic head on a suffixed domain as the brand", () => {
+    const ranked = rankSeedSuggestions({
+      gscQueries: [
+        { query: "bakery near me", impressions: 4000, position: 12.4 },
+        { query: "sourdough delivery", impressions: 90, position: 22.1 },
+      ],
+      savedKeywords: [],
+      domain: "bakerytx.com",
+    });
+    expect(ranked[0]).toMatchObject({
+      keyword: "bakery near me",
+      branded: false,
+    });
+  });
+
   it("matches a spaced brand against the domain stem", () => {
     const ranked = rankSeedSuggestions({
       gscQueries: [{ query: "delio tx", impressions: 900, position: 2 }],

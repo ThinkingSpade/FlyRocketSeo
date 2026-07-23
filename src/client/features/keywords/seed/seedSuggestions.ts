@@ -1,6 +1,7 @@
 import {
   defaultBrandTerms,
   isBrandedQuery,
+  looksLikeClippedBrand,
 } from "@/client/features/search-performance/brandedSplit";
 
 /**
@@ -22,6 +23,10 @@ export type SeedSuggestion = {
 };
 
 const DEFAULT_LIMIT = 5;
+
+/** Sites rank at or near the top for their own name; nobody ranks third for
+ *  "bakery near me" by accident. */
+const MAX_BRAND_POSITION = 3;
 
 function compact(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
@@ -55,7 +60,16 @@ export function rankSeedSuggestions({
   const fromGsc = byImpressions.map((row) => ({
     keyword: row.query,
     hint: `${compact(row.impressions)} impressions · pos ${row.position.toFixed(1)}`,
-    branded: isBrandedQuery(row.query, terms),
+    // A clipped brand is corroborated with position, never taken on shape
+    // alone. "deliotx" minus "tx" is the brand; "bakerytx" minus "tx" is the
+    // word bakery, and the two are indistinguishable as strings. A site ranks
+    // at the top for its own name, so position is the evidence that separates
+    // them -- and getting it wrong the other way would bury the best seed a
+    // generic-domain site has.
+    branded:
+      isBrandedQuery(row.query, terms) ||
+      (row.position <= MAX_BRAND_POSITION &&
+        looksLikeClippedBrand(row.query, terms)),
   }));
 
   if (fromGsc.length > 0) return nonBrandedFirst(fromGsc).slice(0, limit);

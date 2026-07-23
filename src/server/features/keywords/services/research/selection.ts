@@ -21,6 +21,14 @@ export const AUTO_KEYWORD_SOURCES: KeywordSource[] = [
   "related",
 ];
 
+/**
+ * How many rows Auto needs before it stops trying further sources.
+ *
+ * Named for what it used to count. It is now the minimum number of RELEVANT
+ * non-seed rows — see `hasSufficientCoverage` — because counting rows that
+ * merely differed from the seed is what let 46 keywords about the meaning of
+ * names satisfy it.
+ */
 export const MIN_NON_SEED_FOR_AUTO = 5;
 
 export function countNonSeedKeywords(

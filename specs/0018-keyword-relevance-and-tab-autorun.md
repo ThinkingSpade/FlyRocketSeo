@@ -8,6 +8,13 @@ Optimizer all opened as blank forms with invented placeholder text.
 Both are the same failure in different clothes: the product knows things about
 the project and doesn't use them.
 
+## What shipped
+
+Parts A, B and the data half of E. **Parts C, D and the picker half of E are
+not built** — this document describes the whole design, and each unbuilt part
+says so at its head. In particular the standing no-auto-spend rule is **not**
+reversed by what shipped: nothing metered fires without a click.
+
 ## Why the keywords were wrong
 
 Two independent defects compounded.
@@ -31,9 +38,18 @@ the existing, already-tested `isBrandedQuery` / `defaultBrandTerms` from
 ones are still offered, sorted last and labelled `brand`, so choosing one is a
 decision rather than an accident.
 
-Fallback chain: non-branded GSC → saved keywords → ranked keywords from a stored
-Domain Overview run → **no pre-fill plus a line explaining why**. Seeding
-something useless silently is worse than seeding nothing.
+Fallback chain: non-branded GSC → saved keywords → **no pre-fill plus a line
+explaining why**. Seeding something useless silently is worse than seeding
+nothing.
+
+One subtlety the reported site forced. The brand term is the domain stem, so
+deliotx.com yields `deliotx` while the top query is `delio` — containment alone
+calls that non-branded. But shape cannot decide it: `bakerytx` minus `tx` is the
+word bakery, which is that site's best NON-branded query, and `<generic> + co /
+tx / hq` is a very common domain pattern. So `isBrandedQuery` stays containment
+only, and the seed ranker corroborates a clipped brand with Search Console
+position — a site ranks at the top for its own name and nowhere near it for
+"bakery near me".
 
 ## Relevance (part B)
 
@@ -51,7 +67,7 @@ something useless silently is worse than seeding nothing.
 4. `hasSufficientCoverage` counts _relevant_ non-seed keywords, so Auto keeps
    falling through sources instead of stopping on junk.
 
-## Auto-run (part C)
+## Auto-run (part C) — NOT BUILT
 
 `useSeedSuggestions` and `SeedKeywordField` move out of `dashboard/` into a
 shared `keywords/seed/` module. A new `useTabAutoRun` wraps `useAutoRestoredRun`:
@@ -66,7 +82,10 @@ never while another auto-run is in flight.
 
 ## Cost
 
-**This reverses the standing no-auto-spend rule, deliberately and narrowly.**
+**Applies to part C, which is not built. On what shipped, the standing
+no-auto-spend rule holds in full — nothing metered fires without a click.**
+
+When part C lands it will reverse that rule, deliberately and narrowly.
 Auto-run is bounded to the first ever visit to a tab for a project; every later
 visit is free. Restores need no new storage: `analysis_runs` rows are permanent,
 the 24h `CACHE_TTL` is soft app-level metadata in R2 custom metadata,
@@ -76,7 +95,7 @@ rule.
 One-time cost of the fix: correcting the seed changes the research cache key, so
 existing projects re-pay once per tab on first visit after deploy.
 
-## The run control (part D)
+## The run control (part D) — NOT BUILT
 
 The full-width `RestoredRunBanner` plus primary button becomes an inline control
 in the results header — last-run timestamp and a ghost icon refresh.
@@ -84,10 +103,23 @@ in the results header — last-run timestamp and a ghost icon refresh.
 
 ## Locations (part E)
 
-`keyword-locations.ts` gains the 50 US states and the ~300 largest US cities as
-DataForSEO geotarget codes, each typed `kind: "country" | "state" | "city"` with
-a `parentCode`. `LocationSelect` groups the three and searches across all of
-them.
+The data is built; **the picker wiring is not.**
+
+`keyword-locations.ts` gains all 51 US state-level locations — 50 states plus
+the District of Columbia, which is targetable — and all 19,654 US cities, as
+DataForSEO geotarget codes typed `kind: "country" | "state" | "city"` with a
+`parentCode`. They are generated from DataForSEO's public locations CSV, which
+needs no API key, rather than written by hand: a wrong geotarget code silently
+returns data for the wrong place.
+
+Two things the source data forces. Cities are parented to their **state**, not
+the country, so resolving one to a Labs-supported code walks the chain. And
+city names are not unique — six US cities are called Dallas — so labels carry
+the state, taken from the parent code rather than from `location_name`, which
+sometimes carries a county instead.
+
+Not built yet: `LocationSelect` grouping the three kinds and searching across
+them, and Content Optimizer passing a city code through.
 
 The split that matters: **SERP-bound calls pass the precise city code; Labs-bound
 calls resolve up to `parentCode`.** Content Optimizer's brief is SERP-derived and

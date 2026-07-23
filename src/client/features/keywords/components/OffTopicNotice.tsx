@@ -24,7 +24,11 @@ export function OffTopicNotice({
     <div
       className={`shrink-0 flex items-center gap-2 px-4 py-1.5 border-b border-base-300 text-base-content/60 ${compact ? "text-xs" : "text-sm"}`}
     >
-      <span>{`${count} keywords share no words with "${seedKeyword}" — hidden`}</span>
+      <span>
+        {`${count} ${count === 1 ? "keyword shares" : "keywords share"} no words with "${seedKeyword}"`}
+        {/* Only claim they're hidden while they actually are. */}
+        {show ? "" : " — hidden"}
+      </span>
       <button className="btn btn-ghost btn-xs" onClick={onToggle}>
         {show ? "Hide" : "Show"}
       </button>

@@ -246,7 +246,7 @@ function MobileKeywordResults({ controller }: Props) {
         count={controller.offTopicCount}
         seedKeyword={controller.searchedKeyword}
         show={controller.showOffTopic}
-        onToggle={() => controller.setShowOffTopic((current) => !current)}
+        onToggle={controller.toggleOffTopic}
       />
 
       <KeywordResearchDesktopTable
