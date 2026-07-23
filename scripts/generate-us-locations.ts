@@ -89,9 +89,11 @@ async function main(): Promise<void> {
     .map(toStateRow)
     .toSorted((a, b) => a.name.localeCompare(b.name));
 
+  const stateNameByCode = new Map(states.map((s) => [s.code, s.name]));
+
   const cities = usRows
     .filter((row) => row.location_type === "City")
-    .map(toCityRow)
+    .map((row) => toCityRow(row, stateNameByCode))
     .toSorted(
       (a, b) => a.name.localeCompare(b.name) || a.state.localeCompare(b.state),
     );
@@ -160,16 +162,29 @@ function toStateRow(row: CsvRow): StateRow {
   };
 }
 
-function toCityRow(row: CsvRow): CityRow {
-  // Six US cities are named "Dallas" alone; the state segment is kept
-  // alongside the city (not just its numeric parentCode) so the picker label
-  // can disambiguate them without a second lookup at render time.
-  const [cityName, stateName] = row.location_name.split(",");
+function toCityRow(row: CsvRow, stateNameByCode: Map<number, string>): CityRow {
+  // Six US cities are named "Dallas" alone; the state name is kept alongside
+  // the city (not just its numeric parentCode) so the picker label can
+  // disambiguate them without a second lookup at render time.
+  //
+  // It is read from the parent code rather than from location_name, because
+  // location_name is not always "City,State,Country": DataForSEO inserts a
+  // county for cities that need it ("Washington,Warren County,New Jersey,
+  // United States"). Taking the second segment put a county in the state
+  // field for 220 rows and rendered "Highland Park, Dallas County". The
+  // parent code has no such exceptions.
+  const parentCode = Number(row.location_code_parent);
+  const state = stateNameByCode.get(parentCode);
+  if (!state) {
+    throw new Error(
+      `City ${row.location_code} (${row.location_name}) has parent ${parentCode}, which is not one of the ${stateNameByCode.size} states parsed from this file.`,
+    );
+  }
   return {
     code: Number(row.location_code),
-    name: (cityName ?? row.location_name).trim(),
-    state: (stateName ?? "").trim(),
-    parentCode: Number(row.location_code_parent),
+    name: bareName(row.location_name),
+    state,
+    parentCode,
   };
 }
 

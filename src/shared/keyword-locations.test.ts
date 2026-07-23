@@ -19,6 +19,11 @@ const TEXAS = 21176;
 const DALLAS_TX = 1026339;
 const DISTRICT_OF_COLUMBIA = 21140;
 
+/** City labels are "<city>, <state>"; city names never contain a comma. */
+function labelledState(label: string): string {
+  return label.slice(label.lastIndexOf(", ") + 2);
+}
+
 describe("keyword locations", () => {
   it("routes Labs-supported countries to labs", () => {
     expect(getKeywordDataProvider(2840)).toBe("labs"); // US
@@ -117,6 +122,35 @@ describe("US cities", () => {
     const dallases = cities.filter((c) => c.label.startsWith("Dallas"));
     expect(dallases.length).toBeGreaterThan(1);
     expect(new Set(dallases.map((c) => c.label)).size).toBe(dallases.length);
+  });
+
+  /**
+   * Label uniqueness alone does NOT prove the labels are right, and this is
+   * the regression that proves it: location_name is not always
+   * "City,State,Country" -- DataForSEO inserts a county for cities that need
+   * one -- so reading the state from its second segment labelled 220 cities
+   * with a county. "Highland Park, Dallas County" is unique and wrong.
+   */
+  it("labels every city with a real state, never a county", async () => {
+    const cities = await loadUsCityOptions();
+    const stateNames = new Set(US_STATE_OPTIONS.map((s) => s.label));
+    const wrong = cities.filter((c) => !stateNames.has(labelledState(c.label)));
+    // Named rather than counted, so a failure says which rows broke.
+    expect(wrong.slice(0, 5).map((c) => c.label)).toEqual([]);
+  });
+
+  it("names the state that the city's parent code points at", async () => {
+    const cities = await loadUsCityOptions();
+    const stateByCode = new Map(US_STATE_OPTIONS.map((s) => [s.code, s.label]));
+    // parentCode is optional on LocationOption because countries have none;
+    // a city without one could not be resolved to a country at all.
+    const orphaned = cities.filter((c) => c.parentCode === undefined);
+    expect(orphaned.slice(0, 5).map((c) => c.label)).toEqual([]);
+
+    const mismatched = cities.filter(
+      (c) => labelledState(c.label) !== stateByCode.get(c.parentCode ?? 0),
+    );
+    expect(mismatched.slice(0, 5).map((c) => c.label)).toEqual([]);
   });
 });
 
