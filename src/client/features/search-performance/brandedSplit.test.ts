@@ -32,6 +32,27 @@ describe("isBrandedQuery", () => {
     expect(isBrandedQuery("office vending dallas", ["deliotx"])).toBe(false);
     expect(isBrandedQuery("anything", [])).toBe(false);
   });
+
+  // The regression this rule exists for: the term comes from the domain stem
+  // but people search the brand, so the real top query is shorter than the
+  // term and containment alone called it non-branded.
+  it("matches a query that is the term minus a short tail", () => {
+    expect(isBrandedQuery("delio", ["deliotx"])).toBe(true);
+    expect(isBrandedQuery("delio reviews", ["deliotx"])).toBe(true);
+    expect(isBrandedQuery("best delio pricing", ["deliotx"])).toBe(true);
+  });
+
+  it("does not swallow generic words that merely start a brand", () => {
+    // Three characters short of "shopify", and a word in its own right.
+    expect(isBrandedQuery("shop", ["shopify"])).toBe(false);
+    expect(isBrandedQuery("car insurance", ["carpetworld"])).toBe(false);
+    // Too short to be a clipped brand at all.
+    expect(isBrandedQuery("nik", ["nike"])).toBe(false);
+  });
+
+  it("still rejects a word that only shares a prefix mid-term", () => {
+    expect(isBrandedQuery("delicious coffee", ["deliotx"])).toBe(false);
+  });
 });
 
 describe("computeBrandedSplit", () => {

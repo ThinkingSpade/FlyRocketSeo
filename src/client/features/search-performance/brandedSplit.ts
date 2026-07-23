@@ -41,16 +41,46 @@ export function parseBrandTerms(value: string): string[] {
   ];
 }
 
-/** A query is branded when any term appears with spaces ignored ("delio tx"
- *  matches the term "deliotx"). */
+/**
+ * Shortest word we will treat as a clipped brand, and the most characters the
+ * brand may have that the word does not.
+ *
+ * Both bounds exist to keep this from swallowing generic words: "shop" is four
+ * characters and a prefix of "shopify", but three characters short of it, and
+ * nobody searching "shop" means Shopify. "car" is a prefix of "carpetworld" and
+ * fails on both counts.
+ */
+const MIN_CLIPPED_BRAND = 4;
+const MAX_CLIPPED_SUFFIX = 2;
+
+/**
+ * A query is branded when any term appears with spaces ignored ("delio tx"
+ * matches the term "deliotx"), or when a word in the query is the term minus a
+ * short tail.
+ *
+ * That second rule exists because the brand term comes from the domain stem,
+ * and people search the brand, not the domain: deliotx.com yields the term
+ * "deliotx" while the actual top Search Console query is "delio". Containment
+ * alone reads that as non-branded, which is how brand traffic came to be
+ * ranked as the best topic to research.
+ */
 export function isBrandedQuery(query: string, terms: string[]): boolean {
   if (terms.length === 0) return false;
   const normalized = query.toLowerCase();
   const squashed = normalized.replace(/\s+/g, "");
-  return terms.some(
-    (term) =>
-      normalized.includes(term) || squashed.includes(term.replace(/\s+/g, "")),
-  );
+  const words = normalized.split(/\s+/).filter(Boolean);
+
+  return terms.some((term) => {
+    if (normalized.includes(term)) return true;
+    const squashedTerm = term.replace(/\s+/g, "");
+    if (squashed.includes(squashedTerm)) return true;
+    return words.some(
+      (word) =>
+        word.length >= MIN_CLIPPED_BRAND &&
+        squashedTerm.startsWith(word) &&
+        squashedTerm.length - word.length <= MAX_CLIPPED_SUFFIX,
+    );
+  });
 }
 
 export function computeBrandedSplit(
