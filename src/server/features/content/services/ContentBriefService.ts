@@ -22,27 +22,7 @@ const BRIEF_TTL_SECONDS = 7 * 24 * 60 * 60;
 const RELATED_TERMS_LIMIT = 30;
 const MAX_COMPETITORS = 10;
 
-const briefCompetitorSchema = z.object({
-  rank: z.number().nullable(),
-  title: z.string().nullable(),
-  url: z.string().nullable(),
-  domain: z.string().nullable(),
-});
-
-const briefTermSchema = z.object({
-  keyword: z.string(),
-  searchVolume: z.number().nullable(),
-});
-
-const contentBriefSchema = z.object({
-  keyword: z.string(),
-  locationCode: z.number(),
-  languageCode: z.string(),
-  competitors: z.array(briefCompetitorSchema),
-  terms: z.array(briefTermSchema),
-  paaQuestions: z.array(z.string()),
-  fetchedAt: z.string(),
-});
+import { contentBriefSchema } from "@/types/schemas/content";
 
 type ContentBrief = z.infer<typeof contentBriefSchema>;
 

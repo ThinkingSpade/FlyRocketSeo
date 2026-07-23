@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
 import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
@@ -18,26 +17,7 @@ const CLUSTERS_TTL_SECONDS = 7 * 24 * 60 * 60;
 
 const IDEAS_LIMIT = 150;
 
-const clusterKeywordSchema = z.object({
-  keyword: z.string(),
-  searchVolume: z.number().nullable(),
-  keywordDifficulty: z.number().nullable(),
-});
-
-const planSchema = z.object({
-  topic: z.string(),
-  locationCode: z.number(),
-  languageCode: z.string(),
-  hub: z.array(clusterKeywordSchema),
-  clusters: z.array(
-    z.object({
-      name: z.string(),
-      keywords: z.array(clusterKeywordSchema),
-      totalVolume: z.number(),
-    }),
-  ),
-  fetchedAt: z.string(),
-});
+import { topicClusterPlanSchema as planSchema } from "@/types/schemas/topic-clusters";
 
 export const getTopicClusters = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)

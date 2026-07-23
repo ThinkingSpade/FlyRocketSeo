@@ -1,28 +1,18 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import type { TrendsGraphItem } from "@/server/lib/dataforseo/trends";
+import { trendsResultSchema, type TrendsPoint } from "@/types/schemas/trends";
 
 /** Trend curves shift slowly; refresh daily. */
 const TRENDS_TTL_SECONDS = 24 * 60 * 60;
 
-const trendsPointSchema = z.object({
-  timestamp: z.number(),
-  date: z.string(),
-  values: z.array(z.number().nullable()),
-});
-
-export type TrendsPoint = z.infer<typeof trendsPointSchema>;
-
-const trendsResultSchema = z.object({
-  keywords: z.array(z.string()),
-  averages: z.array(z.number().nullable()),
-  points: z.array(trendsPointSchema),
-  fetchedAt: z.string(),
-});
+// Re-exported: consumers (the MCP trends tool) import this type from the
+// service, not from the schema module it now lives in.
+export type { TrendsPoint };
 
 type TrendsResult = z.infer<typeof trendsResultSchema>;
 

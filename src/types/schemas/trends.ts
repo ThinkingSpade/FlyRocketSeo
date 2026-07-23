@@ -24,3 +24,20 @@ export const keywordTrendsRequestSchema = z.object({
 export const trendsSearchSchema = z.object({
   q: z.string().optional(),
 });
+
+const trendsPointSchema = z.object({
+  timestamp: z.number(),
+  date: z.string(),
+  values: z.array(z.number().nullable()),
+});
+
+export type TrendsPoint = z.infer<typeof trendsPointSchema>;
+
+/** The trends result exactly as it is cached — shared so auto-restore
+ *  validates against the same definition that wrote it. */
+export const trendsResultSchema = z.object({
+  keywords: z.array(z.string()),
+  averages: z.array(z.number().nullable()),
+  points: z.array(trendsPointSchema),
+  fetchedAt: z.string(),
+});

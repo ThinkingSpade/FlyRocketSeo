@@ -14,3 +14,26 @@ export const topicClustersSearchSchema = z.object({
   q: z.string().optional(),
   loc: z.number().int().positive().optional(),
 });
+
+const clusterKeywordSchema = z.object({
+  keyword: z.string(),
+  searchVolume: z.number().nullable(),
+  keywordDifficulty: z.number().nullable(),
+});
+
+/** The cluster plan exactly as it is cached — shared so auto-restore
+ *  validates against the same definition that wrote it. */
+export const topicClusterPlanSchema = z.object({
+  topic: z.string(),
+  locationCode: z.number(),
+  languageCode: z.string(),
+  hub: z.array(clusterKeywordSchema),
+  clusters: z.array(
+    z.object({
+      name: z.string(),
+      keywords: z.array(clusterKeywordSchema),
+      totalVolume: z.number(),
+    }),
+  ),
+  fetchedAt: z.string(),
+});

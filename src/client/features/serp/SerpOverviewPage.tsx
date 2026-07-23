@@ -12,6 +12,11 @@ import {
 } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSerpOverview } from "@/serverFunctions/serp";
+import { serpOverviewSchema } from "@/types/schemas/serp";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
+import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { estimateTrafficShare } from "@/client/features/serp/serpTrafficShare";
 import { SerpStrengthCards } from "@/client/features/serp/SerpStrengthCards";
 import {
@@ -76,7 +81,20 @@ export function SerpOverviewPage({
     staleTime: 5 * 60_000,
   });
 
-  const result = serpQuery.data;
+  // With no keyword in the URL the query above stays disabled, so the tab would
+  // otherwise show only a prompt. Restoring the project's last run fills it in
+  // for free: it reads a stored row plus the R2 object that run already paid
+  // for, and can never trigger a metered fetch.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.serpOverview,
+    schema: serpOverviewSchema,
+    enabled: keyword === "",
+    runId: selectedRunId,
+  });
+  const result = serpQuery.data ?? restored?.result;
+  const restoredRun = serpQuery.data == null ? restored : null;
   const errorMessage = serpQuery.isError
     ? getStandardErrorMessage(serpQuery.error)
     : null;
@@ -172,6 +190,34 @@ export function SerpOverviewPage({
       ) : null}
 
       {!keyword ? (
+        <RecentRunsList
+          projectId={projectId}
+          feature={RUN_FEATURES.serpOverview}
+          activeRunId={selectedRunId}
+          onSelect={setSelectedRunId}
+        />
+      ) : null}
+
+      {restoredRun ? (
+        <RestoredRunBanner
+          label={restoredRun.label}
+          lastRanAt={restoredRun.lastRanAt}
+          runCount={restoredRun.runCount}
+          onRunAgain={() => {
+            setInput(restoredRun.result.keyword);
+            navigate({
+              search: (prev) => ({
+                ...prev,
+                q: restoredRun.result.keyword,
+                loc: restoredRun.result.locationCode,
+              }),
+              replace: false,
+            });
+          }}
+        />
+      ) : null}
+
+      {!keyword && !restoredRun ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
             <p className="font-medium">Enter a keyword to get started</p>

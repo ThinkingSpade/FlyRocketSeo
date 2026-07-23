@@ -14,24 +14,6 @@ import { mapSerpOverview } from "@/server/features/serp/services/serpOverviewMap
  *  data — 6h keeps repeat lookups free without going stale. */
 const SERP_OVERVIEW_TTL_SECONDS = 6 * 60 * 60;
 
-const serpOverviewResultSchema = z.object({
-  rank: z.number().nullable(),
-  title: z.string().nullable(),
-  url: z.string().nullable(),
-  domain: z.string().nullable(),
-  description: z.string().nullable(),
-  etv: z.number().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  previousRank: z.number().nullable(),
-  isNew: z.boolean(),
-  isUp: z.boolean(),
-  isDown: z.boolean(),
-  /** Estimated monthly organic traffic for the result's whole domain (Labs
-   *  bulk_traffic_estimation) — the plain SERP payload carries no metrics. */
-  domainEtv: z.number().nullable(),
-});
-
 // Labs bulk_traffic_estimation item, parsed defensively (external data).
 const trafficEstimationItemSchema = z
   .object({
@@ -50,24 +32,7 @@ const trafficEstimationItemSchema = z
   })
   .passthrough();
 
-const keywordStatsSchema = z.object({
-  searchVolume: z.number().nullable(),
-  keywordDifficulty: z.number().nullable(),
-  cpc: z.number().nullable(),
-});
-
-const serpOverviewSchema = z.object({
-  keyword: z.string(),
-  locationCode: z.number(),
-  languageCode: z.string(),
-  /** The keyword's own metrics (Labs overview); null when Labs has no data. */
-  keywordStats: keywordStatsSchema.nullable(),
-  results: z.array(serpOverviewResultSchema),
-  paaQuestions: z.array(z.string()),
-  serpFeatures: z.array(z.object({ type: z.string(), count: z.number() })),
-  totalOrganic: z.number(),
-  fetchedAt: z.string(),
-});
+import { serpOverviewSchema } from "@/types/schemas/serp";
 
 // Labs keyword_overview item, read defensively (external data).
 const keywordOverviewItemSchema = z

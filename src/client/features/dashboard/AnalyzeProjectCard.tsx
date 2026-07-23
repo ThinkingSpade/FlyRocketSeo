@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { Check, Loader2, Rocket, TriangleAlert, X } from "lucide-react";
 import { toast } from "sonner";
 import { DashboardCard } from "@/client/features/dashboard/dashboardShared";
@@ -18,7 +18,10 @@ import { getSerpOverview } from "@/serverFunctions/serp";
 import { getContentBrief } from "@/serverFunctions/content";
 import { getTopicClusters } from "@/serverFunctions/topic-clusters";
 import { startAudit } from "@/serverFunctions/audit";
-import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
+import {
+  SeedKeywordField,
+  useSeedSuggestions,
+} from "@/client/features/dashboard/SeedKeywordField";
 
 /**
  * Runs the project's analyses in one go, so a new project stops being a grid of
@@ -185,23 +188,12 @@ export function AnalyzeProjectCard({
   const [statuses, setStatuses] = useState<Record<string, RunStatus>>({});
   const [keywordInput, setKeywordInput] = useState("");
 
-  // Free: Search Console, same query key the dashboard's other cards already
-  // use, so suggesting a seed costs nothing and adds no request.
-  const gscQuery = useQuery({
-    queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
-    queryFn: () =>
-      getSearchPerformanceReport({
-        data: { projectId, dateRange: "last_28_days" },
-      }),
-    staleTime: 5 * 60_000,
-  });
-  // The query the site already gets the most impressions for is the most
-  // useful thing to research; it is a suggestion, and the field stays editable.
-  const suggestedKeyword =
-    (gscQuery.data?.queryTotals ?? []).toSorted(
-      (a, b) => b.impressions - a.impressions,
-    )[0]?.query ?? "";
-  const keyword = (keywordInput || suggestedKeyword).trim();
+  // Both suggestion sources are free (Search Console, then the project's own
+  // saved keywords). The first is pre-filled so one click still works with no
+  // typing; the field and the chips let you change it.
+  const suggestions = useSeedSuggestions(projectId);
+  const seedValue = keywordInput || suggestions[0]?.keyword || "";
+  const keyword = seedValue.trim();
 
   const chosen = ANALYSES.filter(
     (analysis) =>
@@ -289,24 +281,12 @@ export function AnalyzeProjectCard({
         form.
       </p>
 
-      <label className="flex flex-col gap-1">
-        <span className="text-xs font-medium text-base-content/70">
-          Seed keyword
-        </span>
-        <input
-          type="text"
-          className="input input-bordered input-sm"
-          value={keywordInput || suggestedKeyword}
-          placeholder="e.g. office coffee service"
-          disabled={running}
-          onChange={(event) => setKeywordInput(event.target.value)}
-        />
-        <span className="text-xs text-base-content/50">
-          {suggestedKeyword && !keywordInput
-            ? "Your most-seen Search Console query, filled in for free. Edit it if you'd rather research something else."
-            : "Used by the keyword, SERP, content and cluster analyses below."}
-        </span>
-      </label>
+      <SeedKeywordField
+        value={seedValue}
+        suggestions={suggestions}
+        disabled={running}
+        onChange={setKeywordInput}
+      />
 
       <ul className="space-y-1.5">
         {ANALYSES.map((analysis) => {

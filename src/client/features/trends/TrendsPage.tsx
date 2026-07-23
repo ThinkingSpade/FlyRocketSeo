@@ -12,6 +12,11 @@ import {
 import type { TooltipContentProps } from "recharts";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getKeywordTrends } from "@/serverFunctions/trends";
+import { trendsResultSchema } from "@/types/schemas/trends";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
+import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { MAX_TRENDS_KEYWORDS } from "@/types/schemas/trends";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import {
@@ -68,7 +73,18 @@ export function TrendsPage({
   const errorMessage = trendsQuery.isError
     ? getStandardErrorMessage(trendsQuery.error)
     : null;
-  const result = trendsQuery.data;
+  // Restoring the project's last trends run is free: it reads a stored row plus
+  // the R2 object that run already paid for, never a metered fetch.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.keywordTrends,
+    schema: trendsResultSchema,
+    enabled: keywords.length === 0,
+    runId: selectedRunId,
+  });
+  const result = trendsQuery.data ?? restored?.result;
+  const restoredRun = trendsQuery.data == null ? restored : null;
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -130,9 +146,34 @@ export function TrendsPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
+      {keywords.length === 0 ? (
+        <RecentRunsList
+          projectId={projectId}
+          feature={RUN_FEATURES.keywordTrends}
+          activeRunId={selectedRunId}
+          onSelect={setSelectedRunId}
+        />
+      ) : null}
+
+      {restoredRun ? (
+        <RestoredRunBanner
+          label={restoredRun.label}
+          lastRanAt={restoredRun.lastRanAt}
+          runCount={restoredRun.runCount}
+          onRunAgain={() => {
+            const next = restoredRun.result.keywords.join(", ");
+            setInput(next);
+            navigate({
+              search: (prev) => ({ ...prev, q: next }),
+              replace: false,
+            });
+          }}
+        />
+      ) : null}
+
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body p-4">
-          {keywords.length === 0 ? (
+          {keywords.length === 0 && !restoredRun ? (
             <div className="px-4 py-12 text-center text-sm text-base-content/60">
               Enter keywords above to chart their Google Trends interest.
             </div>

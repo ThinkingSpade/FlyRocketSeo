@@ -9,6 +9,7 @@ import {
   getLanguageCode,
 } from "@/shared/keyword-locations";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
+import { pageExplorerSchema } from "@/types/schemas/page-explorer";
 
 /** Labs ranked-keyword data refreshes roughly monthly; a day of cache keeps
  *  repeat inspections free without meaningful staleness. */
@@ -16,36 +17,6 @@ const PAGE_EXPLORER_TTL_SECONDS = 24 * 60 * 60;
 
 const KEYWORDS_LIMIT = 100;
 const RELATIVE_URL_FIELD = "ranked_serp_element.serp_item.relative_url";
-
-const pageKeywordSchema = z.object({
-  keyword: z.string(),
-  position: z.number().nullable(),
-  searchVolume: z.number().nullable(),
-  traffic: z.number().nullable(),
-  cpc: z.number().nullable(),
-  url: z.string().nullable(),
-  relativeUrl: z.string().nullable(),
-  keywordDifficulty: z.number().nullable(),
-});
-
-const pageBacklinksSchema = z.object({
-  rank: z.number().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-});
-
-const pageExplorerSchema = z.object({
-  url: z.string(),
-  domain: z.string(),
-  path: z.string(),
-  locationCode: z.number(),
-  languageCode: z.string(),
-  keywords: z.array(pageKeywordSchema),
-  totalKeywords: z.number().nullable(),
-  estimatedTraffic: z.number(),
-  backlinks: pageBacklinksSchema.nullable(),
-  fetchedAt: z.string(),
-});
 
 type PageExplorerResult = z.infer<typeof pageExplorerSchema>;
 

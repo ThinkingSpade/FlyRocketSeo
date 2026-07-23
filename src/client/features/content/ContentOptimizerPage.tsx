@@ -9,6 +9,10 @@ import {
   analyzeContentCompetitor,
   getContentBrief,
 } from "@/serverFunctions/content";
+import { contentBriefSchema } from "@/types/schemas/content";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -56,7 +60,18 @@ export function ContentOptimizerPage({
       }),
     staleTime: 30 * 60_000,
   });
-  const brief = briefQuery.data;
+  // Restoring the project's last brief is free: it reads a stored row plus the
+  // R2 object that run already paid for, never a metered fetch.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.contentBrief,
+    schema: contentBriefSchema,
+    enabled: keyword === "",
+    runId: selectedRunId,
+  });
+  const brief = briefQuery.data ?? restored?.result;
+  const restoredRun = briefQuery.data == null ? restored : null;
   const errorMessage = briefQuery.isError
     ? getStandardErrorMessage(briefQuery.error)
     : null;
@@ -76,7 +91,11 @@ export function ContentOptimizerPage({
 
   // One analysis call per competitor page — each is its own Worker invocation
   // (CPU-bounded) and is cached server-side for a week.
-  const competitorUrls = (brief?.competitors ?? [])
+  // Deliberately keyed off the LIVE brief, never the restored one: each URL
+  // here becomes its own metered analyzeContentCompetitor call, so restoring a
+  // brief with ten competitors would turn a free page load into ten paid ones.
+  // Outlines wait for "Run again".
+  const competitorUrls = (briefQuery.data?.competitors ?? [])
     .map((competitor) => competitor.url)
     .filter((url): url is string => Boolean(url));
   const analysisQueries = useQueries({
@@ -116,17 +135,7 @@ export function ContentOptimizerPage({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <NotebookPen className="size-5" />
-          Content Optimizer
-        </h1>
-        <p className="text-sm text-base-content/60">
-          Build a data-backed content brief from the pages that actually rank:
-          target length, subtopics to cover, terms to include, and the questions
-          searchers ask.
-        </p>
-      </div>
+      <ContentOptimizerHeading />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
@@ -194,7 +203,28 @@ export function ContentOptimizerPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
-      {!keyword ? (
+      <RestoreRail
+        projectId={projectId}
+        feature={RUN_FEATURES.contentBrief}
+        selectedRunId={selectedRunId}
+        onSelectRun={setSelectedRunId}
+        idle={keyword === ""}
+        restoredRun={restoredRun}
+        onRunAgain={() => {
+          if (!restoredRun) return;
+          setInput(restoredRun.result.keyword);
+          navigate({
+            search: (prev) => ({
+              ...prev,
+              q: restoredRun.result.keyword,
+              loc: restoredRun.result.locationCode,
+            }),
+            replace: false,
+          });
+        }}
+      />
+
+      {!keyword && !restoredRun ? (
         <ContentEmptyState
           history={history}
           historyLoaded={historyLoaded}
@@ -352,6 +382,22 @@ export function ContentOptimizerPage({
           </p>
         </>
       ) : null}
+    </div>
+  );
+}
+
+function ContentOptimizerHeading() {
+  return (
+    <div>
+      <h1 className="flex items-center gap-2 text-xl font-semibold">
+        <NotebookPen className="size-5" />
+        Content Optimizer
+      </h1>
+      <p className="text-sm text-base-content/60">
+        Build a data-backed content brief from the pages that actually rank:
+        target length, subtopics to cover, terms to include, and the questions
+        searchers ask.
+      </p>
     </div>
   );
 }

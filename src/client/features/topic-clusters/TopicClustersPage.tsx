@@ -5,6 +5,11 @@ import { Network, NotebookPen, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getTopicClusters } from "@/serverFunctions/topic-clusters";
+import { topicClusterPlanSchema } from "@/types/schemas/topic-clusters";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
+import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import {
   clusterPlanToMarkdown,
   computeClusterPlanTotals,
@@ -52,7 +57,18 @@ export function TopicClustersPage({
       }),
     staleTime: 30 * 60_000,
   });
-  const plan = clustersQuery.data;
+  // Restoring the project's last plan is free: it reads a stored row plus the
+  // R2 object that run already paid for, never a metered fetch.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.topicClusters,
+    schema: topicClusterPlanSchema,
+    enabled: topic === "",
+    runId: selectedRunId,
+  });
+  const plan = clustersQuery.data ?? restored?.result;
+  const restoredRun = clustersQuery.data == null ? restored : null;
   const errorMessage = clustersQuery.isError
     ? getStandardErrorMessage(clustersQuery.error)
     : null;
@@ -138,6 +154,34 @@ export function TopicClustersPage({
       ) : null}
 
       {!topic ? (
+        <RecentRunsList
+          projectId={projectId}
+          feature={RUN_FEATURES.topicClusters}
+          activeRunId={selectedRunId}
+          onSelect={setSelectedRunId}
+        />
+      ) : null}
+
+      {restoredRun ? (
+        <RestoredRunBanner
+          label={restoredRun.label}
+          lastRanAt={restoredRun.lastRanAt}
+          runCount={restoredRun.runCount}
+          onRunAgain={() => {
+            setInput(restoredRun.result.topic);
+            navigate({
+              search: (prev) => ({
+                ...prev,
+                q: restoredRun.result.topic,
+                loc: restoredRun.result.locationCode,
+              }),
+              replace: false,
+            });
+          }}
+        />
+      ) : null}
+
+      {!topic && !restoredRun ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
             <p className="font-medium">Enter a topic to plan a cluster</p>
