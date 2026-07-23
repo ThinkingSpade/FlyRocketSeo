@@ -1,4 +1,5 @@
 import { Link } from "@tanstack/react-router";
+import { RotateCcw } from "lucide-react";
 import type { KeywordResearchControllerState } from "./types";
 
 function FilterTextInput({
@@ -181,7 +182,42 @@ export function SerpPanelActions({
   );
 }
 
-export function DesktopFilterFields({
+// Lives beside `DesktopFilterFields` (not in KeywordResearchDesktopResults)
+// because that file sits right at oxlint's per-file line cap.
+export function DesktopFilters({
+  controller,
+}: {
+  controller: KeywordResearchControllerState;
+}) {
+  const { activeFilterCount, filtersForm } = controller;
+
+  return (
+    <div className="shrink-0 border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold">Refine table results</p>
+          {activeFilterCount > 0 ? (
+            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+              {activeFilterCount} active
+            </span>
+          ) : null}
+        </div>
+        <button
+          className="btn btn-xs btn-ghost gap-1"
+          onClick={controller.resetFilters}
+          disabled={activeFilterCount === 0}
+        >
+          <RotateCcw className="size-3" />
+          Clear all
+        </button>
+      </div>
+
+      <DesktopFilterFields form={filtersForm} />
+    </div>
+  );
+}
+
+function DesktopFilterFields({
   form,
 }: {
   form: KeywordResearchControllerState["filtersForm"];

@@ -19,7 +19,10 @@ import {
 import { copyKeywordsAsMarkdown } from "@/client/features/keywords/state/keywordsMarkdown";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
-import { SerpAnalysisCard } from "@/client/features/keywords/components";
+import {
+  OffTopicNotice,
+  SerpAnalysisCard,
+} from "@/client/features/keywords/components";
 import { KeywordResearchDesktopTable } from "./KeywordResearchDesktopTable";
 import {
   KeywordResearchPagination,
@@ -238,6 +241,13 @@ function MobileKeywordResults({ controller }: Props) {
       />
 
       {showFilters ? <MobileFilters controller={controller} /> : null}
+      <OffTopicNotice
+        compact
+        count={controller.offTopicCount}
+        seedKeyword={controller.searchedKeyword}
+        show={controller.showOffTopic}
+        onToggle={() => controller.setShowOffTopic((current) => !current)}
+      />
 
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}

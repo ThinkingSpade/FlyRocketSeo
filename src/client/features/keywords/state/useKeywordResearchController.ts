@@ -7,6 +7,7 @@ import {
   type FormEvent,
 } from "react";
 import { extractKeywordGroups } from "@/client/features/keywords/keywordGroups";
+import { partitionByRelevance } from "@/client/features/keywords/offTopicKeywords";
 import {
   useKeywordControlsForm,
   type KeywordControlsValues,
@@ -155,12 +156,17 @@ export function useKeywordResearchController(
   const previousSearchKeyRef = useRef<string | null>(null);
   const handledSerpSearchKeyRef = useRef<string | null>(null);
 
+  // Off-topic rows stay collapsed by default for every search; a reveal from
+  // one query shouldn't carry over and silently unhide drift on the next.
+  const [showOffTopic, setShowOffTopic] = useState(false);
+
   const clearActiveKeywordResult = useCallback(() => {
     clearSelection();
     uiState.setSelectedKeyword(null);
     setSerpKeyword(null);
     setSerpPage(0);
     setGroupTerm(null);
+    setShowOffTopic(false);
   }, [clearSelection, setSerpKeyword, setSerpPage, uiState]);
 
   const onFormSubmit = input.onFormSubmit;
@@ -204,8 +210,18 @@ export function useKeywordResearchController(
     setSerpPage,
   ]);
 
+  // Partitioned from the full fetch, before filters/sort/grouping ever see the
+  // rows, so a search's off-topic drift can't leak into the table by default.
+  const { onTopic, offTopic } = useMemo(
+    () => partitionByRelevance(rows, searchedKeyword),
+    [rows, searchedKeyword],
+  );
+  const relevanceVisibleRows = showOffTopic
+    ? [...onTopic, ...offTopic]
+    : onTopic;
+
   const { filteredRows, activeFilterCount } = useKeywordFiltering({
-    rows,
+    rows: relevanceVisibleRows,
     filters: filterValues,
     groupTerm,
     sortField: input.sortField,
@@ -298,6 +314,7 @@ export function useKeywordResearchController(
     lastSearchLocationCode,
     lastUsedFallback,
     mobileTab: uiState.mobileTab,
+    offTopicCount: offTopic.length,
     overviewKeyword,
     removeHistoryItem,
     researchError,
@@ -316,9 +333,11 @@ export function useKeywordResearchController(
     setSelectedRows,
     setSerpPage,
     setShowFilters: uiState.setShowFilters,
+    setShowOffTopic,
     setShowSaveDialog: uiState.setShowSaveDialog,
     showApproximateMatchNotice,
     showFilters: uiState.showFilters,
+    showOffTopic,
     showSaveDialog: uiState.showSaveDialog,
     sortDir: input.sortDir,
     sortField: input.sortField,

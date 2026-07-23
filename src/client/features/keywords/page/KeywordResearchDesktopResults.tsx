@@ -6,7 +6,6 @@ import {
   FileDown,
   Globe,
   LineChart,
-  RotateCcw,
   Save,
   Sheet,
   SlidersHorizontal,
@@ -25,13 +24,14 @@ import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
 import {
   AreaTrendChart,
+  OffTopicNotice,
   OverviewStats,
   SerpAnalysisCard,
 } from "@/client/features/keywords/components";
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordResearchControllerState } from "./types";
 import {
-  DesktopFilterFields,
+  DesktopFilters,
   SerpPanelActions,
 } from "./keywordResearchDesktopFilters";
 import { KeywordResearchDesktopTable } from "./KeywordResearchDesktopTable";
@@ -292,6 +292,12 @@ function DesktopTableCard({ controller }: Props) {
       />
 
       {showFilters ? <DesktopFilters controller={controller} /> : null}
+      <OffTopicNotice
+        count={controller.offTopicCount}
+        seedKeyword={controller.searchedKeyword}
+        show={controller.showOffTopic}
+        onToggle={() => controller.setShowOffTopic((current) => !current)}
+      />
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}
         filteredRows={pageRows}
@@ -325,35 +331,6 @@ function DesktopTableCard({ controller }: Props) {
           onClose={() => setShowTrackModal(false)}
         />
       ) : null}
-    </div>
-  );
-}
-
-function DesktopFilters({ controller }: Props) {
-  const { activeFilterCount, filtersForm } = controller;
-
-  return (
-    <div className="shrink-0 border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <p className="text-sm font-semibold">Refine table results</p>
-          {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {activeFilterCount} active
-            </span>
-          ) : null}
-        </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
-          onClick={controller.resetFilters}
-          disabled={activeFilterCount === 0}
-        >
-          <RotateCcw className="size-3" />
-          Clear all
-        </button>
-      </div>
-
-      <DesktopFilterFields form={filtersForm} />
     </div>
   );
 }
