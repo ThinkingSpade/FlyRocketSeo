@@ -4,7 +4,6 @@ import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer
 import { ArrowRight, Settings, User } from "lucide-react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { captureClientEvent } from "@/client/lib/posthog";
-import { getStoredRedditAttribution } from "@/client/lib/reddit-attribution";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -15,7 +14,6 @@ import {
   AUTUMN_MANAGED_ACCESS_FEATURE_ID,
   AUTUMN_PAID_PLAN_ID,
 } from "@/shared/billing";
-import { captureRedditConversionEvent } from "@/serverFunctions/redditConversions";
 
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 
@@ -99,13 +97,6 @@ function SubscribePage() {
         });
       if (checkoutCompleted) {
         captureClientEvent("billing:checkout_success");
-        const attribution = getStoredRedditAttribution();
-        if (attribution) {
-          void captureRedditConversionEvent({
-            data: { attribution, eventType: "PURCHASE" },
-          }).finally(goToApp);
-          return;
-        }
       }
       goToApp();
     }

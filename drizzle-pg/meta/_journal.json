@@ -71,6 +71,13 @@
       "when": 1784702100478,
       "tag": "0009_crazy_stature",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1784766768498,
+      "tag": "0010_cuddly_master_mold",
+      "breakpoints": true
     }
   ]
 }

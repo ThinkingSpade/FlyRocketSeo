@@ -9,13 +9,11 @@ import * as sqliteSam from "./sam.schema";
 import * as sqliteAuth from "./better-auth-schema";
 import * as sqliteBilling from "./billing.schema";
 import * as sqliteGsc from "./gsc.schema";
-import * as sqliteReddit from "./reddit-attribution.schema";
 import * as pgApp from "./pg/app.schema";
 import * as pgSam from "./pg/sam.schema";
 import * as pgAuth from "./pg/better-auth-schema";
 import * as pgBilling from "./pg/billing.schema";
 import * as pgGsc from "./pg/gsc.schema";
-import * as pgReddit from "./pg/reddit-attribution.schema";
 
 // Guards the ONE structural artifact `db:generate` does not regenerate: the
 // hand-written Postgres schema. The provider-aware `db`/`@/db/schema` barrel
@@ -136,9 +134,8 @@ const sqliteAppTables = tablesFrom(
   sqliteSam,
   sqliteBilling,
   sqliteGsc,
-  sqliteReddit,
 );
-const pgAppTables = tablesFrom(pgApp, pgSam, pgBilling, pgGsc, pgReddit);
+const pgAppTables = tablesFrom(pgApp, pgSam, pgBilling, pgGsc);
 const sqliteAuthTables = tablesFrom(sqliteAuth);
 const pgAuthTables = tablesFrom(pgAuth);
 

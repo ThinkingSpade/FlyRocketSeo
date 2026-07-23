@@ -4,7 +4,6 @@ import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { getStoredRedditAttribution } from "@/client/lib/reddit-attribution";
 import { BillingUsageChart } from "@/client/features/billing/BillingUsageChart";
 import { BillingFeatureBreakdown } from "@/client/features/billing/BillingFeatureBreakdown";
 import { parseTopUpAmount } from "@/client/features/billing/HostedBillingContentUtils";
@@ -19,7 +18,6 @@ import {
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
-import { captureRedditConversionEvent } from "@/serverFunctions/redditConversions";
 
 export const Route = createFileRoute("/_app/billing")({
   beforeLoad: () => {
@@ -71,21 +69,6 @@ function BillingPage() {
 
   const { isValid: isValidTopUp, parsed: parsedTopUpAmount } =
     parseTopUpAmount(topUpAmount);
-  const checkoutCompleted =
-    typeof window !== "undefined" &&
-    new URLSearchParams(window.location.search).get("checkout") === "success";
-
-  useEffect(() => {
-    if (!checkoutCompleted || billingRouteState !== "ready") return;
-
-    const attribution = getStoredRedditAttribution();
-    if (!attribution) return;
-
-    void captureRedditConversionEvent({
-      data: { attribution, eventType: "PURCHASE" },
-    });
-  }, [billingRouteState, checkoutCompleted]);
-
   if (billingDisabled || billingRouteState === "loading") {
     return null;
   }
