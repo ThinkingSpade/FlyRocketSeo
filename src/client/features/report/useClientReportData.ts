@@ -45,7 +45,7 @@ function toComparableDomain(value: string): string | null {
   }
 }
 
-export function reportSnapshotMatchesDomain(
+function reportSnapshotMatchesDomain(
   snapshotTarget: string,
   projectDomain: string,
 ): boolean {

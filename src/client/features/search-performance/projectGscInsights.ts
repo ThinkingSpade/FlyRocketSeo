@@ -1,6 +1,6 @@
 import type { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 
-export type ProjectGscReport = Extract<
+type ProjectGscReport = Extract<
   Awaited<ReturnType<typeof getSearchPerformanceReport>>,
   { connected: true }
 >;
@@ -20,7 +20,7 @@ export type TopicCoverage = {
   pages: string[];
 };
 
-export type LocalLandingPage = {
+type LocalLandingPage = {
   page: string;
   clicks: number;
   impressions: number;
@@ -32,7 +32,7 @@ const LOCAL_QUERY_PATTERN = /\b(?:near me|nearby|local|in my area)\b/i;
 const LOCAL_PATH_PATTERN =
   /\/(?:locations?|service-areas?|areas-served|cities|city|local)(?:\/|$)/i;
 
-export function normalizeSearchPhrase(value: string): string {
+function normalizeSearchPhrase(value: string): string {
   return value
     .toLowerCase()
     .replace(/^https?:\/\//, "")

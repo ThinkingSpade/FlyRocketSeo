@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/serverFunctions/projects";
 
-export type ProjectSummary = Awaited<ReturnType<typeof getProjects>>[number];
+type ProjectSummary = Awaited<ReturnType<typeof getProjects>>[number];
 
 export function useProject(projectId: string): ProjectSummary | null {
   const projectsQuery = useQuery({

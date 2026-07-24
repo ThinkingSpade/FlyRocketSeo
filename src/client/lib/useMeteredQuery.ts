@@ -9,7 +9,7 @@ import {
 
 const METERED_QUERY_GC_TIME_MS = 60 * 60_000;
 
-export type MeteredQueryOptions<
+type MeteredQueryOptions<
   TQueryFnData = unknown,
   TError = DefaultError,
   TData = TQueryFnData,
@@ -63,14 +63,14 @@ export function useMeteredQuery<
   });
 }
 
-export type AuthorizedRun = {
+type AuthorizedRun = {
   authorized: boolean;
   runNonce: number;
   authorize: (keyOverride?: string) => void;
   reset: () => void;
 };
 
-export type AuthorizedRunState = {
+type AuthorizedRunState = {
   authorizedKey: string | null;
   runNonce: number;
 };
