@@ -82,7 +82,17 @@ export default defineConfig(({ mode }) => {
       // auth, chat and MCP still run in the Worker via /api, /agents and
       // server-function calls — see the Assets routing in wrangler.jsonc.
       tanstackStart({
-        spa: { enabled: true, prerender: { outputPath: "/index.html" } },
+        // retryCount guards the shell prerender: it boots an ephemeral vite
+        // server (port 0) and fetches "/", which intermittently failed with
+        // "bad port" / "fetch failed" when the machine was busy (a stray
+        // wrangler-dev workerd left from local testing). Retrying makes the
+        // build resilient to that transient bind race instead of failing the
+        // whole deploy. (Leftover dev servers are still worth killing first —
+        // they can lock dist/server/.wrangler and no retry fixes an EBUSY.)
+        spa: {
+          enabled: true,
+          prerender: { outputPath: "/index.html", retryCount: 2 },
+        },
       }),
       viteReact(),
       tailwindcss(),
