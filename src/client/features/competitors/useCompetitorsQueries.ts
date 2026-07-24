@@ -1,10 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   getCompetitorsList,
   getKeywordGapPage,
   getLinkGapPage,
 } from "@/serverFunctions/competitors";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 export function useCompetitorsQuery(input: {
   projectId: string;
@@ -12,9 +12,11 @@ export function useCompetitorsQuery(input: {
   page: number;
   pageSize: number;
   enabled: boolean;
+  authorized: boolean;
 }) {
   const target = input.target.trim();
-  return useQuery({
+  return useMeteredQuery({
+    authorized: input.authorized,
     enabled: input.enabled && target !== "",
     queryKey: [
       "competitors-list",
@@ -32,7 +34,6 @@ export function useCompetitorsQuery(input: {
           pageSize: input.pageSize,
         },
       }),
-    staleTime: 5 * 60_000,
   });
 }
 
@@ -44,10 +45,12 @@ export function useKeywordGapQuery(input: {
   page: number;
   pageSize: number;
   enabled: boolean;
+  authorized: boolean;
 }) {
   const target = input.target.trim();
   const competitor = input.competitor.trim();
-  return useQuery({
+  return useMeteredQuery({
+    authorized: input.authorized,
     enabled: input.enabled && target !== "" && competitor !== "",
     queryKey: [
       "keyword-gap",
@@ -69,7 +72,6 @@ export function useKeywordGapQuery(input: {
           pageSize: input.pageSize,
         },
       }),
-    staleTime: 5 * 60_000,
   });
 }
 
@@ -80,10 +82,12 @@ export function useLinkGapQuery(input: {
   page: number;
   pageSize: number;
   enabled: boolean;
+  authorized: boolean;
 }) {
   const target = input.target.trim();
   const competitor = input.competitor.trim();
-  return useQuery({
+  return useMeteredQuery({
+    authorized: input.authorized,
     enabled: input.enabled && target !== "" && competitor !== "",
     queryKey: [
       "link-gap",
@@ -103,6 +107,5 @@ export function useLinkGapQuery(input: {
           pageSize: input.pageSize,
         },
       }),
-    staleTime: 5 * 60_000,
   });
 }

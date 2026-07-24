@@ -279,12 +279,19 @@ function useDomainOverviewState({
   );
 
   const languageCode = getLanguageCode(routeState.locationCode);
+  const [runInput, setRunInput] = useState<{
+    domain: string;
+    includeSubdomains: boolean;
+    locationCode: number;
+    languageCode: string;
+  } | null>(null);
   const overviewQuery = useDomainOverviewQuery({
     projectId,
-    domain: routeState.domain,
-    includeSubdomains: routeState.subdomains,
-    locationCode: routeState.locationCode,
-    languageCode,
+    domain: runInput?.domain ?? "",
+    includeSubdomains: runInput?.includeSubdomains ?? routeState.subdomains,
+    locationCode: runInput?.locationCode ?? routeState.locationCode,
+    languageCode: runInput?.languageCode ?? languageCode,
+    authorized: runInput != null,
   });
   // With no domain in the URL the live query above stays disabled, so the tab
   // would otherwise show a blank prompt. Restoring the project's last run fills
@@ -296,13 +303,13 @@ function useDomainOverviewState({
     projectId,
     feature: RUN_FEATURES.domainOverview,
     schema: domainOverviewResultSchema,
-    enabled: routeState.domain.trim() === "",
+    enabled: runInput == null,
     runId: selectedRunId,
   });
 
   const overview = overviewQuery.data ?? restored?.result ?? null;
   const restoredRun = overviewQuery.data == null ? restored : null;
-  const isLoading = overviewQuery.isLoading;
+  const isLoading = runInput != null && overviewQuery.isLoading;
 
   const controlsForm = useForm({
     defaultValues: {
@@ -324,6 +331,12 @@ function useDomainOverviewState({
       const target = normalizeDomainTarget(value.domain);
       if (!target) return;
       formApi.setFieldValue("domain", target);
+      setRunInput({
+        domain: target,
+        includeSubdomains: value.subdomains,
+        locationCode: value.locationCode,
+        languageCode: getLanguageCode(value.locationCode),
+      });
       setSearchParams(
         getSearchSubmitUpdate({
           domain: target,

@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -25,6 +24,7 @@ import {
   type PromptExplorerModel,
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type PromptExplorerFormValues = {
   prompt: string;
@@ -74,6 +74,8 @@ function PromptExplorerPageInner({
 }: Props & { planGate: HostedPlanGateState }) {
   const [form, setForm] = useState<PromptExplorerFormValues>(urlState);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [authorizedInput, setAuthorizedInput] =
+    useState<PromptExplorerFormValues | null>(null);
 
   const {
     history,
@@ -82,36 +84,39 @@ function PromptExplorerPageInner({
     removeHistoryItem,
   } = usePromptExplorerSearchHistory(projectId);
 
-  const trimmedPrompt = urlState.prompt.trim();
+  const trimmedPrompt = authorizedInput?.prompt.trim() ?? "";
   const hasActivePrompt = trimmedPrompt.length > 0;
 
-  const exploreQuery = useQuery({
+  const exploreQuery = useMeteredQuery({
+    authorized: authorizedInput != null,
     queryKey: [
       "prompt-explorer",
       projectId,
       trimmedPrompt,
-      urlState.models.toSorted().join(","),
-      urlState.webSearch,
-      urlState.webSearchCountryCode,
-      urlState.highlightBrand.trim(),
+      authorizedInput?.models.toSorted().join(","),
+      authorizedInput?.webSearch,
+      authorizedInput?.webSearchCountryCode,
+      authorizedInput?.highlightBrand.trim(),
     ],
     queryFn: () =>
       explorePrompt({
         data: {
           projectId,
           prompt: trimmedPrompt,
-          models: urlState.models,
-          highlightBrand: urlState.highlightBrand.trim() || undefined,
-          webSearch: urlState.webSearch,
-          webSearchCountryCode: urlState.webSearchCountryCode,
+          models: authorizedInput?.models ?? [],
+          highlightBrand: authorizedInput?.highlightBrand.trim() || undefined,
+          webSearch: authorizedInput?.webSearch ?? false,
+          webSearchCountryCode:
+            authorizedInput?.webSearchCountryCode ?? "US",
         },
       }),
     // Client-side gate is a UX optimization only; the paywall is enforced
     // server-side (explorePrompt → assertPaidPlan) before any DataForSEO spend,
     // so a stale free-plan window here just yields a rejected request, not cost.
     enabled:
-      hasActivePrompt && urlState.models.length > 0 && !planGate.isFreePlan,
-    staleTime: 5 * 60 * 1000,
+      hasActivePrompt &&
+      (authorizedInput?.models.length ?? 0) > 0 &&
+      !planGate.isFreePlan,
     retry: false,
   });
 
@@ -131,28 +136,25 @@ function PromptExplorerPageInner({
     if (!hasActivePrompt || !exploreQuery.isSuccess) return;
     const key = [
       trimmedPrompt,
-      urlState.highlightBrand.trim(),
-      urlState.models.toSorted().join(","),
-      urlState.webSearch,
-      urlState.webSearchCountryCode,
+      authorizedInput?.highlightBrand.trim(),
+      authorizedInput?.models.toSorted().join(","),
+      authorizedInput?.webSearch,
+      authorizedInput?.webSearchCountryCode,
     ].join("|");
     if (lastAddedKeyRef.current === key) return;
     lastAddedKeyRef.current = key;
     addSearch({
       prompt: trimmedPrompt,
-      highlightBrand: urlState.highlightBrand.trim(),
-      models: urlState.models,
-      webSearch: urlState.webSearch,
-      webSearchCountryCode: urlState.webSearchCountryCode,
+      highlightBrand: authorizedInput?.highlightBrand.trim() ?? "",
+      models: authorizedInput?.models ?? [],
+      webSearch: authorizedInput?.webSearch ?? false,
+      webSearchCountryCode: authorizedInput?.webSearchCountryCode ?? "US",
     });
   }, [
     hasActivePrompt,
     exploreQuery.isSuccess,
     trimmedPrompt,
-    urlState.highlightBrand,
-    urlState.models,
-    urlState.webSearch,
-    urlState.webSearchCountryCode,
+    authorizedInput,
     addSearch,
   ]);
 
@@ -174,18 +176,20 @@ function PromptExplorerPageInner({
       return;
     }
     setValidationError(null);
-    onSubmit({
+    const next = {
       ...form,
       prompt: trimmed,
       highlightBrand: form.highlightBrand.trim(),
-    });
+    };
+    setAuthorizedInput(next);
+    onSubmit(next);
   };
 
   const errorMessage = exploreQuery.isError
     ? getStandardErrorMessage(exploreQuery.error)
     : null;
   const isLoading = hasActivePrompt && exploreQuery.isPending;
-  const resultData = hasActivePrompt ? exploreQuery.data : undefined;
+  const resultData = authorizedInput ? exploreQuery.data : undefined;
 
   const updateForm = <K extends keyof PromptExplorerFormValues>(
     key: K,

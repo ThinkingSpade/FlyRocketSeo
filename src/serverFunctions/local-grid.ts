@@ -21,6 +21,52 @@ const cellSchema = z.object({
   topCompetitors: z.array(z.string()),
   fetchedAt: z.string(),
 });
+const cachedCellsRequestSchema = z.object({
+  projectId: z.string().min(1),
+  keyword: z.string().min(1).max(255),
+  points: z
+    .array(
+      z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180),
+      }),
+    )
+    .max(49),
+});
+
+/**
+ * Cache-only grid restore. Missing cells are omitted and never fall through to
+ * DataForSEO, so it is safe for URL/history restoration on mount.
+ */
+export const getCachedLocalGridCells = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(cachedCellsRequestSchema)
+  .handler(async ({ data, context }) => {
+    const project = await ProjectRepository.getProjectById(context.projectId);
+    const domain = project?.domain;
+    if (!domain) return [];
+
+    const keyword = data.keyword.trim().toLowerCase();
+    const cells = await Promise.all(
+      data.points.map(async (point) => {
+        const lat = point.lat.toFixed(4);
+        const lng = point.lng.toFixed(4);
+        const cacheKey = await buildCacheKey("local-grid:cell", {
+          organizationId: context.organizationId,
+          domain,
+          keyword,
+          lat,
+          lng,
+        });
+        const cached = cellSchema.safeParse(await getCached(cacheKey));
+        return cached.success
+          ? { lat: point.lat, lng: point.lng, ...cached.data }
+          : null;
+      }),
+    );
+
+    return cells.filter((cell) => cell !== null);
+  });
 
 /**
  * One grid cell: the project's local-finder rank for a keyword at a specific

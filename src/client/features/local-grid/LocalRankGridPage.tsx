@@ -1,5 +1,6 @@
+/* eslint-disable max-lines-per-function -- Grid authorization and cell rendering must share one in-memory scan state. */
 import { useMemo, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   Grid3x3,
   Hash,
@@ -12,6 +13,7 @@ import {
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
   geocodeLocation,
+  getCachedLocalGridCells,
   getLocalGridCell,
 } from "@/serverFunctions/local-grid";
 import {
@@ -88,7 +90,13 @@ export function LocalRankGridPage({
   );
   const activeRadius = radius ?? 5;
   const activeGrid = gridSize ?? 5;
-  const keyword = query.trim().toLowerCase();
+  const [activeScan, setActiveScan] = useState<{
+    keyword: string;
+    center: GridPoint;
+    radius: number;
+    gridSize: number;
+  } | null>(null);
+  const prefilledKeyword = query.trim().toLowerCase();
 
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState("");
@@ -99,32 +107,84 @@ export function LocalRankGridPage({
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  const mapCenter = pendingCenter ?? committedCenter;
+  const mapCenter =
+    pendingCenter ?? activeScan?.center ?? committedCenter;
 
-  const points = useMemo(
-    () => (keyword ? buildGrid(committedCenter, activeRadius, activeGrid) : []),
-    [keyword, committedCenter, activeRadius, activeGrid],
+  const activePoints = useMemo(
+    () =>
+      activeScan
+        ? buildGrid(activeScan.center, activeScan.radius, activeScan.gridSize)
+        : [],
+    [activeScan],
   );
+  const restorePoints = useMemo(
+    () =>
+      prefilledKeyword && lat != null && lng != null
+        ? buildGrid(committedCenter, activeRadius, activeGrid)
+        : [],
+    [
+      activeGrid,
+      activeRadius,
+      committedCenter,
+      lat,
+      lng,
+      prefilledKeyword,
+    ],
+  );
+  const cachedCellsQuery = useQuery({
+    queryKey: [
+      "local-grid-cached-cells",
+      projectId,
+      prefilledKeyword,
+      restorePoints,
+    ],
+    queryFn: () =>
+      getCachedLocalGridCells({
+        data: { projectId, keyword: prefilledKeyword, points: restorePoints },
+      }),
+    enabled: activeScan == null && restorePoints.length > 0,
+    staleTime: 60_000,
+  });
+  const restoredCells = activeScan == null ? (cachedCellsQuery.data ?? []) : [];
+  const points =
+    activeScan != null
+      ? activePoints
+      : restoredCells.map((cell) => ({ lat: cell.lat, lng: cell.lng }));
+  const keyword =
+    activeScan?.keyword ?? (restoredCells.length > 0 ? prefilledKeyword : "");
 
   const cellQueries = useQueries({
-    queries: points.map((point) => ({
+    queries: activePoints.map((point) => ({
       queryKey: ["local-grid-cell", projectId, keyword, point.lat, point.lng],
       queryFn: async () =>
         getLocalGridCell({
           data: { projectId, keyword, lat: point.lat, lng: point.lng },
         }),
-      staleTime: 60 * 60_000,
+      enabled: activeScan != null,
+      staleTime: Infinity,
+      gcTime: 60 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
       retry: 1,
     })),
   });
   const cellStates = new Map<string, CellState>();
-  points.forEach((point, index) => {
+  activePoints.forEach((point, index) => {
     const cellQuery = cellQueries[index];
     cellStates.set(`${point.lat}|${point.lng}`, {
       position: cellQuery?.data?.position ?? null,
       topCompetitors: cellQuery?.data?.topCompetitors ?? [],
       isLoading: cellQuery?.isLoading ?? false,
       isError: cellQuery?.isError ?? false,
+    });
+  });
+  restoredCells.forEach((cell) => {
+    cellStates.set(`${cell.lat}|${cell.lng}`, {
+      position: cell.position,
+      topCompetitors: cell.topCompetitors,
+      isLoading: false,
+      isError: false,
     });
   });
 
@@ -167,14 +227,26 @@ export function LocalRankGridPage({
       }
     }
 
+    const nextRadius = Number(radiusInput);
+    const nextGridSize = Number(gridInput);
+    const roundedCenter = {
+      lat: roundCoord(center.lat),
+      lng: roundCoord(center.lng),
+    };
+    setActiveScan({
+      keyword: nextKeyword,
+      center: roundedCenter,
+      radius: nextRadius,
+      gridSize: nextGridSize,
+    });
     navigate({
       search: (prev) => ({
         ...prev,
         q: nextKeyword,
-        lat: roundCoord(center.lat),
-        lng: roundCoord(center.lng),
-        r: Number(radiusInput),
-        g: Number(gridInput),
+        lat: roundedCenter.lat,
+        lng: roundedCenter.lng,
+        r: nextRadius,
+        g: nextGridSize,
       }),
       replace: false,
     });
@@ -285,7 +357,7 @@ export function LocalRankGridPage({
       <div className="relative">
         <RankGridMap
           center={mapCenter}
-          radiusMiles={activeRadius}
+          radiusMiles={activeScan?.radius ?? activeRadius}
           points={points}
           cellStates={cellStates}
           onPickCenter={(point) => {

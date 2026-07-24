@@ -61,6 +61,11 @@ export function BacklinksPage({
   navigate,
 }: BacklinksPageProps) {
   const filters = useBacklinksFilters();
+  const [authorizedSearchKey, setAuthorizedSearchKey] = useState<string | null>(
+    null,
+  );
+  const currentSearchKey = `${searchState.scope}:${searchState.target}`;
+  const searchAuthorized = authorizedSearchKey === currentSearchKey;
 
   // Sort lives in the URL so sort changes and the page reset commit in one
   // navigation (no transient fetch of the old page with the new sort).
@@ -148,6 +153,7 @@ export function BacklinksPage({
     projectId,
     searchState,
     filters,
+    authorized: searchAuthorized,
   });
 
   // With no target in the URL every query above stays disabled, so the tab
@@ -239,6 +245,7 @@ export function BacklinksPage({
   // paths open a tab, navigate, and record history identically.
   const runBacklinksSearch = useCallback(
     (values: Pick<BacklinksSearchState, "target" | "scope">) => {
+      setAuthorizedSearchKey(`${values.scope}:${values.target}`);
       searchTabs.openTab(toBacklinksTabInput(values));
       navigateToBacklinksSearch(navigate, values);
       addSearch({ target: values.target, scope: values.scope });
@@ -307,11 +314,12 @@ export function BacklinksPage({
 
         <BacklinksBody
           projectId={projectId}
+          meteredAuthorized={searchAuthorized}
           history={history}
           historyLoaded={historyLoaded}
           overviewData={overviewData}
           overviewError={overviewErrorMessage}
-          overviewLoading={overviewQuery.isLoading}
+          overviewLoading={searchAuthorized && overviewQuery.isLoading}
           backlinksRowsPage={rowsQuery.data}
           referringDomainsPage={referringDomainsQuery.data}
           topPagesPage={topPagesQuery.data}
@@ -321,7 +329,7 @@ export function BacklinksPage({
           sorting={sorting}
           domainExpansion={domainExpansion}
           tabErrorMessage={activeTabErrorMessage}
-          tabLoading={activeTabQuery.isLoading}
+          tabLoading={searchAuthorized && activeTabQuery.isLoading}
           tabFetching={activeTabQuery.isFetching}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}

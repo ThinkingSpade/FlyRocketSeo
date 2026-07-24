@@ -68,6 +68,8 @@ export type KeywordResearchControllerInput = {
 export function useKeywordResearchController(
   input: KeywordResearchControllerInput,
 ) {
+  const [authorizedResearchInput, setAuthorizedResearchInput] =
+    useState<KeywordControlsValues | null>(null);
   const { locationCode, setPreferredLocationCode } =
     useResolvedKeywordLocation(input);
   const {
@@ -121,7 +123,6 @@ export function useKeywordResearchController(
     lastSearchLocationCode,
     researchError,
     researchMutationError,
-    researchQuery,
     searchedKeyword,
     isLoading,
     retryResearch,
@@ -138,6 +139,13 @@ export function useKeywordResearchController(
       clickstream: input.clickstream,
     },
     addSearch,
+    authorizedResearchInput
+      ? {
+          ...authorizedResearchInput,
+          projectId: input.projectId,
+          keywordInput: authorizedResearchInput.keyword,
+        }
+      : null,
   );
   const setSearchParams = useKeywordSearchParams();
   const saveMutation = useKeywordSaveMutation(input.projectId);
@@ -153,8 +161,6 @@ export function useKeywordResearchController(
     : null;
 
   const previousSearchKeyRef = useRef<string | null>(null);
-  const handledSerpSearchKeyRef = useRef<string | null>(null);
-
   const clearActiveKeywordResult = useCallback(() => {
     clearSelection();
     uiState.setSelectedKeyword(null);
@@ -173,6 +179,7 @@ export function useKeywordResearchController(
     },
     (value) => {
       setPreferredLocationCode(value.locationCode);
+      setAuthorizedResearchInput(value);
       onFormSubmit(value);
     },
   );
@@ -183,26 +190,9 @@ export function useKeywordResearchController(
   useEffect(() => {
     if (activeSearchKey === previousSearchKeyRef.current) return;
     previousSearchKeyRef.current = activeSearchKey;
-    handledSerpSearchKeyRef.current = null;
 
     clearActiveKeywordResult();
   }, [activeSearchKey, clearActiveKeywordResult]);
-
-  useEffect(() => {
-    if (!activeSearchKey || !researchQuery.isSuccess) return;
-    if (handledSerpSearchKeyRef.current === activeSearchKey) return;
-
-    handledSerpSearchKeyRef.current = activeSearchKey;
-    setSerpKeyword(rows.length > 0 ? searchedKeyword : null);
-    setSerpPage(0);
-  }, [
-    activeSearchKey,
-    researchQuery.isSuccess,
-    rows.length,
-    searchedKeyword,
-    setSerpKeyword,
-    setSerpPage,
-  ]);
 
   const { filteredRows, activeFilterCount } = useKeywordFiltering({
     rows,

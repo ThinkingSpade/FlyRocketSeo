@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { CalendarRange } from "lucide-react";
 import {
   Bar,
@@ -13,6 +12,7 @@ import type { TooltipContentProps } from "recharts";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import { getBacklinksTimeline } from "@/serverFunctions/backlinks";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type TimelineRow = {
   label: string;
@@ -47,15 +47,17 @@ function monthLabel(date: string): string {
 export function BacklinksTimelineSection({
   projectId,
   target,
+  authorized,
 }: {
   projectId: string;
   target: string;
+  authorized: boolean;
 }) {
-  const timelineQuery = useQuery({
+  const timelineQuery = useMeteredQuery({
+    authorized,
     enabled: target.trim() !== "",
     queryKey: ["backlinks-timeline", projectId, target],
     queryFn: () => getBacklinksTimeline({ data: { projectId, target } }),
-    staleTime: 30 * 60_000,
     retry: 1,
   });
 

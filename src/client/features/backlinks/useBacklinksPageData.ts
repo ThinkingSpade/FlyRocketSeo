@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type {
   BacklinksPageProps,
   BacklinksSearchState,
@@ -31,11 +30,13 @@ import {
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import { getPersistedBacklinksSearchScope } from "./backlinksSearchScope";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type UseBacklinksPageDataArgs = {
   projectId: string;
   searchState: BacklinksSearchState;
   filters: BacklinksFiltersState;
+  authorized: boolean;
 };
 
 // Five-minute client staleness on top of the server's 6h R2 cache, so window
@@ -76,6 +77,7 @@ export function useBacklinksPageData({
   projectId,
   searchState,
   filters,
+  authorized,
 }: UseBacklinksPageDataArgs) {
   const searchCardInitialValues = useMemo(
     () => ({
@@ -91,10 +93,11 @@ export function useBacklinksPageData({
   const baseQueryKeyParts = [projectId, scope, target] as const;
   const pageInputBase = { projectId, target, scope, page, pageSize };
 
-  const overviewQuery = useQuery({
+  const overviewQuery = useMeteredQuery({
+    authorized,
     queryKey: ["backlinksOverview", ...baseQueryKeyParts],
     enabled: targetReady,
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () => getBacklinksOverview({ data: { projectId, target, scope } }),
   });
 
@@ -108,7 +111,8 @@ export function useBacklinksPageData({
     () => toBacklinksFiltersPayload(filters.backlinks.values),
     [filters.backlinks.values],
   );
-  const rowsQuery = useQuery({
+  const rowsQuery = useMeteredQuery({
+    authorized,
     queryKey: [
       "backlinksRows",
       ...baseQueryKeyParts,
@@ -120,7 +124,7 @@ export function useBacklinksPageData({
       rowsMode,
     ],
     enabled: targetReady && tab === "backlinks",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksRows({
         data: {
@@ -143,7 +147,8 @@ export function useBacklinksPageData({
     () => toReferringDomainsFiltersPayload(filters.domains.values),
     [filters.domains.values],
   );
-  const referringDomainsQuery = useQuery({
+  const referringDomainsQuery = useMeteredQuery({
+    authorized,
     queryKey: [
       "backlinksReferringDomains",
       ...baseQueryKeyParts,
@@ -154,7 +159,7 @@ export function useBacklinksPageData({
       domainsFilters,
     ],
     enabled: targetReady && tab === "domains",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksReferringDomains({
         data: {
@@ -176,7 +181,8 @@ export function useBacklinksPageData({
     () => toTopPagesFiltersPayload(filters.pages.values),
     [filters.pages.values],
   );
-  const topPagesQuery = useQuery({
+  const topPagesQuery = useMeteredQuery({
+    authorized,
     queryKey: [
       "backlinksTopPages",
       ...baseQueryKeyParts,
@@ -187,7 +193,7 @@ export function useBacklinksPageData({
       pagesFilters,
     ],
     enabled: targetReady && tab === "pages",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksTopPages({
         data: {
@@ -209,7 +215,8 @@ export function useBacklinksPageData({
     () => toAnchorsFiltersPayload(filters.anchors.values),
     [filters.anchors.values],
   );
-  const anchorsQuery = useQuery({
+  const anchorsQuery = useMeteredQuery({
+    authorized,
     queryKey: [
       "backlinksAnchors",
       ...baseQueryKeyParts,
@@ -220,7 +227,7 @@ export function useBacklinksPageData({
       anchorsFilters,
     ],
     enabled: targetReady && tab === "anchors",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksAnchors({
         data: {

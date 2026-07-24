@@ -38,6 +38,7 @@ import {
   MAX_DATAFORSEO_FILTER_CONDITIONS,
   type DomainSearchParams,
 } from "@/types/schemas/domain";
+import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -90,6 +91,7 @@ export function KeywordsTab({
     new Set(),
   );
   const [showFilters, setShowFilters] = useState(false);
+  const run = useAuthorizedRun();
   const filterPreferences = useDomainKeywordFilterPreferences(
     `${projectId}:${domain}`,
   );
@@ -114,6 +116,7 @@ export function KeywordsTab({
     sortOrder: routeState.order,
     appliedFilters,
     enabled: Boolean(domain),
+    authorized: run.authorized,
   });
 
   const rows = query.data?.keywords ?? EMPTY_KEYWORDS;
@@ -250,6 +253,17 @@ export function KeywordsTab({
 
   return (
     <>
+      {!run.authorized ? (
+        <div className="border-b border-base-300 p-4 text-center">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={run.authorize}
+          >
+            Load keywords
+          </button>
+        </div>
+      ) : null}
       <TableBulkActionBar
         selectedCount={selectedKeywords.size}
         onClear={() => setSelectedKeywords(new Set())}

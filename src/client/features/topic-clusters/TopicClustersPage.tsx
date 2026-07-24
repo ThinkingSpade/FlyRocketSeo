@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { Network, NotebookPen, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -21,6 +20,10 @@ import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -46,16 +49,24 @@ export function TopicClustersPage({
   const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
-  const topic = query.trim();
+  const [runInput, setRunInput] = useState<{
+    topic: string;
+    locationCode: number;
+  } | null>(null);
+  const run = useAuthorizedRun();
 
-  const clustersQuery = useQuery({
-    enabled: topic.length > 0,
-    queryKey: ["topic-clusters", projectId, topic, activeLocation],
+  const clustersQuery = useMeteredQuery({
+    authorized: run.authorized,
+    enabled: runInput != null,
+    queryKey: ["topic-clusters", projectId, runInput],
     queryFn: () =>
       getTopicClusters({
-        data: { projectId, topic, locationCode: activeLocation },
+        data: {
+          projectId,
+          topic: runInput?.topic ?? "",
+          locationCode: runInput?.locationCode ?? activeLocation,
+        },
       }),
-    staleTime: 30 * 60_000,
   });
   // Restoring the project's last plan is free: it reads a stored row plus the
   // R2 object that run already paid for, never a metered fetch.
@@ -64,7 +75,7 @@ export function TopicClustersPage({
     projectId,
     feature: RUN_FEATURES.topicClusters,
     schema: topicClusterPlanSchema,
-    enabled: topic === "",
+    enabled: runInput == null,
     runId: selectedRunId,
   });
   const plan = clustersQuery.data ?? restored?.result;
@@ -95,6 +106,11 @@ export function TopicClustersPage({
               event.preventDefault();
               const next = input.trim();
               if (!next) return;
+              setRunInput({
+                topic: next,
+                locationCode: Number(locationInput),
+              });
+              run.authorize();
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -153,7 +169,7 @@ export function TopicClustersPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
-      {!topic ? (
+      {runInput == null ? (
         <RecentRunsList
           projectId={projectId}
           feature={RUN_FEATURES.topicClusters}
@@ -169,6 +185,12 @@ export function TopicClustersPage({
           runCount={restoredRun.runCount}
           onRunAgain={() => {
             setInput(restoredRun.result.topic);
+            setLocationInput(String(restoredRun.result.locationCode));
+            setRunInput({
+              topic: restoredRun.result.topic,
+              locationCode: restoredRun.result.locationCode,
+            });
+            run.authorize();
             navigate({
               search: (prev) => ({
                 ...prev,
@@ -181,7 +203,7 @@ export function TopicClustersPage({
         />
       ) : null}
 
-      {!topic && !restoredRun ? (
+      {runInput == null && !restoredRun ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
             <p className="font-medium">Enter a topic to plan a cluster</p>
@@ -193,7 +215,7 @@ export function TopicClustersPage({
         </div>
       ) : null}
 
-      {topic && clustersQuery.isLoading ? (
+      {runInput != null && clustersQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-md" />
         </div>

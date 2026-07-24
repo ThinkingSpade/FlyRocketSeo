@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { ReportToolbar } from "@/client/features/report/ReportToolbar";
 import { ReportCover } from "@/client/features/report/ReportChrome";
 import { ReportPages } from "@/client/features/report/ReportPages";
@@ -80,6 +81,63 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
           localStorage.setItem(AGENCY_KEY, value);
         }}
       />
+
+      {data.domainSnapshotMissing ||
+      data.backlinksSnapshotMissing ||
+      data.keywordDetailsMissing ||
+      data.backlinkDetailsMissing ? (
+        <div className="report-no-print mb-4 rounded-lg border border-base-300 bg-base-100 p-4">
+          <p className="text-sm font-medium">
+            No data yet — refresh missing report sections
+          </p>
+          <p className="mt-1 text-xs text-base-content/60">
+            The report only reads saved snapshots. Refreshing happens in the
+            source tab and still requires its Analyze button.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {data.domainSnapshotMissing ? (
+              <Link
+                to="/p/$projectId/domain"
+                params={{ projectId }}
+                search={{ domain: data.domain ?? undefined }}
+                className="btn btn-sm"
+              >
+                Refresh domain overview
+              </Link>
+            ) : null}
+            {data.backlinksSnapshotMissing ? (
+              <Link
+                to="/p/$projectId/backlinks"
+                params={{ projectId }}
+                search={{ target: data.domain ?? undefined }}
+                className="btn btn-sm"
+              >
+                Refresh backlinks
+              </Link>
+            ) : null}
+            {data.keywordDetailsMissing ? (
+              <Link
+                to="/p/$projectId/domain"
+                params={{ projectId }}
+                search={{ domain: data.domain ?? undefined }}
+                className="btn btn-sm"
+              >
+                Refresh keyword details
+              </Link>
+            ) : null}
+            {data.backlinkDetailsMissing ? (
+              <Link
+                to="/p/$projectId/backlinks"
+                params={{ projectId }}
+                search={{ target: data.domain ?? undefined }}
+                className="btn btn-sm"
+              >
+                Refresh backlink details
+              </Link>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div id="client-report" className="space-y-8">
         <ReportCover

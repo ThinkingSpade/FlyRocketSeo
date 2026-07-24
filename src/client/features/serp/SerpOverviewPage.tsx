@@ -1,5 +1,5 @@
+/* eslint-disable max-lines -- SERP results and their paid-query authorization stay colocated. */
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   ArrowDown,
   ArrowUp,
@@ -32,6 +32,10 @@ import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -69,16 +73,24 @@ export function SerpOverviewPage({
   const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
-  const keyword = query.trim();
+  const [runInput, setRunInput] = useState<{
+    keyword: string;
+    locationCode: number;
+  } | null>(null);
+  const run = useAuthorizedRun();
 
-  const serpQuery = useQuery({
-    enabled: keyword.length > 0,
-    queryKey: ["serp-overview", projectId, keyword, activeLocation],
+  const serpQuery = useMeteredQuery({
+    authorized: run.authorized,
+    enabled: runInput != null,
+    queryKey: ["serp-overview", projectId, runInput],
     queryFn: () =>
       getSerpOverview({
-        data: { projectId, keyword, locationCode: activeLocation },
+        data: {
+          projectId,
+          keyword: runInput?.keyword ?? "",
+          locationCode: runInput?.locationCode ?? activeLocation,
+        },
       }),
-    staleTime: 5 * 60_000,
   });
 
   // With no keyword in the URL the query above stays disabled, so the tab would
@@ -90,7 +102,7 @@ export function SerpOverviewPage({
     projectId,
     feature: RUN_FEATURES.serpOverview,
     schema: serpOverviewSchema,
-    enabled: keyword === "",
+    enabled: runInput == null,
     runId: selectedRunId,
   });
   const result = serpQuery.data ?? restored?.result;
@@ -131,6 +143,11 @@ export function SerpOverviewPage({
               event.preventDefault();
               const next = input.trim();
               if (!next) return;
+              setRunInput({
+                keyword: next,
+                locationCode: Number(locationInput),
+              });
+              run.authorize();
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -189,7 +206,7 @@ export function SerpOverviewPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
-      {!keyword ? (
+      {runInput == null ? (
         <RecentRunsList
           projectId={projectId}
           feature={RUN_FEATURES.serpOverview}
@@ -205,6 +222,12 @@ export function SerpOverviewPage({
           runCount={restoredRun.runCount}
           onRunAgain={() => {
             setInput(restoredRun.result.keyword);
+            setLocationInput(String(restoredRun.result.locationCode));
+            setRunInput({
+              keyword: restoredRun.result.keyword,
+              locationCode: restoredRun.result.locationCode,
+            });
+            run.authorize();
             navigate({
               search: (prev) => ({
                 ...prev,
@@ -217,7 +240,7 @@ export function SerpOverviewPage({
         />
       ) : null}
 
-      {!keyword && !restoredRun ? (
+      {runInput == null && !restoredRun ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
             <p className="font-medium">Enter a keyword to get started</p>
@@ -306,7 +329,7 @@ export function SerpOverviewPage({
         </>
       ) : null}
 
-      {keyword && serpQuery.isLoading ? (
+      {runInput != null && serpQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-md" />
         </div>

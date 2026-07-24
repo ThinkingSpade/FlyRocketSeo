@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -26,6 +25,7 @@ import {
   parseCompetitorList,
 } from "@/types/schemas/ai-search";
 import { detectTarget } from "@/shared/targetDetection";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type Props = {
   projectId: string;
@@ -77,22 +77,28 @@ function BrandLookupPageInner({
     field: "query" | "competitors";
     message: string;
   } | null>(null);
+  const [authorizedLookup, setAuthorizedLookup] = useState<{
+    query: string;
+    competitors: string[];
+  } | null>(null);
 
-  const trimmedInitialQuery = initialQuery.trim();
-  const hasActiveQuery = trimmedInitialQuery.length > 0;
+  const activeQuery = authorizedLookup?.query ?? "";
+  const hasActiveQuery = activeQuery.length > 0;
   // The URL `c` param is the source of truth for the active lookup; the local
   // `competitorsInput` text only drives the input until the next submit. A
   // stable string key, since `initialCompetitors` is a fresh array each render.
   const competitorKey = initialCompetitors.join(",");
 
-  const lookupQuery = useQuery({
-    queryKey: ["brand-lookup", projectId, trimmedInitialQuery, competitorKey],
+  const lookupQuery = useMeteredQuery({
+    authorized: authorizedLookup != null,
+    enabled: hasActiveQuery && !planGate.isFreePlan,
+    queryKey: ["brand-lookup", projectId, authorizedLookup],
     queryFn: () =>
       lookupBrand({
         data: {
           projectId,
-          query: trimmedInitialQuery,
-          competitors: initialCompetitors,
+          query: activeQuery,
+          competitors: authorizedLookup?.competitors ?? [],
           locationCode: 2840,
           languageCode: "en",
         },
@@ -100,8 +106,6 @@ function BrandLookupPageInner({
     // Client-side gate is a UX optimization only; the paywall is enforced
     // server-side (lookupBrand → assertPaidPlan) before any DataForSEO spend,
     // so a stale free-plan window here just yields a rejected request, not cost.
-    enabled: hasActiveQuery && !planGate.isFreePlan,
-    staleTime: 5 * 60 * 1000,
     retry: false,
   });
 
@@ -118,18 +122,18 @@ function BrandLookupPageInner({
   const lastAddedKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!hasActiveQuery || !lookupQuery.isSuccess) return;
-    const addedKey = `${trimmedInitialQuery}::${competitorKey}`;
+    const addedKey = `${activeQuery}::${authorizedLookup?.competitors.join(",") ?? ""}`;
     if (lastAddedKeyRef.current === addedKey) return;
     lastAddedKeyRef.current = addedKey;
     addSearch({
-      query: trimmedInitialQuery,
-      competitors: competitorKey ? competitorKey.split(",") : [],
+      query: activeQuery,
+      competitors: authorizedLookup?.competitors ?? [],
     });
   }, [
     hasActiveQuery,
     lookupQuery.isSuccess,
-    trimmedInitialQuery,
-    competitorKey,
+    activeQuery,
+    authorizedLookup,
     addSearch,
   ]);
 
@@ -178,6 +182,7 @@ function BrandLookupPageInner({
       return;
     }
     setValidationError(null);
+    setAuthorizedLookup({ query: trimmed, competitors });
     onSearchChange(trimmed, competitors);
   };
 
@@ -197,7 +202,7 @@ function BrandLookupPageInner({
     hasActiveQuery && lookupQuery.isError
       ? getStandardErrorMessage(lookupQuery.error)
       : null;
-  const resultData = hasActiveQuery ? lookupQuery.data : undefined;
+  const resultData = authorizedLookup ? lookupQuery.data : undefined;
 
   return (
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">

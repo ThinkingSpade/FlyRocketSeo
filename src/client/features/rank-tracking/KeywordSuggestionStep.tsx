@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation } from "@tanstack/react-query";
 import {
   type ColumnDef,
   type RowSelectionState,
@@ -21,6 +21,10 @@ import {
   applyShiftRangeSelection,
   type SelectionAnchor,
 } from "@/client/components/table/tableSelection";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type SuggestedKeyword = {
   keyword: string;
@@ -162,7 +166,9 @@ export function KeywordSuggestionStep({
   // Ranked-keyword suggestions are Labs-backed; countries served from Google
   // Ads keyword data (e.g. Iceland) have no ranking data to suggest from.
   const labsSupported = isLabsLocationCode(locationCode);
-  const suggestionsQuery = useQuery({
+  const run = useAuthorizedRun();
+  const suggestionsQuery = useMeteredQuery({
+    authorized: run.authorized,
     queryKey: [
       "domainKeywordSuggestions",
       projectId,
@@ -254,6 +260,26 @@ export function KeywordSuggestionStep({
           </p>
           <button className="btn btn-primary btn-sm mt-2" onClick={onClose}>
             Continue
+          </button>
+        </div>
+      </>
+    );
+  }
+
+  if (!run.authorized) {
+    return (
+      <>
+        {sectionHeader("Find keywords to track")}
+        <div className="flex flex-col items-center justify-center gap-3 py-16">
+          <p className="text-sm text-base-content/60">
+            Find keywords that {domain} already ranks for.
+          </p>
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={run.authorize}
+          >
+            Find keywords for {domain}
           </button>
         </div>
       </>

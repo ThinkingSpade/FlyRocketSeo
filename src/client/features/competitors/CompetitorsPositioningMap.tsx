@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Map } from "lucide-react";
 import {
   CartesianGrid,
@@ -14,8 +13,10 @@ import {
 import type { TooltipContentProps } from "recharts";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
-import { getDomainOverview } from "@/serverFunctions/domain";
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { domainOverviewResultSchema } from "@/types/schemas/domain";
 
 // Series palette shared with the trends charts.
 const DOT_COLORS = [
@@ -73,13 +74,11 @@ export function CompetitorsPositioningMap({
   target: string;
   rows: CompetitorRow[];
 }) {
-  const targetQuery = useQuery({
+  const { restored: targetRun } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.domainOverview,
+    schema: domainOverviewResultSchema,
     enabled: target.trim() !== "",
-    queryKey: ["domain-overview-bubble", projectId, target],
-    queryFn: () =>
-      getDomainOverview({ data: { projectId, domain: target.trim() } }),
-    staleTime: 30 * 60_000,
-    retry: 1,
   });
 
   const bubbles = useMemo<Bubble[]>(() => {
@@ -98,7 +97,8 @@ export function CompetitorsPositioningMap({
         fill: DOT_COLORS[index % DOT_COLORS.length],
       }));
 
-    const overview = targetQuery.data;
+    const overview =
+      targetRun?.result.domain === target.trim() ? targetRun.result : null;
     if (
       overview?.hasData &&
       overview.organicKeywords != null &&
@@ -115,7 +115,7 @@ export function CompetitorsPositioningMap({
       });
     }
     return competitors;
-  }, [rows, targetQuery.data]);
+  }, [rows, target, targetRun]);
 
   const { containerRef, width: chartWidth } = useChartWidth();
   const height = 260;

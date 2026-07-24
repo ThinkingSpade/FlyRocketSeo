@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { getDomainPagesPage } from "@/serverFunctions/domain";
 import { debugDomain } from "@/client/features/domain/domainDebug";
 import { toPageSortMode } from "@/client/features/domain/utils";
@@ -8,6 +7,7 @@ import type {
   PagesFilterValues,
   SortOrder,
 } from "@/client/features/domain/types";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type DomainPagesQueryInput = {
   projectId: string;
@@ -21,6 +21,7 @@ type DomainPagesQueryInput = {
   sortOrder: SortOrder;
   appliedFilters: PagesFilterValues;
   enabled: boolean;
+  authorized: boolean;
 };
 
 export function useDomainPagesQuery(input: DomainPagesQueryInput) {
@@ -60,7 +61,8 @@ export function useDomainPagesQuery(input: DomainPagesQueryInput) {
     });
   }, [input.domain, input.enabled, queryKey]);
 
-  const query = useQuery({
+  const query = useMeteredQuery({
+    authorized: input.authorized,
     enabled: input.enabled && Boolean(input.domain),
     queryKey,
     queryFn: () =>
@@ -78,7 +80,6 @@ export function useDomainPagesQuery(input: DomainPagesQueryInput) {
           filters: input.appliedFilters,
         },
       }),
-    staleTime: 60_000,
   });
   useEffect(() => {
     debugDomain("useDomainPagesQuery:state", {

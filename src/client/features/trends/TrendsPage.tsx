@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Activity, Search } from "lucide-react";
 import {
   CartesianGrid,
@@ -24,6 +23,10 @@ import {
   TrendsInsightsTable,
   TrendsSeasonalHeatmap,
 } from "@/client/features/trends/TrendsInsightsTable";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -58,16 +61,18 @@ export function TrendsPage({
   query: string;
 }) {
   const [input, setInput] = useState(query);
-  const keywords = parseKeywords(query);
+  const prefilledKeywords = parseKeywords(query);
+  const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
+  const run = useAuthorizedRun();
 
-  const trendsQuery = useQuery({
-    enabled: keywords.length > 0,
-    queryKey: ["keyword-trends", projectId, keywords],
+  const trendsQuery = useMeteredQuery({
+    authorized: run.authorized,
+    enabled: runKeywords != null,
+    queryKey: ["keyword-trends", projectId, runKeywords],
     queryFn: () =>
       getKeywordTrends({
-        data: { projectId, keywords },
+        data: { projectId, keywords: runKeywords ?? [] },
       }),
-    staleTime: 5 * 60_000,
   });
 
   const errorMessage = trendsQuery.isError
@@ -80,7 +85,7 @@ export function TrendsPage({
     projectId,
     feature: RUN_FEATURES.keywordTrends,
     schema: trendsResultSchema,
-    enabled: keywords.length === 0,
+    enabled: runKeywords == null,
     runId: selectedRunId,
   });
   const result = trendsQuery.data ?? restored?.result;
@@ -108,6 +113,8 @@ export function TrendsPage({
               event.preventDefault();
               const next = parseKeywords(input);
               if (next.length === 0) return;
+              setRunKeywords(next);
+              run.authorize();
               navigate({
                 search: (prev) => ({ ...prev, q: next.join(", ") }),
                 replace: false,
@@ -146,7 +153,7 @@ export function TrendsPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
-      {keywords.length === 0 ? (
+      {runKeywords == null ? (
         <RecentRunsList
           projectId={projectId}
           feature={RUN_FEATURES.keywordTrends}
@@ -163,6 +170,8 @@ export function TrendsPage({
           onRunAgain={() => {
             const next = restoredRun.result.keywords.join(", ");
             setInput(next);
+            setRunKeywords(restoredRun.result.keywords);
+            run.authorize();
             navigate({
               search: (prev) => ({ ...prev, q: next }),
               replace: false,
@@ -173,9 +182,11 @@ export function TrendsPage({
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body p-4">
-          {keywords.length === 0 && !restoredRun ? (
+          {runKeywords == null && !restoredRun ? (
             <div className="px-4 py-12 text-center text-sm text-base-content/60">
-              Enter keywords above to chart their Google Trends interest.
+              {prefilledKeywords.length > 0
+                ? "Keywords are prefilled. Click Compare to fetch paid trend data."
+                : "Enter keywords above to chart their Google Trends interest."}
             </div>
           ) : trendsQuery.isFetching && !result ? (
             <div className="flex items-center justify-center py-16">

@@ -1,5 +1,6 @@
+/* eslint-disable max-lines, max-lines-per-function -- Content Optimizer keeps its brief and separately-authorized outline workflow together. */
 import { useEffect, useState } from "react";
-import { useQueries, useQuery } from "@tanstack/react-query";
+import { useQueries } from "@tanstack/react-query";
 import { NotebookPen, Search } from "lucide-react";
 import { BriefTargets } from "@/client/features/content/BriefTargets";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
@@ -19,6 +20,10 @@ import {
 } from "@/shared/keyword-locations";
 import { CompetitorOutlines } from "@/client/features/content/CompetitorOutlines";
 import { DraftGrader } from "@/client/features/content/DraftGrader";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -47,18 +52,27 @@ export function ContentOptimizerPage({
   const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
-  const keyword = query.trim();
+  const [runInput, setRunInput] = useState<{
+    keyword: string;
+    locationCode: number;
+  } | null>(null);
+  const [competitorsAuthorized, setCompetitorsAuthorized] = useState(false);
+  const run = useAuthorizedRun();
   const { history, historyLoaded, addBrief, removeBrief } =
     useContentBriefHistory(projectId);
 
-  const briefQuery = useQuery({
-    enabled: keyword.length > 0,
-    queryKey: ["content-brief", projectId, keyword, activeLocation],
+  const briefQuery = useMeteredQuery({
+    authorized: run.authorized,
+    enabled: runInput != null,
+    queryKey: ["content-brief", projectId, runInput],
     queryFn: () =>
       getContentBrief({
-        data: { projectId, keyword, locationCode: activeLocation },
+        data: {
+          projectId,
+          keyword: runInput?.keyword ?? "",
+          locationCode: runInput?.locationCode ?? activeLocation,
+        },
       }),
-    staleTime: 30 * 60_000,
   });
   // Restoring the project's last brief is free: it reads a stored row plus the
   // R2 object that run already paid for, never a metered fetch.
@@ -67,7 +81,7 @@ export function ContentOptimizerPage({
     projectId,
     feature: RUN_FEATURES.contentBrief,
     schema: contentBriefSchema,
-    enabled: keyword === "",
+    enabled: runInput == null,
     runId: selectedRunId,
   });
   const brief = briefQuery.data ?? restored?.result;
@@ -103,7 +117,12 @@ export function ContentOptimizerPage({
       queryKey: ["content-competitor", projectId, url],
       queryFn: async (): Promise<CompetitorAnalysis> =>
         analyzeContentCompetitor({ data: { projectId, url } }),
-      staleTime: 60 * 60_000,
+      enabled: competitorsAuthorized,
+      staleTime: Infinity,
+      gcTime: 60 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
       retry: 1,
     })),
   });
@@ -145,6 +164,12 @@ export function ContentOptimizerPage({
               event.preventDefault();
               const next = input.trim();
               if (!next) return;
+              setCompetitorsAuthorized(false);
+              setRunInput({
+                keyword: next,
+                locationCode: Number(locationInput),
+              });
+              run.authorize();
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -208,11 +233,18 @@ export function ContentOptimizerPage({
         feature={RUN_FEATURES.contentBrief}
         selectedRunId={selectedRunId}
         onSelectRun={setSelectedRunId}
-        idle={keyword === ""}
+        idle={runInput == null}
         restoredRun={restoredRun}
         onRunAgain={() => {
           if (!restoredRun) return;
           setInput(restoredRun.result.keyword);
+          setLocationInput(String(restoredRun.result.locationCode));
+          setCompetitorsAuthorized(false);
+          setRunInput({
+            keyword: restoredRun.result.keyword,
+            locationCode: restoredRun.result.locationCode,
+          });
+          run.authorize();
           navigate({
             search: (prev) => ({
               ...prev,
@@ -224,7 +256,7 @@ export function ContentOptimizerPage({
         }}
       />
 
-      {!keyword && !restoredRun ? (
+      {runInput == null && !restoredRun ? (
         <ContentEmptyState
           history={history}
           historyLoaded={historyLoaded}
@@ -244,7 +276,7 @@ export function ContentOptimizerPage({
         />
       ) : null}
 
-      {keyword && briefQuery.isLoading ? (
+      {runInput != null && briefQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-md" />
         </div>
@@ -252,6 +284,29 @@ export function ContentOptimizerPage({
 
       {brief ? (
         <>
+          {competitorUrls.length > 0 && !competitorsAuthorized ? (
+            <div className="card border border-base-300 bg-base-100">
+              <div className="card-body flex-row items-center justify-between gap-3 p-4">
+                <div>
+                  <h2 className="text-sm font-semibold">
+                    Competitor outlines are a separate paid analysis
+                  </h2>
+                  <p className="text-xs text-base-content/60">
+                    Analyze {competitorUrls.length} ranking pages for word counts
+                    and heading outlines.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="btn btn-primary btn-sm"
+                  onClick={() => setCompetitorsAuthorized(true)}
+                >
+                  Analyze competitor outlines
+                </button>
+              </div>
+            </div>
+          ) : null}
+
           <BriefTargets
             wordCounts={wordCounts}
             h2Counts={h2Counts}
@@ -345,7 +400,7 @@ export function ContentOptimizerPage({
                           </div>
                         </td>
                         <td className="text-right align-top tabular-nums">
-                          {analysis === undefined ? (
+                          {competitorsAuthorized && analysis === undefined ? (
                             <span className="loading loading-dots loading-xs" />
                           ) : analysis?.wordCount != null ? (
                             analysis.wordCount.toLocaleString()
@@ -354,7 +409,7 @@ export function ContentOptimizerPage({
                           )}
                         </td>
                         <td className="text-right align-top tabular-nums">
-                          {analysis === undefined ? (
+                          {competitorsAuthorized && analysis === undefined ? (
                             <span className="loading loading-dots loading-xs" />
                           ) : (
                             (analysis?.h2.length ?? "—")

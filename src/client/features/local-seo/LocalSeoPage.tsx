@@ -19,6 +19,10 @@ import {
   type AnalyzePreviewItem,
 } from "@/client/components/AnalyzeDomainPrompt";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 import { ReviewAnalyticsCards } from "./ReviewAnalyticsCards";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
@@ -60,13 +64,16 @@ export function LocalSeoPage({
 }) {
   const [input, setInput] = useState(query);
   const keyword = query.trim();
+  const [runKeyword, setRunKeyword] = useState<string | null>(null);
+  const run = useAuthorizedRun();
   const projectDomain = useProjectDomain(projectId);
 
-  const profileQuery = useQuery({
-    enabled: keyword !== "",
-    queryKey: ["business-profile", projectId, keyword],
-    queryFn: () => getBusinessProfile({ data: { projectId, keyword } }),
-    staleTime: 5 * 60_000,
+  const profileQuery = useMeteredQuery({
+    authorized: run.authorized,
+    enabled: runKeyword != null,
+    queryKey: ["business-profile", projectId, runKeyword],
+    queryFn: () =>
+      getBusinessProfile({ data: { projectId, keyword: runKeyword ?? "" } }),
   });
 
   const errorMessage = profileQuery.isError
@@ -95,6 +102,8 @@ export function LocalSeoPage({
               event.preventDefault();
               const next = input.trim();
               if (!next) return;
+              setRunKeyword(next);
+              run.authorize();
               navigate({
                 search: (prev) => ({ ...prev, q: next }),
                 replace: false,
@@ -133,7 +142,7 @@ export function LocalSeoPage({
         <div className="alert alert-error text-sm">{errorMessage}</div>
       ) : null}
 
-      {keyword === "" ? (
+      {runKeyword == null ? (
         <AnalyzeDomainPrompt
           domain={projectDomain}
           title="Look up your business profile"
@@ -148,6 +157,8 @@ export function LocalSeoPage({
               .replace(/^www\./, "")
               .split(".")[0];
             setInput(guess);
+            setRunKeyword(guess);
+            run.authorize();
             navigate({
               search: (prev) => ({ ...prev, q: guess }),
               replace: false,
@@ -166,7 +177,7 @@ export function LocalSeoPage({
         ) : (
           <>
             <ProfileCard profile={profile} />
-            <ReviewsSection projectId={projectId} keyword={keyword} />
+            <ReviewsSection projectId={projectId} keyword={runKeyword} />
           </>
         )
       ) : null}

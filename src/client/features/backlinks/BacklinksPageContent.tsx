@@ -33,6 +33,7 @@ import {
 
 type BacklinksBodyProps = {
   projectId: string;
+  meteredAuthorized: boolean;
   history: BacklinksSearchHistoryItem[];
   historyLoaded: boolean;
   overviewData: BacklinksOverviewData | undefined;
@@ -67,6 +68,7 @@ type BacklinksBodyProps = {
 
 export function BacklinksBody({
   projectId,
+  meteredAuthorized,
   history,
   historyLoaded,
   overviewData,
@@ -181,6 +183,7 @@ export function BacklinksBody({
         <BacklinksTimelineSection
           projectId={projectId}
           target={overviewData.displayTarget || searchState.target}
+          authorized={meteredAuthorized}
         />
       )}
       {isRestoredRun ? null : (

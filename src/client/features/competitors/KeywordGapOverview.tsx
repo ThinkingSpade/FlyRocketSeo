@@ -41,6 +41,7 @@ export function KeywordGapOverview({
   competitor,
   pageSize,
   activeMode,
+  authorized,
   onModeChange,
 }: {
   projectId: string;
@@ -48,6 +49,7 @@ export function KeywordGapOverview({
   competitor: string;
   pageSize: number;
   activeMode: KeywordGapMode;
+  authorized: boolean;
   onModeChange: (mode: KeywordGapMode) => void;
 }) {
   const queries = {
@@ -58,7 +60,8 @@ export function KeywordGapOverview({
       mode: "missing",
       page: 1,
       pageSize,
-      enabled: true,
+      enabled: activeMode === "missing",
+      authorized,
     }),
     shared: useKeywordGapQuery({
       projectId,
@@ -67,7 +70,8 @@ export function KeywordGapOverview({
       mode: "shared",
       page: 1,
       pageSize,
-      enabled: true,
+      enabled: activeMode === "shared",
+      authorized,
     }),
     advantage: useKeywordGapQuery({
       projectId,
@@ -76,7 +80,8 @@ export function KeywordGapOverview({
       mode: "advantage",
       page: 1,
       pageSize,
-      enabled: true,
+      enabled: activeMode === "advantage",
+      authorized,
     }),
   };
 

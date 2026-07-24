@@ -6,21 +6,42 @@ import {
   getSearchPerformanceTable,
 } from "@/serverFunctions/searchPerformance";
 import { getLinkInsights } from "@/serverFunctions/link-insights";
-import {
-  getDomainKeywordSuggestions,
-  getDomainKeywordsPage,
-  getDomainOverview,
-} from "@/serverFunctions/domain";
-import {
-  getBacklinksOverview,
-  getBacklinksReferringDomains,
-  getBacklinksRows,
-} from "@/serverFunctions/backlinks";
 import { getAuditHistory, getAuditResults } from "@/serverFunctions/audit";
 import { getOnPageFixes } from "@/serverFunctions/onPage";
 import { getBrandVisibilityHistory } from "@/serverFunctions/brandVisibility";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { domainOverviewResultSchema } from "@/types/schemas/domain";
+import { backlinksOverviewCacheSchema } from "@/types/schemas/backlinks-results";
 
 const STALE_TIME = 10 * 60_000;
+type ReportRanking = {
+  keyword: string;
+  position: number | null;
+  searchVolume: number | null;
+  traffic: number | null;
+  keywordDifficulty: number | null;
+  relativeUrl: string | null;
+};
+type ReportSuggestion = {
+  keyword: string;
+  searchVolume: number | null;
+  keywordDifficulty: number | null;
+  cpc: number | null;
+};
+type ReportBacklink = {
+  domainFrom: string | null;
+  urlFrom: string | null;
+  urlTo: string | null;
+  anchor: string | null;
+  isDofollow: boolean | null;
+  rank: number | null;
+};
+type ReportReferringDomain = {
+  domain: string | null;
+  backlinks: number | null;
+  rank: number | null;
+};
 
 /**
  * Every query the Client Report renders from, in one place so the page itself
@@ -105,56 +126,17 @@ export function useClientReportData(projectId: string) {
     staleTime: STALE_TIME,
   });
 
-  const domainQuery = useQuery({
+  const { restored: domainRun } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.domainOverview,
+    schema: domainOverviewResultSchema,
     enabled: hasDomain,
-    queryKey: ["report-domain", projectId, domain],
-    queryFn: () =>
-      getDomainOverview({ data: { projectId, domain: domain ?? "" } }),
-    staleTime: STALE_TIME,
   });
-  const backlinksQuery = useQuery({
+  const { restored: backlinksRun } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.backlinks,
+    schema: backlinksOverviewCacheSchema,
     enabled: hasDomain,
-    queryKey: ["report-backlinks", projectId, domain],
-    queryFn: () =>
-      getBacklinksOverview({ data: { projectId, target: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const rankingsQuery = useQuery({
-    enabled: hasDomain,
-    queryKey: ["report-rankings", projectId, domain],
-    queryFn: () =>
-      getDomainKeywordsPage({ data: { projectId, domain: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const suggestionsQuery = useQuery({
-    enabled: hasDomain,
-    queryKey: ["report-suggestions", projectId, domain],
-    queryFn: () =>
-      getDomainKeywordSuggestions({
-        data: {
-          projectId,
-          domain: domain ?? "",
-          locationCode: 2840,
-          languageCode: "en",
-        },
-      }),
-    staleTime: STALE_TIME,
-  });
-  const backlinkRowsQuery = useQuery({
-    enabled: hasDomain,
-    queryKey: ["report-backlink-rows", projectId, domain],
-    queryFn: () =>
-      getBacklinksRows({ data: { projectId, target: domain ?? "" } }),
-    staleTime: STALE_TIME,
-  });
-  const referringDomainsQuery = useQuery({
-    enabled: hasDomain,
-    queryKey: ["report-ref-domains", projectId, domain],
-    queryFn: () =>
-      getBacklinksReferringDomains({
-        data: { projectId, target: domain ?? "" },
-      }),
-    staleTime: STALE_TIME,
   });
 
   const content = contentQuery.data?.connected ? contentQuery.data : null;
@@ -165,8 +147,12 @@ export function useClientReportData(projectId: string) {
     gsc: gscQuery.data?.connected ? gscQuery.data : null,
     gscPending: gscQuery.isLoading,
     insights: insightsQuery.data?.connected ? insightsQuery.data : null,
-    backlinks: backlinksQuery.data ?? null,
-    domainOverview: domainQuery.data ?? null,
+    backlinks: backlinksRun?.result.overview ?? null,
+    domainOverview: domainRun?.result ?? null,
+    domainSnapshotMissing: hasDomain && domainRun == null,
+    backlinksSnapshotMissing: hasDomain && backlinksRun == null,
+    keywordDetailsMissing: hasDomain,
+    backlinkDetailsMissing: hasDomain,
     latestAudit: latestAudit ?? null,
     auditPages: auditResultsQuery.data?.pages ?? [],
     approvedFixes: (onPageQuery.data?.rows ?? []).filter(
@@ -183,9 +169,9 @@ export function useClientReportData(projectId: string) {
       ? topPagesQuery.data.rows
       : []
     ).slice(0, 10),
-    rankings: (rankingsQuery.data?.keywords ?? []).slice(0, 10),
-    suggestions: (suggestionsQuery.data ?? []).slice(0, 12),
-    backlinkRows: (backlinkRowsQuery.data?.rows ?? []).slice(0, 10),
-    referringDomains: (referringDomainsQuery.data?.rows ?? []).slice(0, 10),
+    rankings: [] as ReportRanking[],
+    suggestions: [] as ReportSuggestion[],
+    backlinkRows: [] as ReportBacklink[],
+    referringDomains: [] as ReportReferringDomain[],
   };
 }

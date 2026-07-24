@@ -125,6 +125,10 @@ export function CompetitorsPage({
 
   const [targetInput, setTargetInput] = useState(target);
   const [competitorInput, setCompetitorInput] = useState(competitor);
+  const [authorizedSearchKey, setAuthorizedSearchKey] = useState<string | null>(
+    null,
+  );
+  const authorized = authorizedSearchKey === `${target}|${competitor}`;
 
   // Keep inputs in sync when the URL changes (e.g. via a table row action).
   useEffect(() => setTargetInput(target), [target]);
@@ -145,6 +149,7 @@ export function CompetitorsPage({
     page: tab === "competitors" ? page : 1,
     pageSize: DEFAULT_COMPETITORS_PAGE_SIZE,
     enabled: tab === "competitors",
+    authorized,
   });
 
   // With no target in the URL the query above stays disabled, so the tab would
@@ -174,6 +179,7 @@ export function CompetitorsPage({
     page: tab === "gap" ? page : 1,
     pageSize: DEFAULT_KEYWORD_GAP_PAGE_SIZE,
     enabled: tab === "gap",
+    authorized,
   });
 
   const linkGapQuery = useLinkGapQuery({
@@ -183,6 +189,7 @@ export function CompetitorsPage({
     page: tab === "links" ? page : 1,
     pageSize: DEFAULT_LINK_GAP_PAGE_SIZE,
     enabled: tab === "links",
+    authorized,
   });
 
   const tabQueries: Record<
@@ -239,9 +246,11 @@ export function CompetitorsPage({
             onSubmit={() => {
               const nextTarget = targetInput.trim();
               if (!nextTarget) return;
+              const nextCompetitor = competitorInput.trim();
+              setAuthorizedSearchKey(`${nextTarget}|${nextCompetitor}`);
               updateSearch({
                 target: nextTarget,
-                competitor: competitorInput.trim(),
+                competitor: nextCompetitor,
                 page: 1,
               });
             }}
@@ -285,6 +294,7 @@ export function CompetitorsPage({
           runCount={restoredRun.runCount}
           onRunAgain={() => {
             setTargetInput(restoredRun.label);
+            setAuthorizedSearchKey(`${restoredRun.label}|${competitor}`);
             updateSearch({ target: restoredRun.label, page: 1 });
           }}
         />
@@ -299,6 +309,7 @@ export function CompetitorsPage({
           onAnalyze={() => {
             if (!projectDomain) return;
             setTargetInput(projectDomain);
+            setAuthorizedSearchKey(`${projectDomain}|${competitor}`);
             updateSearch({ target: projectDomain, page: 1 });
           }}
           isBusy={competitorsQuery.isFetching}
@@ -323,6 +334,7 @@ export function CompetitorsPage({
           competitor={competitor}
           pageSize={DEFAULT_KEYWORD_GAP_PAGE_SIZE}
           activeMode={mode}
+          authorized={authorized}
           onModeChange={(nextMode) => updateSearch({ mode: nextMode, page: 1 })}
         />
       ) : null}
@@ -352,14 +364,15 @@ export function CompetitorsPage({
           competitorRows={competitorRows}
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}
-          onCompareCompetitor={(domain) =>
+          onCompareCompetitor={(domain) => {
+            setAuthorizedSearchKey(`${target}|${domain}`);
             updateSearch({
               tab: "gap",
               competitor: domain,
               mode: "missing",
               page: 1,
-            })
-          }
+            });
+          }}
         />
 
         {rowsOnPage > 0 || page > 1 ? (

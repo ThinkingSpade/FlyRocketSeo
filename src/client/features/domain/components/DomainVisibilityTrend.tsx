@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import {
   Area,
   AreaChart,
@@ -10,6 +9,10 @@ import {
 import type { TooltipContentProps } from "recharts";
 import { getDomainRankHistory } from "@/serverFunctions/domain";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 /** Narrowed shape of a recharts tooltip payload entry (typed `any` upstream). */
 interface RechartsPayloadEntry {
@@ -40,7 +43,9 @@ export function DomainVisibilityTrend({
   languageCode: string;
 }) {
   const trimmedDomain = domain.trim();
-  const query = useQuery({
+  const run = useAuthorizedRun();
+  const query = useMeteredQuery({
+    authorized: run.authorized,
     enabled: trimmedDomain !== "",
     queryKey: ["domain-rank-history", projectId, trimmedDomain, locationCode],
     queryFn: () =>
@@ -52,7 +57,6 @@ export function DomainVisibilityTrend({
           languageCode,
         },
       }),
-    staleTime: 30 * 60_000,
   });
 
   const points = query.data?.points ?? [];
@@ -74,7 +78,17 @@ export function DomainVisibilityTrend({
       </div>
 
       <div className="p-4">
-        {query.isFetching && points.length === 0 ? (
+        {!run.authorized ? (
+          <div className="py-8 text-center">
+            <button
+              type="button"
+              className="btn btn-primary btn-sm"
+              onClick={run.authorize}
+            >
+              Load visibility trend
+            </button>
+          </div>
+        ) : query.isFetching && points.length === 0 ? (
           <div className="flex items-center justify-center py-12">
             <span className="loading loading-spinner" />
           </div>

@@ -32,6 +32,7 @@ import {
   MAX_DATAFORSEO_FILTER_CONDITIONS,
   type DomainSearchParams,
 } from "@/types/schemas/domain";
+import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -75,6 +76,7 @@ export function PagesTab({
   onPageSizeChange,
 }: Props) {
   const [showFilters, setShowFilters] = useState(false);
+  const run = useAuthorizedRun();
   const filterPreferences = useDomainPageFilterPreferences(
     `${projectId}:${domain}`,
   );
@@ -107,6 +109,7 @@ export function PagesTab({
     sortOrder: routeState.order,
     appliedFilters: appliedPagesFilters,
     enabled: Boolean(domain),
+    authorized: run.authorized,
   });
 
   const rows = query.data?.pages ?? EMPTY_PAGES_ROWS;
@@ -180,6 +183,17 @@ export function PagesTab({
 
   return (
     <>
+      {!run.authorized ? (
+        <div className="border-b border-base-300 p-4 text-center">
+          <button
+            type="button"
+            className="btn btn-primary btn-sm"
+            onClick={run.authorize}
+          >
+            Load pages
+          </button>
+        </div>
+      ) : null}
       {routeState.page === 1 ? <DomainPagesTreemap rows={rows} /> : null}
       <DomainTableTabSurface
         showFilters={showFilters}
