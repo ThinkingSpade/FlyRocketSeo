@@ -20,6 +20,16 @@ export const getProjects = createServerFn({ method: "POST" })
     ProjectService.listProjectsEnsuringOne(context.organizationId),
   );
 
+/**
+ * Cross-project portfolio using only free GSC requests and cached D1 audit,
+ * rank-tracking, and analysis-run rows. No metered provider is touched.
+ */
+export const getProjectsPortfolio = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .handler(async ({ context }) =>
+    ProjectService.getPortfolio(context.organizationId),
+  );
+
 export const createProject = createServerFn({ method: "POST" })
   .middleware(requireAuthenticatedContext)
   .validator(createProjectSchema)
