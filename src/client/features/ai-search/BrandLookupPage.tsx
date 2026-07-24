@@ -81,6 +81,7 @@ function BrandLookupPageInner({
     query: string;
     competitors: string[];
   } | null>(null);
+  const [runNonce, setRunNonce] = useState(0);
 
   const activeQuery = authorizedLookup?.query ?? "";
   const hasActiveQuery = activeQuery.length > 0;
@@ -91,6 +92,7 @@ function BrandLookupPageInner({
 
   const lookupQuery = useMeteredQuery({
     authorized: authorizedLookup != null,
+    runNonce,
     enabled: hasActiveQuery && !planGate.isFreePlan,
     queryKey: ["brand-lookup", projectId, authorizedLookup],
     queryFn: () =>
@@ -183,6 +185,7 @@ function BrandLookupPageInner({
     }
     setValidationError(null);
     setAuthorizedLookup({ query: trimmed, competitors });
+    setRunNonce((previous) => previous + 1);
     onSearchChange(trimmed, competitors);
   };
 

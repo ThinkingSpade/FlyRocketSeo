@@ -33,6 +33,7 @@ import {
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -77,10 +78,13 @@ export function SerpOverviewPage({
     keyword: string;
     locationCode: number;
   } | null>(null);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
+  );
 
   const serpQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runInput != null,
     queryKey: ["serp-overview", projectId, runInput],
     queryFn: () =>
@@ -227,7 +231,13 @@ export function SerpOverviewPage({
               keyword: restoredRun.result.keyword,
               locationCode: restoredRun.result.locationCode,
             });
-            run.authorize();
+            run.authorize(
+              createMeteredRunKey(
+                projectId,
+                restoredRun.result.keyword,
+                restoredRun.result.locationCode,
+              ),
+            );
             navigate({
               search: (prev) => ({
                 ...prev,

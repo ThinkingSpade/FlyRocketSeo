@@ -21,6 +21,7 @@ import {
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -53,10 +54,13 @@ export function TopicClustersPage({
     topic: string;
     locationCode: number;
   } | null>(null);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
+  );
 
   const clustersQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runInput != null,
     queryKey: ["topic-clusters", projectId, runInput],
     queryFn: () =>
@@ -190,7 +194,13 @@ export function TopicClustersPage({
               topic: restoredRun.result.topic,
               locationCode: restoredRun.result.locationCode,
             });
-            run.authorize();
+            run.authorize(
+              createMeteredRunKey(
+                projectId,
+                restoredRun.result.topic,
+                restoredRun.result.locationCode,
+              ),
+            );
             navigate({
               search: (prev) => ({
                 ...prev,

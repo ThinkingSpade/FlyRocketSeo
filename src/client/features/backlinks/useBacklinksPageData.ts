@@ -30,13 +30,17 @@ import {
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import { getPersistedBacklinksSearchScope } from "./backlinksSearchScope";
-import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import {
+  createMeteredRunKey,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type UseBacklinksPageDataArgs = {
   projectId: string;
   searchState: BacklinksSearchState;
   filters: BacklinksFiltersState;
   authorized: boolean;
+  runNonce: number;
 };
 
 // Five-minute client staleness on top of the server's 6h R2 cache, so window
@@ -73,11 +77,40 @@ function toSort<T extends string>(
   return { field, order: orderParam ?? "desc" };
 }
 
+export function buildBacklinksAuthorizationKey(
+  projectId: string,
+  searchState: BacklinksSearchState,
+  filters: BacklinksFiltersState,
+): string {
+  const activeFilters =
+    searchState.tab === "backlinks"
+      ? toBacklinksFiltersPayload(filters.backlinks.values)
+      : searchState.tab === "domains"
+        ? toReferringDomainsFiltersPayload(filters.domains.values)
+        : searchState.tab === "pages"
+          ? toTopPagesFiltersPayload(filters.pages.values)
+          : toAnchorsFiltersPayload(filters.anchors.values);
+
+  return createMeteredRunKey(
+    projectId,
+    searchState.target,
+    searchState.scope,
+    searchState.tab,
+    searchState.page,
+    searchState.pageSize,
+    searchState.sort,
+    searchState.order,
+    searchState.view,
+    activeFilters,
+  );
+}
+
 export function useBacklinksPageData({
   projectId,
   searchState,
   filters,
   authorized,
+  runNonce,
 }: UseBacklinksPageDataArgs) {
   const searchCardInitialValues = useMemo(
     () => ({
@@ -95,6 +128,7 @@ export function useBacklinksPageData({
 
   const overviewQuery = useMeteredQuery({
     authorized,
+    runNonce,
     queryKey: ["backlinksOverview", ...baseQueryKeyParts],
     enabled: targetReady,
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
@@ -113,6 +147,7 @@ export function useBacklinksPageData({
   );
   const rowsQuery = useMeteredQuery({
     authorized,
+    runNonce,
     queryKey: [
       "backlinksRows",
       ...baseQueryKeyParts,
@@ -149,6 +184,7 @@ export function useBacklinksPageData({
   );
   const referringDomainsQuery = useMeteredQuery({
     authorized,
+    runNonce,
     queryKey: [
       "backlinksReferringDomains",
       ...baseQueryKeyParts,
@@ -183,6 +219,7 @@ export function useBacklinksPageData({
   );
   const topPagesQuery = useMeteredQuery({
     authorized,
+    runNonce,
     queryKey: [
       "backlinksTopPages",
       ...baseQueryKeyParts,
@@ -217,6 +254,7 @@ export function useBacklinksPageData({
   );
   const anchorsQuery = useMeteredQuery({
     authorized,
+    runNonce,
     queryKey: [
       "backlinksAnchors",
       ...baseQueryKeyParts,

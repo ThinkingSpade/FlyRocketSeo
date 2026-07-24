@@ -13,10 +13,12 @@ export function useCompetitorsQuery(input: {
   pageSize: number;
   enabled: boolean;
   authorized: boolean;
+  runNonce: number;
 }) {
   const target = input.target.trim();
   return useMeteredQuery({
     authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: input.enabled && target !== "",
     queryKey: [
       "competitors-list",
@@ -46,11 +48,13 @@ export function useKeywordGapQuery(input: {
   pageSize: number;
   enabled: boolean;
   authorized: boolean;
+  runNonce: number;
 }) {
   const target = input.target.trim();
   const competitor = input.competitor.trim();
   return useMeteredQuery({
     authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: input.enabled && target !== "" && competitor !== "",
     queryKey: [
       "keyword-gap",
@@ -83,11 +87,13 @@ export function useLinkGapQuery(input: {
   pageSize: number;
   enabled: boolean;
   authorized: boolean;
+  runNonce: number;
 }) {
   const target = input.target.trim();
   const competitor = input.competitor.trim();
   return useMeteredQuery({
     authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: input.enabled && target !== "" && competitor !== "",
     queryKey: [
       "link-gap",

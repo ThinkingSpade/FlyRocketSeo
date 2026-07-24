@@ -13,9 +13,8 @@ export type MeteredQueryOptions<
   TQueryFnData = unknown,
   TError = DefaultError,
   TData = TQueryFnData,
-  TQueryKey extends QueryKey = QueryKey,
 > = Omit<
-  UseQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+  UseQueryOptions<TQueryFnData, TError, TData>,
   | "enabled"
   | "gcTime"
   | "refetchOnMount"
@@ -26,6 +25,7 @@ export type MeteredQueryOptions<
   authorized?: boolean;
   enabled?: boolean;
   gcTime?: number;
+  runNonce?: number;
 };
 
 /**
@@ -39,20 +39,22 @@ export function useMeteredQuery<
   TQueryFnData = unknown,
   TError = DefaultError,
   TData = TQueryFnData,
-  TQueryKey extends QueryKey = QueryKey,
 >(
-  options: MeteredQueryOptions<TQueryFnData, TError, TData, TQueryKey>,
+  options: MeteredQueryOptions<TQueryFnData, TError, TData>,
 ): UseQueryResult<TData, TError> {
   const {
     authorized = false,
     enabled = true,
     gcTime = METERED_QUERY_GC_TIME_MS,
+    runNonce,
     ...queryOptions
   } = options;
+  const queryKey = withMeteredRunNonce(queryOptions.queryKey, runNonce);
 
   return useQuery({
     ...queryOptions,
-    enabled: authorized && enabled,
+    queryKey,
+    enabled: isMeteredQueryEnabled(authorized, enabled),
     staleTime: Infinity,
     gcTime,
     refetchOnWindowFocus: false,
@@ -63,14 +65,83 @@ export function useMeteredQuery<
 
 export type AuthorizedRun = {
   authorized: boolean;
-  authorize: () => void;
+  runNonce: number;
+  authorize: (keyOverride?: string) => void;
   reset: () => void;
 };
 
-export function useAuthorizedRun(): AuthorizedRun {
-  const [authorized, setAuthorized] = useState(false);
-  const authorize = useCallback(() => setAuthorized(true), []);
-  const reset = useCallback(() => setAuthorized(false), []);
+export type AuthorizedRunState = {
+  authorizedKey: string | null;
+  runNonce: number;
+};
 
-  return { authorized, authorize, reset };
+export const INITIAL_AUTHORIZED_RUN_STATE: AuthorizedRunState = {
+  authorizedKey: null,
+  runNonce: 0,
+};
+
+export function createMeteredRunKey(...parts: unknown[]): string {
+  return JSON.stringify(parts);
+}
+
+export function authorizeRunState(
+  state: AuthorizedRunState,
+  currentKey: string,
+): AuthorizedRunState {
+  return {
+    authorizedKey: currentKey,
+    runNonce: state.runNonce + 1,
+  };
+}
+
+export function isRunAuthorized(
+  state: AuthorizedRunState,
+  currentKey: string,
+): boolean {
+  return state.authorizedKey === currentKey;
+}
+
+export function isMeteredQueryEnabled(
+  authorized: boolean,
+  enabled = true,
+): boolean {
+  return authorized && enabled;
+}
+
+export function withMeteredRunNonce(
+  queryKey: QueryKey,
+  runNonce?: number,
+): QueryKey {
+  return runNonce == null
+    ? queryKey
+    : [...queryKey, { meteredRunNonce: runNonce }];
+}
+
+export function useAuthorizedRun(currentKey: string): AuthorizedRun {
+  const [state, setState] = useState<AuthorizedRunState>(
+    INITIAL_AUTHORIZED_RUN_STATE,
+  );
+  const authorize = useCallback(
+    (keyOverride?: string) => {
+      setState((previous) =>
+        authorizeRunState(previous, keyOverride ?? currentKey),
+      );
+    },
+    [currentKey],
+  );
+  const reset = useCallback(
+    () =>
+      setState((previous) => ({
+        authorizedKey: null,
+        runNonce: previous.runNonce,
+      })),
+    [],
+  );
+
+  return {
+    authorized: isRunAuthorized(state, currentKey),
+    runNonce: state.runNonce,
+    authorize,
+    reset,
+  };
 }

@@ -76,6 +76,7 @@ function PromptExplorerPageInner({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [authorizedInput, setAuthorizedInput] =
     useState<PromptExplorerFormValues | null>(null);
+  const [runNonce, setRunNonce] = useState(0);
 
   const {
     history,
@@ -89,6 +90,7 @@ function PromptExplorerPageInner({
 
   const exploreQuery = useMeteredQuery({
     authorized: authorizedInput != null,
+    runNonce,
     queryKey: [
       "prompt-explorer",
       projectId,
@@ -106,8 +108,7 @@ function PromptExplorerPageInner({
           models: authorizedInput?.models ?? [],
           highlightBrand: authorizedInput?.highlightBrand.trim() || undefined,
           webSearch: authorizedInput?.webSearch ?? false,
-          webSearchCountryCode:
-            authorizedInput?.webSearchCountryCode ?? "US",
+          webSearchCountryCode: authorizedInput?.webSearchCountryCode ?? "US",
         },
       }),
     // Client-side gate is a UX optimization only; the paywall is enforced
@@ -182,6 +183,7 @@ function PromptExplorerPageInner({
       highlightBrand: form.highlightBrand.trim(),
     };
     setAuthorizedInput(next);
+    setRunNonce((previous) => previous + 1);
     onSubmit(next);
   };
 

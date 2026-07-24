@@ -22,6 +22,7 @@ type DomainPagesQueryInput = {
   appliedFilters: PagesFilterValues;
   enabled: boolean;
   authorized: boolean;
+  runNonce: number;
 };
 
 export function useDomainPagesQuery(input: DomainPagesQueryInput) {
@@ -63,6 +64,7 @@ export function useDomainPagesQuery(input: DomainPagesQueryInput) {
 
   const query = useMeteredQuery({
     authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: input.enabled && Boolean(input.domain),
     queryKey,
     queryFn: () =>

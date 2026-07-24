@@ -285,6 +285,7 @@ function useDomainOverviewState({
     locationCode: number;
     languageCode: string;
   } | null>(null);
+  const [runNonce, setRunNonce] = useState(0);
   const overviewQuery = useDomainOverviewQuery({
     projectId,
     domain: runInput?.domain ?? "",
@@ -292,6 +293,7 @@ function useDomainOverviewState({
     locationCode: runInput?.locationCode ?? routeState.locationCode,
     languageCode: runInput?.languageCode ?? languageCode,
     authorized: runInput != null,
+    runNonce,
   });
   // With no domain in the URL the live query above stays disabled, so the tab
   // would otherwise show a blank prompt. Restoring the project's last run fills
@@ -337,6 +339,7 @@ function useDomainOverviewState({
         locationCode: value.locationCode,
         languageCode: getLanguageCode(value.locationCode),
       });
+      setRunNonce((previous) => previous + 1);
       setSearchParams(
         getSearchSubmitUpdate({
           domain: target,

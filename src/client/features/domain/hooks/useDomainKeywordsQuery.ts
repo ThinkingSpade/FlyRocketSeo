@@ -21,6 +21,7 @@ type DomainKeywordsQueryInput = {
   appliedFilters: DomainFilterValues;
   enabled: boolean;
   authorized: boolean;
+  runNonce: number;
 };
 
 function toNumberOrUndefined(value: string): number | undefined {
@@ -91,6 +92,7 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
 
   const query = useMeteredQuery({
     authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: input.enabled && Boolean(input.domain),
     queryKey,
     queryFn: () =>

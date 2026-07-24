@@ -48,13 +48,16 @@ export function BacklinksTimelineSection({
   projectId,
   target,
   authorized,
+  runNonce,
 }: {
   projectId: string;
   target: string;
   authorized: boolean;
+  runNonce: number;
 }) {
   const timelineQuery = useMeteredQuery({
     authorized,
+    runNonce,
     enabled: target.trim() !== "",
     queryKey: ["backlinks-timeline", projectId, target],
     queryFn: () => getBacklinksTimeline({ data: { projectId, target } }),

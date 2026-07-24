@@ -91,9 +91,19 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
             No data yet — refresh missing report sections
           </p>
           <p className="mt-1 text-xs text-base-content/60">
-            The report only reads saved snapshots. Refreshing happens in the
-            source tab and still requires its Analyze button.
+            Saved overview snapshots are free to reuse. Detail sections are
+            metered and only load after the paid-request buttons below.
           </p>
+          {data.keywordDetailsError ? (
+            <div className="mt-3 alert alert-error text-sm">
+              {data.keywordDetailsError}
+            </div>
+          ) : null}
+          {data.backlinkDetailsError ? (
+            <div className="mt-3 alert alert-error text-sm">
+              {data.backlinkDetailsError}
+            </div>
+          ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
             {data.domainSnapshotMissing ? (
               <Link
@@ -116,24 +126,30 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
               </Link>
             ) : null}
             {data.keywordDetailsMissing ? (
-              <Link
-                to="/p/$projectId/domain"
-                params={{ projectId }}
-                search={{ domain: data.domain ?? undefined }}
+              <button
+                type="button"
                 className="btn btn-sm"
+                disabled={data.keywordDetailsLoading}
+                onClick={() => data.refreshKeywordDetails()}
               >
-                Refresh keyword details
-              </Link>
+                {data.keywordDetailsLoading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : null}
+                Load keyword details · 1 paid request
+              </button>
             ) : null}
             {data.backlinkDetailsMissing ? (
-              <Link
-                to="/p/$projectId/backlinks"
-                params={{ projectId }}
-                search={{ target: data.domain ?? undefined }}
+              <button
+                type="button"
                 className="btn btn-sm"
+                disabled={data.backlinkDetailsLoading}
+                onClick={() => data.refreshBacklinkDetails()}
               >
-                Refresh backlink details
-              </Link>
+                {data.backlinkDetailsLoading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : null}
+                Load backlink details · 2 paid requests
+              </button>
             ) : null}
           </div>
         </div>

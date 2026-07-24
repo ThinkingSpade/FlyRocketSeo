@@ -8,6 +8,7 @@ type Input = {
   locationCode: number;
   languageCode: string;
   authorized: boolean;
+  runNonce: number;
 };
 
 export function useDomainOverviewQuery(input: Input) {
@@ -15,6 +16,7 @@ export function useDomainOverviewQuery(input: Input) {
 
   return useMeteredQuery({
     authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: trimmedDomain !== "",
     queryKey: [
       "domain-overview",

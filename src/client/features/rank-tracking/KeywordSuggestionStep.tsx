@@ -22,6 +22,7 @@ import {
   type SelectionAnchor,
 } from "@/client/components/table/tableSelection";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -166,9 +167,12 @@ export function KeywordSuggestionStep({
   // Ranked-keyword suggestions are Labs-backed; countries served from Google
   // Ads keyword data (e.g. Iceland) have no ranking data to suggest from.
   const labsSupported = isLabsLocationCode(locationCode);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, domain, locationCode, languageCode),
+  );
   const suggestionsQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     queryKey: [
       "domainKeywordSuggestions",
       projectId,
@@ -277,7 +281,7 @@ export function KeywordSuggestionStep({
           <button
             type="button"
             className="btn btn-primary btn-sm"
-            onClick={run.authorize}
+            onClick={() => run.authorize()}
           >
             Find keywords for {domain}
           </button>

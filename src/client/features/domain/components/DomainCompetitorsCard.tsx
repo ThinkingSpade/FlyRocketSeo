@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { getCompetitorsList } from "@/serverFunctions/competitors";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -19,9 +20,12 @@ export function DomainCompetitorsCard({
   projectId: string;
   domain: string;
 }) {
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, domain.trim(), 1),
+  );
   const competitorsQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     queryKey: ["domain-competitors-inline", projectId, domain],
     queryFn: () => getCompetitorsList({ data: { projectId, target: domain } }),
   });
@@ -46,7 +50,7 @@ export function DomainCompetitorsCard({
           <button
             type="button"
             className="btn btn-primary btn-sm self-start"
-            onClick={run.authorize}
+            onClick={() => run.authorize()}
           >
             Load competitors
           </button>

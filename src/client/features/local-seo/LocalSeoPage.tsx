@@ -20,6 +20,7 @@ import {
 } from "@/client/components/AnalyzeDomainPrompt";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -65,11 +66,12 @@ export function LocalSeoPage({
   const [input, setInput] = useState(query);
   const keyword = query.trim();
   const [runKeyword, setRunKeyword] = useState<string | null>(null);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(createMeteredRunKey(projectId, input.trim()));
   const projectDomain = useProjectDomain(projectId);
 
   const profileQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runKeyword != null,
     queryKey: ["business-profile", projectId, runKeyword],
     queryFn: () =>
@@ -158,7 +160,7 @@ export function LocalSeoPage({
               .split(".")[0];
             setInput(guess);
             setRunKeyword(guess);
-            run.authorize();
+            run.authorize(createMeteredRunKey(projectId, guess));
             navigate({
               search: (prev) => ({ ...prev, q: guess }),
               replace: false,

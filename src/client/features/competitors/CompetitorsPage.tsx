@@ -33,6 +33,8 @@ import {
   useKeywordGapQuery,
   useLinkGapQuery,
 } from "./useCompetitorsQueries";
+import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
+import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
 
 type CompetitorsSearchState = {
   target: string;
@@ -122,14 +124,12 @@ export function CompetitorsPage({
   searchState: CompetitorsSearchState;
 }) {
   const { target, competitor, tab, mode, page } = searchState;
-
   const [targetInput, setTargetInput] = useState(target);
   const [competitorInput, setCompetitorInput] = useState(competitor);
-  const [authorizedSearchKey, setAuthorizedSearchKey] = useState<string | null>(
-    null,
+  const run = useAuthorizedRun(
+    buildCompetitorsAuthorizationKey(projectId, searchState),
   );
-  const authorized = authorizedSearchKey === `${target}|${competitor}`;
-
+  const authorized = run.authorized;
   // Keep inputs in sync when the URL changes (e.g. via a table row action).
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
@@ -150,8 +150,8 @@ export function CompetitorsPage({
     pageSize: DEFAULT_COMPETITORS_PAGE_SIZE,
     enabled: tab === "competitors",
     authorized,
+    runNonce: run.runNonce,
   });
-
   // With no target in the URL the query above stays disabled, so the tab would
   // otherwise show nothing but a prompt. Restoring the project's last run fills
   // it in for free: it reads a stored row plus the R2 object that run already
@@ -170,7 +170,6 @@ export function CompetitorsPage({
   const restoredRun = competitorsQuery.data == null ? restored : null;
   const competitorRows =
     competitorsQuery.data?.rows ?? restored?.result.rows ?? [];
-
   const gapQuery = useKeywordGapQuery({
     projectId,
     target,
@@ -180,8 +179,8 @@ export function CompetitorsPage({
     pageSize: DEFAULT_KEYWORD_GAP_PAGE_SIZE,
     enabled: tab === "gap",
     authorized,
+    runNonce: run.runNonce,
   });
-
   const linkGapQuery = useLinkGapQuery({
     projectId,
     target,
@@ -190,6 +189,7 @@ export function CompetitorsPage({
     pageSize: DEFAULT_LINK_GAP_PAGE_SIZE,
     enabled: tab === "links",
     authorized,
+    runNonce: run.runNonce,
   });
 
   const tabQueries: Record<
@@ -229,7 +229,7 @@ export function CompetitorsPage({
         </div>
         <DataFreshness
           fetchedAt={activeQuery.data?.fetchedAt}
-          onRefresh={() => void activeQuery.refetch()}
+          onRefresh={() => run.authorize()}
           refreshing={activeQuery.isFetching && !activeQuery.isPending}
         />
       </div>
@@ -247,11 +247,22 @@ export function CompetitorsPage({
               const nextTarget = targetInput.trim();
               if (!nextTarget) return;
               const nextCompetitor = competitorInput.trim();
-              setAuthorizedSearchKey(`${nextTarget}|${nextCompetitor}`);
+              const nextPage =
+                nextTarget === target && nextCompetitor === competitor
+                  ? page
+                  : 1;
+              run.authorize(
+                buildCompetitorsAuthorizationKey(projectId, {
+                  ...searchState,
+                  target: nextTarget,
+                  competitor: nextCompetitor,
+                  page: nextPage,
+                }),
+              );
               updateSearch({
                 target: nextTarget,
                 competitor: nextCompetitor,
-                page: 1,
+                page: nextPage,
               });
             }}
           />
@@ -294,7 +305,13 @@ export function CompetitorsPage({
           runCount={restoredRun.runCount}
           onRunAgain={() => {
             setTargetInput(restoredRun.label);
-            setAuthorizedSearchKey(`${restoredRun.label}|${competitor}`);
+            run.authorize(
+              buildCompetitorsAuthorizationKey(projectId, {
+                ...searchState,
+                target: restoredRun.label,
+                page: 1,
+              }),
+            );
             updateSearch({ target: restoredRun.label, page: 1 });
           }}
         />
@@ -309,7 +326,13 @@ export function CompetitorsPage({
           onAnalyze={() => {
             if (!projectDomain) return;
             setTargetInput(projectDomain);
-            setAuthorizedSearchKey(`${projectDomain}|${competitor}`);
+            run.authorize(
+              buildCompetitorsAuthorizationKey(projectId, {
+                ...searchState,
+                target: projectDomain,
+                page: 1,
+              }),
+            );
             updateSearch({ target: projectDomain, page: 1 });
           }}
           isBusy={competitorsQuery.isFetching}
@@ -335,6 +358,7 @@ export function CompetitorsPage({
           pageSize={DEFAULT_KEYWORD_GAP_PAGE_SIZE}
           activeMode={mode}
           authorized={authorized}
+          runNonce={run.runNonce}
           onModeChange={(nextMode) => updateSearch({ mode: nextMode, page: 1 })}
         />
       ) : null}
@@ -365,7 +389,15 @@ export function CompetitorsPage({
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}
           onCompareCompetitor={(domain) => {
-            setAuthorizedSearchKey(`${target}|${domain}`);
+            run.authorize(
+              buildCompetitorsAuthorizationKey(projectId, {
+                ...searchState,
+                competitor: domain,
+                tab: "gap",
+                mode: "missing",
+                page: 1,
+              }),
+            );
             updateSearch({
               tab: "gap",
               competitor: domain,

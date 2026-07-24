@@ -34,6 +34,7 @@ import {
 type BacklinksBodyProps = {
   projectId: string;
   meteredAuthorized: boolean;
+  meteredRunNonce: number;
   history: BacklinksSearchHistoryItem[];
   historyLoaded: boolean;
   overviewData: BacklinksOverviewData | undefined;
@@ -69,6 +70,7 @@ type BacklinksBodyProps = {
 export function BacklinksBody({
   projectId,
   meteredAuthorized,
+  meteredRunNonce,
   history,
   historyLoaded,
   overviewData,
@@ -184,6 +186,7 @@ export function BacklinksBody({
           projectId={projectId}
           target={overviewData.displayTarget || searchState.target}
           authorized={meteredAuthorized}
+          runNonce={meteredRunNonce}
         />
       )}
       {isRestoredRun ? null : (

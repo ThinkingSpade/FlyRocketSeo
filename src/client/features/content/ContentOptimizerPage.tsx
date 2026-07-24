@@ -21,6 +21,7 @@ import {
 import { CompetitorOutlines } from "@/client/features/content/CompetitorOutlines";
 import { DraftGrader } from "@/client/features/content/DraftGrader";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -57,12 +58,15 @@ export function ContentOptimizerPage({
     locationCode: number;
   } | null>(null);
   const [competitorsAuthorized, setCompetitorsAuthorized] = useState(false);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
+  );
   const { history, historyLoaded, addBrief, removeBrief } =
     useContentBriefHistory(projectId);
 
   const briefQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runInput != null,
     queryKey: ["content-brief", projectId, runInput],
     queryFn: () =>
@@ -244,7 +248,13 @@ export function ContentOptimizerPage({
             keyword: restoredRun.result.keyword,
             locationCode: restoredRun.result.locationCode,
           });
-          run.authorize();
+          run.authorize(
+            createMeteredRunKey(
+              projectId,
+              restoredRun.result.keyword,
+              restoredRun.result.locationCode,
+            ),
+          );
           navigate({
             search: (prev) => ({
               ...prev,
@@ -292,8 +302,8 @@ export function ContentOptimizerPage({
                     Competitor outlines are a separate paid analysis
                   </h2>
                   <p className="text-xs text-base-content/60">
-                    Analyze {competitorUrls.length} ranking pages for word counts
-                    and heading outlines.
+                    Analyze {competitorUrls.length} ranking pages for word
+                    counts and heading outlines.
                   </p>
                 </div>
                 <button

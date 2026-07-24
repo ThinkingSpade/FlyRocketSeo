@@ -25,6 +25,7 @@ import {
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -33,6 +34,12 @@ type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
+
+function normalizePageUrlInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
 
 const PAGE_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -75,11 +82,18 @@ export function PageExplorerPage({
     url: string;
     locationCode: number;
   } | null>(null);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(
+      projectId,
+      normalizePageUrlInput(input),
+      Number(locationInput),
+    ),
+  );
   const projectDomain = useProjectDomain(projectId);
 
   const pageQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runInput != null,
     queryKey: ["page-explorer", projectId, runInput],
     queryFn: () =>
@@ -113,10 +127,13 @@ export function PageExplorerPage({
   // uses for competitor pages — title, length, and the heading outline.
   const snapshotQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runInput != null,
     queryKey: ["content-competitor", projectId, runInput?.url],
     queryFn: () =>
-      analyzeContentCompetitor({ data: { projectId, url: runInput?.url ?? "" } }),
+      analyzeContentCompetitor({
+        data: { projectId, url: runInput?.url ?? "" },
+      }),
     retry: 1,
   });
   const snapshot = snapshotQuery.data ?? null;
@@ -140,11 +157,8 @@ export function PageExplorerPage({
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
             onSubmit={(event) => {
               event.preventDefault();
-              const next = input.trim();
-              if (!next) return;
-              const normalized = /^https?:\/\//i.test(next)
-                ? next
-                : `https://${next}`;
+              const normalized = normalizePageUrlInput(input);
+              if (!normalized) return;
               setRunInput({
                 url: normalized,
                 locationCode: Number(locationInput),
@@ -223,7 +237,13 @@ export function PageExplorerPage({
             url: restoredRun.result.url,
             locationCode: restoredRun.result.locationCode,
           });
-          run.authorize();
+          run.authorize(
+            createMeteredRunKey(
+              projectId,
+              restoredRun.result.url,
+              restoredRun.result.locationCode,
+            ),
+          );
           navigate({
             search: (prev) => ({
               ...prev,
@@ -247,7 +267,9 @@ export function PageExplorerPage({
               const homepage = `https://${projectDomain.replace(/^https?:\/\//, "")}/`;
               setInput(homepage);
               setRunInput({ url: homepage, locationCode: activeLocation });
-              run.authorize();
+              run.authorize(
+                createMeteredRunKey(projectId, homepage, activeLocation),
+              );
               navigate({
                 search: (prev) => ({
                   ...prev,

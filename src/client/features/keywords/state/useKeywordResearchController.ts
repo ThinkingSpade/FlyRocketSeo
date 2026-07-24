@@ -70,6 +70,7 @@ export function useKeywordResearchController(
 ) {
   const [authorizedResearchInput, setAuthorizedResearchInput] =
     useState<KeywordControlsValues | null>(null);
+  const [researchRunNonce, setResearchRunNonce] = useState(0);
   const { locationCode, setPreferredLocationCode } =
     useResolvedKeywordLocation(input);
   const {
@@ -146,6 +147,7 @@ export function useKeywordResearchController(
           keywordInput: authorizedResearchInput.keyword,
         }
       : null,
+    researchRunNonce,
   );
   const setSearchParams = useKeywordSearchParams();
   const saveMutation = useKeywordSaveMutation(input.projectId);
@@ -180,6 +182,7 @@ export function useKeywordResearchController(
     (value) => {
       setPreferredLocationCode(value.locationCode);
       setAuthorizedResearchInput(value);
+      setResearchRunNonce((previous) => previous + 1);
       onFormSubmit(value);
     },
   );

@@ -13,35 +13,177 @@ import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoResto
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { domainOverviewResultSchema } from "@/types/schemas/domain";
 import { backlinksOverviewCacheSchema } from "@/types/schemas/backlinks-results";
+import { getDomainKeywordsPage } from "@/serverFunctions/domain";
+import {
+  getBacklinksReferringDomains,
+  getBacklinksRows,
+} from "@/serverFunctions/backlinks";
+import {
+  BACKLINKS_DEFAULT_SORT,
+  DEFAULT_BACKLINKS_PAGE_SIZE,
+} from "@/types/schemas/backlinks";
+import {
+  DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
+  normalizeDomain,
+} from "@/types/schemas/domain";
+import {
+  createMeteredRunKey,
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
+import { DEFAULT_LOCATION_CODE } from "@/shared/keyword-locations";
+import { getLanguageCode } from "@/client/features/keywords/utils";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 const STALE_TIME = 10 * 60_000;
-type ReportRanking = {
-  keyword: string;
-  position: number | null;
-  searchVolume: number | null;
-  traffic: number | null;
-  keywordDifficulty: number | null;
-  relativeUrl: string | null;
-};
-type ReportSuggestion = {
-  keyword: string;
-  searchVolume: number | null;
-  keywordDifficulty: number | null;
-  cpc: number | null;
-};
-type ReportBacklink = {
-  domainFrom: string | null;
-  urlFrom: string | null;
-  urlTo: string | null;
-  anchor: string | null;
-  isDofollow: boolean | null;
-  rank: number | null;
-};
-type ReportReferringDomain = {
-  domain: string | null;
-  backlinks: number | null;
-  rank: number | null;
-};
+
+function toComparableDomain(value: string): string | null {
+  try {
+    return normalizeDomain(value.replace(/^\*\./, ""));
+  } catch {
+    return null;
+  }
+}
+
+export function reportSnapshotMatchesDomain(
+  snapshotTarget: string,
+  projectDomain: string,
+): boolean {
+  const snapshotDomain = toComparableDomain(snapshotTarget);
+  const normalizedProjectDomain = toComparableDomain(projectDomain);
+  return (
+    snapshotDomain != null &&
+    normalizedProjectDomain != null &&
+    snapshotDomain === normalizedProjectDomain
+  );
+}
+
+function useReportPaidDetails(projectId: string, domain: string | null) {
+  const hasDomain = Boolean(domain);
+  const keywordDetailsRun = useAuthorizedRun(
+    createMeteredRunKey(
+      projectId,
+      domain,
+      true,
+      DEFAULT_LOCATION_CODE,
+      getLanguageCode(DEFAULT_LOCATION_CODE),
+      1,
+      DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
+      "traffic",
+      "desc",
+      {},
+    ),
+  );
+  const keywordDetailsQuery = useMeteredQuery({
+    authorized: keywordDetailsRun.authorized,
+    runNonce: keywordDetailsRun.runNonce,
+    enabled: hasDomain,
+    queryKey: ["report-domain-keywords", projectId, domain],
+    queryFn: () =>
+      getDomainKeywordsPage({
+        data: {
+          projectId,
+          domain: domain ?? "",
+          includeSubdomains: true,
+          locationCode: DEFAULT_LOCATION_CODE,
+          languageCode: getLanguageCode(DEFAULT_LOCATION_CODE),
+          page: 1,
+          pageSize: DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
+          sortMode: "traffic",
+          sortOrder: "desc",
+          filters: {},
+        },
+      }),
+  });
+
+  const backlinkDetailsRun = useAuthorizedRun(
+    createMeteredRunKey(
+      projectId,
+      domain,
+      "domain",
+      1,
+      DEFAULT_BACKLINKS_PAGE_SIZE,
+      BACKLINKS_DEFAULT_SORT.backlinks,
+      BACKLINKS_DEFAULT_SORT.domains,
+    ),
+  );
+  const backlinkRowsQuery = useMeteredQuery({
+    authorized: backlinkDetailsRun.authorized,
+    runNonce: backlinkDetailsRun.runNonce,
+    enabled: hasDomain,
+    queryKey: ["report-backlink-rows", projectId, domain],
+    queryFn: () =>
+      getBacklinksRows({
+        data: {
+          projectId,
+          target: domain ?? "",
+          scope: "domain",
+          page: 1,
+          pageSize: DEFAULT_BACKLINKS_PAGE_SIZE,
+          sortField: BACKLINKS_DEFAULT_SORT.backlinks.field,
+          sortOrder: BACKLINKS_DEFAULT_SORT.backlinks.order,
+          filters: {},
+          mode: "one_per_domain",
+        },
+      }),
+  });
+  const referringDomainsQuery = useMeteredQuery({
+    authorized: backlinkDetailsRun.authorized,
+    runNonce: backlinkDetailsRun.runNonce,
+    enabled: hasDomain,
+    queryKey: ["report-referring-domains", projectId, domain],
+    queryFn: () =>
+      getBacklinksReferringDomains({
+        data: {
+          projectId,
+          target: domain ?? "",
+          scope: "domain",
+          page: 1,
+          pageSize: DEFAULT_BACKLINKS_PAGE_SIZE,
+          sortField: BACKLINKS_DEFAULT_SORT.domains.field,
+          sortOrder: BACKLINKS_DEFAULT_SORT.domains.order,
+          filters: {},
+        },
+      }),
+  });
+
+  return {
+    keywordDetailsMissing: hasDomain && keywordDetailsQuery.data == null,
+    backlinkDetailsMissing:
+      hasDomain &&
+      (backlinkRowsQuery.data == null || referringDomainsQuery.data == null),
+    keywordDetailsLoading: keywordDetailsQuery.isFetching,
+    backlinkDetailsLoading:
+      backlinkRowsQuery.isFetching || referringDomainsQuery.isFetching,
+    keywordDetailsError: keywordDetailsQuery.isError
+      ? getStandardErrorMessage(
+          keywordDetailsQuery.error,
+          "Could not load keyword details.",
+        )
+      : null,
+    backlinkDetailsError:
+      backlinkRowsQuery.isError || referringDomainsQuery.isError
+        ? getStandardErrorMessage(
+            backlinkRowsQuery.error ?? referringDomainsQuery.error,
+            "Could not load backlink details.",
+          )
+        : null,
+    refreshKeywordDetails: keywordDetailsRun.authorize,
+    refreshBacklinkDetails: backlinkDetailsRun.authorize,
+    rankings: (keywordDetailsQuery.data?.keywords ?? []).slice(0, 10),
+    suggestions: (keywordDetailsQuery.data?.keywords ?? [])
+      .filter((row) => row.position == null || row.position > 10)
+      .slice(0, 10)
+      .map((row) => ({
+        keyword: row.keyword,
+        searchVolume: row.searchVolume,
+        keywordDifficulty: row.keywordDifficulty,
+        cpc: row.cpc,
+      })),
+    backlinkRows: (backlinkRowsQuery.data?.rows ?? []).slice(0, 10),
+    referringDomains: (referringDomainsQuery.data?.rows ?? []).slice(0, 10),
+  };
+}
 
 /**
  * Every query the Client Report renders from, in one place so the page itself
@@ -138,6 +280,20 @@ export function useClientReportData(projectId: string) {
     schema: backlinksOverviewCacheSchema,
     enabled: hasDomain,
   });
+  const matchingDomainRun =
+    domainRun &&
+    domain &&
+    reportSnapshotMatchesDomain(domainRun.result.domain, domain)
+      ? domainRun
+      : null;
+  const matchingBacklinksRun =
+    backlinksRun &&
+    domain &&
+    backlinksRun.result.overview.scope === "domain" &&
+    reportSnapshotMatchesDomain(backlinksRun.result.overview.target, domain)
+      ? backlinksRun
+      : null;
+  const paidDetails = useReportPaidDetails(projectId, domain);
 
   const content = contentQuery.data?.connected ? contentQuery.data : null;
 
@@ -147,12 +303,18 @@ export function useClientReportData(projectId: string) {
     gsc: gscQuery.data?.connected ? gscQuery.data : null,
     gscPending: gscQuery.isLoading,
     insights: insightsQuery.data?.connected ? insightsQuery.data : null,
-    backlinks: backlinksRun?.result.overview ?? null,
-    domainOverview: domainRun?.result ?? null,
-    domainSnapshotMissing: hasDomain && domainRun == null,
-    backlinksSnapshotMissing: hasDomain && backlinksRun == null,
-    keywordDetailsMissing: hasDomain,
-    backlinkDetailsMissing: hasDomain,
+    backlinks: matchingBacklinksRun?.result.overview ?? null,
+    domainOverview: matchingDomainRun?.result ?? null,
+    domainSnapshotMissing: hasDomain && matchingDomainRun == null,
+    backlinksSnapshotMissing: hasDomain && matchingBacklinksRun == null,
+    keywordDetailsMissing: paidDetails.keywordDetailsMissing,
+    backlinkDetailsMissing: paidDetails.backlinkDetailsMissing,
+    keywordDetailsLoading: paidDetails.keywordDetailsLoading,
+    backlinkDetailsLoading: paidDetails.backlinkDetailsLoading,
+    keywordDetailsError: paidDetails.keywordDetailsError,
+    backlinkDetailsError: paidDetails.backlinkDetailsError,
+    refreshKeywordDetails: paidDetails.refreshKeywordDetails,
+    refreshBacklinkDetails: paidDetails.refreshBacklinkDetails,
     latestAudit: latestAudit ?? null,
     auditPages: auditResultsQuery.data?.pages ?? [],
     approvedFixes: (onPageQuery.data?.rows ?? []).filter(
@@ -169,9 +331,9 @@ export function useClientReportData(projectId: string) {
       ? topPagesQuery.data.rows
       : []
     ).slice(0, 10),
-    rankings: [] as ReportRanking[],
-    suggestions: [] as ReportSuggestion[],
-    backlinkRows: [] as ReportBacklink[],
-    referringDomains: [] as ReportReferringDomain[],
+    rankings: paidDetails.rankings,
+    suggestions: paidDetails.suggestions,
+    backlinkRows: paidDetails.backlinkRows,
+    referringDomains: paidDetails.referringDomains,
   };
 }

@@ -10,6 +10,7 @@ import type { TooltipContentProps } from "recharts";
 import { getDomainRankHistory } from "@/serverFunctions/domain";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -43,11 +44,20 @@ export function DomainVisibilityTrend({
   languageCode: string;
 }) {
   const trimmedDomain = domain.trim();
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, trimmedDomain, locationCode, languageCode),
+  );
   const query = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: trimmedDomain !== "",
-    queryKey: ["domain-rank-history", projectId, trimmedDomain, locationCode],
+    queryKey: [
+      "domain-rank-history",
+      projectId,
+      trimmedDomain,
+      locationCode,
+      languageCode,
+    ],
     queryFn: () =>
       getDomainRankHistory({
         data: {
@@ -83,7 +93,7 @@ export function DomainVisibilityTrend({
             <button
               type="button"
               className="btn btn-primary btn-sm"
-              onClick={run.authorize}
+              onClick={() => run.authorize()}
             >
               Load visibility trend
             </button>

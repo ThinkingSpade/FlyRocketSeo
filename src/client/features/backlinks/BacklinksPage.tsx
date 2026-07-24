@@ -16,6 +16,7 @@ import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
 import {
+  buildBacklinksAuthorizationKey,
   navigateToBacklinksSearch,
   useBacklinksPageData,
 } from "./useBacklinksPageData";
@@ -31,6 +32,7 @@ import {
   BACKLINKS_DEFAULT_SORT,
   DEFAULT_BACKLINKS_PAGE_SIZE,
 } from "@/types/schemas/backlinks";
+import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 
 const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -61,11 +63,13 @@ export function BacklinksPage({
   navigate,
 }: BacklinksPageProps) {
   const filters = useBacklinksFilters();
-  const [authorizedSearchKey, setAuthorizedSearchKey] = useState<string | null>(
-    null,
+  const currentSearchKey = buildBacklinksAuthorizationKey(
+    projectId,
+    searchState,
+    filters,
   );
-  const currentSearchKey = `${searchState.scope}:${searchState.target}`;
-  const searchAuthorized = authorizedSearchKey === currentSearchKey;
+  const run = useAuthorizedRun(currentSearchKey);
+  const searchAuthorized = run.authorized;
 
   // Sort lives in the URL so sort changes and the page reset commit in one
   // navigation (no transient fetch of the old page with the new sort).
@@ -154,6 +158,7 @@ export function BacklinksPage({
     searchState,
     filters,
     authorized: searchAuthorized,
+    runNonce: run.runNonce,
   });
 
   // With no target in the URL every query above stays disabled, so the tab
@@ -245,12 +250,39 @@ export function BacklinksPage({
   // paths open a tab, navigate, and record history identically.
   const runBacklinksSearch = useCallback(
     (values: Pick<BacklinksSearchState, "target" | "scope">) => {
-      setAuthorizedSearchKey(`${values.scope}:${values.target}`);
+      if (
+        values.target === searchState.target &&
+        values.scope === searchState.scope
+      ) {
+        run.authorize();
+        return;
+      }
+      const nextSearchState: BacklinksSearchState = {
+        ...searchState,
+        target: values.target,
+        scope: values.scope,
+        tab: "backlinks",
+        page: 1,
+        sort: undefined,
+        order: undefined,
+      };
+      run.authorize(
+        buildBacklinksAuthorizationKey(projectId, nextSearchState, filters),
+      );
       searchTabs.openTab(toBacklinksTabInput(values));
       navigateToBacklinksSearch(navigate, values);
       addSearch({ target: values.target, scope: values.scope });
     },
-    [addSearch, navigate, searchTabs, toBacklinksTabInput],
+    [
+      addSearch,
+      filters,
+      navigate,
+      projectId,
+      run,
+      searchState,
+      searchTabs,
+      toBacklinksTabInput,
+    ],
   );
   return (
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
@@ -315,6 +347,7 @@ export function BacklinksPage({
         <BacklinksBody
           projectId={projectId}
           meteredAuthorized={searchAuthorized}
+          meteredRunNonce={run.runNonce}
           history={history}
           historyLoaded={historyLoaded}
           overviewData={overviewData}
@@ -334,7 +367,7 @@ export function BacklinksPage({
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           onRemoveHistoryItem={removeHistoryItem}
-          onRetryOverview={() => void overviewQuery.refetch()}
+          onRetryOverview={() => run.authorize()}
           onSortingChange={handleSortingChange}
           onTabChange={handleResultTabChange}
           onViewChange={handleViewChange}

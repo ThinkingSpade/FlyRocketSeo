@@ -97,6 +97,7 @@ export function useKeywordResearchData(
   input: KeywordResearchQueryInput,
   addSearch: AddSearchFn,
   authorizedInput: KeywordResearchQueryInput | null,
+  runNonce: number,
 ) {
   const { projectId } = input;
   const request = useMemo<KeywordResearchRequest | null>(
@@ -112,6 +113,7 @@ export function useKeywordResearchData(
 
   const researchQuery = useMeteredQuery({
     authorized: authorizedInput != null,
+    runNonce,
     queryKey,
     queryFn: () => {
       if (!request) {

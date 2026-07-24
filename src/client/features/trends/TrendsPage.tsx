@@ -24,6 +24,7 @@ import {
   TrendsSeasonalHeatmap,
 } from "@/client/features/trends/TrendsInsightsTable";
 import {
+  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
@@ -63,10 +64,13 @@ export function TrendsPage({
   const [input, setInput] = useState(query);
   const prefilledKeywords = parseKeywords(query);
   const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
-  const run = useAuthorizedRun();
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, parseKeywords(input)),
+  );
 
   const trendsQuery = useMeteredQuery({
     authorized: run.authorized,
+    runNonce: run.runNonce,
     enabled: runKeywords != null,
     queryKey: ["keyword-trends", projectId, runKeywords],
     queryFn: () =>
@@ -171,7 +175,9 @@ export function TrendsPage({
             const next = restoredRun.result.keywords.join(", ");
             setInput(next);
             setRunKeywords(restoredRun.result.keywords);
-            run.authorize();
+            run.authorize(
+              createMeteredRunKey(projectId, restoredRun.result.keywords),
+            );
             navigate({
               search: (prev) => ({ ...prev, q: next }),
               replace: false,
