@@ -4,6 +4,7 @@ import {
   AuthPageShell,
   authRedirectSearchSchema,
 } from "@/client/features/auth/AuthPage";
+import { LoadingShell } from "@/client/components/LoadingShell";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getCurrentAuthRedirect } from "@/lib/auth-redirect";
@@ -31,8 +32,11 @@ function AuthPageLayout() {
     void navigate({ href: redirectTo, replace: true });
   }, [navigate, redirectTo, session?.user?.id]);
 
+  // While the session resolves (a cold isolate is slow) or an already-signed-in
+  // user is being handed off, keep the loading animation up rather than a blank
+  // page or a flash of the sign-in form.
   if (isHostedMode && (isPending || session?.user?.id)) {
-    return null;
+    return <LoadingShell />;
   }
 
   return (
