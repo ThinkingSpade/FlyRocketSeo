@@ -14,7 +14,7 @@ responds.
 
 ## Why a normal spinner can't do this
 
-The blank is *before the first byte*. A React spinner lives in the client JS,
+The blank is _before the first byte_. A React spinner lives in the client JS,
 which only loads after the HTML arrives — i.e. after the 4.5s. Even streaming
 SSR can't flush a shell early, because the delay is before the request handler
 produces anything (a 4-byte `get-session` call also takes ~4s).
@@ -77,5 +77,5 @@ moment the app mounts. No new dependency.
 ## Out of scope
 
 Reducing the 4.5s itself (paid-plan test, deferring the chat frameworks) is the
-real cure and stays a separate track. This spec only removes the *blank* — the
+real cure and stays a separate track. This spec only removes the _blank_ — the
 animation masks the wait; it does not shorten it.

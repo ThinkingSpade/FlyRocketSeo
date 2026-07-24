@@ -74,7 +74,16 @@ export default defineConfig(({ mode }) => {
         : null,
       cloudflare({ inspectorPort: false, viteEnvironment: { name: "ssr" } }),
       tsConfigPaths(),
-      tanstackStart(),
+      // SPA mode: prerender a static shell (the RootDocument, whose <body> is
+      // already ClientOnly so SSR renders no page content anyway) to
+      // dist/client/index.html. Cloudflare Workers Assets serves it from the
+      // edge in ~40ms, so the loading animation in the shell paints instantly
+      // instead of the browser waiting ~4.5s for a cold Worker isolate. Data,
+      // auth, chat and MCP still run in the Worker via /api, /agents and
+      // server-function calls — see the Assets routing in wrangler.jsonc.
+      tanstackStart({
+        spa: { enabled: true, prerender: { outputPath: "/index.html" } },
+      }),
       viteReact(),
       tailwindcss(),
     ],

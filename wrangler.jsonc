@@ -31,6 +31,24 @@
   "placement": {
     "mode": "smart",
   },
+  // SPA-mode routing. The Cloudflare plugin sets `assets.directory`; we add the
+  // routing on top. `single-page-application` serves the prerendered static
+  // shell (dist/client/index.html, with the loading animation) from the edge
+  // for any page route — the fast first paint. `run_worker_first` forces the
+  // dynamic paths back through the Worker so data, auth, chat and MCP are
+  // unaffected: server-function calls (/_serverFn/*), the API and OAuth
+  // (/api/*), OAuth discovery (/.well-known/*), the chat agents (/agents/*),
+  // and the MCP endpoint (/mcp). Anything not listed gets the shell.
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": [
+      "/api/*",
+      "/_serverFn/*",
+      "/agents/*",
+      "/mcp",
+      "/.well-known/*",
+    ],
+  },
   // Serving on the default workers.dev hostname. To move to a custom domain,
   // add a "routes" block with a zone this Cloudflare account controls —
   // `wrangler deploy` fails on a zone the account cannot see.

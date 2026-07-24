@@ -23,6 +23,7 @@ import {
   stopAnalyticsCapture,
 } from "@/client/lib/posthog";
 import { NotFound } from "@/client/components/NotFound";
+import { LoadingShell } from "@/client/components/LoadingShell";
 import appCss from "@/client/styles/app.css?url";
 import { useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -144,7 +145,12 @@ function RootDocument({ children }: { children: React.ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        <ClientOnly>
+        {/* The fallback is what SPA-mode prerenders into the static shell, so
+            it is the instant first paint (see LoadingShell). It also covers the
+            client's pre-mount frame, so there is no blank flash and no
+            hydration mismatch — same markup on the server shell and the first
+            client render. */}
+        <ClientOnly fallback={<LoadingShell />}>
           {/* Keep this the ONLY AutumnProvider. Each provider creates its own
               customer cache (autumn-js bundles a private react-query, so it
               never shares the app QueryClient), and every extra provider mount
