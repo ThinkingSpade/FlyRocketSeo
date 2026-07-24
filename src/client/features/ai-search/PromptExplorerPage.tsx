@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   AlertCircle,
@@ -8,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { explorePrompt } from "@/serverFunctions/ai-search";
+import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
   HostedPlanGate,
   type HostedPlanGateState,
@@ -24,7 +26,16 @@ import {
   type PromptExplorerModel,
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
-import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import {
+  createMeteredRunKey,
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
+import { useProject } from "@/client/hooks/useProjectDomain";
+import {
+  buildPromptStarters,
+  domainStem,
+} from "@/client/features/search-performance/projectGscInsights";
 
 type PromptExplorerFormValues = {
   prompt: string;
@@ -58,6 +69,20 @@ const PROMPT_EXPLORER_BULLETS = [
   },
 ];
 
+function promptRunKey(
+  projectId: string,
+  values: PromptExplorerFormValues,
+): string {
+  return createMeteredRunKey(
+    projectId,
+    values.prompt.trim(),
+    values.models.toSorted(),
+    values.webSearch,
+    values.webSearchCountryCode,
+    values.highlightBrand.trim(),
+  );
+}
+
 export function PromptExplorerPage(props: Props) {
   return (
     <HostedPlanGate>
@@ -76,7 +101,23 @@ function PromptExplorerPageInner({
   const [validationError, setValidationError] = useState<string | null>(null);
   const [authorizedInput, setAuthorizedInput] =
     useState<PromptExplorerFormValues | null>(null);
-  const [runNonce, setRunNonce] = useState(0);
+  const project = useProject(projectId);
+  const defaultBrand =
+    project?.name.trim() && project.name.toLowerCase() !== "default"
+      ? project.name.trim()
+      : (domainStem(project?.domain) ?? "");
+  const brandWasEdited = useRef(Boolean(urlState.highlightBrand));
+  const run = useAuthorizedRun(promptRunKey(projectId, form));
+  const gscQuery = useQuery({
+    queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
+    queryFn: () =>
+      getSearchPerformanceReport({
+        data: { projectId, dateRange: "last_28_days" },
+      }),
+    staleTime: 5 * 60_000,
+  });
+  const promptStarters =
+    gscQuery.data?.connected === true ? buildPromptStarters(gscQuery.data) : [];
 
   const {
     history,
@@ -89,8 +130,8 @@ function PromptExplorerPageInner({
   const hasActivePrompt = trimmedPrompt.length > 0;
 
   const exploreQuery = useMeteredQuery({
-    authorized: authorizedInput != null,
-    runNonce,
+    authorized: run.authorized,
+    runNonce: run.runNonce,
     queryKey: [
       "prompt-explorer",
       projectId,
@@ -125,9 +166,16 @@ function PromptExplorerPageInner({
   // cmd+click history navigation (in the originating tab nothing changes; in
   // a new tab the form mounts populated from the URL).
   useEffect(() => {
-    setForm(urlState);
+    setForm((current) => ({
+      ...urlState,
+      highlightBrand:
+        urlState.highlightBrand ||
+        (brandWasEdited.current
+          ? current.highlightBrand
+          : defaultBrand || current.highlightBrand),
+    }));
     setValidationError(null);
-  }, [urlState]);
+  }, [defaultBrand, urlState]);
 
   // Persist successful searches to history. Run on isSuccess so failed
   // requests don't pollute recent searches. The dedup ref prevents repeat
@@ -183,7 +231,7 @@ function PromptExplorerPageInner({
       highlightBrand: form.highlightBrand.trim(),
     };
     setAuthorizedInput(next);
-    setRunNonce((previous) => previous + 1);
+    run.authorize(promptRunKey(projectId, next));
     onSubmit(next);
   };
 
@@ -223,9 +271,10 @@ function PromptExplorerPageInner({
             <PromptExplorerForm
               form={form}
               onPromptChange={(value) => updateForm("prompt", value)}
-              onHighlightBrandChange={(value) =>
-                updateForm("highlightBrand", value)
-              }
+              onHighlightBrandChange={(value) => {
+                brandWasEdited.current = true;
+                updateForm("highlightBrand", value);
+              }}
               onModelsChange={(value) => updateForm("models", value)}
               onWebSearchChange={(value) => updateForm("webSearch", value)}
               onCountryChange={(value) =>
@@ -234,6 +283,7 @@ function PromptExplorerPageInner({
               onSubmit={handleSubmit}
               isLoading={isLoading}
               validationError={validationError}
+              promptStarters={promptStarters}
             />
 
             {errorMessage ? (

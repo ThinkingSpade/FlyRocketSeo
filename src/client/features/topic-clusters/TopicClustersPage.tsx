@@ -1,6 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link } from "@tanstack/react-router";
-import { Network, NotebookPen, Search, Sparkles } from "lucide-react";
+import { Network, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getTopicClusters } from "@/serverFunctions/topic-clusters";
@@ -13,7 +12,6 @@ import {
   clusterPlanToMarkdown,
   computeClusterPlanTotals,
   prioritizeClusters,
-  type ClusterPriority,
 } from "@/client/features/topic-clusters/clusterPriorities";
 import { captureClientEvent } from "@/client/lib/posthog";
 import {
@@ -25,16 +23,16 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import {
+  CoverageSummary,
+  useTopicPlanCoverage,
+} from "@/client/features/topic-clusters/TopicCoverageOverlay";
+import { ClusterPlanBody } from "@/client/features/topic-clusters/ClusterPlanBody";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
-
-function formatVolume(value: number | null): string {
-  if (value == null) return "—";
-  return value.toLocaleString();
-}
 
 export function TopicClustersPage({
   projectId,
@@ -236,12 +234,6 @@ export function TopicClustersPage({
   );
 }
 
-const PRIORITY_BADGES: Record<ClusterPriority, string> = {
-  1: "badge-success",
-  2: "badge-warning",
-  3: "badge-ghost",
-};
-
 function ClusterPlan({
   plan,
   projectId,
@@ -252,6 +244,14 @@ function ClusterPlan({
   // Priority ranking + totals are pure client-side cuts of the fetched plan.
   const clusters = useMemo(() => prioritizeClusters(plan.clusters), [plan]);
   const totals = useMemo(() => computeClusterPlanTotals(plan.clusters), [plan]);
+  const coverageState = useTopicPlanCoverage({
+    projectId,
+    hubTerms: [plan.topic, ...plan.hub.map((keyword) => keyword.keyword)],
+    clusters: clusters.map((cluster) => ({
+      name: cluster.name,
+      terms: cluster.keywords.map((keyword) => keyword.keyword),
+    })),
+  });
 
   const handleCopyPlan = async () => {
     if (typeof navigator === "undefined" || !navigator.clipboard) {
@@ -276,6 +276,12 @@ function ClusterPlan({
 
   return (
     <>
+      <CoverageSummary
+        coverage={coverageState.coverage}
+        isLoading={coverageState.isLoading}
+        isConnected={coverageState.isConnected}
+      />
+
       <div className="flex flex-wrap items-center gap-2">
         <span className="badge badge-ghost tabular-nums">
           {totals.clusterCount} clusters
@@ -297,123 +303,12 @@ function ClusterPlan({
         </button>
       </div>
 
-      <ClusterPlanBody plan={plan} clusters={clusters} projectId={projectId} />
-    </>
-  );
-}
-
-function ClusterPlanBody({
-  plan,
-  clusters,
-  projectId,
-}: {
-  plan: NonNullable<Awaited<ReturnType<typeof getTopicClusters>>>;
-  clusters: ReturnType<typeof prioritizeClusters>;
-  projectId: string;
-}) {
-  return (
-    <>
-      {plan.hub.length > 0 ? (
-        <div className="card border border-primary/40 bg-base-100">
-          <div className="card-body gap-2 p-4">
-            <div className="flex items-baseline justify-between gap-2">
-              <h2 className="text-sm font-semibold">
-                Hub page — &ldquo;{plan.topic}&rdquo;
-              </h2>
-              <Link
-                to="/p/$projectId/content"
-                params={{ projectId }}
-                search={{ q: plan.topic, loc: plan.locationCode }}
-                className="btn btn-primary btn-xs gap-1"
-              >
-                <NotebookPen className="size-3" /> Build brief
-              </Link>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {plan.hub.map((keyword) => (
-                <span key={keyword.keyword} className="badge badge-ghost">
-                  {keyword.keyword}
-                  <span className="ml-1 text-base-content/50 tabular-nums">
-                    {formatVolume(keyword.searchVolume)}
-                  </span>
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {clusters.map((cluster) => {
-          const topKeyword = cluster.keywords[0]?.keyword ?? plan.topic;
-          return (
-            <div
-              key={cluster.name}
-              className="card border border-base-300 bg-base-100"
-            >
-              <div className="card-body gap-2 p-4">
-                <div className="flex items-baseline justify-between gap-2">
-                  <h3 className="flex items-center gap-1.5 font-semibold">
-                    <span
-                      className={`badge badge-sm ${PRIORITY_BADGES[cluster.priority]}`}
-                      title="Priority from volume weighed against difficulty — write P1 clusters first"
-                    >
-                      P{cluster.priority}
-                    </span>
-                    {cluster.name}
-                  </h3>
-                  <span className="text-xs text-base-content/50 tabular-nums">
-                    {cluster.totalVolume.toLocaleString()} vol ·{" "}
-                    {cluster.keywords.length} keywords
-                    {cluster.averageDifficulty != null
-                      ? ` · KD ${Math.round(cluster.averageDifficulty)}`
-                      : ""}
-                  </span>
-                </div>
-                <ul className="space-y-0.5 text-sm text-base-content/80">
-                  {cluster.keywords.map((keyword) => (
-                    <li
-                      key={keyword.keyword}
-                      className="flex items-baseline justify-between gap-2"
-                    >
-                      <span className="line-clamp-1">{keyword.keyword}</span>
-                      <span className="shrink-0 text-xs text-base-content/50 tabular-nums">
-                        {formatVolume(keyword.searchVolume)}
-                        {keyword.keywordDifficulty != null
-                          ? ` · KD ${keyword.keywordDifficulty}`
-                          : ""}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-                <div className="mt-1 flex gap-2">
-                  <Link
-                    to="/p/$projectId/content"
-                    params={{ projectId }}
-                    search={{ q: topKeyword, loc: plan.locationCode }}
-                    className="btn btn-soft btn-xs gap-1"
-                  >
-                    <NotebookPen className="size-3" /> Build brief
-                  </Link>
-                  <Link
-                    to="/p/$projectId/serp"
-                    params={{ projectId }}
-                    search={{ q: topKeyword, loc: plan.locationCode }}
-                    className="btn btn-ghost btn-xs"
-                  >
-                    View SERP
-                  </Link>
-                </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      <p className="text-xs text-base-content/40">
-        Plan for &ldquo;{plan.topic}&rdquo; · fetched{" "}
-        {new Date(plan.fetchedAt).toLocaleString()}
-      </p>
+      <ClusterPlanBody
+        plan={plan}
+        clusters={clusters}
+        projectId={projectId}
+        coverage={coverageState.coverage}
+      />
     </>
   );
 }

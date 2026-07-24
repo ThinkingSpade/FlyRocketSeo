@@ -15,6 +15,7 @@ import {
   previousPeriod,
   sumSearchTotals,
   toDimensionRows,
+  toQueryPageRows,
 } from "@/server/features/gsc/searchPerformanceReport";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
@@ -124,6 +125,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
         strikingDistance: buildStrikingDistanceRows(queryPages.rows),
         ctrOpportunities: buildCtrOpportunityRows(queryPages.rows),
         queryTotals: buildQueryTotals(queryPages.rows),
+        queryPages: toQueryPageRows(queryPages.rows),
         countries: toDimensionRows(countries.rows),
       };
     } catch (error) {
