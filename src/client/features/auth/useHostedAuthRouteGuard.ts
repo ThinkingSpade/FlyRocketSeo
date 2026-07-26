@@ -1,10 +1,8 @@
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useEmailVerificationBypassed } from "@/client/features/auth/useEmailVerificationBypassed";
 import { useSession } from "@/lib/auth-client";
-import {
-  isEmailVerificationBypassed,
-  isHostedClientAuthMode,
-} from "@/lib/auth-mode";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import {
   getCurrentAuthRedirectFromHref,
   getSignInSearch,
@@ -15,8 +13,9 @@ export function useHostedAuthRouteGuard() {
   const navigate = useNavigate();
   const { data: session, isPending } = useSession();
   const isHostedMode = isHostedClientAuthMode();
+  const bypassEmailVerification = useEmailVerificationBypassed();
   const emailVerified =
-    session?.user?.emailVerified === true || isEmailVerificationBypassed();
+    session?.user?.emailVerified === true || bypassEmailVerification;
 
   useEffect(() => {
     if (isPending || !isHostedMode) {

@@ -30,8 +30,10 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { Toaster } from "sonner";
 import { queryClient } from "@/client/tanstack-db";
 import { getActiveOrganizationId } from "@/lib/auth-session";
+import { getClientRuntimeConfig } from "@/serverFunctions/config";
 
 export const Route = createRootRoute({
+  loader: () => getClientRuntimeConfig(),
   head: () => ({
     meta: [
       {

@@ -3,6 +3,12 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 
+export const getClientRuntimeConfig = createServerFn({ method: "GET" }).handler(
+  () => ({
+    emailVerificationBypassed: env.BYPASS_EMAIL_VERIFICATION === "true",
+  }),
+);
+
 export const getSeoApiKeyStatus = createServerFn({ method: "GET" })
   .middleware(requireAuthenticatedContext)
   .handler(() => {
