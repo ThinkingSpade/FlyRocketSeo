@@ -30,8 +30,12 @@ export function buildProjectStartUrl(domain: string | null): string | null {
   // to the site root, which is correct and what the branch below still does;
   // appending it to a path instead can 404 on servers that don't redirect a
   // directory-less path to its slash form, so a path is re-schemed and
-  // returned as given, with no slash added.
+  // returned with no slash appended. Built from `bareHost`, not
+  // `withoutScheme`, so a path stored with one or more redundant trailing
+  // slashes (e.g. "/blog//") comes out collapsed to none ("/blog"), the same
+  // "no trailing slash on a path" rule the strip above already established --
+  // rather than reappearing verbatim.
   return bareHost.includes("/")
-    ? `https://${withoutScheme}`
+    ? `https://${bareHost}`
     : `https://${bareHost}/`;
 }

@@ -51,6 +51,24 @@ describe("buildProjectStartUrl", () => {
     );
   });
 
+  it("collapses a single redundant trailing slash on a path to none", () => {
+    // Deliberate: "no trailing slash on a path" (above) means zero, not
+    // "whatever the row happened to store" -- a path is never supposed to
+    // carry one, so an errant single trailing slash collapses away too.
+    expect(buildProjectStartUrl("deliotx.com/blog/")).toBe(
+      "https://deliotx.com/blog",
+    );
+  });
+
+  it("collapses multiple redundant trailing slashes on a path to none", () => {
+    // Regression case: the path branch used to return the pre-strip
+    // `withoutScheme` value verbatim, so "/blog//" reached the browser
+    // unchanged instead of collapsing like the bare-host branch already did.
+    expect(buildProjectStartUrl("deliotx.com/blog//")).toBe(
+      "https://deliotx.com/blog",
+    );
+  });
+
   it("returns null for a null domain", () => {
     expect(buildProjectStartUrl(null)).toBeNull();
   });
