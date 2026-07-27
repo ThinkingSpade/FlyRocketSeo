@@ -24,7 +24,7 @@ import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBa
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { TabBody } from "./CompetitorsTabBody";
-import { CompetitorsPositioningMap } from "./CompetitorsPositioningMap";
+import { CompetitorsOverviewExtras } from "./CompetitorsOverviewExtras";
 import { KeywordGapOverview } from "./KeywordGapOverview";
 import {
   useCompetitorsQuery,
@@ -344,11 +344,8 @@ export function CompetitorsPage({
         />
       ) : null}
 
-      {/* Deliberately keyed off the live target, not the restored one: the map
-          fetches a domain overview for its own bubble, which is metered. A
-          restored run must cost nothing, so the map waits for "Run again". */}
-      {tab === "competitors" && target && competitorRows.length > 0 ? (
-        <CompetitorsPositioningMap
+      {tab === "competitors" && target ? (
+        <CompetitorsOverviewExtras
           projectId={projectId}
           target={target}
           rows={competitorRows}

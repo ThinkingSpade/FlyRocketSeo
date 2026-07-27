@@ -6,6 +6,7 @@ import {
   useAppTable,
 } from "@/client/components/table/AppDataTable";
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
+import { competitorsRowNote } from "@/client/features/insights/verdicts/competitors";
 
 function formatCount(value: number | null): string {
   return value == null ? "—" : Math.round(value).toLocaleString();
@@ -30,7 +31,20 @@ export function CompetitorsTable({
       {
         id: "intersections",
         header: "Shared Keywords",
-        cell: ({ row }) => formatCount(row.original.intersections),
+        cell: ({ row }) => {
+          const rowNote = competitorsRowNote({
+            intersections: row.original.intersections,
+            organicKeywords: row.original.organicKeywords,
+          });
+          return (
+            <div>
+              <div>{formatCount(row.original.intersections)}</div>
+              {rowNote ? (
+                <div className="text-xs text-base-content/45">{rowNote}</div>
+              ) : null}
+            </div>
+          );
+        },
       },
       {
         id: "avgPosition",
