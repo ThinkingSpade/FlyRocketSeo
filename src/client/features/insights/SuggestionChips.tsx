@@ -34,13 +34,28 @@ export function SuggestionChips({
 }) {
   if (suggestions.length === 0) return null;
 
-  const current = value.trim().toLowerCase();
+  // Most callers' field holds a single value, but Keyword Trends' holds a
+  // comma-separated list of up to `MAX_TRENDS_KEYWORDS` -- splitting on `,`
+  // and testing membership handles both without a per-caller opt-in: a
+  // single-value field just splits into a one-element list, so this is the
+  // exact-match check it always was, while a list field highlights every
+  // member it currently holds instead of only ever matching when exactly one
+  // is present. Filtering blanks means an empty (or all-commas) field never
+  // marks a chip active.
+  const currentValues = value
+    .trim()
+    .toLowerCase()
+    .split(",")
+    .map((item) => item.trim())
+    .filter(Boolean);
 
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       <Lightbulb className="size-3.5 shrink-0 text-base-content/40" />
       {suggestions.map((suggestion) => {
-        const active = suggestion.value.toLowerCase() === current;
+        const active = currentValues.includes(
+          suggestion.value.trim().toLowerCase(),
+        );
         return (
           <button
             key={suggestion.value}

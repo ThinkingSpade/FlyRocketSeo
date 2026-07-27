@@ -150,7 +150,12 @@ export function TrendsPage({
 }) {
   const [input, setInput] = useState(query);
   const [inputTouched, setInputTouched] = useState(false);
-  const prefilledKeywords = parseKeywords(query);
+  // Gates the empty-state message below on what the field actually holds
+  // right now, not on where that value came from: handoff, last-run memory,
+  // and suggestion chips all populate `input` without ever touching `query`,
+  // so deriving this from `query` alone left the tab telling the user to
+  // "enter keywords" while a suggestion sat prefilled in the box.
+  const enteredKeywords = parseKeywords(input);
   const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, parseKeywords(input)),
@@ -334,7 +339,7 @@ export function TrendsPage({
         <div className="card-body p-4">
           {runKeywords == null && !restoredRun ? (
             <div className="px-4 py-12 text-center text-sm text-base-content/60">
-              {prefilledKeywords.length > 0
+              {enteredKeywords.length > 0
                 ? "Keywords are prefilled. Click Compare to fetch paid trend data."
                 : "Enter keywords above to chart their Google Trends interest."}
             </div>
