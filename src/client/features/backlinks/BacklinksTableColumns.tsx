@@ -2,6 +2,7 @@ import type { ColumnDef } from "@tanstack/react-table";
 import { ChevronRight } from "lucide-react";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
+import { backlinksRowNote } from "@/client/features/insights/verdicts/backlinks";
 import { BacklinksSourceLink } from "./BacklinksPageLinks";
 import type { BacklinksRow } from "./backlinksPageTypes";
 import type { BacklinksRowsSortField } from "@/types/schemas/backlinks";
@@ -153,15 +154,21 @@ function buildBaseColumns(
       ),
       size: 220,
       minSize: 150,
-      cell: linkCell((row) => (
-        <div className="break-all">
-          {row.urlTo ? (
-            <BacklinksSourceLink url={row.urlTo} maxLength={40} />
-          ) : (
-            "-"
-          )}
-        </div>
-      )),
+      cell: linkCell((row) => {
+        const rowNote = backlinksRowNote({ isBroken: row.isBroken });
+        return (
+          <div className="break-all">
+            {row.urlTo ? (
+              <BacklinksSourceLink url={row.urlTo} maxLength={40} />
+            ) : (
+              "-"
+            )}
+            {rowNote ? (
+              <div className="text-xs text-base-content/45">{rowNote}</div>
+            ) : null}
+          </div>
+        );
+      }),
     },
     {
       id: "anchor",
