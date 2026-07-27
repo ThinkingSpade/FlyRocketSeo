@@ -5,6 +5,7 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 
 function formatCount(value: number | null): string {
   if (value == null) return "—";
@@ -58,6 +59,12 @@ export function DomainCompetitorsCard({
           <div className="flex justify-center py-4">
             <span className="loading loading-dots loading-sm" />
           </div>
+        ) : competitorsQuery.isError ? (
+          <InlineQueryError
+            message="Competitors could not be loaded."
+            retrying={competitorsQuery.isFetching}
+            onRetry={() => void competitorsQuery.refetch()}
+          />
         ) : rows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="table table-sm">

@@ -6,7 +6,7 @@ import { z } from "zod";
 import { MIN_AUDIT_PAGES, PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { jsonCodec } from "@/shared/json";
 
-export type LighthouseStrategy = "auto" | "manual" | "none";
+export type LighthouseStrategy = "auto" | "none";
 
 export interface AuditConfig {
   maxPages: number;
@@ -14,11 +14,17 @@ export interface AuditConfig {
 }
 
 // Read-side only (writes stringify a typed AuditConfig). Stored rows may hold
-// retired strategies (e.g. "all"); fall back to "auto" instead of failing the
-// whole config parse and making the audit's results unviewable.
+// retired strategies. "manual" never sampled a page, so preserve those old
+// rows as "none"; other unknown values fall back to "auto" instead of failing
+// the whole config parse and making the audit's results unviewable.
 const auditConfigSchema = z.object({
   maxPages: z.number().int().min(MIN_AUDIT_PAGES).max(PAID_MAX_AUDIT_PAGES),
-  lighthouseStrategy: z.enum(["auto", "manual", "none"]).catch("auto"),
+  lighthouseStrategy: z
+    .preprocess(
+      (value) => (value === "manual" ? "none" : value),
+      z.enum(["auto", "none"]),
+    )
+    .catch("auto"),
 });
 
 const auditConfigCodec = jsonCodec(auditConfigSchema);

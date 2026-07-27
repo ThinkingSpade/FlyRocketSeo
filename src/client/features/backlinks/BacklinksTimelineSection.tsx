@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import { getBacklinksTimeline } from "@/serverFunctions/backlinks";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
@@ -76,7 +77,9 @@ export function BacklinksTimelineSection({
     referringDomains: point.referringDomains,
   }));
 
-  if (!timelineQuery.isPending && rows.length < 2) return null;
+  if (!timelineQuery.isPending && !timelineQuery.isError && rows.length < 2) {
+    return null;
+  }
 
   return (
     <section className="rounded-2xl border border-base-300 bg-base-100 p-5">
@@ -92,6 +95,13 @@ export function BacklinksTimelineSection({
         <div className="flex items-center justify-center py-14">
           <span className="loading loading-spinner loading-sm" />
         </div>
+      ) : timelineQuery.isError ? (
+        <InlineQueryError
+          className="mt-3"
+          message="The backlink timeline could not be loaded."
+          retrying={timelineQuery.isFetching}
+          onRetry={() => void timelineQuery.refetch()}
+        />
       ) : (
         <div
           ref={containerRef}

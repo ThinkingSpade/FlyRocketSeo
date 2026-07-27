@@ -10,7 +10,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import { getAuditHistory, getAuditResults } from "@/serverFunctions/audit";
 import { scoreCannibalization } from "@/client/features/link-insights/cannibalizationSeverity";
@@ -100,6 +100,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     (sum, issue) => sum + issue.pageCount,
     0,
   );
+  const opportunitySourcesFailed =
+    reportQuery.isError || linkInsightsQuery.isError;
+  const technicalSourcesFailed = historyQuery.isError || auditQuery.isError;
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -115,36 +118,32 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
         </p>
       </div>
 
-      {reportQuery.isError ? (
-        <div className="alert alert-error text-sm">
-          {getStandardErrorMessage(reportQuery.error)}
-        </div>
-      ) : null}
-
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <InsightTile
           icon={Lightbulb}
           label="Opportunities"
-          value={opportunities.length}
+          value={opportunitySourcesFailed ? "—" : opportunities.length}
           tone="primary"
         />
         <InsightTile
           icon={ArrowUpRight}
           label="Clicks at stake"
-          value={totalClicksAtStake.toLocaleString()}
+          value={
+            opportunitySourcesFailed ? "—" : totalClicksAtStake.toLocaleString()
+          }
           hint="Estimated monthly, if all are fixed"
           tone="success"
         />
         <InsightTile
           icon={Wrench}
           label="Technical issues"
-          value={technicalIssues.length}
+          value={technicalSourcesFailed ? "—" : technicalIssues.length}
           tone={technicalIssues.length > 0 ? "warning" : "neutral"}
         />
         <InsightTile
           icon={ClipboardCheck}
           label="Pages affected"
-          value={affectedPages.toLocaleString()}
+          value={technicalSourcesFailed ? "—" : affectedPages.toLocaleString()}
           hint="Across the last audit"
         />
       </div>
@@ -160,7 +159,24 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             earn, so the highest-value work sits at the top.
           </p>
 
-          {reportQuery.isPending ? (
+          {reportQuery.isError || linkInsightsQuery.isError ? (
+            <div className="space-y-2">
+              {reportQuery.isError ? (
+                <InlineQueryError
+                  message="Search Console opportunities could not be loaded."
+                  retrying={reportQuery.isFetching}
+                  onRetry={() => void reportQuery.refetch()}
+                />
+              ) : null}
+              {linkInsightsQuery.isError ? (
+                <InlineQueryError
+                  message="Link and cannibalization insights could not be loaded."
+                  retrying={linkInsightsQuery.isFetching}
+                  onRetry={() => void linkInsightsQuery.refetch()}
+                />
+              ) : null}
+            </div>
+          ) : reportQuery.isPending || linkInsightsQuery.isPending ? (
             <div className="flex items-center justify-center py-10">
               <span className="loading loading-spinner loading-md" />
             </div>
@@ -235,7 +251,24 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             </Link>
           </div>
 
-          {historyQuery.isPending || auditQuery.isPending ? (
+          {historyQuery.isError || auditQuery.isError ? (
+            <div className="space-y-2">
+              {historyQuery.isError ? (
+                <InlineQueryError
+                  message="Site audit history could not be loaded."
+                  retrying={historyQuery.isFetching}
+                  onRetry={() => void historyQuery.refetch()}
+                />
+              ) : null}
+              {auditQuery.isError ? (
+                <InlineQueryError
+                  message="The latest site audit results could not be loaded."
+                  retrying={auditQuery.isFetching}
+                  onRetry={() => void auditQuery.refetch()}
+                />
+              ) : null}
+            </div>
+          ) : historyQuery.isPending || auditQuery.isPending ? (
             <div className="flex items-center justify-center py-10">
               <span className="loading loading-spinner loading-md" />
             </div>

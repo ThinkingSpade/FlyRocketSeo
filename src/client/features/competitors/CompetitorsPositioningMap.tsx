@@ -12,6 +12,7 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
@@ -74,7 +75,12 @@ export function CompetitorsPositioningMap({
   target: string;
   rows: CompetitorRow[];
 }) {
-  const { restored: targetRun } = useAutoRestoredRun({
+  const {
+    restored: targetRun,
+    isError: targetRunFailed,
+    retry: retryTargetRun,
+    isRetrying: targetRunRetrying,
+  } = useAutoRestoredRun({
     projectId,
     feature: RUN_FEATURES.domainOverview,
     schema: domainOverviewResultSchema,
@@ -119,6 +125,15 @@ export function CompetitorsPositioningMap({
 
   const { containerRef, width: chartWidth } = useChartWidth();
   const height = 260;
+  if (targetRunFailed) {
+    return (
+      <InlineQueryError
+        message="The positioning map could not restore the domain overview."
+        retrying={targetRunRetrying}
+        onRetry={retryTargetRun}
+      />
+    );
+  }
   if (bubbles.length < 2) return null;
 
   return (

@@ -71,13 +71,13 @@ app already populates, so the suggestion layer adds zero network requests and is
 structurally incapable of triggering a metered call — the same guarantee
 `useAutoRestoredRun` documents.
 
-| Source | Query key | Provides |
-| --- | --- | --- |
-| `getSearchPerformanceReport` | `["searchPerformance", id, "overview", "last_28_days"]` | `queryTotals`, `pageTotals`, `strikingDistance`, `ctrOpportunities` |
-| `getSavedKeywords` | `["savedKeywords", id, ...]` | user's own list with volumes |
-| `getProjects` | `["projects"]` | domain, `locationCode`, `languageCode` |
-| `getAuditHistory` / `getAuditResults` | `["auditHistory", id]` | crawled pages, issue counts |
-| `restoreLatestRun` | `["analysisRun", "latest", id, feature]` | last-run memory, R2-backed |
+| Source                                | Query key                                               | Provides                                                                                                              |
+| ------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| `getSearchPerformanceReport`          | `["searchPerformance", id, "overview", "last_28_days"]` | `connected`, `totals`, `prevTotals`, `queryTotals`, `queryPages`, `strikingDistance`, `ctrOpportunities`, `countries` |
+| `getSavedKeywords`                    | `["savedKeywords", id, ...]`                            | user's own list with volumes                                                                                          |
+| `getProjects`                         | `["projects"]`                                          | domain, `locationCode`, `languageCode`                                                                                |
+| `getAuditHistory` / `getAuditResults` | `["auditHistory", id]`                                  | crawled pages, issue counts                                                                                           |
+| `restoreLatestRun`                    | `["analysisRun", "latest", id, feature]`                | last-run memory, R2-backed                                                                                            |
 
 Adding a sixth source to this list is a design change, not an implementation
 detail. The contract is what keeps the layer free.
@@ -86,13 +86,13 @@ detail. The contract is what keeps the layer free.
 
 Five intents, each a pure ranking function over the free data:
 
-| Intent | Ranks by | Feeds |
-| --- | --- | --- |
-| `striking-distance` | position 4–20, descending impressions | SERP Overview, Rank Tracking |
-| `under-clicked` | high impressions, CTR below the curve for that position | Content Optimizer, On-Page Fixes |
-| `high-volume` | descending search volume (saved) or impressions (GSC) | Keyword Research, Keyword Trends |
-| `topic-gap` | queries with impressions but no owning page | Topic Clusters |
-| `own-pages` | descending clicks; page URLs rather than keywords | Page Explorer |
+| Intent              | Ranks by                                                | Feeds                            |
+| ------------------- | ------------------------------------------------------- | -------------------------------- |
+| `striking-distance` | position 4–20, descending impressions                   | SERP Overview, Rank Tracking     |
+| `under-clicked`     | high impressions, CTR below the curve for that position | Content Optimizer, On-Page Fixes |
+| `high-volume`       | descending search volume (saved) or impressions (GSC)   | Keyword Research, Keyword Trends |
+| `topic-gap`         | queries with impressions but no owning page             | Topic Clusters                   |
+| `own-pages`         | descending clicks; page URLs rather than keywords       | Page Explorer                    |
 
 The "feeds" column names every eventual consumer, so the intent set is designed
 once rather than grown ad hoc. Wave 1 wires only the wave-1 tabs; Rank Tracking,
@@ -127,7 +127,7 @@ prefill, grep the subtree for `useQuery` and confirm nothing self-fetches.
 stores `{ kind: "keyword" | "domain" | "url", value, locationCode, source, at }`,
 with a 30-minute TTL so a stale keyword does not haunt the next session.
 
-All nine wave-1 tabs write to it on a *successful* run — never on a failed or
+All nine wave-1 tabs write to it on a _successful_ run — never on a failed or
 cancelled one — recording the input they just ran and the tab that ran it
 (`source`). A reading tab consumes an entry only when `kind` matches the field it
 is filling: a stored domain never lands in a keyword box. A mismatch is not an
@@ -175,25 +175,25 @@ Three discipline rules, inherited from `reportNarrative.ts`:
    invention.
 2. Thresholds are named constants with comments, never magic numbers inline.
 3. When there is not enough data, return `tone: "unknown"` with an honest read —
-   *"Only 3 queries have impressions; there isn't enough traffic yet to call
-   this."* Never fabricate advice to fill the card.
+   _"Only 3 queries have impressions; there isn't enough traffic yet to call
+   this."_ Never fabricate advice to fill the card.
 
 Representative output:
 
-- **SERP Overview** — *"Top 10 averages DR 58; your domain is DR 12. This keyword
-  is out of reach directly."* Action: target a long-tail variant drawn from the
+- **SERP Overview** — _"Top 10 averages DR 58; your domain is DR 12. This keyword
+  is out of reach directly."_ Action: target a long-tail variant drawn from the
   People Also Ask block, noting that 3 of the top 10 are forum posts.
-- **Backlinks** — *"41 backlinks point at URLs that no longer resolve."* Action:
+- **Backlinks** — _"41 backlinks point at URLs that no longer resolve."_ Action:
   redirect those targets; highest weight, because it is free.
-- **Site Audit** — *"18 of 47 pages are missing meta descriptions, 6 of them in
-  your top 10 by clicks."* Action links into On-Page Fixes filtered to those 6.
-- **Competitors** — *"3 competitors rank for 200+ keywords you don't."* Action
+- **Site Audit** — _"18 of 47 pages are missing meta descriptions, 6 of them in
+  your top 10 by clicks."_ Action links into On-Page Fixes filtered to those 6.
+- **Competitors** — _"3 competitors rank for 200+ keywords you don't."_ Action
   names the specific keyword to start with and why.
 
 ### Inline row-level annotations
 
 The same model at row granularity: a `rowNote(row) => string | null` per table.
-SERP rows get *"needs DR 45+"*; audit issues get the literal fix; keyword rows
+SERP rows get _"needs DR 45+"_; audit issues get the literal fix; keyword rows
 get why they are reachable. Rendered as muted text under the cell, with no chips,
 per the project's icon rule.
 
@@ -243,17 +243,17 @@ not depend on it.
 
 ## Wave 1 scope — nine tabs
 
-| Tab | Autofill | Verdict says | Inline notes |
-| --- | --- | --- | --- |
-| SERP Overview | `striking-distance`, handoff, project location | Whether the keyword is winnable given the DR spread | "needs DR 45+" per row |
-| Content Optimizer | `under-clicked` | Which existing page to fix first, and why | — |
-| Keyword Research | `high-volume`, last-run | Which of these are actually winnable | reachability per row |
-| Keyword Trends | `high-volume`, project location | Seasonality — when to publish | peak month per series |
-| Topic Clusters | `topic-gap` | The gap worth building a hub around | — |
-| Domain Overview | project domain, location | Where traffic concentrates and what is at risk | — |
-| Backlinks | project domain, last-run | Broken links to recover, spam risk | recoverable flag per row |
-| Competitors | project domain, competitor autofill | Which competitor to actually chase | keyword-overlap note per row |
-| Site Audit | project domain | Which issues touch the highest-traffic pages | literal fix per issue |
+| Tab               | Autofill                                       | Verdict says                                        | Inline notes                 |
+| ----------------- | ---------------------------------------------- | --------------------------------------------------- | ---------------------------- |
+| SERP Overview     | `striking-distance`, handoff, project location | Whether the keyword is winnable given the DR spread | "needs DR 45+" per row       |
+| Content Optimizer | `under-clicked`                                | Which existing page to fix first, and why           | —                            |
+| Keyword Research  | `high-volume`, last-run                        | Which of these are actually winnable                | reachability per row         |
+| Keyword Trends    | `high-volume`, project location                | Seasonality — when to publish                       | peak month per series        |
+| Topic Clusters    | `topic-gap`                                    | The gap worth building a hub around                 | —                            |
+| Domain Overview   | project domain, location                       | Where traffic concentrates and what is at risk      | —                            |
+| Backlinks         | project domain, last-run                       | Broken links to recover, spam risk                  | recoverable flag per row     |
+| Competitors       | project domain, competitor autofill            | Which competitor to actually chase                  | keyword-overlap note per row |
+| Site Audit        | project domain                                 | Which issues touch the highest-traffic pages        | literal fix per issue        |
 
 Shared plumbing: `mapProject` gains `locationCode` and `languageCode`; the
 hardcoded `2840` in `AnalyzeProjectCard`, SERP Overview and Keyword Trends is

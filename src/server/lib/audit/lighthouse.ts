@@ -127,11 +127,6 @@ export function selectLighthouseSample(
     (p) => p.statusCode >= 200 && p.statusCode < 300,
   );
 
-  if (strategy === "manual") {
-    // manual = user picks after crawl; for now return empty
-    return [];
-  }
-
   // strategy === "auto": homepage + 1 per URL pattern, capped at 10
   const selected = new Set<string>();
 

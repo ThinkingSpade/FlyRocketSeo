@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Vitest only collects `src/**/*.test.ts`** — note the `.ts`, not `.tsx` — and runs in `environment: "node"`. Pure model files get unit tests; React components get none. Do not add jsdom or change `vitest.config.ts`.
+- **Vitest only collects `src/**/\*.test.ts`** — note the `.ts`, not `.tsx`— and runs in`environment: "node"`. Pure model files get unit tests; React components get none. Do not add jsdom or change `vitest.config.ts`.
 - **`pnpm ci:check` runs `prettier --check . && knip && tsc --noEmit && oxlint . --type-aware`.** All four must pass.
 - **knip fails the build on unused exports.** Export a symbol only when another module imports it. Keep helpers module-private until a consumer exists.
 - **No automatic spend.** Prefilling a field must never start a fetch. Before wiring prefill into a tab, grep that tab's subtree for `useQuery` and confirm nothing self-fetches off a non-empty target.
@@ -27,46 +27,46 @@
 
 **Created:**
 
-| File | Responsibility |
-| --- | --- |
-| `src/client/features/insights/types.ts` | Shared types: `SeedSuggestion`, `SuggestionIntent`, `Verdict`, `Action`, `FreeSignals` |
-| `src/client/features/insights/suggestionModel.ts` | Pure: `(FreeSignals, SuggestionIntent) => SeedSuggestion[]` |
-| `src/client/features/insights/suggestionModel.test.ts` | Unit tests for all five intents |
-| `src/client/features/insights/handoffStore.ts` | sessionStorage cross-tab carry, `useSyncExternalStore` |
-| `src/client/features/insights/handoffStore.test.ts` | TTL, project scoping, corrupt storage |
-| `src/client/features/insights/resolvePrefill.ts` | Pure: six-level precedence chain |
-| `src/client/features/insights/resolvePrefill.test.ts` | Precedence with sources present/absent |
-| `src/client/features/insights/useProjectSuggestions.ts` | Hook: assembles free signals, calls the model |
-| `src/client/features/insights/SuggestionChips.tsx` | UI: chips with justifying numbers |
-| `src/client/features/insights/NextStepsCard.tsx` | UI: verdict line + ranked actions |
-| `src/client/features/insights/verdicts/serp.ts` | SERP verdict + row notes |
-| `src/client/features/insights/verdicts/serp.test.ts` | |
-| `src/client/features/insights/verdicts/backlinks.ts` | Backlinks verdict + row notes |
-| `src/client/features/insights/verdicts/backlinks.test.ts` | |
-| `src/client/features/insights/verdicts/audit.ts` | Site Audit verdict + row notes |
-| `src/client/features/insights/verdicts/audit.test.ts` | |
-| `src/client/features/insights/verdicts/competitors.ts` | Competitors verdict + row notes |
-| `src/client/features/insights/verdicts/competitors.test.ts` | |
-| `src/client/features/insights/verdicts/keywords.ts` | Keyword Research + Trends verdicts |
-| `src/client/features/insights/verdicts/keywords.test.ts` | |
-| `src/client/features/insights/verdicts/content.ts` | Content Optimizer + Topic Clusters verdicts |
-| `src/client/features/insights/verdicts/content.test.ts` | |
-| `src/client/features/insights/verdicts/domain.ts` | Domain Overview verdict |
-| `src/client/features/insights/verdicts/domain.test.ts` | |
-| `src/client/features/insights/ExplainButton.tsx` | Opt-in AI button |
-| `src/server/features/insights/services/ExplainService.ts` | OpenRouter call, key gating |
-| `src/serverFunctions/insights.ts` | `explainFindings` server function |
+| File                                                        | Responsibility                                                                         |
+| ----------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `src/client/features/insights/types.ts`                     | Shared types: `SeedSuggestion`, `SuggestionIntent`, `Verdict`, `Action`, `FreeSignals` |
+| `src/client/features/insights/suggestionModel.ts`           | Pure: `(FreeSignals, SuggestionIntent) => SeedSuggestion[]`                            |
+| `src/client/features/insights/suggestionModel.test.ts`      | Unit tests for all five intents                                                        |
+| `src/client/features/insights/handoffStore.ts`              | sessionStorage cross-tab carry, `useSyncExternalStore`                                 |
+| `src/client/features/insights/handoffStore.test.ts`         | TTL, project scoping, corrupt storage                                                  |
+| `src/client/features/insights/resolvePrefill.ts`            | Pure: six-level precedence chain                                                       |
+| `src/client/features/insights/resolvePrefill.test.ts`       | Precedence with sources present/absent                                                 |
+| `src/client/features/insights/useProjectSuggestions.ts`     | Hook: assembles free signals, calls the model                                          |
+| `src/client/features/insights/SuggestionChips.tsx`          | UI: chips with justifying numbers                                                      |
+| `src/client/features/insights/NextStepsCard.tsx`            | UI: verdict line + ranked actions                                                      |
+| `src/client/features/insights/verdicts/serp.ts`             | SERP verdict + row notes                                                               |
+| `src/client/features/insights/verdicts/serp.test.ts`        |                                                                                        |
+| `src/client/features/insights/verdicts/backlinks.ts`        | Backlinks verdict + row notes                                                          |
+| `src/client/features/insights/verdicts/backlinks.test.ts`   |                                                                                        |
+| `src/client/features/insights/verdicts/audit.ts`            | Site Audit verdict + row notes                                                         |
+| `src/client/features/insights/verdicts/audit.test.ts`       |                                                                                        |
+| `src/client/features/insights/verdicts/competitors.ts`      | Competitors verdict + row notes                                                        |
+| `src/client/features/insights/verdicts/competitors.test.ts` |                                                                                        |
+| `src/client/features/insights/verdicts/keywords.ts`         | Keyword Research + Trends verdicts                                                     |
+| `src/client/features/insights/verdicts/keywords.test.ts`    |                                                                                        |
+| `src/client/features/insights/verdicts/content.ts`          | Content Optimizer + Topic Clusters verdicts                                            |
+| `src/client/features/insights/verdicts/content.test.ts`     |                                                                                        |
+| `src/client/features/insights/verdicts/domain.ts`           | Domain Overview verdict                                                                |
+| `src/client/features/insights/verdicts/domain.test.ts`      |                                                                                        |
+| `src/client/features/insights/ExplainButton.tsx`            | Opt-in AI button                                                                       |
+| `src/server/features/insights/services/ExplainService.ts`   | OpenRouter call, key gating                                                            |
+| `src/serverFunctions/insights.ts`                           | `explainFindings` server function                                                      |
 
 **Modified:**
 
-| File | Change |
-| --- | --- |
-| `src/server/features/projects/services/projects.ts` | `mapProject` returns `locationCode`, `languageCode` |
-| `src/serverFunctions/config.ts` | `getClientRuntimeConfig` gains `aiExplainAvailable` |
-| `src/client/hooks/useProjectDomain.ts` | Add `useProjectMarket` |
-| `src/client/features/dashboard/AnalyzeProjectCard.tsx` | Use project market, not `2840` |
-| `src/client/features/dashboard/SeedKeywordField.tsx` | Re-export from `SuggestionChips`, drop duplication |
-| Nine tab pages | Wire prefill + `NextStepsCard` (one task each) |
+| File                                                   | Change                                              |
+| ------------------------------------------------------ | --------------------------------------------------- |
+| `src/server/features/projects/services/projects.ts`    | `mapProject` returns `locationCode`, `languageCode` |
+| `src/serverFunctions/config.ts`                        | `getClientRuntimeConfig` gains `aiExplainAvailable` |
+| `src/client/hooks/useProjectDomain.ts`                 | Add `useProjectMarket`                              |
+| `src/client/features/dashboard/AnalyzeProjectCard.tsx` | Use project market, not `2840`                      |
+| `src/client/features/dashboard/SeedKeywordField.tsx`   | Re-export from `SuggestionChips`, drop duplication  |
+| Nine tab pages                                         | Wire prefill + `NextStepsCard` (one task each)      |
 
 ---
 
@@ -75,11 +75,13 @@
 ### Task 1: Expose the project's market
 
 **Files:**
+
 - Modify: `src/server/features/projects/services/projects.ts:10-22`
 - Modify: `src/server/features/projects/repositories/ProjectRepository.ts` (only if its select list is explicit)
 - Test: `src/server/features/projects/services/projects.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `mapProject` output gains `locationCode: number` and `languageCode: string`. Every consumer of `getProjects()` can read them.
 
@@ -166,10 +168,12 @@ US/2840. Nothing could prefill the market the user actually chose."
 ### Task 2: Read the project's market in the client
 
 **Files:**
+
 - Modify: `src/client/hooks/useProjectDomain.ts`
 - Modify: `src/client/features/dashboard/AnalyzeProjectCard.tsx:49,169`
 
 **Interfaces:**
+
 - Consumes: `mapProject` output from Task 1.
 - Produces: `useProjectMarket(projectId): { locationCode: number; languageCode: string }`. Falls back to `{ locationCode: 2840, languageCode: "en" }` while `["projects"]` is still loading.
 
@@ -297,9 +301,11 @@ onboarded for the UK ran every analysis against US data."
 ### Task 3: Shared types
 
 **Files:**
+
 - Create: `src/client/features/insights/types.ts`
 
 **Interfaces:**
+
 - Produces: `SeedSuggestion`, `SuggestionIntent`, `FreeSignals`, `Verdict`, `VerdictTone`, `Action`. Every later task imports from here.
 
 - [ ] **Step 1: Write the file**
@@ -419,10 +425,12 @@ git commit -m "Add shared types for the insights layer"
 ### Task 4: The suggestion model
 
 **Files:**
+
 - Create: `src/client/features/insights/suggestionModel.ts`
 - Test: `src/client/features/insights/suggestionModel.test.ts`
 
 **Interfaces:**
+
 - Consumes: `FreeSignals`, `SeedSuggestion`, `SuggestionIntent` from `./types`.
 - Produces: `buildSuggestions(signals: FreeSignals, intent: SuggestionIntent, limit?: number): SeedSuggestion[]` and `compactNumber(value: number): string`.
 
@@ -462,9 +470,27 @@ describe("buildSuggestions", () => {
         ...EMPTY,
         strikingDistance: [
           { query: "top", page: "/a", clicks: 0, impressions: 50, position: 2 },
-          { query: "mid", page: "/b", clicks: 0, impressions: 900, position: 7 },
-          { query: "far", page: "/c", clicks: 0, impressions: 80, position: 40 },
-          { query: "low", page: "/d", clicks: 0, impressions: 120, position: 12 },
+          {
+            query: "mid",
+            page: "/b",
+            clicks: 0,
+            impressions: 900,
+            position: 7,
+          },
+          {
+            query: "far",
+            page: "/c",
+            clicks: 0,
+            impressions: 80,
+            position: 40,
+          },
+          {
+            query: "low",
+            page: "/d",
+            clicks: 0,
+            impressions: 120,
+            position: 12,
+          },
         ],
       };
 
@@ -783,10 +809,12 @@ a content rewrite. Pure and free by construction."
 ### Task 5: The cross-tab handoff store
 
 **Files:**
+
 - Create: `src/client/features/insights/handoffStore.ts`
 - Test: `src/client/features/insights/handoffStore.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `writeHandoff(projectId, entry)`, `readHandoff(projectId, now?)`, `useHandoff(projectId)`, and type `HandoffEntry = { kind: "keyword" | "domain" | "url"; value: string; locationCode?: number; source: string; at: number }`.
 
@@ -1049,10 +1077,12 @@ arrive, but yesterday's search never reappears as a considered default."
 ### Task 6: The prefill precedence resolver
 
 **Files:**
+
 - Create: `src/client/features/insights/resolvePrefill.ts`
 - Test: `src/client/features/insights/resolvePrefill.test.ts`
 
 **Interfaces:**
+
 - Consumes: `HandoffEntry` from `./handoffStore`, `SeedSuggestion` from `./types`.
 - Produces: `resolvePrefill(input): { value: string; source: PrefillSource }` where `PrefillSource = "search-param" | "handoff" | "last-run" | "suggestion" | "project" | "none"`.
 
@@ -1249,10 +1279,12 @@ through rather than dropping a domain into a keyword box."
 ### Task 7: The free-signals hook and last-run memory
 
 **Files:**
+
 - Create: `src/client/features/insights/useProjectSuggestions.ts`
 - Create: `src/client/features/insights/useLastRunInput.ts`
 
 **Interfaces:**
+
 - Consumes: `buildSuggestions` from `./suggestionModel`, `FreeSignals`/`SeedSuggestion`/`SuggestionIntent` from `./types`.
 - Produces: `useProjectSuggestions(projectId: string, intent: SuggestionIntent, limit?: number): SeedSuggestion[]` and `useLastRunInput(projectId: string, feature: string, extract: (result: unknown) => string | null): string | null`.
 
@@ -1410,10 +1442,12 @@ zero extra requests and neither can reach a metered provider."
 ### Task 8: The suggestion chips component
 
 **Files:**
+
 - Create: `src/client/features/insights/SuggestionChips.tsx`
 - Modify: `src/client/features/dashboard/SeedKeywordField.tsx`
 
 **Interfaces:**
+
 - Consumes: `SeedSuggestion` from `./types`.
 - Produces: `<SuggestionChips suggestions value onSelect disabled? />`.
 
@@ -1526,9 +1560,11 @@ Confirm every hook found is either explicitly `enabled`-gated on a user action, 
 ### Task 9: SERP Overview autofill
 
 **Files:**
+
 - Modify: `src/client/features/serp/SerpOverviewPage.tsx:75-76`
 
 **Interfaces:**
+
 - Consumes: `useProjectSuggestions`, `resolvePrefill`, `useHandoff`, `writeHandoff`, `useProjectMarket`, `SuggestionChips`.
 - Produces: nothing for later tasks.
 
@@ -1548,12 +1584,15 @@ const market = useProjectMarket(projectId);
 
 // This page already imports RUN_FEATURES for its RecentRunsList; reuse the
 // same feature key so both read one cache entry.
-const lastRun = useLastRunInput(projectId, RUN_FEATURES.serpOverview, (result) =>
-  typeof result === "object" &&
-  result !== null &&
-  typeof (result as { keyword?: unknown }).keyword === "string"
-    ? (result as { keyword: string }).keyword
-    : null,
+const lastRun = useLastRunInput(
+  projectId,
+  RUN_FEATURES.serpOverview,
+  (result) =>
+    typeof result === "object" &&
+    result !== null &&
+    typeof (result as { keyword?: unknown }).keyword === "string"
+      ? (result as { keyword: string }).keyword
+      : null,
 );
 
 // The URL param wins, then a keyword carried from another tab, then what this
@@ -1689,11 +1728,11 @@ git commit -m "Prefill Content Optimizer from under-clicked pages"
 
 Three tabs, same shape, one commit each.
 
-| Tab | File | Intent | Handoff source |
-| --- | --- | --- | --- |
+| Tab              | File                                                        | Intent        | Handoff source       |
+| ---------------- | ----------------------------------------------------------- | ------------- | -------------------- |
 | Keyword Research | `src/client/features/keywords/page/KeywordResearchPage.tsx` | `high-volume` | `"Keyword Research"` |
-| Keyword Trends | `src/client/features/trends/TrendsPage.tsx` | `high-volume` | `"Keyword Trends"` |
-| Topic Clusters | `src/client/features/topic-clusters/TopicClustersPage.tsx` | `topic-gap` | `"Topic Clusters"` |
+| Keyword Trends   | `src/client/features/trends/TrendsPage.tsx`                 | `high-volume` | `"Keyword Trends"`   |
+| Topic Clusters   | `src/client/features/topic-clusters/TopicClustersPage.tsx`  | `topic-gap`   | `"Topic Clusters"`   |
 
 - [ ] **Step 1: No-auto-spend check for all three**
 
@@ -1713,11 +1752,11 @@ Run: `pnpm vitest run && pnpm tsc --noEmit`
 
 These three already receive `projectDomain` via `AnalyzeDomainPrompt`, so the work is to route them through `resolvePrefill` so a handoff or last run can override, and to default their location selects to the project market.
 
-| Tab | File | Kind | Handoff source |
-| --- | --- | --- | --- |
-| Domain Overview | `src/client/features/domain/DomainOverviewPage.tsx` | `domain` | `"Domain Overview"` |
-| Backlinks | `src/client/features/backlinks/BacklinksPage.tsx` | `domain` | `"Backlinks"` |
-| Competitors | `src/client/features/competitors/CompetitorsPage.tsx` | `domain` | `"Competitors"` |
+| Tab             | File                                                  | Kind     | Handoff source      |
+| --------------- | ----------------------------------------------------- | -------- | ------------------- |
+| Domain Overview | `src/client/features/domain/DomainOverviewPage.tsx`   | `domain` | `"Domain Overview"` |
+| Backlinks       | `src/client/features/backlinks/BacklinksPage.tsx`     | `domain` | `"Backlinks"`       |
+| Competitors     | `src/client/features/competitors/CompetitorsPage.tsx` | `domain` | `"Competitors"`     |
 
 - [ ] **Step 1: No-auto-spend check**
 
@@ -1742,6 +1781,7 @@ Run between each: `pnpm tsc --noEmit && pnpm lint`
 ### Task 13: Site Audit autofill
 
 **Files:**
+
 - Modify: `src/client/features/audit/launch/LaunchFormCard.tsx`, `src/client/features/audit/launch/useLaunchController.ts`
 
 - [ ] **Step 1: No-auto-spend check**
@@ -1768,9 +1808,11 @@ git commit -m "Prefill the site audit start URL from the project domain"
 ### Task 14: NextStepsCard
 
 **Files:**
+
 - Create: `src/client/features/insights/NextStepsCard.tsx`
 
 **Interfaces:**
+
 - Consumes: `Verdict` from `./types`.
 - Produces: `<NextStepsCard verdict projectId />`.
 
@@ -1778,7 +1820,12 @@ git commit -m "Prefill the site audit start URL from the project domain"
 
 ```tsx
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, CircleCheck, CircleHelp, TriangleAlert } from "lucide-react";
+import {
+  ArrowRight,
+  CircleCheck,
+  CircleHelp,
+  TriangleAlert,
+} from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import type { Verdict, VerdictTone } from "./types";
 
@@ -1797,7 +1844,10 @@ const TONE_ICON = {
   unknown: CircleHelp,
 } as const;
 
-const TONE_STYLE: Record<VerdictTone, "success" | "warning" | "error" | "neutral"> = {
+const TONE_STYLE: Record<
+  VerdictTone,
+  "success" | "warning" | "error" | "neutral"
+> = {
   good: "success",
   mixed: "warning",
   bad: "error",
@@ -1825,7 +1875,10 @@ export function NextStepsCard({ verdict }: { verdict: Verdict }) {
                 <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-base-content/45" />
                 <div className="min-w-0">
                   {action.to ? (
-                    <Link {...action.to} className="font-medium hover:underline">
+                    <Link
+                      {...action.to}
+                      className="font-medium hover:underline"
+                    >
                       {action.label}
                     </Link>
                   ) : (
@@ -1862,10 +1915,12 @@ git commit -m "Add the verdict and next-steps card"
 ### Task 15: SERP verdict
 
 **Files:**
+
 - Create: `src/client/features/insights/verdicts/serp.ts`
 - Test: `src/client/features/insights/verdicts/serp.test.ts`
 
 **Interfaces:**
+
 - Consumes: `Verdict`, `unknownVerdict` from `../types`.
 - Produces: `buildSerpVerdict(input): Verdict` and `serpRowNote(row, input): string | null`.
 
@@ -1921,13 +1976,15 @@ describe("buildSerpVerdict", () => {
 
 describe("serpRowNote", () => {
   it("states the gap for a result stronger than the site", () => {
-    expect(
-      serpRowNote({ domainRating: 45 }, { ownDomainRating: 12 }),
-    ).toBe("needs DR 45+");
+    expect(serpRowNote({ domainRating: 45 }, { ownDomainRating: 12 })).toBe(
+      "needs DR 45+",
+    );
   });
 
   it("says nothing for a result the site already outranks on authority", () => {
-    expect(serpRowNote({ domainRating: 8 }, { ownDomainRating: 12 })).toBeNull();
+    expect(
+      serpRowNote({ domainRating: 8 }, { ownDomainRating: 12 }),
+    ).toBeNull();
   });
 
   it("says nothing when either rating is missing", () => {
@@ -2083,17 +2140,19 @@ Add `const projectDomain = useProjectDomain(projectId);` if the page does not al
 In `SerpResultsTable`, render the row note under the URL line:
 
 ```tsx
-{serpRowNote(
-  { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
-  { ownDomainRating },
-) ? (
-  <div className="text-xs text-base-content/45">
-    {serpRowNote(
-      { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
-      { ownDomainRating },
-    )}
-  </div>
-) : null}
+{
+  serpRowNote(
+    { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
+    { ownDomainRating },
+  ) ? (
+    <div className="text-xs text-base-content/45">
+      {serpRowNote(
+        { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
+        { ownDomainRating },
+      )}
+    </div>
+  ) : null;
+}
 ```
 
 Thread `ownDomainRating` into `SerpResultsTable` as a prop. Compute the note once into a variable rather than calling it twice — the double call above is written out only to show both branches.
@@ -2210,14 +2269,14 @@ export function buildClustersVerdict(input: {
 
 **Verdict content per module:**
 
-| Module | Verdict answers | Row note |
-| --- | --- | --- |
-| `verdicts/backlinks.ts` | Broken links to recover, spam risk level | `"recoverable"` on rows whose target 404s |
-| `verdicts/audit.ts` | Which issues touch the highest-traffic pages | the literal fix for the issue type |
-| `verdicts/competitors.ts` | Which competitor to chase, and the first keyword | keyword-overlap count per row |
-| `verdicts/domain.ts` | Where traffic concentrates, what is at risk | none |
-| `verdicts/keywords.ts` | Which of these are winnable; when to publish (Trends) | reachability per keyword row |
-| `verdicts/content.ts` | Which page to fix first; the gap worth a hub (Clusters) | none |
+| Module                    | Verdict answers                                         | Row note                                  |
+| ------------------------- | ------------------------------------------------------- | ----------------------------------------- |
+| `verdicts/backlinks.ts`   | Broken links to recover, spam risk level                | `"recoverable"` on rows whose target 404s |
+| `verdicts/audit.ts`       | Which issues touch the highest-traffic pages            | the literal fix for the issue type        |
+| `verdicts/competitors.ts` | Which competitor to chase, and the first keyword        | keyword-overlap count per row             |
+| `verdicts/domain.ts`      | Where traffic concentrates, what is at risk             | none                                      |
+| `verdicts/keywords.ts`    | Which of these are winnable; when to publish (Trends)   | reachability per keyword row              |
+| `verdicts/content.ts`     | Which page to fix first; the gap worth a hub (Clusters) | none                                      |
 
 **Before implementing each module, read the tab's actual result type** and adjust the input shape above to match what the page really holds. The signatures name the fields the verdict needs; the tab is the authority on what those fields are called. If a field genuinely is not available, drop it from the input and weaken the verdict rather than inventing a source for it.
 
@@ -2246,11 +2305,13 @@ Run: `pnpm tsc --noEmit && pnpm lint && pnpm vitest run`
 ### Task 17: The explain service and server function
 
 **Files:**
+
 - Create: `src/server/features/insights/services/ExplainService.ts`
 - Create: `src/serverFunctions/insights.ts`
 - Modify: `src/serverFunctions/config.ts:6-10`
 
 **Interfaces:**
+
 - Consumes: `Verdict` shape (structurally — the server validates it with zod rather than importing client types).
 - Produces: `explainFindings` server function; `getClientRuntimeConfig` gains `aiExplainAvailable: boolean`.
 
@@ -2379,6 +2440,7 @@ provider payload, so there are no other figures available to invent."
 ### Task 18: The explain button
 
 **Files:**
+
 - Create: `src/client/features/insights/ExplainButton.tsx`
 - Modify: `src/client/features/insights/NextStepsCard.tsx`
 

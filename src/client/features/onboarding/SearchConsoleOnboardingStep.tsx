@@ -47,8 +47,9 @@ export function SearchConsoleOnboardingStep() {
       )}
 
       <p className="text-xs leading-relaxed text-base-content/55">
-        For now, Search Console data flows through the FlyRocketSEO MCP. We're
-        building it into the FlyRocketSEO app soon too.
+        Connect a verified property here, then open the project&apos;s GSC
+        Insights tab for free performance data, queries, pages, and
+        opportunities.
       </p>
     </div>
   );
