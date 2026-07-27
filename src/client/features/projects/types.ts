@@ -5,6 +5,8 @@ export type ProjectSummary = {
   id: string;
   name: string;
   domain: string | null;
+  locationCode: number;
+  languageCode: string;
   createdAt: string;
 };
 
