@@ -81,6 +81,48 @@ function extractStoredKeyword(result: unknown): string | null {
   return typeof result.keyword === "string" ? result.keyword : null;
 }
 
+/**
+ * The submit button, paired with an invisible copy of the "Keyword"/
+ * "Location" label row above it. The form aligns its columns with
+ * `items-start` so the keyword column's chips (rendered after the input)
+ * can never drag the other columns down -- but that only works if every
+ * column starts with the same label-row height. This column has no real
+ * label, so the phantom one here lands the button's own control at the
+ * input's y-offset instead of flush with the "Keyword"/"Location" text.
+ * `hidden`/`sm:block` keeps it out of the stacked mobile layout, where
+ * nothing pushes the button down and this spacer would only add dead space.
+ */
+function AnalyzeButton({
+  disabled,
+  isFetching,
+}: {
+  disabled: boolean;
+  isFetching: boolean;
+}) {
+  return (
+    <div className="form-control">
+      <span
+        aria-hidden="true"
+        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+      >
+        Analyze
+      </span>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm gap-1.5"
+        disabled={disabled}
+      >
+        {isFetching ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <Search className="size-3.5" />
+        )}
+        Analyze
+      </button>
+    </div>
+  );
+}
+
 export function SerpOverviewPage({
   projectId,
   navigate,
@@ -122,6 +164,7 @@ export function SerpOverviewPage({
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
   const [inputTouched, setInputTouched] = useState(false);
+  const [locationTouched, setLocationTouched] = useState(false);
 
   // Every prefill source above resolves after first paint, so the `useState`
   // initializer can never see it. Seed the field once a value lands, but
@@ -133,6 +176,27 @@ export function SerpOverviewPage({
     if (prefill.value === "") return;
     setInput(prefill.value);
   }, [inputTouched, input, prefill.value]);
+
+  // `activeLocation` has the same deferred-arrival problem as the keyword
+  // prefill above, and it's worse here: on a cold load (hard refresh,
+  // bookmark, shared link) the `["projects"]` query behind `useProjectMarket`
+  // hasn't resolved on first render, so `activeLocation` reads the US
+  // fallback and `locationInput` locks onto it via the `useState` initializer.
+  // Without this effect the select would silently keep showing "United
+  // States" even after the project's real market arrives a render later --
+  // and the metered lookup below bills a wrong-country analysis with no
+  // error and no visual cue. Bail on an explicit `loc` URL param (it already
+  // won at first paint, synchronously -- there's nothing to re-sync) and on
+  // a location the user picked themselves (locationTouched), so precedence
+  // stays URL param > user selection > project market > US fallback.
+  // Depending on the primitive `activeLocation` (not the `market` object)
+  // keeps this from re-running every render: an unstable object dependency
+  // has caused a real render loop in this codebase before.
+  useEffect(() => {
+    if (locationCode != null) return;
+    if (locationTouched) return;
+    setLocationInput(String(activeLocation));
+  }, [locationCode, locationTouched, activeLocation]);
 
   const [runInput, setRunInput] = useState<{
     keyword: string;
@@ -202,7 +266,7 @@ export function SerpOverviewPage({
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
           <form
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
               event.preventDefault();
               const next = input.trim();
@@ -262,7 +326,10 @@ export function SerpOverviewPage({
               <select
                 className="select select-bordered select-sm w-full"
                 value={locationInput}
-                onChange={(event) => setLocationInput(event.target.value)}
+                onChange={(event) => {
+                  setLocationTouched(true);
+                  setLocationInput(event.target.value);
+                }}
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option.code} value={option.code}>
@@ -271,18 +338,10 @@ export function SerpOverviewPage({
                 ))}
               </select>
             </label>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+            <AnalyzeButton
               disabled={!input.trim() || serpQuery.isFetching}
-            >
-              {serpQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <Search className="size-3.5" />
-              )}
-              Analyze
-            </button>
+              isFetching={serpQuery.isFetching}
+            />
           </form>
         </div>
       </div>
