@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo } from "react";
+import { useStore } from "@tanstack/react-form";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 import { getErrorCode } from "@/client/lib/error-messages";
 import { BILLING_ROUTE } from "@/shared/billing";
@@ -20,6 +21,12 @@ import { KeywordResearchLoadingState } from "./KeywordResearchLoadingState";
 import { KeywordResearchResults } from "./KeywordResearchResults";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
 import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
 
@@ -124,9 +131,21 @@ export function KeywordResearchPage(input: Props) {
           activeInput = result.tab.input;
         }
       }
-      if (activeInput) navigateToKeywordInput(activeInput);
+      if (activeInput) {
+        navigateToKeywordInput(activeInput);
+        // Hands the active (last-opened) keyword to whichever tab the user
+        // opens next -- the same cross-tab channel SERP Overview and Content
+        // Optimizer already write to.
+        writeHandoff(projectId, {
+          kind: "keyword",
+          value: activeInput.keyword,
+          locationCode: activeInput.locationCode,
+          source: "Keyword Research",
+          at: Date.now(),
+        });
+      }
     },
-    [navigateToKeywordInput, searchTabs],
+    [navigateToKeywordInput, projectId, searchTabs],
   );
   const showRecentSearches = useCallback(() => {
     searchTabs.setActiveTab(null);
@@ -190,6 +209,58 @@ export function KeywordResearchPage(input: Props) {
     }));
   }, [controller.controlsForm, searchTabs.tabs]);
 
+  const suggestions = useProjectSuggestions(projectId, "high-volume");
+  const handoff = useHandoff(projectId);
+  // Unlike SERP/Content, a stored keyword-research run's `resultJson` (rows,
+  // source, diagnostics) carries no keyword field of its own -- the seed
+  // keyword only exists as the analysis run's `label` column (research.ts:
+  // `label: uniqueKeywords.join(", ")`). `controller.restoredRun` already
+  // surfaces that label for the "Run again" button below, so it doubles as
+  // this tab's last-run signal instead of a `useLastRunInput` call that could
+  // never find a keyword inside the JSON to extract.
+  const lastRun = controller.restoredRun?.label ?? null;
+
+  // The live form value, read here (not just inside the search bar) because
+  // the prefill effect below needs to know whether the field is still empty
+  // and whether the user has already touched it -- `isDirty` is TanStack
+  // Form's own per-field "changed since the last reset" flag.
+  const currentKeyword = useStore(
+    controller.controlsForm.store,
+    (state) => state.values.keyword,
+  );
+  const keywordIsDirty = useStore(
+    controller.controlsForm.store,
+    (state) => state.fieldMeta.keyword?.isDirty ?? false,
+  );
+
+  // The URL param wins, then a keyword carried from another tab, then what
+  // this tab last ran, then the high-volume ranking. Resolved only for the
+  // field's initial value -- after that the user owns the input.
+  const prefill = resolvePrefill({
+    kind: "keyword",
+    searchParam: input.keywordInput,
+    handoff,
+    lastRun,
+    suggestions,
+    projectDefault: null,
+  });
+
+  // Every prefill source above resolves after first paint, so the form's
+  // `defaultValues` can never see it. Seed the field once a value lands, but
+  // never fight the user: bail as soon as they've typed or picked a chip
+  // (keywordIsDirty), and even before that, bail if the field is non-empty (a
+  // `q` param already won, or a search tab is active). `dontUpdateMeta` keeps
+  // this programmatic fill from masquerading as the user's own edit -- only a
+  // real keystroke or chip click should flip `isDirty`.
+  useEffect(() => {
+    if (keywordIsDirty) return;
+    if (currentKeyword.trim() !== "") return;
+    if (prefill.value === "") return;
+    controller.controlsForm.setFieldValue("keyword", prefill.value, {
+      dontUpdateMeta: true,
+    });
+  }, [keywordIsDirty, currentKeyword, prefill.value, controller.controlsForm]);
+
   return (
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
@@ -200,7 +271,10 @@ export function KeywordResearchPage(input: Props) {
           </p>
         </div>
 
-        <KeywordResearchSearchBar controller={controller} />
+        <KeywordResearchSearchBar
+          controller={controller}
+          suggestions={suggestions}
+        />
 
         <RestoreRail
           projectId={projectId}
