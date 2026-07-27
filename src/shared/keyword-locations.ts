@@ -729,15 +729,15 @@ export function isLabsLocationCode(locationCode: number): boolean {
 }
 
 /**
- * Which DataForSEO API serves keyword data for this location. Unknown codes
- * fall back to Labs so behavior for arbitrary codes is unchanged (Labs
- * rejects unsupported locations with its own error).
+ * Country codes are 4-digit (2xxx); every geotarget below country level has a
+ * larger code. Labs is country-only and rejects sub-country codes outright, so
+ * anything unrecognised here must go to Google Ads, whose geotarget coverage
+ * includes metros and cities. Falling through to Labs — the previous
+ * behaviour — turned a supported metro into a hard API error.
  */
 export function getKeywordDataProvider(
   locationCode: number,
 ): KeywordDataProvider {
-  return LOCATION_CODES.has(locationCode) &&
-    !LABS_LOCATION_CODES.has(locationCode)
-    ? "google_ads"
-    : "labs";
+  if (LABS_LOCATION_CODES.has(locationCode)) return "labs";
+  return "google_ads";
 }

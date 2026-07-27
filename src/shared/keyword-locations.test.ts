@@ -22,8 +22,13 @@ describe("keyword locations", () => {
     expect(getLanguageCode(2352)).toBe("is");
   });
 
-  it("falls back to labs for unknown codes (Labs rejects them upstream)", () => {
-    expect(getKeywordDataProvider(999999)).toBe("labs");
+  it("routes unknown codes to Google Ads rather than falling through to Labs", () => {
+    // This is the inverse of the old contract (unknown -> labs): Labs rejects
+    // sub-country codes outright, so an unrecognised code — which is what
+    // every metro/city code is, since LOCATION_CODES holds only countries —
+    // must go to Google Ads instead. isSupportedLocationCode is unaffected;
+    // 999999 is still not a real country.
+    expect(getKeywordDataProvider(999999)).toBe("google_ads");
     expect(isSupportedLocationCode(999999)).toBe(false);
   });
 
@@ -61,5 +66,23 @@ describe("keyword locations", () => {
     expect(labels).toEqual(labels.toSorted((a, b) => a.localeCompare(b)));
     const codes = LOCATION_OPTIONS.map((option) => option.code);
     expect(new Set(codes).size).toBe(codes.length);
+  });
+});
+
+describe("getKeywordDataProvider", () => {
+  it("routes a Labs-supported country to Labs", () => {
+    expect(getKeywordDataProvider(2840)).toBe("labs");
+  });
+
+  it("routes a Google-Ads-only country to Google Ads", () => {
+    // Iceland: outside Labs' 94-country coverage.
+    expect(getKeywordDataProvider(2352)).toBe("google_ads");
+  });
+
+  it("routes a sub-country code to Google Ads", () => {
+    // Metro/city geotargets are not in LOCATION_CODES at all. Labs is
+    // country-only and rejects them, so they must go to Google Ads rather
+    // than falling through to a provider that cannot serve them.
+    expect(getKeywordDataProvider(1026339)).toBe("google_ads");
   });
 });
