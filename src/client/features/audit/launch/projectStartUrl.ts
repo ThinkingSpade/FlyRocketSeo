@@ -19,7 +19,19 @@ export function buildProjectStartUrl(domain: string | null): string | null {
   if (!domain) return null;
   const trimmed = domain.trim();
   if (!trimmed) return null;
-  const host = trimmed.replace(URL_SCHEME_PATTERN, "").replace(/\/+$/, "");
-  if (!host) return null;
-  return `https://${host}/`;
+
+  const withoutScheme = trimmed.replace(URL_SCHEME_PATTERN, "");
+  const bareHost = withoutScheme.replace(/\/+$/, "");
+  if (!bareHost) return null;
+
+  // A slash surviving the trailing-slash strip means there's a real path
+  // segment (e.g. "/blog") left, not just a bare host with redundant
+  // trailing slashes to collapse. Appending "/" to a bare host normalizes it
+  // to the site root, which is correct and what the branch below still does;
+  // appending it to a path instead can 404 on servers that don't redirect a
+  // directory-less path to its slash form, so a path is re-schemed and
+  // returned as given, with no slash added.
+  return bareHost.includes("/")
+    ? `https://${withoutScheme}`
+    : `https://${bareHost}/`;
 }

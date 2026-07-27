@@ -40,13 +40,14 @@ describe("buildProjectStartUrl", () => {
     );
   });
 
-  it("only strips a trailing slash, not a trailing path segment", () => {
-    // Surprising but current: the trailing-slash strip only ever matches
-    // slashes at the very end of the string, so a stored path segment like
-    // "/blog" survives and gets its own trailing slash appended, rather than
-    // being dropped down to the bare host.
+  it("does not append a trailing slash to a path", () => {
+    // Deliberate: a bare host normalizes to the site root ("/"), but a
+    // stored path segment like "/blog" is a real resource path, not a
+    // directory -- appending "/" to it can 404 on servers that don't
+    // redirect a directory-less path to its slash form. So this stays
+    // "/blog", not "/blog/".
     expect(buildProjectStartUrl("deliotx.com/blog")).toBe(
-      "https://deliotx.com/blog/",
+      "https://deliotx.com/blog",
     );
   });
 
