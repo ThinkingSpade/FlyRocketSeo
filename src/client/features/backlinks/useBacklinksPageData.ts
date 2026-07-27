@@ -34,6 +34,62 @@ import {
   createMeteredRunKey,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import { useHandoff } from "@/client/features/insights/handoffStore";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls the analyzed
+ * target off the stored backlinks-overview result, which nests it under
+ * `overview` (matching `backlinksOverviewCacheSchema`, not the result shape
+ * itself). A shape that has drifted (or isn't this feature's result at all)
+ * returns null rather than throwing — the tab simply has no last-run value to
+ * offer, same contract as the hook itself.
+ */
+function extractStoredTarget(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  if (!isRecord(result.overview)) return null;
+  return typeof result.overview.target === "string"
+    ? result.overview.target
+    : null;
+}
+
+/**
+ * The URL param wins, then a domain carried from another tab, then what this
+ * tab last ran, then the project's own domain (the same fallback
+ * `AnalyzeDomainPrompt` already offers as an explicit click). There's no
+ * domain-shaped suggestion source, so this kind always passes an empty
+ * suggestions list. Lives alongside the rest of this page's supporting hooks
+ * rather than in `BacklinksPage` itself to keep that component under this
+ * file's line-count limit.
+ */
+export function useBacklinksTargetPrefill(
+  projectId: string,
+  target: string,
+  projectDomain: string | null,
+): string {
+  const handoff = useHandoff(projectId);
+  // BacklinksPage already imports RUN_FEATURES for its RecentRunsList; reuse
+  // the same feature key so both read one cache entry.
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.backlinks,
+    extractStoredTarget,
+  );
+  return resolvePrefill({
+    kind: "domain",
+    searchParam: target,
+    handoff,
+    lastRun,
+    suggestions: [],
+    projectDefault: projectDomain,
+  }).value;
+}
 
 type UseBacklinksPageDataArgs = {
   projectId: string;

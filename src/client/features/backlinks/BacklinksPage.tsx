@@ -11,6 +11,7 @@ import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoResto
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { writeHandoff } from "@/client/features/insights/handoffStore";
 import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
@@ -19,6 +20,7 @@ import {
   buildBacklinksAuthorizationKey,
   navigateToBacklinksSearch,
   useBacklinksPageData,
+  useBacklinksTargetPrefill,
 } from "./useBacklinksPageData";
 import { useBacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import { useBacklinksFilters } from "./useBacklinksFilters";
@@ -246,10 +248,24 @@ export function BacklinksPage({
     [],
   );
   const projectDomain = useProjectDomain(projectId);
-  // Shared by the search form and the "analyze my domain" prompt so both
-  // paths open a tab, navigate, and record history identically.
+  const targetPrefill = useBacklinksTargetPrefill(
+    projectId,
+    searchState.target,
+    projectDomain,
+  );
+  // Shared by the search form, "Run again", and the "analyze my domain"
+  // prompt so all three open a tab, navigate, and record history identically.
   const runBacklinksSearch = useCallback(
     (values: Pick<BacklinksSearchState, "target" | "scope">) => {
+      // Every trigger below is "a backlinks run just happened for this
+      // target" -- a fresh search, a repeat via "Run again", or the analyze
+      // prompt -- which is exactly what the next tab opened should inherit.
+      writeHandoff(projectId, {
+        kind: "domain",
+        value: values.target,
+        source: "Backlinks",
+        at: Date.now(),
+      });
       if (
         values.target === searchState.target &&
         values.scope === searchState.scope
@@ -303,6 +319,7 @@ export function BacklinksPage({
           }
           tabLimit={searchTabs.limit}
           onSubmit={runBacklinksSearch}
+          prefillTarget={targetPrefill}
         />
 
         {searchState.target.trim() === "" ? (
