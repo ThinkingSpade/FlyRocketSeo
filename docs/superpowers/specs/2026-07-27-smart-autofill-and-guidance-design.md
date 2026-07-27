@@ -94,6 +94,12 @@ Five intents, each a pure ranking function over the free data:
 | `topic-gap` | queries with impressions but no owning page | Topic Clusters |
 | `own-pages` | descending clicks; page URLs rather than keywords | Page Explorer |
 
+The "feeds" column names every eventual consumer, so the intent set is designed
+once rather than grown ad hoc. Wave 1 wires only the wave-1 tabs; Rank Tracking,
+On-Page Fixes and Page Explorer are listed because their intent already exists,
+not because they are in this scope. `own-pages` has no wave-1 consumer and is
+therefore specified but not implemented until wave 2.
+
 Every suggestion carries the number that justifies it — `"pos 7 · 2.4k impr"` —
 never a bare word. `SeedKeywordField` already enforces this; `SuggestionChips`
 generalizes it.
@@ -118,9 +124,15 @@ prefill, grep the subtree for `useQuery` and confirm nothing self-fetches.
 
 `handoffStore.ts` follows the `useSearchTabs` precedent: sessionStorage,
 `useSyncExternalStore`, project-scoped key, corrupt data treated as empty. It
-stores `{ keyword | domain | url, locationCode, source, at }`, written when a tab
-runs an analysis, with a 30-minute TTL so a stale keyword does not haunt the next
-session.
+stores `{ kind: "keyword" | "domain" | "url", value, locationCode, source, at }`,
+with a 30-minute TTL so a stale keyword does not haunt the next session.
+
+All nine wave-1 tabs write to it on a *successful* run — never on a failed or
+cancelled one — recording the input they just ran and the tab that ran it
+(`source`). A reading tab consumes an entry only when `kind` matches the field it
+is filling: a stored domain never lands in a keyword box. A mismatch is not an
+error; the entry is simply skipped and precedence falls through to the next
+level.
 
 ### Competitor and market autofill
 
@@ -146,8 +158,12 @@ type Action = {
   label: string;
   /** The number that justifies it. "1,240 impressions at 0.4% CTR" */
   evidence: string;
-  /** Optional route to where the work happens. */
-  to?: { tab: string; params?: Record<string, string> };
+  /**
+   * Optional route to where the work happens, as TanStack `linkOptions` —
+   * a `to` path from `src/client/navigation/items.ts` plus its params and
+   * search. Typed, so a renamed route breaks the build rather than the link.
+   */
+  to?: LinkOptions;
   /** Ranked by this. Clicks where derivable, otherwise a fixed tier. */
   weight: number;
 };
@@ -242,6 +258,26 @@ not depend on it.
 Shared plumbing: `mapProject` gains `locationCode` and `languageCode`; the
 hardcoded `2840` in `AnalyzeProjectCard`, SERP Overview and Keyword Trends is
 replaced by the project's own market.
+
+## Implementation order
+
+Five phases, each independently verifiable and each leaving the app shippable:
+
+1. **Plumbing.** `mapProject` returns `locationCode` and `languageCode`; the
+   hardcoded `2840` call sites read the project's market. No new UI. Verifiable
+   on its own: a project configured for a non-US market stops defaulting to US.
+2. **Suggestion engine.** `suggestionModel`, `useProjectSuggestions`,
+   `handoffStore`, `SuggestionChips`, with their tests. Nothing wired yet.
+3. **Autofill wiring.** The nine tabs adopt the engine, honouring the precedence
+   chain. Each tab's subtree is checked for self-fetching `useQuery` calls before
+   its prefill lands.
+4. **Guidance engine and wiring.** `verdictModel`, `NextStepsCard`, row notes,
+   then the nine per-tab adapters.
+5. **AI slice.** `explainFindings`, the runtime-config flag, the button. Ships
+   dark until `OPENROUTER_API_KEY` is set.
+
+Phases 2 and 4 are the ones worth reviewing closely; 1, 3 and 5 are mechanical
+once their engine exists.
 
 ## Testing
 
