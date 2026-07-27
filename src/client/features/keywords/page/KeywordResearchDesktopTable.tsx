@@ -19,6 +19,7 @@ import {
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
 import { TrendSparkline } from "@/client/components/TrendSparkline";
 import { formatNumber } from "@/client/features/keywords/utils";
+import { keywordRowNote } from "@/client/features/insights/verdicts/keywords";
 import type { KeywordResearchRow } from "@/types/keywords";
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
 
@@ -26,6 +27,9 @@ type Props = {
   activeFilterCount: number;
   filteredRows: KeywordResearchRow[];
   overviewKeyword: KeywordResearchRow | null;
+  /** This project's own Ahrefs domain rating, for the "needs DR X+" note
+   *  under each row's difficulty score. */
+  ownDomainRating: number | null;
   selectedRows: Set<string>;
   setSelectedRows: (rows: Set<string>) => void;
   sortDir: SortDir;
@@ -41,6 +45,7 @@ export function KeywordResearchDesktopTable({
   activeFilterCount,
   filteredRows,
   overviewKeyword,
+  ownDomainRating,
   selectedRows,
   setSelectedRows,
   sortDir,
@@ -172,7 +177,20 @@ export function KeywordResearchDesktopTable({
             className="justify-end"
           />
         ),
-        cell: ({ getValue }) => <DifficultyBadge value={getValue()} />,
+        cell: ({ getValue }) => {
+          const rowNote = keywordRowNote(
+            { keywordDifficulty: getValue() },
+            { ownDomainRating },
+          );
+          return (
+            <div>
+              <DifficultyBadge value={getValue()} />
+              {rowNote ? (
+                <div className="text-xs text-base-content/45">{rowNote}</div>
+              ) : null}
+            </div>
+          );
+        },
         meta: { headerClassName: "text-right", cellClassName: "text-right" },
       }),
       keywordColumnHelper.accessor("intent", {
@@ -184,7 +202,7 @@ export function KeywordResearchDesktopTable({
         },
       }),
     ],
-    [selectAnchorRef, sortDir, sortField, toggleSort],
+    [ownDomainRating, selectAnchorRef, sortDir, sortField, toggleSort],
   );
   const table = useAppTable({
     data: filteredRows,

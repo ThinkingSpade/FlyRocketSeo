@@ -21,6 +21,8 @@ import { KeywordResearchLoadingState } from "./KeywordResearchLoadingState";
 import { KeywordResearchResults } from "./KeywordResearchResults";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
 import {
@@ -211,6 +213,19 @@ export function KeywordResearchPage(input: Props) {
 
   const suggestions = useProjectSuggestions(projectId, "high-volume");
   const handoff = useHandoff(projectId);
+  // Ahrefs' free, keyless DR lookup (same source SERP Overview already
+  // reads) -- not a metered call, so fetching just this project's own domain
+  // costs nothing and needs no authorization gate.
+  const projectDomain = useProjectDomain(projectId);
+  const { ratings: ownDomainRatings, loadRatings: loadOwnDomainRating } =
+    useAhrefsDomainRatings(projectId);
+  useEffect(() => {
+    if (projectDomain) void loadOwnDomainRating([projectDomain]);
+  }, [projectDomain, loadOwnDomainRating]);
+  const ownDomainRating =
+    projectDomain && ownDomainRatings
+      ? (ownDomainRatings[projectDomain] ?? null)
+      : null;
   // Unlike SERP/Content, a stored keyword-research run's `resultJson` (rows,
   // source, diagnostics) carries no keyword field of its own -- the seed
   // keyword only exists as the analysis run's `label` column (research.ts:
@@ -317,6 +332,7 @@ export function KeywordResearchPage(input: Props) {
         <KeywordResearchContent
           controller={controller}
           projectId={input.projectId}
+          ownDomainRating={ownDomainRating}
         />
         <KeywordSaveDialog controller={controller} />
       </div>
@@ -327,9 +343,11 @@ export function KeywordResearchPage(input: Props) {
 function KeywordResearchContent({
   controller,
   projectId,
+  ownDomainRating,
 }: {
   controller: KeywordResearchControllerState;
   projectId: string;
+  ownDomainRating: number | null;
 }) {
   if (controller.isLoading) {
     return <KeywordResearchLoadingState />;
@@ -369,7 +387,12 @@ function KeywordResearchContent({
     );
   }
 
-  return <KeywordResearchResults controller={controller} />;
+  return (
+    <KeywordResearchResults
+      controller={controller}
+      ownDomainRating={ownDomainRating}
+    />
+  );
 }
 
 function KeywordSaveDialog({

@@ -1,5 +1,5 @@
 /* eslint-disable max-lines -- the keyword-trends form and its chart rendering stay colocated. */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Activity, Search } from "lucide-react";
 import {
   CartesianGrid,
@@ -24,6 +24,7 @@ import {
   TrendsInsightsTable,
   TrendsSeasonalHeatmap,
 } from "@/client/features/trends/TrendsInsightsTable";
+import { computeMonthlyInterest } from "@/client/features/trends/trendsInsights";
 import {
   createMeteredRunKey,
   useAuthorizedRun,
@@ -37,6 +38,8 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import { buildTrendsVerdict } from "@/client/features/insights/verdicts/keywords";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -95,6 +98,23 @@ function appendKeyword(current: string, next: string): string {
   const normalized = next.trim().toLowerCase();
   if (existing.includes(normalized)) return existing.join(", ");
   return [...existing, normalized].slice(0, MAX_TRENDS_KEYWORDS).join(", ");
+}
+
+/**
+ * Reshapes `computeMonthlyInterest`'s output (the same seasonality
+ * computation `TrendsSeasonalHeatmap` renders below) into the
+ * keyword-keyed record `buildTrendsVerdict` reads -- called from this same
+ * page rather than lifted out of the heatmap, but it's a pure function of
+ * `keywords`/`points` so both call sites can never disagree about a peak or
+ * low month.
+ */
+function toSeriesByKeyword(
+  monthlyInterest: ReturnType<typeof computeMonthlyInterest>,
+): Record<string, Array<number | null>> {
+  if (!monthlyInterest) return {};
+  return Object.fromEntries(
+    monthlyInterest.map((row) => [row.keyword, row.months]),
+  );
 }
 
 /**
@@ -228,6 +248,13 @@ export function TrendsPage({
   });
   const result = trendsQuery.data ?? restored?.result;
   const restoredRun = trendsQuery.data == null ? restored : null;
+  const seriesByKeyword = useMemo(
+    () =>
+      toSeriesByKeyword(
+        result ? computeMonthlyInterest(result.keywords, result.points) : null,
+      ),
+    [result],
+  );
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -360,6 +387,15 @@ export function TrendsPage({
           )}
         </div>
       </div>
+
+      {result && result.points.length > 0 ? (
+        <NextStepsCard
+          verdict={buildTrendsVerdict({
+            keywords: result.keywords,
+            seriesByKeyword,
+          })}
+        />
+      ) : null}
 
       {result && result.points.length > 0 ? (
         <div className="grid items-start gap-3 xl:grid-cols-2">
