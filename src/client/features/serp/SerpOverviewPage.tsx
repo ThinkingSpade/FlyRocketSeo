@@ -28,15 +28,21 @@ import {
   useAhrefsDomainRatings,
   type DomainRatings,
 } from "@/client/features/backlinks/useAhrefsDomainRatings";
-import {
-  DEFAULT_LOCATION_CODE,
-  LOCATION_OPTIONS,
-} from "@/shared/keyword-locations";
+import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import {
   createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
+import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -60,6 +66,21 @@ function difficultyTone(value: number | null | undefined): InsightTone {
   return "error";
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls `keyword` off the
+ * stored SERP-overview result. A shape that has drifted (or isn't this
+ * feature's result at all) returns null rather than throwing — the tab
+ * simply has no last-run value to offer, same contract as the hook itself.
+ */
+function extractStoredKeyword(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  return typeof result.keyword === "string" ? result.keyword : null;
+}
+
 export function SerpOverviewPage({
   projectId,
   navigate,
@@ -71,9 +92,48 @@ export function SerpOverviewPage({
   query: string;
   locationCode: number | undefined;
 }) {
-  const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
+  const market = useProjectMarket(projectId);
+  // The URL's own `loc` param always wins; the project's configured market
+  // only fills in for a tab opened with no location in the URL at all.
+  const activeLocation = locationCode ?? market.locationCode;
+
+  const suggestions = useProjectSuggestions(projectId, "striking-distance");
+  const handoff = useHandoff(projectId);
+  // This page already imports RUN_FEATURES for its RecentRunsList; reuse the
+  // same feature key so both read one cache entry.
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.serpOverview,
+    extractStoredKeyword,
+  );
+
+  // The URL param wins, then a keyword carried from another tab, then what
+  // this tab last ran, then the striking-distance ranking. Resolved only for
+  // the field's initial value — after that the user owns the input.
+  const prefill = resolvePrefill({
+    kind: "keyword",
+    searchParam: query,
+    handoff,
+    lastRun,
+    suggestions,
+    projectDefault: null,
+  });
+
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
+  const [inputTouched, setInputTouched] = useState(false);
+
+  // Every prefill source above resolves after first paint, so the `useState`
+  // initializer can never see it. Seed the field once a value lands, but
+  // never fight the user: bail as soon as they've typed or picked a chip
+  // (inputTouched), and even before that, bail if the field is non-empty.
+  useEffect(() => {
+    if (inputTouched) return;
+    if (input.trim() !== "") return;
+    if (prefill.value === "") return;
+    setInput(prefill.value);
+  }, [inputTouched, input, prefill.value]);
+
   const [runInput, setRunInput] = useState<{
     keyword: string;
     locationCode: number;
@@ -152,6 +212,13 @@ export function SerpOverviewPage({
                 locationCode: Number(locationInput),
               });
               run.authorize();
+              writeHandoff(projectId, {
+                kind: "keyword",
+                value: next,
+                locationCode: Number(locationInput),
+                source: "SERP Overview",
+                at: Date.now(),
+              });
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -162,18 +229,32 @@ export function SerpOverviewPage({
               });
             }}
           >
-            <label className="form-control w-full sm:max-w-md">
-              <span className="label-text pb-1 text-xs font-medium">
-                Keyword
-              </span>
-              <input
-                type="text"
-                className="input input-bordered input-sm w-full"
-                placeholder="office coffee service dallas"
+            <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
+              <label className="form-control w-full">
+                <span className="label-text pb-1 text-xs font-medium">
+                  Keyword
+                </span>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="office coffee service dallas"
+                  value={input}
+                  onChange={(event) => {
+                    setInputTouched(true);
+                    setInput(event.target.value);
+                  }}
+                />
+              </label>
+              <SuggestionChips
+                suggestions={suggestions}
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onSelect={(next) => {
+                  setInputTouched(true);
+                  setInput(next);
+                }}
+                disabled={serpQuery.isFetching}
               />
-            </label>
+            </div>
             <label className="form-control w-full sm:max-w-56">
               <span className="label-text pb-1 text-xs font-medium">
                 Location
