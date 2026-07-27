@@ -12,7 +12,12 @@ import type { SeedSuggestion } from "./types";
  * input; the user still presses the button.
  */
 
-export type PrefillSource =
+/**
+ * Which level of the chain supplied the value. Deliberately not exported: no
+ * caller needs to name it, and the return type carries it structurally. knip
+ * fails the build on exports nothing imports.
+ */
+type PrefillSource =
   | "search-param"
   | "handoff"
   | "last-run"
