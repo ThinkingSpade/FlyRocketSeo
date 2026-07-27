@@ -38,20 +38,26 @@ function isKind(value: unknown): value is HandoffKind {
   return value === "keyword" || value === "domain" || value === "url";
 }
 
+// Matches the `isRecord` guard in useSearchTabs.ts: a type predicate narrows
+// `unknown` without an unsafe cast, so the fields below are read straight off
+// the parameter instead of a separately asserted variable.
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
 function parseEntry(raw: unknown): HandoffEntry | null {
-  if (typeof raw !== "object" || raw === null) return null;
-  const record = raw as Record<string, unknown>;
-  if (!isKind(record.kind)) return null;
-  if (typeof record.value !== "string" || record.value === "") return null;
-  if (typeof record.source !== "string" || record.source === "") return null;
-  if (typeof record.at !== "number") return null;
+  if (!isRecord(raw)) return null;
+  if (!isKind(raw.kind)) return null;
+  if (typeof raw.value !== "string" || raw.value === "") return null;
+  if (typeof raw.source !== "string" || raw.source === "") return null;
+  if (typeof raw.at !== "number") return null;
   return {
-    kind: record.kind,
-    value: record.value,
+    kind: raw.kind,
+    value: raw.value,
     locationCode:
-      typeof record.locationCode === "number" ? record.locationCode : undefined,
-    source: record.source,
-    at: record.at,
+      typeof raw.locationCode === "number" ? raw.locationCode : undefined,
+    source: raw.source,
+    at: raw.at,
   };
 }
 
