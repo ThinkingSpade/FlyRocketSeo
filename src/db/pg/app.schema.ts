@@ -584,3 +584,36 @@ export const analysisRuns = pgTable(
     ),
   ],
 );
+
+// Google geotargets (countries, regions, metros/DMAs, cities). Lives in D1
+// rather than a bundled table because the full list is large and `src/shared`
+// is in the Worker's startup graph — the same graph whose size previously
+// caused multi-second cold starts. Seeded by scripts/seed-geo-locations.ts.
+export const geoLocations = pgTable(
+  "geo_locations",
+  {
+    // `serial`, not a plain integer PK: SQLite's `INTEGER PRIMARY KEY` always
+    // carries an implicit rowid-style default (hasDefault=true in drizzle's
+    // model) regardless of an explicit AUTOINCREMENT, which schema-parity.test.ts
+    // enforces structurally. The seed script always supplies an explicit `code`
+    // (the Google geotarget ID) on both dialects — the sequence itself is never
+    // consulted, this only exists to keep the two dialects structurally equal.
+    code: serial("code").primaryKey(),
+    name: text("name").notNull(),
+    /** DataForSEO location_type, e.g. "Country", "DMA Region", "City". */
+    type: text("type").notNull(),
+    /** Two-letter state/region code where applicable, e.g. "TX". */
+    stateCode: text("state_code"),
+    /** The metro this place rolls up into, when it has one. */
+    parentMetroCode: integer("parent_metro_code"),
+    countryCode: integer("country_code").notNull(),
+    /** Drives search ranking so "dal" surfaces Dallas before Dalton. */
+    population: integer("population"),
+  },
+  (table) => [
+    // The picker searches by name prefix within a country, ordered by
+    // population. Without this the search is a full scan on every keystroke.
+    index("geo_locations_country_name_idx").on(table.countryCode, table.name),
+    index("geo_locations_type_idx").on(table.type),
+  ],
+);
