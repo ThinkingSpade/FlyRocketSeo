@@ -1,36 +1,66 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useState } from "react";
 import {
   getCompetitorsList,
   getKeywordGapPage,
   getLinkGapPage,
 } from "@/serverFunctions/competitors";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
-import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import {
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
 import { useHandoff } from "@/client/features/insights/handoffStore";
-import type { ProjectMarket } from "@/client/hooks/useProjectDomain";
+import {
+  useProjectMarket,
+  type ProjectMarket,
+} from "@/client/hooks/useProjectDomain";
+
+type CompetitorsRun = {
+  authorized: boolean;
+  runNonce: number;
+  market: ProjectMarket;
+  authorize: (keyOverride?: string) => void;
+};
 
 /**
- * The market to bill this page's metered competitor/gap calls against.
+ * Wraps `useAuthorizedRun` with this page's market-billing rule: the market
+ * used for every metered competitor/gap call is captured into state at the
+ * exact moment a run is authorized, instead of read live off
+ * `useProjectMarket` on every render.
  *
- * `market` (from `useProjectMarket`) can update after a run is already
- * authorized -- `["projects"]` is an async query, and authorization is keyed
- * on target/competitor/tab/mode/page only, never on location, so a late
- * arrival does not deauthorize anything. But `locationCode`/`languageCode`
- * still feed the metered query's key below, and changing a query key while it
- * stays enabled makes TanStack Query treat it as a brand-new, never-fetched
- * entry and fetch it immediately -- a second metered call the user never
- * asked for. Freezing the market the moment a run becomes authorized (and
- * tracking it live otherwise, so a late arrival still lands before the user
- * actually submits) keeps the key stable for the lifetime of that run.
+ * `useProjectMarket` depends on the async `["projects"]` query and can
+ * resolve to a new value *after* a run is already authorized. If the
+ * metered queries read it live, that late arrival changes their query key
+ * while they stay enabled, and TanStack Query treats a changed key on an
+ * enabled query as a brand-new, never-fetched entry -- an uncommanded
+ * second paid fetch for a run already paid for. Bundling the capture into
+ * `authorize` itself -- rather than asking every call site to remember a
+ * separate "capture the market" step -- means it happens for every run
+ * (submit, run-again, analyze, refresh, compare-competitor) with no
+ * dependency on render ordering: this is billing safety, not style.
+ *
+ * The initial `market` value is never actually read by a metered query --
+ * every one of them stays disabled until `authorized` is true -- so it's
+ * simply seeded from whatever the project market resolves to at mount.
  */
-export function useAuthorizedMarket(
-  market: ProjectMarket,
-  authorized: boolean,
-): ProjectMarket {
-  const frozen = useRef(market);
-  if (!authorized) frozen.current = market;
-  return authorized ? frozen.current : market;
+export function useCompetitorsRun(
+  projectId: string,
+  currentKey: string,
+): CompetitorsRun {
+  const run = useAuthorizedRun(currentKey);
+  const projectMarket = useProjectMarket(projectId);
+  const [market, setMarket] = useState<ProjectMarket>(projectMarket);
+
+  return {
+    authorized: run.authorized,
+    runNonce: run.runNonce,
+    market,
+    authorize: (keyOverride) => {
+      setMarket(projectMarket);
+      run.authorize(keyOverride);
+    },
+  };
 }
 
 /**

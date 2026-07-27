@@ -14,10 +14,7 @@ import {
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
 import { AnalyzeDomainPrompt } from "@/client/components/AnalyzeDomainPrompt";
-import {
-  useProjectDomain,
-  useProjectMarket,
-} from "@/client/hooks/useProjectDomain";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
@@ -27,13 +24,12 @@ import { TabBody } from "./CompetitorsTabBody";
 import { CompetitorsOverviewExtras } from "./CompetitorsOverviewExtras";
 import { KeywordGapOverview } from "./KeywordGapOverview";
 import {
-  useAuthorizedMarket,
   useCompetitorsQuery,
+  useCompetitorsRun,
   useCompetitorsTargetPrefill,
   useKeywordGapQuery,
   useLinkGapQuery,
 } from "./useCompetitorsQueries";
-import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
 import { writeHandoff } from "@/client/features/insights/handoffStore";
 import {
@@ -68,15 +64,14 @@ export function CompetitorsPage({
   const { target, competitor, tab, mode, page } = searchState;
   const [targetInput, setTargetInput] = useState(target);
   const [competitorInput, setCompetitorInput] = useState(competitor);
-  const run = useAuthorizedRun(
+  // `useCompetitorsRun` captures the project's market into state at the
+  // moment a run is authorized rather than reading it live -- see its own
+  // doc comment for why that matters for billing safety.
+  const run = useCompetitorsRun(
+    projectId,
     buildCompetitorsAuthorizationKey(projectId, searchState),
   );
-  const authorized = run.authorized;
-  // The project's configured market, not the server's bare 2840 default --
-  // frozen once this run is authorized so a late-arriving market can never
-  // silently change an already-authorized metered query's key (see
-  // `useAuthorizedMarket`).
-  const market = useAuthorizedMarket(useProjectMarket(projectId), authorized);
+  const { authorized, market } = run;
   // Keep inputs in sync when the URL changes (e.g. via a table row action).
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
