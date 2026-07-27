@@ -1,8 +1,58 @@
+import { useQuery } from "@tanstack/react-query";
 import { useLoaderData } from "@tanstack/react-router";
-import { isEmailVerificationBypassed } from "@/lib/auth-mode";
+import {
+  isEmailVerificationBypassed,
+  isHostedClientAuthMode,
+} from "@/lib/auth-mode";
+import { getClientRuntimeConfig } from "@/serverFunctions/config";
 
-export function useEmailVerificationBypassed() {
-  const runtimeConfig = useLoaderData({ from: "__root__" });
+const CLIENT_RUNTIME_CONFIG_QUERY_KEY = ["client-runtime-config"] as const;
+const CLIENT_RUNTIME_CONFIG_STALE_TIME = 5 * 60 * 1000;
 
-  return isEmailVerificationBypassed(runtimeConfig.emailVerificationBypassed);
+type ClientRuntimeConfigQueryData = {
+  emailVerificationBypassed: boolean;
+  source: "prerender" | "runtime";
+};
+
+export function useEmailVerificationBypassed({
+  refreshOnMount = false,
+}: {
+  refreshOnMount?: boolean;
+} = {}) {
+  const prerenderedConfig = useLoaderData({ from: "__root__" });
+  const isHostedMode = isHostedClientAuthMode();
+  const runtimeConfigQuery = useQuery<ClientRuntimeConfigQueryData>({
+    queryKey: CLIENT_RUNTIME_CONFIG_QUERY_KEY,
+    queryFn: async () => ({
+      ...(await getClientRuntimeConfig()),
+      source: "runtime",
+    }),
+    initialData: {
+      emailVerificationBypassed: prerenderedConfig.emailVerificationBypassed,
+      source: "prerender",
+    },
+    // The prerendered value is only a first-paint hint. Mark it stale so the
+    // root bootstrap's forced mount refetch always replaces it with a value
+    // read from the live Worker environment.
+    initialDataUpdatedAt: 0,
+    enabled: isHostedMode,
+    staleTime: CLIENT_RUNTIME_CONFIG_STALE_TIME,
+    refetchOnMount: refreshOnMount ? "always" : false,
+    refetchOnReconnect: false,
+    refetchOnWindowFocus: false,
+    retry: false,
+  });
+  const isResolved =
+    !isHostedMode || runtimeConfigQuery.data.source === "runtime";
+
+  return {
+    // Never expose a prerendered `true` as authoritative. Callers can only
+    // bypass verification after the browser has received the runtime result.
+    isBypassed:
+      isResolved &&
+      isEmailVerificationBypassed(
+        runtimeConfigQuery.data.emailVerificationBypassed,
+      ),
+    isResolved,
+  };
 }

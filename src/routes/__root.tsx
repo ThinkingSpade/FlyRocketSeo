@@ -31,6 +31,7 @@ import { Toaster } from "sonner";
 import { queryClient } from "@/client/tanstack-db";
 import { getActiveOrganizationId } from "@/lib/auth-session";
 import { getClientRuntimeConfig } from "@/serverFunctions/config";
+import { useEmailVerificationBypassed } from "@/client/features/auth/useEmailVerificationBypassed";
 
 export const Route = createRootRoute({
   loader: () => getClientRuntimeConfig(),
@@ -106,6 +107,13 @@ function AppLayout() {
   return <Outlet />;
 }
 
+function ClientRuntimeConfigBootstrap() {
+  // This is the one observer that owns the browser boot-time refetch. Route
+  // guards subscribe to the same query without refetching on every mount.
+  useEmailVerificationBypassed({ refreshOnMount: true });
+  return null;
+}
+
 function PostHogBootstrap() {
   const isHostedMode = isHostedClientAuthMode();
   const { data: session, isPending: isSessionPending } = useSession();
@@ -161,6 +169,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
           <AutumnProvider>
             <QueryClientProvider client={queryClient}>
               <>
+                <ClientRuntimeConfigBootstrap />
                 <PostHogBootstrap />
                 {children}
                 <CommandPalette />

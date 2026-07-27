@@ -103,7 +103,7 @@ function VerifyEmailPage() {
   const redirectTo = normalizeAuthRedirect(search.redirect);
   const isHostedMode = isHostedClientAuthMode();
   const { data: session, isPending } = useSession();
-  const bypassEmailVerification = useEmailVerificationBypassed();
+  const runtimeConfig = useEmailVerificationBypassed();
   const errorMessage = getVerificationErrorMessage(search.error);
   const verificationIssueType = search.error
     ? verificationIssueSchema.parse(search.error)
@@ -115,11 +115,16 @@ function VerifyEmailPage() {
   // Verified (or bypass) users are sent on to the app by the effect below; until
   // that lands we show the redirecting state instead of the resend prompt.
   const isRedirecting =
-    isVerified || (bypassEmailVerification && Boolean(session?.user?.id));
+    isVerified ||
+    (runtimeConfig.isResolved &&
+      runtimeConfig.isBypassed &&
+      Boolean(session?.user?.id));
+  const isRuntimeConfigPending =
+    isHostedMode && !isVerified && !runtimeConfig.isResolved;
   const pageCopy = getVerifyEmailPageCopy({
     isHostedMode,
     errorMessage,
-    isPending,
+    isPending: isPending || isRuntimeConfigPending,
     isRedirecting,
     email,
   });
@@ -127,7 +132,8 @@ function VerifyEmailPage() {
   useEffect(() => {
     if (
       isPending ||
-      (!isVerified && !(bypassEmailVerification && session?.user?.id))
+      (!isVerified && !runtimeConfig.isResolved) ||
+      (!isVerified && !(runtimeConfig.isBypassed && session?.user?.id))
     ) {
       return;
     }
@@ -145,10 +151,11 @@ function VerifyEmailPage() {
     // "action is not a function" errors).
     window.location.replace(redirectTo);
   }, [
-    bypassEmailVerification,
     isPending,
     isVerified,
     redirectTo,
+    runtimeConfig.isBypassed,
+    runtimeConfig.isResolved,
     session?.user?.id,
   ]);
 
@@ -219,7 +226,7 @@ function VerifyEmailPage() {
               Back to sign in
             </Link>
           </div>
-        ) : isPending || isRedirecting ? (
+        ) : isPending || isRuntimeConfigPending || isRedirecting ? (
           <div className="flex justify-center py-4">
             <span className="loading loading-spinner loading-md" />
           </div>

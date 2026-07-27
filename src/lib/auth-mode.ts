@@ -26,7 +26,7 @@ export function isHostedClientAuthMode() {
 export function isEmailVerificationBypassed(
   runtimeValue: boolean | null | undefined,
 ) {
-  // This value is computed from the Worker runtime env and serialized through
-  // the root loader before client route guards render.
+  // The browser runtime-config query provides the authoritative value. The
+  // prerendered root-loader value is only a non-authoritative initial hint.
   return runtimeValue === true;
 }

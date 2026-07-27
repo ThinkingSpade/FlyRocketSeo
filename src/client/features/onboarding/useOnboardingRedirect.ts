@@ -10,9 +10,10 @@ export function useOnboardingRedirect() {
   const navigate = useNavigate();
   const { data: session } = useSession();
   const isHostedMode = isHostedClientAuthMode();
-  const bypassEmailVerification = useEmailVerificationBypassed();
+  const runtimeConfig = useEmailVerificationBypassed();
   const isEmailVerified =
-    session?.user?.emailVerified === true || bypassEmailVerification;
+    session?.user?.emailVerified === true ||
+    (runtimeConfig.isResolved && runtimeConfig.isBypassed);
   const onboardingQuery = useQuery({
     ...onboardingAnswersQueryOptions(),
     enabled: isHostedMode && Boolean(session?.user?.id) && isEmailVerified,
