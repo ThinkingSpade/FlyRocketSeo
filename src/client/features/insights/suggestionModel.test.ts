@@ -60,6 +60,118 @@ describe("buildSuggestions", () => {
         { value: "low", hint: "pos 12 · 120 impr", weight: 120 },
       ]);
     });
+
+    describe("position boundaries", () => {
+      it("includes position 4 (lower inclusive boundary)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          strikingDistance: [
+            {
+              query: "at4",
+              page: "/a",
+              clicks: 0,
+              impressions: 500,
+              position: 4,
+            },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "striking-distance")).toEqual([
+          { value: "at4", hint: "pos 4 · 500 impr", weight: 500 },
+        ]);
+      });
+
+      it("excludes position 3 (below lower boundary)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          strikingDistance: [
+            {
+              query: "at3",
+              page: "/a",
+              clicks: 0,
+              impressions: 500,
+              position: 3,
+            },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "striking-distance")).toEqual([]);
+      });
+
+      it("includes position 20 (upper inclusive boundary)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          strikingDistance: [
+            {
+              query: "at20",
+              page: "/a",
+              clicks: 0,
+              impressions: 500,
+              position: 20,
+            },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "striking-distance")).toEqual([
+          { value: "at20", hint: "pos 20 · 500 impr", weight: 500 },
+        ]);
+      });
+
+      it("excludes position 21 (above upper boundary)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          strikingDistance: [
+            {
+              query: "at21",
+              page: "/a",
+              clicks: 0,
+              impressions: 500,
+              position: 21,
+            },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "striking-distance")).toEqual([]);
+      });
+    });
+
+    describe("demand floor", () => {
+      it("includes exactly 10 impressions (inclusive floor)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          strikingDistance: [
+            {
+              query: "at10",
+              page: "/a",
+              clicks: 0,
+              impressions: 10,
+              position: 10,
+            },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "striking-distance")).toEqual([
+          { value: "at10", hint: "pos 10 · 10 impr", weight: 10 },
+        ]);
+      });
+
+      it("excludes 9 impressions (below floor)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          strikingDistance: [
+            {
+              query: "at9",
+              page: "/a",
+              clicks: 0,
+              impressions: 9,
+              position: 10,
+            },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "striking-distance")).toEqual([]);
+      });
+    });
   });
 
   describe("under-clicked", () => {
@@ -137,6 +249,23 @@ describe("buildSuggestions", () => {
         { value: "seen", hint: "800 impr · pos 9", weight: 800 },
       ]);
     });
+
+    it("does not suppress Search Console fallback for searchVolume 0", () => {
+      const signals: FreeSignals = {
+        ...EMPTY,
+        savedKeywords: [{ keyword: "zero", searchVolume: 0 }],
+        queryTotals: [
+          { query: "fallback", clicks: 5, impressions: 100, position: 8 },
+        ],
+      };
+
+      const result = buildSuggestions(signals, "high-volume");
+
+      expect(result).toEqual([
+        { value: "fallback", hint: "100 impr · pos 8", weight: 100 },
+      ]);
+      expect(result.some((s) => s.value === "zero")).toBe(false);
+    });
   });
 
   describe("topic-gap", () => {
@@ -153,6 +282,36 @@ describe("buildSuggestions", () => {
       expect(buildSuggestions(signals, "topic-gap")).toEqual([
         { value: "gap", hint: "700 impr · best page ranks #34", weight: 700 },
       ]);
+    });
+
+    describe("position floor", () => {
+      it("includes position 21 (inclusive floor)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          queryTotals: [
+            { query: "gap21", clicks: 0, impressions: 500, position: 21 },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "topic-gap")).toEqual([
+          {
+            value: "gap21",
+            hint: "500 impr · best page ranks #21",
+            weight: 500,
+          },
+        ]);
+      });
+
+      it("excludes position 20 (below floor)", () => {
+        const signals: FreeSignals = {
+          ...EMPTY,
+          queryTotals: [
+            { query: "gap20", clicks: 0, impressions: 500, position: 20 },
+          ],
+        };
+
+        expect(buildSuggestions(signals, "topic-gap")).toEqual([]);
+      });
     });
   });
 
@@ -206,5 +365,25 @@ describe("buildSuggestions", () => {
     };
 
     expect(buildSuggestions(signals, "high-volume", 2)).toHaveLength(2);
+  });
+
+  it("does not mutate input signals", () => {
+    const signals: FreeSignals = {
+      ...EMPTY,
+      strikingDistance: [
+        { query: "c", page: "/c", clicks: 0, impressions: 100, position: 10 },
+        { query: "a", page: "/a", clicks: 0, impressions: 300, position: 10 },
+        { query: "b", page: "/b", clicks: 0, impressions: 200, position: 10 },
+      ],
+    };
+
+    const originalOrder = signals.strikingDistance.map((r) => r.query);
+
+    const result1 = buildSuggestions(signals, "striking-distance");
+    const result2 = buildSuggestions(signals, "striking-distance");
+
+    expect(result1).toEqual(result2);
+    const currentOrder = signals.strikingDistance.map((r) => r.query);
+    expect(currentOrder).toEqual(originalOrder);
   });
 });
