@@ -1005,7 +1005,32 @@ export function writeHandoff(projectId: string, entry: HandoffEntry): void {
     // A full or disabled sessionStorage costs us a convenience, nothing more.
     return;
   }
+  snapshotCache.delete(projectId);
   window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
+/**
+ * `useSyncExternalStore` compares snapshots by identity on every render, so
+ * returning a freshly parsed object each call throws "The result of
+ * getSnapshot should be cached to avoid an infinite loop". Cache per project
+ * and invalidate on write, exactly as `useSearchTabs` does with `stateCache`.
+ */
+const snapshotCache = new Map<string, HandoffEntry | null>();
+
+function getSnapshot(projectId: string): HandoffEntry | null {
+  if (snapshotCache.has(projectId)) {
+    const cached = snapshotCache.get(projectId) ?? null;
+    // An entry that has since aged out must stop being served, even though no
+    // write happened to invalidate it.
+    if (cached && Date.now() - cached.at > HANDOFF_TTL_MS) {
+      snapshotCache.set(projectId, null);
+      return null;
+    }
+    return cached;
+  }
+  const fresh = readHandoff(projectId);
+  snapshotCache.set(projectId, fresh);
+  return fresh;
 }
 
 function subscribe(onChange: () => void): () => void {
@@ -1014,20 +1039,17 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener(CHANGE_EVENT, onChange);
 }
 
-/**
- * Reactive read for components. The snapshot is re-parsed on each change
- * event; entries are single small objects, so this stays cheap.
- */
+/** Reactive read for components. */
 export function useHandoff(projectId: string): HandoffEntry | null {
   return useSyncExternalStore(
     subscribe,
-    () => readHandoff(projectId),
+    () => getSnapshot(projectId),
     () => null,
   );
 }
 ```
 
-**Note on `useSyncExternalStore`:** `readHandoff` allocates a new object each call, which would loop if React compared by identity on every render. It only re-reads on a change event here because the subscribe callback drives it — but if you see an infinite render warning, memoize the snapshot in a module-level cache keyed by projectId, invalidated in `writeHandoff`, exactly as `useSearchTabs` does with `stateCache`.
+**Testing note:** the tests above exercise `readHandoff` and `writeHandoff`, both of which touch sessionStorage directly and bypass `snapshotCache` — so no cache reset is needed and the test file stays exactly as written in Step 1. The cache sits only behind `getSnapshot`/`useHandoff`, which are React-only and therefore untested under `environment: "node"`. If you later add a test that asserts through `getSnapshot`, reset module state with `vi.resetModules()` rather than exporting a cache-clearing hatch from production code.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -2080,23 +2102,22 @@ In `SerpOverviewPage.tsx`, after the `<SerpStrengthCards>` line and before `<Ser
 
 Add `const projectDomain = useProjectDomain(projectId);` if the page does not already have it.
 
-In `SerpResultsTable`, render the row note under the URL line:
+Thread `ownDomainRating` into `SerpResultsTable` as a prop. Inside the existing `result.results.map(...)` callback, beside the `const estimate = ...` line already there, add:
 
 ```tsx
-{serpRowNote(
+const rowNote = serpRowNote(
   { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
   { ownDomainRating },
-) ? (
-  <div className="text-xs text-base-content/45">
-    {serpRowNote(
-      { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
-      { ownDomainRating },
-    )}
-  </div>
-) : null}
+);
 ```
 
-Thread `ownDomainRating` into `SerpResultsTable` as a prop. Compute the note once into a variable rather than calling it twice — the double call above is written out only to show both branches.
+Then render it under the URL line, after the existing `<div className="line-clamp-1 text-xs text-success/80">{item.url}</div>`:
+
+```tsx
+{rowNote ? (
+  <div className="text-xs text-base-content/45">{rowNote}</div>
+) : null}
+```
 
 - [ ] **Step 6: Verify and commit**
 
