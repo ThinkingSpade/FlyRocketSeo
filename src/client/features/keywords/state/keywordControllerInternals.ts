@@ -2,6 +2,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
 import { usePreferredKeywordLocation } from "@/client/features/keywords/hooks/usePreferredKeywordLocation";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { saveKeywords } from "@/serverFunctions/keywords";
 import type { SaveKeywordsInput } from "@/types/schemas/keywords";
 import type { KeywordResearchRow } from "@/types/keywords";
@@ -10,8 +11,13 @@ import type { KeywordResearchControllerInput } from "./useKeywordResearchControl
 export function useResolvedKeywordLocation(
   input: KeywordResearchControllerInput,
 ) {
+  // The project's own market replaces the bare US constant as the fallback a
+  // user with no saved preference gets -- `useProjectMarket` already falls
+  // back to the US constant itself while `["projects"]` is in flight or the
+  // project has none configured, so this hook never sees an undefined value.
+  const projectMarket = useProjectMarket(input.projectId);
   const { preferredLocationCode, setPreferredLocationCode } =
-    usePreferredKeywordLocation();
+    usePreferredKeywordLocation(projectMarket.locationCode);
   const locationCode =
     !input.hasExplicitLocationCode && input.keywordInput === ""
       ? preferredLocationCode
