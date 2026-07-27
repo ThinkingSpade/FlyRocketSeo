@@ -113,7 +113,7 @@ export function ResultsView({
 
       <AuditComparison projectId={projectId} current={data} />
 
-      <NextStepsCard verdict={verdict} />
+      <NextStepsCard verdict={verdict} projectId={projectId} tab="Site Audit" />
       <AuditIssuesList issues={issues} />
 
       <div className="card bg-base-100 border border-base-300">

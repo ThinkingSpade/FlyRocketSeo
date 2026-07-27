@@ -6,6 +6,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
+import { ExplainButton } from "./ExplainButton";
 import type { Verdict, VerdictTone } from "./types";
 
 /**
@@ -33,9 +35,23 @@ const TONE_STYLE: Record<
   unknown: "neutral",
 };
 
-export function NextStepsCard({ verdict }: { verdict: Verdict }) {
+export function NextStepsCard({
+  verdict,
+  projectId,
+  tab,
+}: {
+  verdict: Verdict;
+  /** Both required together to opt this card into the "Explain this" button
+   *  -- call sites not yet wired for it simply omit them. */
+  projectId?: string;
+  tab?: string;
+}) {
   const Icon = TONE_ICON[verdict.tone];
   const actions = verdict.actions.toSorted((a, b) => b.weight - a.weight);
+  // Root-loader-derived flag, not a fresh server call -- see
+  // useAiExplainAvailable's own doc comment for why a prerendered `true`
+  // still isn't trusted until the live refetch confirms it.
+  const aiExplainAvailable = useAiExplainAvailable();
 
   return (
     <div className="card border border-base-300 bg-base-100">
@@ -70,6 +86,10 @@ export function NextStepsCard({ verdict }: { verdict: Verdict }) {
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {aiExplainAvailable && projectId != null && tab != null ? (
+          <ExplainButton projectId={projectId} tab={tab} verdict={verdict} />
         ) : null}
       </div>
     </div>

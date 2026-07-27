@@ -189,6 +189,8 @@ export function BacklinksBody({
           brokenBacklinks: overviewData.summary.brokenBacklinks,
           backlinksSpamScore: overviewData.summary.backlinksSpamScore,
         })}
+        projectId={projectId}
+        tab="Backlinks"
       />
       {isRestoredRun ? null : <BrokenLinkReclaimCard topPages={topPagesPage} />}
       {/* Both of these fetch on their own — the timeline is a metered history

@@ -34,6 +34,8 @@ export function CompetitorsOverviewExtras({
       />
       <NextStepsCard
         verdict={buildCompetitorsVerdict({ target, competitors: rows })}
+        projectId={projectId}
+        tab="Competitors"
       />
     </>
   );

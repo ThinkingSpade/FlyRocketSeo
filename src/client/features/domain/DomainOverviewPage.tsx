@@ -848,6 +848,8 @@ export function DomainOverviewPage({
                 organicTraffic: state.overview.organicTraffic,
                 positionBuckets: state.overview.positionBuckets,
               })}
+              projectId={projectId}
+              tab="Domain Overview"
             />
 
             {state.overview.hasData ? (

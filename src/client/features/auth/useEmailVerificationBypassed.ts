@@ -11,10 +11,20 @@ const CLIENT_RUNTIME_CONFIG_STALE_TIME = 5 * 60 * 1000;
 
 type ClientRuntimeConfigQueryData = {
   emailVerificationBypassed: boolean;
+  aiExplainAvailable: boolean;
   source: "prerender" | "runtime";
 };
 
-export function useEmailVerificationBypassed({
+/**
+ * Shared subscription to the one client-runtime-config query. Every consumer
+ * of a server-runtime-derived flag (email verification bypass, AI-explain
+ * availability) reads through this, so there is exactly one cache entry and
+ * exactly one forced live refetch -- owned by `ClientRuntimeConfigBootstrap`
+ * in __root.tsx via `refreshOnMount`. Everyone else just subscribes without
+ * refetching on their own mount, the same way the hosted-auth route guards
+ * already subscribe to `useEmailVerificationBypassed` below.
+ */
+function useClientRuntimeConfigQuery({
   refreshOnMount = false,
 }: {
   refreshOnMount?: boolean;
@@ -29,6 +39,7 @@ export function useEmailVerificationBypassed({
     }),
     initialData: {
       emailVerificationBypassed: prerenderedConfig.emailVerificationBypassed,
+      aiExplainAvailable: prerenderedConfig.aiExplainAvailable,
       source: "prerender",
     },
     // The prerendered value is only a first-paint hint. Mark it stale so the
@@ -45,14 +56,34 @@ export function useEmailVerificationBypassed({
   const isResolved =
     !isHostedMode || runtimeConfigQuery.data.source === "runtime";
 
+  return { data: runtimeConfigQuery.data, isResolved };
+}
+
+export function useEmailVerificationBypassed({
+  refreshOnMount = false,
+}: {
+  refreshOnMount?: boolean;
+} = {}) {
+  const { data, isResolved } = useClientRuntimeConfigQuery({ refreshOnMount });
+
   return {
     // Never expose a prerendered `true` as authoritative. Callers can only
     // bypass verification after the browser has received the runtime result.
     isBypassed:
-      isResolved &&
-      isEmailVerificationBypassed(
-        runtimeConfigQuery.data.emailVerificationBypassed,
-      ),
+      isResolved && isEmailVerificationBypassed(data.emailVerificationBypassed),
     isResolved,
   };
+}
+
+/**
+ * Gates the insights "Explain this" button (src/client/features/insights).
+ * Same trust rule as email-verification bypass: a prerendered `true` is only
+ * a hint, never trusted until the live refetch (owned by
+ * ClientRuntimeConfigBootstrap) confirms it against the real Worker env --
+ * otherwise a hosted build made before OPENROUTER_API_KEY was set would hide
+ * the button forever, even after the operator adds the key.
+ */
+export function useAiExplainAvailable(): boolean {
+  const { data, isResolved } = useClientRuntimeConfigQuery();
+  return isResolved && data.aiExplainAvailable;
 }

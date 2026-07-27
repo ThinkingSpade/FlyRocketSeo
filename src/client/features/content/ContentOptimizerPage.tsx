@@ -580,6 +580,7 @@ export function ContentOptimizerPage({
           <CompetitorOutlines analyses={loadedAnalyses} />
 
           <DraftGrader
+            projectId={projectId}
             keyword={brief.keyword}
             targetWordCount={targetWordCount}
             terms={brief.terms}

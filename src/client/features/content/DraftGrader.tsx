@@ -49,12 +49,14 @@ function isQuestionCovered(draft: string, question: string): boolean {
  *  recurring sections competitors write. Runs entirely client-side — nothing
  *  is stored or sent anywhere. */
 export function DraftGrader({
+  projectId,
   keyword,
   targetWordCount,
   terms,
   questions,
   outlines = [],
 }: {
+  projectId: string;
   /** The brief's target keyword, for the verdict's read. */
   keyword: string;
   /** Median word count across analyzed top-ranking pages (the same value
@@ -148,7 +150,13 @@ export function DraftGrader({
         {/* Nothing defensible to say before a draft exists -- this is that
             state's empty state, so the card waits for hasDraft rather than
             rendering an "unknown" tone by default. */}
-        {hasDraft ? <NextStepsCard verdict={verdict} /> : null}
+        {hasDraft ? (
+          <NextStepsCard
+            verdict={verdict}
+            projectId={projectId}
+            tab="Content Optimizer"
+          />
+        ) : null}
         {hasDraft ? (
           <>
             <div className="flex flex-wrap gap-1.5">

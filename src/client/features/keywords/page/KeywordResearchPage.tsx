@@ -389,6 +389,7 @@ function KeywordResearchContent({
 
   return (
     <KeywordResearchResults
+      projectId={projectId}
       controller={controller}
       ownDomainRating={ownDomainRating}
     />

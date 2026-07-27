@@ -6,13 +6,18 @@ import { PpcValuePanel } from "./PpcValuePanel";
 import type { KeywordResearchControllerState } from "./types";
 
 type Props = {
+  projectId: string;
   controller: KeywordResearchControllerState;
   /** This project's own Ahrefs domain rating, for the reachability verdict
    *  and the per-row "needs DR X+" notes below. */
   ownDomainRating: number | null;
 };
 
-export function KeywordResearchResults({ controller, ownDomainRating }: Props) {
+export function KeywordResearchResults({
+  projectId,
+  controller,
+  ownDomainRating,
+}: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden w-full gap-3">
       {/* Pure read of rows already on the page plus the free DR lookup above
@@ -23,6 +28,8 @@ export function KeywordResearchResults({ controller, ownDomainRating }: Props) {
           rows: controller.rows,
           ownDomainRating,
         })}
+        projectId={projectId}
+        tab="Keyword Research"
       />
       <KeywordResearchDesktopResults
         controller={controller}

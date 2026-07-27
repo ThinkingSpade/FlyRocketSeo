@@ -533,6 +533,8 @@ export function SerpOverviewPage({
               ownDomainRating,
               projectDomain,
             )}
+            projectId={projectId}
+            tab="SERP Overview"
           />
 
           <SerpResultsTable

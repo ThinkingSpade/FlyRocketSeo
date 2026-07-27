@@ -394,6 +394,8 @@ export function TrendsPage({
             keywords: result.keywords,
             seriesByKeyword,
           })}
+          projectId={projectId}
+          tab="Keyword Trends"
         />
       ) : null}
 
