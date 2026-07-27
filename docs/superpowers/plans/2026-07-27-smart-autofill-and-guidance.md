@@ -1579,6 +1579,33 @@ grep -rn "useQuery\|useMutation" <the tab's directory>
 
 Confirm every hook found is either explicitly `enabled`-gated on a user action, or reads a free/local source. If any hook would fire because a field became non-empty, stop and report it rather than wiring prefill into that tab.
 
+The real gate in this codebase is stronger than that grep suggests: metered tabs call
+`useMeteredQuery` (`src/client/lib/useMeteredQuery.ts`), which resolves
+`enabled: isMeteredQueryEnabled(authorized, enabled)`. `authorized` only becomes true through an
+explicit `run.authorize()` on a user action, so a prefilled field cannot spend. **Never add a
+`run.authorize()` call while wiring prefill, and never alter an existing `authorized`/`enabled`
+argument.**
+
+### Both deferred syncs are mandatory
+
+Task 9 shipped with only the keyword sync and a reviewer caught the consequence: making a location
+default read from `useProjectMarket` turns a previously synchronous constant into an async value,
+but `useState` reads its initializer once. On a cold load — hard refresh, bookmark, shared link —
+`["projects"]` has not resolved at first render, the select locks to the US fallback, and the
+**metered analysis then runs against the wrong country with no error and no visual cue.**
+
+Every tab in this phase that has a location control therefore needs _two_ deferred-sync effects,
+not one. Copy the pair from `src/client/features/serp/SerpOverviewPage.tsx` (search
+`inputTouched` and `locationTouched`). Both must:
+
+- bail when an explicit URL search param supplied the value,
+- bail once the user has touched that control,
+- depend only on primitives — never on the `market` object, which is a fresh reference per render
+  and has caused a real render loop in this codebase,
+- converge, so the effect cannot fire repeatedly.
+
+Precedence, in both effects: URL param > user selection > project market > US fallback.
+
 ### Task 9: SERP Overview autofill
 
 **Files:**
