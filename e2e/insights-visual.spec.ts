@@ -70,7 +70,9 @@ async function getProjectId(page: Page): Promise<string> {
  *  instead of an overlay, and so it never blocks a form submit underneath. */
 async function dismissSetupModalIfPresent(page: Page) {
   const dismissButton = page.getByRole("button", { name: "Dismiss" });
-  await dismissButton.waitFor({ state: "visible", timeout: 1500 }).catch(() => {});
+  await dismissButton
+    .waitFor({ state: "visible", timeout: 1500 })
+    .catch(() => {});
   if (await dismissButton.isVisible().catch(() => false)) {
     await dismissButton.click().catch(() => {});
   }
@@ -97,7 +99,9 @@ function attachDiagnostics(page: Page) {
 
 async function gotoAndSettle(page: Page, url: string) {
   await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.waitForLoadState("networkidle", { timeout: 10_000 }).catch(() => {});
+  await page
+    .waitForLoadState("networkidle", { timeout: 10_000 })
+    .catch(() => {});
   await page.waitForTimeout(600); // a beat for hydration
 }
 
@@ -109,7 +113,10 @@ async function overflowCheck(page: Page) {
 }
 
 async function getTopY(locator: Locator): Promise<number | null> {
-  const box = await locator.first().boundingBox().catch(() => null);
+  const box = await locator
+    .first()
+    .boundingBox()
+    .catch(() => null);
   return box ? box.y : null;
 }
 
@@ -182,7 +189,9 @@ const ROUTES: RouteConfig[] = [
       input: (page) =>
         page
           .locator("form label")
-          .filter({ has: page.getByPlaceholder("Enter keywords, one per line") }),
+          .filter({
+            has: page.getByPlaceholder("Enter keywords, one per line"),
+          }),
       others: (page) => [
         page.locator("form").getByRole("combobox").first(),
         page.locator("form").getByRole("button", { name: "Search" }),
@@ -305,7 +314,10 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
         // 3. The page's own heading proves this rendered a real page, not a
         // blank/error shell.
         const heading = page.getByRole("heading", {
-          name: new RegExp(route.heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"),
+          name: new RegExp(
+            route.heading.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"),
+            "i",
+          ),
           level: 1,
         });
         let headingVisible = false;
@@ -313,7 +325,9 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
           await expect(heading).toBeVisible({ timeout: 15_000 });
           headingVisible = true;
         } catch {
-          failureReasons.push(`heading "${route.heading}" never became visible`);
+          failureReasons.push(
+            `heading "${route.heading}" never became visible`,
+          );
         }
 
         // 4. No horizontal scroll -- the most likely regression from adding
@@ -342,7 +356,8 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
           applicable: false,
           checked: false,
           aligned: null,
-          detail: "this form has no SuggestionChips slot (domain/URL-shaped prefill) -- items-start alignment fix does not apply here",
+          detail:
+            "this form has no SuggestionChips slot (domain/URL-shaped prefill) -- items-start alignment fix does not apply here",
         };
         if (route.alignment) {
           if (viewportSize.width >= route.alignment.minBreakpoint) {
@@ -371,10 +386,14 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
                 aligned,
                 detail: `input top=${inputTop.toFixed(1)}px, other control tops=[${otherTops
                   .map((top) => (top as number).toFixed(1))
-                  .join(", ")}]px, maxDelta=${maxDelta.toFixed(1)}px (tolerance 4px)`,
+                  .join(
+                    ", ",
+                  )}]px, maxDelta=${maxDelta.toFixed(1)}px (tolerance 4px)`,
               };
               if (!aligned) {
-                failureReasons.push(`form controls not top-aligned: ${alignment.detail}`);
+                failureReasons.push(
+                  `form controls not top-aligned: ${alignment.detail}`,
+                );
               }
             }
           } else {
@@ -403,7 +422,8 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
           alignment,
           screenshotPath,
           verdict,
-          failureReason: failureReasons.length > 0 ? failureReasons.join("; ") : null,
+          failureReason:
+            failureReasons.length > 0 ? failureReasons.join("; ") : null,
         });
 
         // One combined hard assertion covering every category above
