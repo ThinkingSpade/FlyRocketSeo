@@ -79,6 +79,8 @@ import {
   useHandoff,
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import { buildDomainVerdict } from "@/client/features/insights/verdicts/domain";
 import type { DomainOverviewRouteState } from "@/client/features/domain/domainRouteState";
 import type {
   DomainActiveTab,
@@ -835,6 +837,18 @@ export function DomainOverviewPage({
             {state.overview.hasData && state.overview.positionBuckets ? (
               <PositionDistribution buckets={state.overview.positionBuckets} />
             ) : null}
+
+            {/* Pure read of data already on the page -- renders even when
+                hasData is false (an honest "unknown" tone), unlike the
+                metered cards below it. */}
+            <NextStepsCard
+              verdict={buildDomainVerdict({
+                domain: state.overview.domain,
+                organicKeywords: state.overview.organicKeywords,
+                organicTraffic: state.overview.organicTraffic,
+                positionBuckets: state.overview.positionBuckets,
+              })}
+            />
 
             {state.overview.hasData ? (
               <DomainCompetitorsCard
