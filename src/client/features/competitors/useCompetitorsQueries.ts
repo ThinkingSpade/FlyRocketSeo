@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import {
   getCompetitorsList,
   getKeywordGapPage,
@@ -5,6 +6,57 @@ import {
 } from "@/serverFunctions/competitors";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import { useHandoff } from "@/client/features/insights/handoffStore";
+
+/**
+ * Prefill the target input from a handoff, this tab's last run, or the
+ * project's own domain -- but only while the field is still empty; never
+ * clobber user input. `lastRun` comes from the caller's own `restored.label`
+ * rather than `useLastRunInput`: the stored competitors result
+ * (`competitorsPageSchema`) is just rows/count/fetchedAt, with no target
+ * field of its own, so -- exactly like Keyword Research's seed keyword --
+ * the target only exists as the analysis run's `label` column.
+ *
+ * Lives alongside this page's other supporting hooks rather than in
+ * `CompetitorsPage` itself to keep that component under this file's
+ * line-count limit.
+ */
+export function useCompetitorsTargetPrefill({
+  projectId,
+  target,
+  targetInput,
+  setTargetInput,
+  projectDomain,
+  lastRun,
+}: {
+  projectId: string;
+  target: string;
+  targetInput: string;
+  setTargetInput: (value: string) => void;
+  projectDomain: string | null;
+  lastRun: string | null;
+}) {
+  const handoff = useHandoff(projectId);
+  // There's no domain-shaped suggestion source, so this kind always passes an
+  // empty suggestions list.
+  const prefill = resolvePrefill({
+    kind: "domain",
+    searchParam: target,
+    handoff,
+    lastRun,
+    suggestions: [],
+    projectDefault: projectDomain,
+  });
+
+  useEffect(() => {
+    if (!target && !targetInput && prefill.value) {
+      setTargetInput(prefill.value);
+    }
+    // Only prefill while the field is empty; never clobber user input.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefill.value]);
+}
 
 export function useCompetitorsQuery(input: {
   projectId: string;

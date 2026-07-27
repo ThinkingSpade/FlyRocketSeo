@@ -1,11 +1,9 @@
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link2, Map, SearchX, Users } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { getProjects } from "@/serverFunctions/projects";
 import {
   DEFAULT_COMPETITORS_PAGE_SIZE,
   DEFAULT_KEYWORD_GAP_PAGE_SIZE,
@@ -30,11 +28,13 @@ import { CompetitorsPositioningMap } from "./CompetitorsPositioningMap";
 import { KeywordGapOverview } from "./KeywordGapOverview";
 import {
   useCompetitorsQuery,
+  useCompetitorsTargetPrefill,
   useKeywordGapQuery,
   useLinkGapQuery,
 } from "./useCompetitorsQueries";
 import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
+import { writeHandoff } from "@/client/features/insights/handoffStore";
 
 type CompetitorsSearchState = {
   target: string;
@@ -66,30 +66,6 @@ const COMPETITORS_TABS: Array<{ tab: CompetitorsTab; label: string }> = [
   { tab: "gap", label: "Keyword Gap" },
   { tab: "links", label: "Link Gap" },
 ];
-
-/** Prefill the target input with the project's own domain on first visit. */
-function useProjectDomainPrefill(
-  projectId: string,
-  target: string,
-  targetInput: string,
-  setTargetInput: (value: string) => void,
-) {
-  const projectsQuery = useQuery({
-    queryKey: ["projects"],
-    queryFn: () => getProjects(),
-    staleTime: 60_000,
-  });
-  const projectDomain =
-    projectsQuery.data?.find((project) => project.id === projectId)?.domain ??
-    "";
-  useEffect(() => {
-    if (!target && !targetInput && projectDomain) {
-      setTargetInput(projectDomain);
-    }
-    // Only prefill while the field is empty; never clobber user input.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [projectDomain]);
-}
 
 const COMPETITORS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -133,8 +109,32 @@ export function CompetitorsPage({
   // Keep inputs in sync when the URL changes (e.g. via a table row action).
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
-  useProjectDomainPrefill(projectId, target, targetInput, setTargetInput);
   const projectDomain = useProjectDomain(projectId);
+  // With no target in the URL the competitors query below stays disabled, so
+  // the tab would otherwise show nothing but a prompt. Restoring the
+  // project's last run fills it in for free: it reads a stored row plus the
+  // R2 object that run already paid for, and can never trigger a metered
+  // fetch. Declared before `useCompetitorsTargetPrefill` so its `label` can
+  // feed that hook's last-run prefill tier.
+  //
+  // Only the competitor list restores. Keyword gap and link gap need a chosen
+  // competitor and are separately metered, so they stay on demand.
+  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.competitors,
+    schema: competitorsPageSchema,
+    enabled: target.trim() === "" && tab === "competitors",
+    runId: selectedRunId,
+  });
+  useCompetitorsTargetPrefill({
+    projectId,
+    target,
+    targetInput,
+    setTargetInput,
+    projectDomain,
+    lastRun: restored?.label ?? null,
+  });
 
   const updateSearch = (update: Partial<CompetitorsSearchState>) => {
     navigate({
@@ -151,21 +151,6 @@ export function CompetitorsPage({
     enabled: tab === "competitors",
     authorized,
     runNonce: run.runNonce,
-  });
-  // With no target in the URL the query above stays disabled, so the tab would
-  // otherwise show nothing but a prompt. Restoring the project's last run fills
-  // it in for free: it reads a stored row plus the R2 object that run already
-  // paid for, and can never trigger a metered fetch.
-  //
-  // Only the competitor list restores. Keyword gap and link gap need a chosen
-  // competitor and are separately metered, so they stay on demand.
-  const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const { restored } = useAutoRestoredRun({
-    projectId,
-    feature: RUN_FEATURES.competitors,
-    schema: competitorsPageSchema,
-    enabled: target.trim() === "" && tab === "competitors",
-    runId: selectedRunId,
   });
   const restoredRun = competitorsQuery.data == null ? restored : null;
   const competitorRows =
@@ -251,6 +236,14 @@ export function CompetitorsPage({
                 nextTarget === target && nextCompetitor === competitor
                   ? page
                   : 1;
+              // A competitors run just happened for this target -- the next
+              // tab opened should inherit it.
+              writeHandoff(projectId, {
+                kind: "domain",
+                value: nextTarget,
+                source: "Competitors",
+                at: Date.now(),
+              });
               run.authorize(
                 buildCompetitorsAuthorizationKey(projectId, {
                   ...searchState,
@@ -305,6 +298,12 @@ export function CompetitorsPage({
           runCount={restoredRun.runCount}
           onRunAgain={() => {
             setTargetInput(restoredRun.label);
+            writeHandoff(projectId, {
+              kind: "domain",
+              value: restoredRun.label,
+              source: "Competitors",
+              at: Date.now(),
+            });
             run.authorize(
               buildCompetitorsAuthorizationKey(projectId, {
                 ...searchState,
@@ -326,6 +325,12 @@ export function CompetitorsPage({
           onAnalyze={() => {
             if (!projectDomain) return;
             setTargetInput(projectDomain);
+            writeHandoff(projectId, {
+              kind: "domain",
+              value: projectDomain,
+              source: "Competitors",
+              at: Date.now(),
+            });
             run.authorize(
               buildCompetitorsAuthorizationKey(projectId, {
                 ...searchState,
