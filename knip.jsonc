@@ -17,6 +17,14 @@
     "src/db/pg/schema.ts",
     // Standalone CLI/dev scripts, invoked via package.json scripts
     "scripts/**",
+    // Complete, working component whose consumer is a deliberately separate,
+    // not-yet-started plan (tab wiring + a confirmation banner) -- see
+    // docs/superpowers/specs/2026-07-27-local-geo-targeting-design.md's
+    // "Implementation order". Wiring it into a tab now would be scope creep
+    // this task's own brief explicitly forbids, so it has no importer yet by
+    // design, not by accident -- same reasoning as the src/db/schema.ts
+    // family above, applied to a public UI entry point instead of a barrel.
+    "src/client/features/geo/GeoLocationSelect.tsx",
   ],
   "project": ["**/*.{js,mjs,ts,tsx}", "!src/routeTree.gen.ts", "!web/**"],
   "ignore": ["drizzle-prod.config.ts"],
