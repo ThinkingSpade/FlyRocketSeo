@@ -24,13 +24,18 @@ export type SuggestionIntent =
   | "topic-gap"
   | "own-pages";
 
-/** Search Console query×page row, as returned by getSearchPerformanceReport. */
+/**
+ * Search Console query×page row, as returned by getSearchPerformanceReport.
+ * `ctr` is optional: the `queryPages` field (toQueryPageRows) never carries it
+ * through, only `ctrOpportunities` rows (buildCtrOpportunityRows) do — the two
+ * share this shape but not this one field.
+ */
 export type GscQueryPage = {
   query: string;
   page: string;
   clicks: number;
   impressions: number;
-  ctr: number;
+  ctr?: number;
   position: number;
 };
 
