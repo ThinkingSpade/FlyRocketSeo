@@ -1,4 +1,5 @@
-import { useState } from "react";
+/* eslint-disable max-lines -- the keyword-trends form and its chart rendering stay colocated. */
+import { useEffect, useState } from "react";
 import { Activity, Search } from "lucide-react";
 import {
   CartesianGrid,
@@ -28,6 +29,14 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
+import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -52,6 +61,84 @@ function parseKeywords(query: string): string[] {
   ].slice(0, MAX_TRENDS_KEYWORDS);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls the keyword list
+ * off the stored trends result and rejoins it into the same comma-separated
+ * shape the input holds. A shape that has drifted (or isn't this feature's
+ * result at all) returns null rather than throwing — the tab simply has no
+ * last-run value to offer, same contract as the hook itself.
+ */
+function extractStoredKeywords(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  if (!Array.isArray(result.keywords)) return null;
+  const keywords = result.keywords.filter(
+    (keyword): keyword is string => typeof keyword === "string",
+  );
+  return keywords.length > 0 ? keywords.join(", ") : null;
+}
+
+/**
+ * Adds one keyword to the comma-separated list rather than replacing it: this
+ * field holds up to `MAX_TRENDS_KEYWORDS` keywords being compared side by
+ * side, so a chip click that wiped out whatever the user had already typed
+ * or added would be far more surprising than one that extends the list.
+ * Case-insensitive de-dupe and the same cap `parseKeywords` enforces at
+ * submit time keep a repeated click a harmless no-op instead of a visible
+ * duplicate.
+ */
+function appendKeyword(current: string, next: string): string {
+  const existing = parseKeywords(current);
+  const normalized = next.trim().toLowerCase();
+  if (existing.includes(normalized)) return existing.join(", ");
+  return [...existing, normalized].slice(0, MAX_TRENDS_KEYWORDS).join(", ");
+}
+
+/**
+ * The submit button, paired with an invisible copy of the "Keywords
+ * (comma-separated...)" label above it. The form aligns its columns with
+ * `items-start` so the keyword column's chips (rendered after the input) can
+ * never drag the other columns down -- but that only works if every column
+ * starts with the same label-row height. This column has no real label, so
+ * the phantom one here lands the button's own control at the input's
+ * y-offset instead of flush with the field's label text. `hidden`/`sm:block`
+ * keeps it out of the stacked mobile layout, where nothing pushes the button
+ * down and this spacer would only add dead space.
+ */
+function CompareButton({
+  disabled,
+  isFetching,
+}: {
+  disabled: boolean;
+  isFetching: boolean;
+}) {
+  return (
+    <div className="form-control">
+      <span
+        aria-hidden="true"
+        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+      >
+        Compare
+      </span>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm gap-1.5"
+        disabled={disabled}
+      >
+        {isFetching ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <Search className="size-3.5" />
+        )}
+        Compare
+      </button>
+    </div>
+  );
+}
+
 export function TrendsPage({
   projectId,
   navigate,
@@ -62,6 +149,7 @@ export function TrendsPage({
   query: string;
 }) {
   const [input, setInput] = useState(query);
+  const [inputTouched, setInputTouched] = useState(false);
   const prefilledKeywords = parseKeywords(query);
   const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
   const run = useAuthorizedRun(
@@ -82,6 +170,47 @@ export function TrendsPage({
   const errorMessage = trendsQuery.isError
     ? getStandardErrorMessage(trendsQuery.error)
     : null;
+
+  const suggestions = useProjectSuggestions(projectId, "high-volume");
+  const handoff = useHandoff(projectId);
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.keywordTrends,
+    extractStoredKeywords,
+  );
+
+  // Unlike every other tab, this field holds a LIST: `resolvePrefill` only
+  // ever reads `suggestions[0]`, so joining just the top suggestion would
+  // waste the two other slots the field can hold. The URL/handoff/last-run
+  // levels stay exactly as authoritative as everywhere else -- passing an
+  // empty suggestions array here means `resolved` reflects only those three
+  // -- and only the bottom "suggestion" rung swaps one keyword for the top
+  // three, joined the same way a restored run's keyword list already is.
+  const resolved = resolvePrefill({
+    kind: "keyword",
+    searchParam: query,
+    handoff,
+    lastRun,
+    suggestions: [],
+    projectDefault: null,
+  });
+  const suggestedKeywords = suggestions
+    .slice(0, 3)
+    .map((suggestion) => suggestion.value)
+    .join(", ");
+  const prefillValue =
+    resolved.value !== "" ? resolved.value : suggestedKeywords;
+
+  // Every prefill source above resolves after first paint, so the `useState`
+  // initializer can never see it. Seed the field once a value lands, but
+  // never fight the user: bail as soon as they've typed or picked a chip
+  // (inputTouched), and even before that, bail if the field is non-empty.
+  useEffect(() => {
+    if (inputTouched) return;
+    if (input.trim() !== "") return;
+    if (prefillValue === "") return;
+    setInput(prefillValue);
+  }, [inputTouched, input, prefillValue]);
   // Restoring the project's last trends run is free: it reads a stored row plus
   // the R2 object that run already paid for, never a metered fetch.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -112,43 +241,58 @@ export function TrendsPage({
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
           <form
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
               event.preventDefault();
               const next = parseKeywords(input);
               if (next.length === 0) return;
               setRunKeywords(next);
               run.authorize();
+              // Hands the primary (first) keyword to whichever tab the user
+              // opens next -- the list itself is this tab's own concept, but
+              // every other tab's field only knows how to take one keyword.
+              writeHandoff(projectId, {
+                kind: "keyword",
+                value: next[0],
+                source: "Keyword Trends",
+                at: Date.now(),
+              });
               navigate({
                 search: (prev) => ({ ...prev, q: next.join(", ") }),
                 replace: false,
               });
             }}
           >
-            <label className="form-control w-full sm:max-w-xl">
-              <span className="label-text pb-1 text-xs font-medium">
-                Keywords (comma-separated, up to {MAX_TRENDS_KEYWORDS})
-              </span>
-              <input
-                type="text"
-                className="input input-bordered input-sm w-full"
-                placeholder="seo tools, keyword research, rank tracker"
+            <div className="flex w-full flex-col gap-1.5 sm:max-w-xl">
+              <label className="form-control w-full">
+                <span className="label-text pb-1 text-xs font-medium">
+                  Keywords (comma-separated, up to {MAX_TRENDS_KEYWORDS})
+                </span>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="seo tools, keyword research, rank tracker"
+                  value={input}
+                  onChange={(event) => {
+                    setInputTouched(true);
+                    setInput(event.target.value);
+                  }}
+                />
+              </label>
+              <SuggestionChips
+                suggestions={suggestions}
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onSelect={(next) => {
+                  setInputTouched(true);
+                  setInput(appendKeyword(input, next));
+                }}
+                disabled={trendsQuery.isFetching}
               />
-            </label>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+            </div>
+            <CompareButton
               disabled={!input.trim() || trendsQuery.isFetching}
-            >
-              {trendsQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <Search className="size-3.5" />
-              )}
-              Compare
-            </button>
+              isFetching={trendsQuery.isFetching}
+            />
           </form>
         </div>
       </div>
