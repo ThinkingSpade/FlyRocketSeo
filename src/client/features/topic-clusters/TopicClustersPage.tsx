@@ -34,6 +34,8 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import { buildClustersVerdict } from "@/client/features/insights/verdicts/content";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -384,6 +386,23 @@ function ClusterPlan({
   // Priority ranking + totals are pure client-side cuts of the fetched plan.
   const clusters = useMemo(() => prioritizeClusters(plan.clusters), [plan]);
   const totals = useMemo(() => computeClusterPlanTotals(plan.clusters), [plan]);
+  // clusters is already sorted by opportunity (prioritizeClusters' own
+  // order), so the verdict's lead candidate is always the plan's own P1
+  // cluster -- it can never name a different "worth a hub" pick than the
+  // priority badges below already show.
+  const clustersVerdict = useMemo(
+    () =>
+      buildClustersVerdict({
+        topic: plan.topic,
+        clusters: clusters.map((cluster) => ({
+          name: cluster.name,
+          keywordCount: cluster.keywords.length,
+          totalVolume: cluster.totalVolume,
+          averageDifficulty: cluster.averageDifficulty,
+        })),
+      }),
+    [plan.topic, clusters],
+  );
   const coverageState = useTopicPlanCoverage({
     projectId,
     hubTerms: [plan.topic, ...plan.hub.map((keyword) => keyword.keyword)],
@@ -442,6 +461,8 @@ function ClusterPlan({
           <Sparkles className="size-3" /> Copy plan for AI
         </button>
       </div>
+
+      <NextStepsCard verdict={clustersVerdict} />
 
       <ClusterPlanBody
         plan={plan}

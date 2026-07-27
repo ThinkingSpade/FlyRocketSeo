@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { NotebookPen, Search } from "lucide-react";
-import { BriefTargets } from "@/client/features/content/BriefTargets";
+import { BriefTargets, quantile } from "@/client/features/content/BriefTargets";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
 import { useContentBriefHistory } from "@/client/features/content/useContentBriefHistory";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -271,6 +271,10 @@ export function ContentOptimizerPage({
   const h2Counts = loadedAnalyses
     .map((analysis) => analysis.h2.length)
     .toSorted((a, b) => a - b);
+  // Read once and threaded into both BriefTargets and DraftGrader's verdict
+  // below, so the two can never disagree on what "the target" is.
+  const targetWordCount =
+    wordCounts.length > 0 ? quantile(wordCounts, 0.5) : null;
 
   const headingIdeas = [
     ...new Set(
@@ -576,6 +580,8 @@ export function ContentOptimizerPage({
           <CompetitorOutlines analyses={loadedAnalyses} />
 
           <DraftGrader
+            keyword={brief.keyword}
+            targetWordCount={targetWordCount}
             terms={brief.terms}
             questions={brief.paaQuestions}
             outlines={loadedAnalyses.map((analysis) => analysis.h2)}
