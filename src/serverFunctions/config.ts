@@ -6,6 +6,9 @@ import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 export const getClientRuntimeConfig = createServerFn({ method: "GET" }).handler(
   () => ({
     emailVerificationBypassed: env.BYPASS_EMAIL_VERIFICATION === "true",
+    // Gates the insights "Explain this" button. Without a key the button is
+    // hidden rather than shown-and-broken (see ExplainService).
+    aiExplainAvailable: Boolean(env.OPENROUTER_API_KEY?.trim()),
   }),
 );
 
