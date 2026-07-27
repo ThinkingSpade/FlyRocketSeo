@@ -26,17 +26,27 @@ function isSubCountry(area: TargetArea): boolean {
 }
 
 /**
- * A national-scope result needs the country's NAME (e.g. "United States"),
- * not the sub-country area's own label (e.g. "Dallas-Fort Worth TX"). Rather
- * than keep a second country table, look it up in LOCATION_OPTIONS — the
- * single source of truth for location metadata already used to pick data
- * providers.
+ * Country name for a DataForSEO country location code, read from
+ * LOCATION_OPTIONS — the single source of truth for location metadata
+ * already used to pick data providers, so we don't keep a second country
+ * table. Two callers need this: a national-scope result under a sub-country
+ * area (which needs the country's NAME, e.g. "United States", not the
+ * area's own label, e.g. "Dallas-Fort Worth TX"), and any need with no
+ * target area at all, where the label is simply the session country's own
+ * name — never a different, hardcoded country.
+ *
+ * The `?? ""` here is the one place an empty label is correct rather than a
+ * bug: if the code isn't in LOCATION_OPTIONS, there is no truthful name to
+ * show, and every caller below already has nothing better to fall back to.
  */
-function countryLabel(area: TargetArea): string {
+function countryLabelForCode(locationCode: number): string {
   return (
-    LOCATION_OPTIONS.find((option) => option.code === area.parentCountryCode)
-      ?.label ?? ""
+    LOCATION_OPTIONS.find((option) => option.code === locationCode)?.label ?? ""
   );
+}
+
+function countryLabel(area: TargetArea): string {
+  return countryLabelForCode(area.parentCountryCode);
 }
 
 export function resolveGeo(
@@ -58,13 +68,17 @@ export function resolveGeo(
       languageCode: country.languageCode,
       provider: "business",
       scope: area && isSubCountry(area) ? "local" : "national",
-      label: area?.label ?? "United States",
+      // No target area means this figure describes the whole session
+      // country; say so by its own name, not an assumed default.
+      label: area?.label ?? countryLabelForCode(country.locationCode),
     };
   }
 
   if (NATIONAL_ONLY.has(need)) {
     return national(
-      area && isSubCountry(area) ? countryLabel(area) : (area?.label ?? ""),
+      area && isSubCountry(area)
+        ? countryLabel(area)
+        : (area?.label ?? countryLabelForCode(country.locationCode)),
       "labs",
     );
   }
@@ -87,6 +101,6 @@ export function resolveGeo(
     languageCode: country.languageCode,
     provider: isSerpNeed ? "serp" : getKeywordDataProvider(locationCode),
     scope: "national",
-    label: area?.label ?? "",
+    label: area?.label ?? countryLabelForCode(country.locationCode),
   };
 }
