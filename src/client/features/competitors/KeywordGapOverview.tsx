@@ -41,6 +41,8 @@ export function KeywordGapOverview({
   competitor,
   pageSize,
   activeMode,
+  locationCode,
+  languageCode,
   authorized,
   runNonce,
   onModeChange,
@@ -50,6 +52,8 @@ export function KeywordGapOverview({
   competitor: string;
   pageSize: number;
   activeMode: KeywordGapMode;
+  locationCode: number;
+  languageCode: string;
   authorized: boolean;
   runNonce: number;
   onModeChange: (mode: KeywordGapMode) => void;
@@ -62,6 +66,8 @@ export function KeywordGapOverview({
       mode: "missing",
       page: 1,
       pageSize,
+      locationCode,
+      languageCode,
       enabled: activeMode === "missing",
       authorized,
       runNonce,
@@ -73,6 +79,8 @@ export function KeywordGapOverview({
       mode: "shared",
       page: 1,
       pageSize,
+      locationCode,
+      languageCode,
       enabled: activeMode === "shared",
       authorized,
       runNonce,
@@ -84,6 +92,8 @@ export function KeywordGapOverview({
       mode: "advantage",
       page: 1,
       pageSize,
+      locationCode,
+      languageCode,
       enabled: activeMode === "advantage",
       authorized,
       runNonce,

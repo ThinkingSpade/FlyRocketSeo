@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link2, Map, SearchX, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";
@@ -13,11 +13,11 @@ import {
   type CompetitorsTab,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
+import { AnalyzeDomainPrompt } from "@/client/components/AnalyzeDomainPrompt";
 import {
-  AnalyzeDomainPrompt,
-  type AnalyzePreviewItem,
-} from "@/client/components/AnalyzeDomainPrompt";
-import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
@@ -27,6 +27,7 @@ import { TabBody } from "./CompetitorsTabBody";
 import { CompetitorsOverviewExtras } from "./CompetitorsOverviewExtras";
 import { KeywordGapOverview } from "./KeywordGapOverview";
 import {
+  useAuthorizedMarket,
   useCompetitorsQuery,
   useCompetitorsTargetPrefill,
   useKeywordGapQuery,
@@ -35,6 +36,12 @@ import {
 import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
 import { writeHandoff } from "@/client/features/insights/handoffStore";
+import {
+  COMPETITORS_ANALYZE_PREVIEW,
+  COMPETITORS_TABS,
+  GAP_MODE_LABELS,
+  TAB_PAGE_SIZES,
+} from "./competitorsPageContent";
 
 type CompetitorsSearchState = {
   target: string;
@@ -48,47 +55,6 @@ type CompetitorsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
-
-const GAP_MODE_LABELS: Record<KeywordGapMode, string> = {
-  missing: "Missing (they rank, you don't)",
-  shared: "Shared (you both rank)",
-  advantage: "Advantage (you rank, they don't)",
-};
-
-const TAB_PAGE_SIZES: Record<CompetitorsTab, number> = {
-  competitors: DEFAULT_COMPETITORS_PAGE_SIZE,
-  gap: DEFAULT_KEYWORD_GAP_PAGE_SIZE,
-  links: DEFAULT_LINK_GAP_PAGE_SIZE,
-};
-
-const COMPETITORS_TABS: Array<{ tab: CompetitorsTab; label: string }> = [
-  { tab: "competitors", label: "Competitors" },
-  { tab: "gap", label: "Keyword Gap" },
-  { tab: "links", label: "Link Gap" },
-];
-
-const COMPETITORS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
-  {
-    icon: Users,
-    title: "Organic rivals",
-    description: "Domains ranking for the same keywords, by overlap",
-  },
-  {
-    icon: Map,
-    title: "Positioning map",
-    description: "Keywords vs traffic, bubble-sized by shared keywords",
-  },
-  {
-    icon: SearchX,
-    title: "Keyword gap",
-    description: "What they rank for that you don't — your content roadmap",
-  },
-  {
-    icon: Link2,
-    title: "Link gap",
-    description: "Sites linking to them but not to you",
-  },
-];
 
 export function CompetitorsPage({
   projectId,
@@ -106,6 +72,11 @@ export function CompetitorsPage({
     buildCompetitorsAuthorizationKey(projectId, searchState),
   );
   const authorized = run.authorized;
+  // The project's configured market, not the server's bare 2840 default --
+  // frozen once this run is authorized so a late-arriving market can never
+  // silently change an already-authorized metered query's key (see
+  // `useAuthorizedMarket`).
+  const market = useAuthorizedMarket(useProjectMarket(projectId), authorized);
   // Keep inputs in sync when the URL changes (e.g. via a table row action).
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
@@ -148,6 +119,8 @@ export function CompetitorsPage({
     target,
     page: tab === "competitors" ? page : 1,
     pageSize: DEFAULT_COMPETITORS_PAGE_SIZE,
+    locationCode: market.locationCode,
+    languageCode: market.languageCode,
     enabled: tab === "competitors",
     authorized,
     runNonce: run.runNonce,
@@ -162,6 +135,8 @@ export function CompetitorsPage({
     mode,
     page: tab === "gap" ? page : 1,
     pageSize: DEFAULT_KEYWORD_GAP_PAGE_SIZE,
+    locationCode: market.locationCode,
+    languageCode: market.languageCode,
     enabled: tab === "gap",
     authorized,
     runNonce: run.runNonce,
@@ -359,6 +334,8 @@ export function CompetitorsPage({
           competitor={competitor}
           pageSize={DEFAULT_KEYWORD_GAP_PAGE_SIZE}
           activeMode={mode}
+          locationCode={market.locationCode}
+          languageCode={market.languageCode}
           authorized={authorized}
           runNonce={run.runNonce}
           onModeChange={(nextMode) => updateSearch({ mode: nextMode, page: 1 })}

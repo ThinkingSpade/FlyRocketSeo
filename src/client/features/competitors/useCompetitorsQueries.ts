@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import {
   getCompetitorsList,
   getKeywordGapPage,
@@ -8,6 +8,30 @@ import type { KeywordGapMode } from "@/types/schemas/competitors";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
 import { useHandoff } from "@/client/features/insights/handoffStore";
+import type { ProjectMarket } from "@/client/hooks/useProjectDomain";
+
+/**
+ * The market to bill this page's metered competitor/gap calls against.
+ *
+ * `market` (from `useProjectMarket`) can update after a run is already
+ * authorized -- `["projects"]` is an async query, and authorization is keyed
+ * on target/competitor/tab/mode/page only, never on location, so a late
+ * arrival does not deauthorize anything. But `locationCode`/`languageCode`
+ * still feed the metered query's key below, and changing a query key while it
+ * stays enabled makes TanStack Query treat it as a brand-new, never-fetched
+ * entry and fetch it immediately -- a second metered call the user never
+ * asked for. Freezing the market the moment a run becomes authorized (and
+ * tracking it live otherwise, so a late arrival still lands before the user
+ * actually submits) keeps the key stable for the lifetime of that run.
+ */
+export function useAuthorizedMarket(
+  market: ProjectMarket,
+  authorized: boolean,
+): ProjectMarket {
+  const frozen = useRef(market);
+  if (!authorized) frozen.current = market;
+  return authorized ? frozen.current : market;
+}
 
 /**
  * Prefill the target input from a handoff, this tab's last run, or the
@@ -63,6 +87,8 @@ export function useCompetitorsQuery(input: {
   target: string;
   page: number;
   pageSize: number;
+  locationCode: number;
+  languageCode: string;
   enabled: boolean;
   authorized: boolean;
   runNonce: number;
@@ -78,6 +104,8 @@ export function useCompetitorsQuery(input: {
       target,
       input.page,
       input.pageSize,
+      input.locationCode,
+      input.languageCode,
     ],
     queryFn: () =>
       getCompetitorsList({
@@ -86,6 +114,8 @@ export function useCompetitorsQuery(input: {
           target,
           page: input.page,
           pageSize: input.pageSize,
+          locationCode: input.locationCode,
+          languageCode: input.languageCode,
         },
       }),
   });
@@ -98,6 +128,8 @@ export function useKeywordGapQuery(input: {
   mode: KeywordGapMode;
   page: number;
   pageSize: number;
+  locationCode: number;
+  languageCode: string;
   enabled: boolean;
   authorized: boolean;
   runNonce: number;
@@ -116,6 +148,8 @@ export function useKeywordGapQuery(input: {
       input.mode,
       input.page,
       input.pageSize,
+      input.locationCode,
+      input.languageCode,
     ],
     queryFn: () =>
       getKeywordGapPage({
@@ -126,6 +160,8 @@ export function useKeywordGapQuery(input: {
           mode: input.mode,
           page: input.page,
           pageSize: input.pageSize,
+          locationCode: input.locationCode,
+          languageCode: input.languageCode,
         },
       }),
   });
