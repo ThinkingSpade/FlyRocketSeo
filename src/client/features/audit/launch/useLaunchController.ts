@@ -20,7 +20,11 @@ import {
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
-import { useHandoff } from "@/client/features/insights/handoffStore";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
+import { buildProjectStartUrl } from "@/client/features/audit/launch/projectStartUrl";
 
 function getLaunchValidationErrors(
   value: LaunchFormValues,
@@ -39,26 +43,6 @@ function getLaunchValidationErrors(
       url: "Please enter a URL.",
     },
   });
-}
-
-const URL_SCHEME_PATTERN = /^[a-zA-Z][a-zA-Z\d+.-]*:\/\//;
-
-/**
- * The project's `domain` column is meant to hold a bare host, but a few rows
- * predate that convention and still carry a scheme. `AnalyzeProjectCard`'s
- * one-click "analyze everything" flow builds `https://${domain}/` assuming a
- * bare host -- doing that blindly here would double the scheme on those rows
- * (`https://https://...`). Stripping any existing scheme and trailing
- * slash(es) first, then reapplying exactly one of each, lands every stored
- * shape on the same normalized result instead.
- */
-function buildProjectStartUrl(domain: string | null): string | null {
-  if (!domain) return null;
-  const trimmed = domain.trim();
-  if (!trimmed) return null;
-  const host = trimmed.replace(URL_SCHEME_PATTERN, "").replace(/\/+$/, "");
-  if (!host) return null;
-  return `https://${host}/`;
 }
 
 export function useLaunchController({
@@ -138,6 +122,17 @@ export function useLaunchController({
         });
         toast.success("Audit started!");
         onAuditStarted(result.auditId);
+        // Site Audit is the ninth wave-1 tab required to write a handoff on a
+        // successful run (design doc, "Cross-tab handoff") -- opening
+        // Backlinks right after an audit should inherit the domain just
+        // crawled instead of making the user retype it. No `locationCode`:
+        // this form has none, matching the Backlinks precedent.
+        writeHandoff(projectId, {
+          kind: "url",
+          value: value.url,
+          source: "Site Audit",
+          at: Date.now(),
+        });
       } catch (error) {
         formApi.setErrorMap({
           onSubmit: createFormValidationErrors({
