@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Network, Search, Sparkles } from "lucide-react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -14,25 +14,88 @@ import {
   prioritizeClusters,
 } from "@/client/features/topic-clusters/clusterPriorities";
 import { captureClientEvent } from "@/client/lib/posthog";
-import {
-  DEFAULT_LOCATION_CODE,
-  LOCATION_OPTIONS,
-} from "@/shared/keyword-locations";
+import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import {
   createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import {
   CoverageSummary,
   useTopicPlanCoverage,
 } from "@/client/features/topic-clusters/TopicCoverageOverlay";
 import { ClusterPlanBody } from "@/client/features/topic-clusters/ClusterPlanBody";
+import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
+import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls `topic` off the
+ * stored cluster-plan result. A shape that has drifted (or isn't this
+ * feature's result at all) returns null rather than throwing — the tab
+ * simply has no last-run value to offer, same contract as the hook itself.
+ */
+function extractStoredTopic(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  return typeof result.topic === "string" ? result.topic : null;
+}
+
+/**
+ * The submit button, paired with an invisible copy of the "Seed topic"/
+ * "Location" label row above it. The form aligns its columns with
+ * `items-start` so the topic column's chips (rendered after the input) can
+ * never drag the other columns down -- but that only works if every column
+ * starts with the same label-row height. This column has no real label, so
+ * the phantom one here lands the button's own control at the input's
+ * y-offset instead of flush with the "Seed topic"/"Location" text.
+ * `hidden`/`sm:block` keeps it out of the stacked mobile layout, where
+ * nothing pushes the button down and this spacer would only add dead space.
+ */
+function PlanClustersButton({
+  disabled,
+  isFetching,
+}: {
+  disabled: boolean;
+  isFetching: boolean;
+}) {
+  return (
+    <div className="form-control">
+      <span
+        aria-hidden="true"
+        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+      >
+        Plan clusters
+      </span>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm gap-1.5"
+        disabled={disabled}
+      >
+        {isFetching ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <Search className="size-3.5" />
+        )}
+        Plan clusters
+      </button>
+    </div>
+  );
+}
 
 export function TopicClustersPage({
   projectId,
@@ -45,9 +108,70 @@ export function TopicClustersPage({
   query: string;
   locationCode: number | undefined;
 }) {
-  const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
+  const market = useProjectMarket(projectId);
+  // The URL's own `loc` param always wins; the project's configured market
+  // only fills in for a tab opened with no location in the URL at all.
+  const activeLocation = locationCode ?? market.locationCode;
+
+  const suggestions = useProjectSuggestions(projectId, "topic-gap");
+  const handoff = useHandoff(projectId);
+  // This page already imports RUN_FEATURES for its RecentRunsList; reuse the
+  // same feature key so both read one cache entry.
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.topicClusters,
+    extractStoredTopic,
+  );
+
+  // The URL param wins, then a topic carried from another tab, then what this
+  // tab last ran, then the topic-gap ranking. Resolved only for the field's
+  // initial value — after that the user owns the input.
+  const prefill = resolvePrefill({
+    kind: "keyword",
+    searchParam: query,
+    handoff,
+    lastRun,
+    suggestions,
+    projectDefault: null,
+  });
+
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
+  const [inputTouched, setInputTouched] = useState(false);
+  const [locationTouched, setLocationTouched] = useState(false);
+
+  // Every prefill source above resolves after first paint, so the `useState`
+  // initializer can never see it. Seed the field once a value lands, but
+  // never fight the user: bail as soon as they've typed or picked a chip
+  // (inputTouched), and even before that, bail if the field is non-empty.
+  useEffect(() => {
+    if (inputTouched) return;
+    if (input.trim() !== "") return;
+    if (prefill.value === "") return;
+    setInput(prefill.value);
+  }, [inputTouched, input, prefill.value]);
+
+  // `activeLocation` has the same deferred-arrival problem as the topic
+  // prefill above, and it's worse here: on a cold load (hard refresh,
+  // bookmark, shared link) the `["projects"]` query behind `useProjectMarket`
+  // hasn't resolved on first render, so `activeLocation` reads the US
+  // fallback and `locationInput` locks onto it via the `useState` initializer.
+  // Without this effect the select would silently keep showing "United
+  // States" even after the project's real market arrives a render later --
+  // and the metered lookup below bills a wrong-country analysis with no
+  // error and no visual cue. Bail on an explicit `loc` URL param (it already
+  // won at first paint, synchronously -- there's nothing to re-sync) and on
+  // a location the user picked themselves (locationTouched), so precedence
+  // stays URL param > user selection > project market > US fallback.
+  // Depending on the primitive `activeLocation` (not the `market` object)
+  // keeps this from re-running every render: an unstable object dependency
+  // has caused a real render loop in this codebase before.
+  useEffect(() => {
+    if (locationCode != null) return;
+    if (locationTouched) return;
+    setLocationInput(String(activeLocation));
+  }, [locationCode, locationTouched, activeLocation]);
+
   const [runInput, setRunInput] = useState<{
     topic: string;
     locationCode: number;
@@ -103,7 +227,7 @@ export function TopicClustersPage({
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
           <form
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
               event.preventDefault();
               const next = input.trim();
@@ -113,6 +237,13 @@ export function TopicClustersPage({
                 locationCode: Number(locationInput),
               });
               run.authorize();
+              writeHandoff(projectId, {
+                kind: "keyword",
+                value: next,
+                locationCode: Number(locationInput),
+                source: "Topic Clusters",
+                at: Date.now(),
+              });
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -123,18 +254,32 @@ export function TopicClustersPage({
               });
             }}
           >
-            <label className="form-control w-full sm:max-w-md">
-              <span className="label-text pb-1 text-xs font-medium">
-                Seed topic
-              </span>
-              <input
-                type="text"
-                className="input input-bordered input-sm w-full"
-                placeholder="office vending machines"
+            <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
+              <label className="form-control w-full">
+                <span className="label-text pb-1 text-xs font-medium">
+                  Seed topic
+                </span>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="office vending machines"
+                  value={input}
+                  onChange={(event) => {
+                    setInputTouched(true);
+                    setInput(event.target.value);
+                  }}
+                />
+              </label>
+              <SuggestionChips
+                suggestions={suggestions}
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onSelect={(next) => {
+                  setInputTouched(true);
+                  setInput(next);
+                }}
+                disabled={clustersQuery.isFetching}
               />
-            </label>
+            </div>
             <label className="form-control w-full sm:max-w-56">
               <span className="label-text pb-1 text-xs font-medium">
                 Location
@@ -142,7 +287,10 @@ export function TopicClustersPage({
               <select
                 className="select select-bordered select-sm w-full"
                 value={locationInput}
-                onChange={(event) => setLocationInput(event.target.value)}
+                onChange={(event) => {
+                  setLocationTouched(true);
+                  setLocationInput(event.target.value);
+                }}
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option.code} value={option.code}>
@@ -151,18 +299,10 @@ export function TopicClustersPage({
                 ))}
               </select>
             </label>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+            <PlanClustersButton
               disabled={!input.trim() || clustersQuery.isFetching}
-            >
-              {clustersQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <Search className="size-3.5" />
-              )}
-              Plan clusters
-            </button>
+              isFetching={clustersQuery.isFetching}
+            />
           </form>
         </div>
       </div>
