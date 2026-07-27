@@ -34,7 +34,10 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
-import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import {
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -43,6 +46,11 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import {
+  buildSerpVerdict,
+  serpRowNote,
+} from "@/client/features/insights/verdicts/serp";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -68,6 +76,37 @@ function difficultyTone(value: number | null | undefined): InsightTone {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/** The project's own DR, or null when there's no domain or Ahrefs hasn't
+ *  rated it yet. Split out so the render function states its intent in one
+ *  line rather than a ternary. */
+function computeOwnDomainRating(
+  projectDomain: string | null,
+  ratings: DomainRatings | null,
+): number | null {
+  return projectDomain && ratings ? (ratings[projectDomain] ?? null) : null;
+}
+
+/**
+ * Shapes this page's fetched result into the verdict model's input. Kept
+ * outside the component so wiring glue doesn't compete with layout for the
+ * render function's line budget.
+ */
+function buildPageSerpVerdict(
+  result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>,
+  ratings: DomainRatings | null,
+  ownDomainRating: number | null,
+) {
+  return buildSerpVerdict({
+    keyword: result.keyword,
+    ownDomainRating,
+    competitorRatings: result.results
+      .map((item) => (item.domain ? (ratings?.[item.domain] ?? null) : null))
+      .filter((value): value is number => value != null),
+    resultCount: result.results.length,
+    paaQuestions: result.paaQuestions,
+  });
 }
 
 /**
@@ -135,6 +174,7 @@ export function SerpOverviewPage({
   locationCode: number | undefined;
 }) {
   const market = useProjectMarket(projectId);
+  const projectDomain = useProjectDomain(projectId);
   // The URL's own `loc` param always wins; the project's configured market
   // only fills in for a tab opened with no location in the URL at all.
   const activeLocation = locationCode ?? market.locationCode;
@@ -248,6 +288,10 @@ export function SerpOverviewPage({
       .filter((domain): domain is string => Boolean(domain));
     if (domains.length > 0) void loadRatings(domains);
   }, [result, loadRatings]);
+
+  // Read once and threaded into both the verdict and the results table below,
+  // so the two can never disagree about what "our own site" means.
+  const ownDomainRating = computeOwnDomainRating(projectDomain, ratings);
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -453,7 +497,15 @@ export function SerpOverviewPage({
 
           <SerpStrengthCards results={result.results} ratings={ratings} />
 
-          <SerpResultsTable result={result} ratings={ratings} />
+          <NextStepsCard
+            verdict={buildPageSerpVerdict(result, ratings, ownDomainRating)}
+          />
+
+          <SerpResultsTable
+            result={result}
+            ratings={ratings}
+            ownDomainRating={ownDomainRating}
+          />
 
           {result.paaQuestions.length > 0 ? (
             <div className="card border border-base-300 bg-base-100">
@@ -491,9 +543,11 @@ export function SerpOverviewPage({
 function SerpResultsTable({
   result,
   ratings,
+  ownDomainRating,
 }: {
   result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
   ratings: DomainRatings | null;
+  ownDomainRating: number | null;
 }) {
   // Ahrefs-style estimate: keyword volume spread over a standard
   // CTR-by-position curve. Client-side, no extra API spend.
@@ -531,6 +585,14 @@ function SerpResultsTable({
             {result.results.map((item) => {
               const estimate =
                 item.rank != null ? trafficShare?.get(item.rank) : undefined;
+              const rowNote = serpRowNote(
+                {
+                  domainRating: item.domain
+                    ? (ratings?.[item.domain] ?? null)
+                    : null,
+                },
+                { ownDomainRating },
+              );
               return (
                 <tr key={`${item.rank}-${item.url}`}>
                   <td className="align-top">
@@ -559,6 +621,11 @@ function SerpResultsTable({
                     <div className="line-clamp-1 text-xs text-success/80">
                       {item.url}
                     </div>
+                    {rowNote ? (
+                      <div className="text-xs text-base-content/45">
+                        {rowNote}
+                      </div>
+                    ) : null}
                     {item.description ? (
                       <div className="line-clamp-2 text-xs text-base-content/60">
                         {item.description}
