@@ -7,6 +7,7 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { applyBillingMarkupUsd } from "@/shared/billing";
 import { BRAND_LOOKUP_RAW_COST_USD } from "@/shared/analysis-costs";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { getDomainOverview } from "@/serverFunctions/domain";
 import { getBacklinksOverview } from "@/serverFunctions/backlinks";
 import { getCompetitorsList } from "@/serverFunctions/competitors";
@@ -46,9 +47,9 @@ import {
 const markup = (rawUsd: number) =>
   isHostedClientAuthMode() ? applyBillingMarkupUsd(rawUsd) : rawUsd;
 
-const DEFAULT_LOCATION_CODE = 2840;
-
 type RunStatus = "idle" | "running" | "done" | "failed";
+
+type AnalysisMarket = { locationCode: number; languageCode: string };
 
 type Analysis = {
   key: string;
@@ -58,7 +59,12 @@ type Analysis = {
   estimateUsd: number | null;
   /** True when the analysis needs a seed keyword rather than just the domain. */
   needsKeyword?: boolean;
-  run: (projectId: string, domain: string, keyword: string) => Promise<unknown>;
+  run: (
+    projectId: string,
+    domain: string,
+    keyword: string,
+    market: AnalysisMarket,
+  ) => Promise<unknown>;
 };
 
 const ANALYSES: Analysis[] = [
@@ -67,14 +73,14 @@ const ANALYSES: Analysis[] = [
     label: "Domain Overview",
     detail: "Traffic, keywords and ranking distribution",
     estimateUsd: null,
-    run: (projectId, domain) =>
+    run: (projectId, domain, _keyword, market) =>
       getDomainOverview({
         data: {
           projectId,
           domain,
           includeSubdomains: true,
-          locationCode: 2840,
-          languageCode: "en",
+          locationCode: market.locationCode,
+          languageCode: market.languageCode,
         },
       }),
   },
@@ -83,7 +89,7 @@ const ANALYSES: Analysis[] = [
     label: "Backlinks",
     detail: "Domain rank, referring domains and link profile",
     estimateUsd: null,
-    run: (projectId, domain) =>
+    run: (projectId, domain, _keyword, _market) =>
       getBacklinksOverview({ data: { projectId, target: domain } }),
   },
   {
@@ -91,7 +97,7 @@ const ANALYSES: Analysis[] = [
     label: "Competitors",
     detail: "Domains competing for the same keywords",
     estimateUsd: null,
-    run: (projectId, domain) =>
+    run: (projectId, domain, _keyword, _market) =>
       getCompetitorsList({ data: { projectId, target: domain } }),
   },
   {
@@ -99,7 +105,7 @@ const ANALYSES: Analysis[] = [
     label: "AI Visibility",
     detail: "How ChatGPT and Google AI Overview cite you",
     estimateUsd: markup(BRAND_LOOKUP_RAW_COST_USD),
-    run: (projectId) =>
+    run: (projectId, _domain, _keyword, _market) =>
       analyzeProjectBrand({ data: { projectId, competitors: [] } }),
   },
   {
@@ -107,7 +113,7 @@ const ANALYSES: Analysis[] = [
     label: "Page Explorer",
     detail: "What the homepage itself ranks for",
     estimateUsd: null,
-    run: (projectId, domain) =>
+    run: (projectId, domain, _keyword, _market) =>
       getPageExplorer({ data: { projectId, url: `https://${domain}/` } }),
   },
   {
@@ -115,7 +121,7 @@ const ANALYSES: Analysis[] = [
     label: "Site Audit",
     detail: "Crawls the site for technical issues (runs in the background)",
     estimateUsd: null,
-    run: (projectId, domain) =>
+    run: (projectId, domain, _keyword, _market) =>
       startAudit({ data: { projectId, startUrl: `https://${domain}/` } }),
   },
   {
@@ -124,7 +130,7 @@ const ANALYSES: Analysis[] = [
     detail: "Volume, difficulty and intent around the seed keyword",
     estimateUsd: null,
     needsKeyword: true,
-    run: (projectId, _domain, keyword) =>
+    run: (projectId, _domain, keyword, _market) =>
       researchKeywords({ data: { projectId, keywords: [keyword] } }),
   },
   {
@@ -133,7 +139,7 @@ const ANALYSES: Analysis[] = [
     detail: "Who ranks top-20 for the seed keyword, and how strong they are",
     estimateUsd: null,
     needsKeyword: true,
-    run: (projectId, _domain, keyword) =>
+    run: (projectId, _domain, keyword, _market) =>
       getSerpOverview({ data: { projectId, keyword } }),
   },
   {
@@ -142,7 +148,7 @@ const ANALYSES: Analysis[] = [
     detail: "Word-count targets, subtopics and questions to cover",
     estimateUsd: null,
     needsKeyword: true,
-    run: (projectId, _domain, keyword) =>
+    run: (projectId, _domain, keyword, _market) =>
       getContentBrief({ data: { projectId, keyword } }),
   },
   {
@@ -151,7 +157,7 @@ const ANALYSES: Analysis[] = [
     detail: "Hub-and-spoke content plan around the seed keyword",
     estimateUsd: null,
     needsKeyword: true,
-    run: (projectId, _domain, keyword) =>
+    run: (projectId, _domain, keyword, _market) =>
       getTopicClusters({ data: { projectId, topic: keyword } }),
   },
   {
@@ -160,13 +166,13 @@ const ANALYSES: Analysis[] = [
     detail: "Search interest for the seed keyword over time",
     estimateUsd: null,
     needsKeyword: true,
-    run: (projectId, _domain, keyword) =>
+    run: (projectId, _domain, keyword, market) =>
       getKeywordTrends({
         data: {
           projectId,
           keywords: [keyword],
-          languageCode: "en",
-          locationCode: DEFAULT_LOCATION_CODE,
+          languageCode: market.languageCode,
+          locationCode: market.locationCode,
         },
       }),
   },
@@ -194,6 +200,7 @@ export function AnalyzeProjectCard({
   const suggestions = useSeedSuggestions(projectId);
   const seedValue = keywordInput || suggestions[0]?.keyword || "";
   const keyword = seedValue.trim();
+  const market = useProjectMarket(projectId);
 
   const chosen = ANALYSES.filter(
     (analysis) =>
@@ -247,7 +254,7 @@ export function AnalyzeProjectCard({
     for (const analysis of chosen) {
       setStatuses((previous) => ({ ...previous, [analysis.key]: "running" }));
       try {
-        await analysis.run(projectId, activeDomain, keyword);
+        await analysis.run(projectId, activeDomain, keyword, market);
         setStatuses((previous) => ({ ...previous, [analysis.key]: "done" }));
       } catch (error) {
         failed += 1;
