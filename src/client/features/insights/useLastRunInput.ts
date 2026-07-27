@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { restoreLatestRun } from "@/serverFunctions/analysisRuns";
 
@@ -23,21 +24,30 @@ export function useLastRunInput(
     staleTime: 60_000,
   });
 
-  const row = query.data;
-  if (!row) return null;
+  return useMemo(() => {
+    const row = query.data;
+    if (!row) return null;
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(row.resultJson);
-  } catch {
-    return null;
-  }
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(row.resultJson);
+    } catch {
+      return null;
+    }
 
-  try {
-    return extract(parsed);
-  } catch {
-    // A stored shape that has drifted since it was written is not an error —
-    // the tab simply has no last-run value to offer.
-    return null;
-  }
+    try {
+      return extract(parsed);
+    } catch {
+      // A stored shape that has drifted since it was written is not an error —
+      // the tab simply has no last-run value to offer.
+      return null;
+    }
+    // `extract` is deliberately not a dependency. Callers (Tasks 9-13) pass an
+    // inline arrow, which gets a new identity every render; depending on it
+    // would make this memo recompute every render too, i.e. no memo at all.
+    // The parse only needs to rerun when the restored row itself changes, so
+    // `query.data` is the only real dependency — same reasoning as `schema` in
+    // `useAutoRestoredRun`, just without a stable reference to lean on here.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query.data]);
 }

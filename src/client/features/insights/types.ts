@@ -25,17 +25,18 @@ export type SuggestionIntent =
   | "own-pages";
 
 /**
- * Search Console query×page row, as returned by getSearchPerformanceReport.
- * `ctr` is optional: the `queryPages` field (toQueryPageRows) never carries it
- * through, only `ctrOpportunities` rows (buildCtrOpportunityRows) do — the two
- * share this shape but not this one field.
+ * Search Console query×page row, as returned by getSearchPerformanceReport's
+ * `queryPages` field (toQueryPageRows). Has no `ctr`: that function never
+ * computes one, so the field would always be `undefined` here, not just
+ * sometimes. Contrast `GscCtrOpportunity` below, whose source always computes
+ * a real ctr and declares it as its own required field rather than inheriting
+ * an optional one from here.
  */
 export type GscQueryPage = {
   query: string;
   page: string;
   clicks: number;
   impressions: number;
-  ctr?: number;
   position: number;
 };
 
@@ -54,7 +55,17 @@ export type GscStrikingDistance = {
   position: number;
 };
 
-export type GscCtrOpportunity = GscQueryPage & { missedClicks: number };
+/**
+ * The `ctrOpportunities` field (buildCtrOpportunityRows). Same base fields as
+ * `GscQueryPage` plus `missedClicks`, but `ctr` is declared here as required,
+ * not reused from `GscQueryPage` — this source always computes it (it's the
+ * value the row's whole ranking is based on), so an optional `ctr` would hide
+ * a real guarantee behind a needless undefined check.
+ */
+export type GscCtrOpportunity = GscQueryPage & {
+  ctr: number;
+  missedClicks: number;
+};
 
 export type SavedKeyword = {
   keyword: string;

@@ -196,7 +196,6 @@ describe("buildSuggestions", () => {
             page: "/one",
             clicks: 10,
             impressions: 100,
-            ctr: 0.1,
             position: 3,
           },
           {
@@ -204,7 +203,6 @@ describe("buildSuggestions", () => {
             page: "/one",
             clicks: 5,
             impressions: 60,
-            ctr: 0.08,
             position: 4,
           },
           {
@@ -212,7 +210,6 @@ describe("buildSuggestions", () => {
             page: "/two",
             clicks: 30,
             impressions: 400,
-            ctr: 0.07,
             position: 2,
           },
         ],
