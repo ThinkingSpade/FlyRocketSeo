@@ -23,11 +23,16 @@ const RESULTS_JSON_PATH = path.join(SCREENSHOT_DIR, "results.json");
 
 type ViewportName = "mobile" | "tablet" | "desktop";
 
-const VIEWPORTS: Record<ViewportName, { width: number; height: number }> = {
-  mobile: { width: 390, height: 844 },
-  tablet: { width: 768, height: 1024 },
-  desktop: { width: 1280, height: 900 },
-};
+// A tuple array rather than a record: iterating a record needs
+// `Object.entries`, whose key type widens to `string` and would then need an
+// `as` cast to narrow back — and oxlint forbids unsafe type assertions.
+const VIEWPORTS: ReadonlyArray<
+  readonly [ViewportName, { width: number; height: number }]
+> = [
+  ["mobile", { width: 390, height: 844 }],
+  ["tablet", { width: 768, height: 1024 }],
+  ["desktop", { width: 1280, height: 900 }],
+];
 
 type AlignmentResult = {
   applicable: boolean;
@@ -187,11 +192,9 @@ const ROUTES: RouteConfig[] = [
       // "misalignment" that isn't a real bug. Compare the label box's top
       // instead, matching what the other three controls' outer edges are.
       input: (page) =>
-        page
-          .locator("form label")
-          .filter({
-            has: page.getByPlaceholder("Enter keywords, one per line"),
-          }),
+        page.locator("form label").filter({
+          has: page.getByPlaceholder("Enter keywords, one per line"),
+        }),
       others: (page) => [
         page.locator("form").getByRole("combobox").first(),
         page.locator("form").getByRole("button", { name: "Search" }),
@@ -281,10 +284,7 @@ test.afterAll(async () => {
   await writeFile(RESULTS_JSON_PATH, JSON.stringify(results, null, 2));
 });
 
-for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
-  ViewportName,
-  { width: number; height: number },
-][]) {
+for (const [viewportName, viewportSize] of VIEWPORTS) {
   test.describe(`insights visual smoke @ ${viewportName}`, () => {
     test.use({ viewport: viewportSize });
     test.describe.configure({ timeout: 90_000 });
@@ -366,7 +366,13 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
             const otherTops = await Promise.all(
               otherLocators.map((locator) => getTopY(locator)),
             );
-            if (inputTop == null || otherTops.some((top) => top == null)) {
+            // `.some()` is not a type guard, so it cannot narrow away the
+            // nulls. Filtering with a predicate does, which keeps the maths
+            // below cast-free.
+            const measuredTops = otherTops.filter(
+              (top): top is number => top != null,
+            );
+            if (inputTop == null || measuredTops.length !== otherTops.length) {
               alignment = {
                 applicable: true,
                 checked: false,
@@ -375,8 +381,8 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
                   "could not measure one or more controls' bounding boxes (not visible/attached) -- not asserting, screenshot captured instead",
               };
             } else {
-              const deltas = otherTops.map((top) =>
-                Math.abs((top as number) - inputTop),
+              const deltas = measuredTops.map((top) =>
+                Math.abs(top - inputTop),
               );
               const maxDelta = Math.max(...deltas);
               const aligned = maxDelta <= 4;
@@ -384,8 +390,8 @@ for (const [viewportName, viewportSize] of Object.entries(VIEWPORTS) as [
                 applicable: true,
                 checked: true,
                 aligned,
-                detail: `input top=${inputTop.toFixed(1)}px, other control tops=[${otherTops
-                  .map((top) => (top as number).toFixed(1))
+                detail: `input top=${inputTop.toFixed(1)}px, other control tops=[${measuredTops
+                  .map((top) => top.toFixed(1))
                   .join(
                     ", ",
                   )}]px, maxDelta=${maxDelta.toFixed(1)}px (tolerance 4px)`,
