@@ -21,6 +21,7 @@ import { getOrJoinSharedHostedOrganization } from "@/server/auth/default-hosted-
 import { isHostedEmailAllowed } from "@/server/auth/hosted-access";
 import { InviteRepository } from "@/server/auth/repositories/InviteRepository";
 import {
+  getHostedEmailErrorContext,
   sendHostedPasswordResetEmail,
   sendHostedVerificationEmail,
   upsertHostedSignupContact,
@@ -87,10 +88,18 @@ function createAuth() {
           sendOnSignUp: true,
           autoSignInAfterVerification: true,
           sendVerificationEmail: async ({ user, url }) => {
-            await sendHostedVerificationEmail({
-              email: user.email,
-              confirmationUrl: url,
-            });
+            try {
+              await sendHostedVerificationEmail({
+                email: user.email,
+                confirmationUrl: url,
+              });
+            } catch (error) {
+              console.error("HOSTED_VERIFICATION_SEND_FAILED", {
+                email: user.email,
+                ...getHostedEmailErrorContext(error),
+              });
+              throw error;
+            }
           },
         },
     socialProviders: getSocialProviders(),

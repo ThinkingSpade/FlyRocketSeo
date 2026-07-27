@@ -22,6 +22,9 @@ const verifyEmailSearchSchema = authRedirectSearchSchema.extend({
   email: z.string().optional(),
 });
 
+const resendFailureMessage =
+  "We couldn't send the verification email. Please try again or contact support if the problem continues.";
+
 export const Route = createFileRoute("/verify-email")({
   validateSearch: verifyEmailSearchSchema,
   component: VerifyEmailPage,
@@ -108,6 +111,7 @@ function VerifyEmailPage() {
   const email = search.email ?? session?.user?.email;
   const isVerified = !!session?.user?.emailVerified;
   const [isResending, setIsResending] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
   // Verified (or bypass) users are sent on to the app by the effect below; until
   // that lands we show the redirecting state instead of the resend prompt.
   const isRedirecting =
@@ -160,6 +164,7 @@ function VerifyEmailPage() {
 
   async function handleResend() {
     if (!email) return;
+    setResendError(null);
     setIsResending(true);
     try {
       const callbackURL = new URL("/verify-email", window.location.origin);
@@ -170,15 +175,15 @@ function VerifyEmailPage() {
         callbackURL: callbackURL.toString(),
       });
       if (result.error) {
-        toast.error(result.error.message || "We couldn't send another email.");
+        setResendError(resendFailureMessage);
+        toast.error(resendFailureMessage);
         return;
       }
       captureClientEvent("auth:verification_resend");
       toast.success("A new email is on the way.");
     } catch {
-      toast.error(
-        "We couldn't send another email right now. Please try again.",
-      );
+      setResendError(resendFailureMessage);
+      toast.error(resendFailureMessage);
     } finally {
       setIsResending(false);
     }
@@ -219,14 +224,21 @@ function VerifyEmailPage() {
             <span className="loading loading-spinner loading-md" />
           </div>
         ) : email ? (
-          <button
-            type="button"
-            className="btn btn-soft w-full"
-            onClick={() => void handleResend()}
-            disabled={isResending}
-          >
-            {isResending ? "Sending email..." : "Resend email"}
-          </button>
+          <div className="space-y-3">
+            {resendError ? (
+              <div className="alert alert-error" role="alert">
+                <span>{resendError}</span>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn-soft w-full"
+              onClick={() => void handleResend()}
+              disabled={isResending}
+            >
+              {isResending ? "Sending email..." : "Resend email"}
+            </button>
+          </div>
         ) : null}
       </AuthPageCard>
     </AuthPageShell>

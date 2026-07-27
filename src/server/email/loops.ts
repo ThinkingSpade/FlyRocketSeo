@@ -5,6 +5,28 @@ import {
 } from "@/server/email/loops-client";
 
 const LOOPS_TRANSACTIONAL_URL = "https://app.loops.so/api/v1/transactional";
+const MAX_PROVIDER_ERROR_LENGTH = 1_000;
+
+class LoopsConfigError extends Error {
+  constructor(readonly variableName: string) {
+    super(`${variableName} is required in hosted mode`);
+    this.name = "LoopsConfigError";
+  }
+}
+
+class LoopsTransactionalEmailError extends Error {
+  constructor(
+    readonly transactionalId: string,
+    readonly providerStatus: number | null,
+    providerMessage: string,
+  ) {
+    const status = providerStatus === null ? "network error" : providerStatus;
+    super(
+      `LOOPS_SEND_FAILED: Loops transactional email failed (${status}). Provider response: ${providerMessage}`,
+    );
+    this.name = "LoopsTransactionalEmailError";
+  }
+}
 
 function getOptionalEnv(name: string) {
   const value: unknown = Reflect.get(env, name);
@@ -17,21 +39,24 @@ function getRequiredEnv(name: string) {
   const value = getOptionalEnv(name);
 
   if (!value) {
-    throw new Error(`${name} is required in hosted mode`);
+    console.error("LOOPS_CONFIG_MISSING", { variableName: name });
+    throw new LoopsConfigError(name);
   }
 
   return value;
 }
 
-function getHostedAuthEmailConfig() {
+function getHostedVerificationEmailConfig() {
   return {
     apiKey: getRequiredEnv("LOOPS_API_KEY"),
-    verificationTemplateId: getRequiredEnv(
-      "LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID",
-    ),
-    passwordResetTemplateId: getRequiredEnv(
-      "LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID",
-    ),
+    transactionalId: getRequiredEnv("LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID"),
+  };
+}
+
+function getHostedPasswordResetEmailConfig() {
+  return {
+    apiKey: getRequiredEnv("LOOPS_API_KEY"),
+    transactionalId: getRequiredEnv("LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID"),
   };
 }
 
@@ -53,35 +78,125 @@ async function sendLoopsTransactionalEmail({
   transactionalId: string;
   dataVariables: Record<string, string>;
 }) {
-  const response = await fetch(LOOPS_TRANSACTIONAL_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      transactionalId,
+  let response: Response;
+
+  try {
+    response = await fetch(LOOPS_TRANSACTIONAL_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        transactionalId,
+        email,
+        addToAudience: false,
+        dataVariables,
+      }),
+    });
+  } catch (error) {
+    const providerMessage = getErrorMessage(error);
+    console.error("LOOPS_SEND_FAILED", {
+      status: null,
       email,
-      addToAudience: false,
-      dataVariables,
-    }),
-  });
+      transactionalId,
+      providerMessage,
+      dataVariablesPresent: getDataVariablePresence(dataVariables),
+    });
+    throw new LoopsTransactionalEmailError(
+      transactionalId,
+      null,
+      providerMessage,
+    );
+  }
 
   if (response.ok) {
+    console.info("LOOPS_SEND_OK", { transactionalId, email });
     return;
   }
 
-  const errorPayload = await response.json().catch(() => null);
-  console.error("Loops transactional email error:", {
+  const errorPayload = await getProviderErrorPayload(response, dataVariables);
+  console.error("LOOPS_SEND_FAILED", {
     status: response.status,
     email,
     transactionalId,
     errorPayload,
+    dataVariablesPresent: getDataVariablePresence(dataVariables),
   });
 
-  throw new Error(
-    `Failed to send Loops transactional email (${response.status})`,
+  throw new LoopsTransactionalEmailError(
+    transactionalId,
+    response.status,
+    errorPayload,
   );
+}
+
+function getDataVariablePresence(dataVariables: Record<string, string>) {
+  return Object.fromEntries(
+    Object.entries(dataVariables).map(([name, value]) => [
+      name,
+      value.length > 0,
+    ]),
+  );
+}
+
+async function getProviderErrorPayload(
+  response: Response,
+  dataVariables: Record<string, string>,
+) {
+  const responseText = await response.text().catch(() => "");
+  let sanitizedPayload =
+    responseText.trim() || response.statusText || "No provider error payload";
+
+  for (const [name, value] of Object.entries(dataVariables)) {
+    if (value && name.toLowerCase().includes("url")) {
+      sanitizedPayload = sanitizedPayload.replaceAll(
+        value,
+        `[redacted ${name}; present=true]`,
+      );
+    }
+  }
+
+  return truncate(sanitizedPayload, MAX_PROVIDER_ERROR_LENGTH);
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function truncate(value: string, maxLength: number) {
+  if (value.length <= maxLength) {
+    return value;
+  }
+
+  return `${value.slice(0, maxLength)}…`;
+}
+
+export function getHostedEmailErrorContext(error: unknown) {
+  if (error instanceof LoopsTransactionalEmailError) {
+    return {
+      transactionalId: error.transactionalId,
+      providerStatus: error.providerStatus,
+      configVariable: null,
+      errorMessage: error.message,
+    };
+  }
+
+  if (error instanceof LoopsConfigError) {
+    return {
+      transactionalId: null,
+      providerStatus: null,
+      configVariable: error.variableName,
+      errorMessage: error.message,
+    };
+  }
+
+  return {
+    transactionalId: null,
+    providerStatus: null,
+    configVariable: null,
+    errorMessage: getErrorMessage(error),
+  };
 }
 
 export async function upsertHostedSignupContact({
@@ -122,11 +237,11 @@ export async function sendHostedVerificationEmail({
   email: string;
   confirmationUrl: string;
 }) {
-  const config = getHostedAuthEmailConfig();
+  const config = getHostedVerificationEmailConfig();
   await sendLoopsTransactionalEmail({
     apiKey: config.apiKey,
     email,
-    transactionalId: config.verificationTemplateId,
+    transactionalId: config.transactionalId,
     dataVariables: {
       appName: "FlyRocketSEO",
       confirmationUrl,
@@ -141,11 +256,11 @@ export async function sendHostedPasswordResetEmail({
   email: string;
   resetUrl: string;
 }) {
-  const config = getHostedAuthEmailConfig();
+  const config = getHostedPasswordResetEmailConfig();
   await sendLoopsTransactionalEmail({
     apiKey: config.apiKey,
     email,
-    transactionalId: config.passwordResetTemplateId,
+    transactionalId: config.transactionalId,
     dataVariables: {
       appName: "FlyRocketSEO",
       resetUrl,
