@@ -36,7 +36,10 @@ import {
   AnalyzeDomainPrompt,
   type AnalyzePreviewItem,
 } from "@/client/components/AnalyzeDomainPrompt";
-import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import {
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
 import { useDomainSearchHistory } from "@/client/hooks/useDomainSearchHistory";
 import type { DomainSearchHistoryItem } from "@/client/hooks/useDomainSearchHistory";
 import {
@@ -70,6 +73,12 @@ import {
 import { buildDomainFiltersClearSearchUpdate } from "@/client/features/domain/domainFilterUtils";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
 import type { DomainOverviewRouteState } from "@/client/features/domain/domainRouteState";
 import type {
   DomainActiveTab,
@@ -89,6 +98,21 @@ type Props = {
 
 type DomainNavigate = Props["navigate"];
 type DomainSearchUpdate = Partial<DomainSearchParams>;
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls `domain` off the
+ * stored domain-overview result. A shape that has drifted (or isn't this
+ * feature's result at all) returns null rather than throwing — the tab
+ * simply has no last-run value to offer, same contract as the hook itself.
+ */
+function extractStoredDomain(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  return typeof result.domain === "string" ? result.domain : null;
+}
 
 const KEYWORDS_ONLY_SORTS: ReadonlySet<DomainSortMode> = new Set([
   "rank",
@@ -213,6 +237,31 @@ function useDomainOverviewState({
     removeHistoryItem,
   } = useDomainSearchHistory(projectId);
 
+  const market = useProjectMarket(projectId);
+  const projectDomain = useProjectDomain(projectId);
+  const handoff = useHandoff(projectId);
+  // This page already imports RUN_FEATURES for its RecentRunsList; reuse the
+  // same feature key so both read one cache entry.
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.domainOverview,
+    extractStoredDomain,
+  );
+  // The URL param wins, then a domain carried from another tab, then what
+  // this tab last ran, then the project's own domain (the same fallback
+  // `AnalyzeDomainPrompt` already offers as an explicit click below).
+  // Resolved only for the field's initial value — after that the user owns
+  // the input. There's no domain-shaped suggestion source, so this kind
+  // always passes an empty suggestions list.
+  const domainPrefill = resolvePrefill({
+    kind: "domain",
+    searchParam: routeState.domain,
+    handoff,
+    lastRun,
+    suggestions: [],
+    projectDefault: projectDomain,
+  });
+
   const setSearchParams = useCallback(
     (updates: DomainSearchUpdate) => {
       navigate({
@@ -230,8 +279,10 @@ function useDomainOverviewState({
     [setSearchParams],
   );
 
+  const [locationTouched, setLocationTouched] = useState(false);
   const applyLocationChange = useCallback(
     (nextLocationCode: number) => {
+      setLocationTouched(true);
       setSearchParams(getLocationSearchUpdate(nextLocationCode));
     },
     [setSearchParams],
@@ -340,6 +391,18 @@ function useDomainOverviewState({
         languageCode: getLanguageCode(value.locationCode),
       });
       setRunNonce((previous) => previous + 1);
+      // Covers a fresh search, the "Analyze <domain>" prompt, and "Run again"
+      // alike -- all three funnel through this one `onSubmit` (they each just
+      // set the form's `domain` field first), and all three are equally "a
+      // domain overview run just happened for this target", which is exactly
+      // what the next tab opened should inherit.
+      writeHandoff(projectId, {
+        kind: "domain",
+        value: target,
+        locationCode: value.locationCode,
+        source: "Domain Overview",
+        at: Date.now(),
+      });
       setSearchParams(
         getSearchSubmitUpdate({
           domain: target,
@@ -366,6 +429,61 @@ function useDomainOverviewState({
     routeState.locationCode,
     routeState.sort,
     routeState.subdomains,
+  ]);
+
+  const currentDomain = useStore(controlsForm.store, (s) => s.values.domain);
+  const domainIsDirty = useStore(
+    controlsForm.store,
+    (s) => s.fieldMeta.domain?.isDirty ?? false,
+  );
+  // Every prefill source above resolves after first paint, so the form's
+  // `defaultValues` can never see it. Seed the field once a value lands, but
+  // never fight the user: bail as soon as they've typed (domainIsDirty), and
+  // even before that, bail if the field is non-empty (a `domain` URL param, a
+  // history pick, or a prior submit already won). `dontUpdateMeta` keeps this
+  // programmatic fill from masquerading as the user's own edit. Typing into
+  // the domain box never navigates mid-keystroke (only submit does, via
+  // `getSearchSubmitUpdate`), so unlike the location field below, `isDirty`
+  // here is never wiped out from under this effect by the route-state reset
+  // effect above.
+  useEffect(() => {
+    if (domainIsDirty) return;
+    if (currentDomain.trim() !== "") return;
+    if (domainPrefill.value === "") return;
+    controlsForm.setFieldValue("domain", domainPrefill.value, {
+      dontUpdateMeta: true,
+    });
+  }, [domainIsDirty, currentDomain, domainPrefill.value, controlsForm]);
+
+  // `routeState.locationCode` always resolves to a concrete Labs location
+  // code (DEFAULT_LOCATION_CODE when `loc` is missing or invalid), so unlike
+  // the domain field there's no "empty" state to test -- `hasExplicitLocationCode`
+  // (a real `loc` appeared in the URL) plays that role instead. `locationTouched`
+  // -- not the form's own `isDirty` meta -- is the "user already chose one"
+  // signal: the reset effect above re-`reset()`s this whole form (which wipes
+  // every field's dirty/touched meta back to pristine) every time
+  // `routeState.locationCode` changes, and picking a location changes it
+  // immediately (`onLocationChange`/`applyLocationChange` commits straight to
+  // the URL). A meta flag would flicker back to false the instant that
+  // round-trip lands, letting this effect immediately re-fire and stomp a
+  // location the user just picked -- most visibly when they deliberately pick
+  // the one value that matches `DEFAULT_LOCATION_CODE`, which the URL layer
+  // omits as "nothing explicit" (see `getLocationSearchUpdate`). A plain flag
+  // set once in `applyLocationChange` survives that round-trip for the rest of
+  // the mount. Depending on the primitive `market.locationCode` (not the
+  // `market` object) keeps this from re-running every render: an unstable
+  // object dependency has caused a real render loop in this codebase before.
+  useEffect(() => {
+    if (routeState.hasExplicitLocationCode) return;
+    if (locationTouched) return;
+    controlsForm.setFieldValue("locationCode", market.locationCode, {
+      dontUpdateMeta: true,
+    });
+  }, [
+    routeState.hasExplicitLocationCode,
+    locationTouched,
+    market.locationCode,
+    controlsForm,
   ]);
 
   useEffect(() => {
