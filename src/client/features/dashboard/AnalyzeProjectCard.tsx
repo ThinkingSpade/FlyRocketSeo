@@ -7,7 +7,10 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { applyBillingMarkupUsd } from "@/shared/billing";
 import { BRAND_LOOKUP_RAW_COST_USD } from "@/shared/analysis-costs";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import {
+  useProjectMarket,
+  type ProjectMarket,
+} from "@/client/hooks/useProjectDomain";
 import { getDomainOverview } from "@/serverFunctions/domain";
 import { getBacklinksOverview } from "@/serverFunctions/backlinks";
 import { getCompetitorsList } from "@/serverFunctions/competitors";
@@ -49,8 +52,6 @@ const markup = (rawUsd: number) =>
 
 type RunStatus = "idle" | "running" | "done" | "failed";
 
-type AnalysisMarket = { locationCode: number; languageCode: string };
-
 type Analysis = {
   key: string;
   label: string;
@@ -63,7 +64,7 @@ type Analysis = {
     projectId: string,
     domain: string,
     keyword: string,
-    market: AnalysisMarket,
+    market: ProjectMarket,
   ) => Promise<unknown>;
 };
 
