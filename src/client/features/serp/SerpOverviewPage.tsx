@@ -479,6 +479,15 @@ export function SerpOverviewPage({
                 restoredRun.result.locationCode,
               ),
             );
+            // A re-run is a genuine, user-authorized run for this keyword --
+            // the next tab opened should inherit it, same as a fresh submit.
+            writeHandoff(projectId, {
+              kind: "keyword",
+              value: restoredRun.result.keyword,
+              locationCode: restoredRun.result.locationCode,
+              source: "SERP Overview",
+              at: Date.now(),
+            });
             navigate({
               search: (prev) => ({
                 ...prev,
