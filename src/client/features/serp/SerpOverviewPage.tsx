@@ -92,19 +92,32 @@ function computeOwnDomainRating(
  * Shapes this page's fetched result into the verdict model's input. Kept
  * outside the component so wiring glue doesn't compete with layout for the
  * render function's line budget.
+ *
+ * Excludes the project's own domain from the field before it ever reaches
+ * the verdict: if the project already ranks in this SERP, its own DR is not
+ * a "competitor" rating, and folding it in would understate how strong the
+ * field actually is. Compares with the same bare `===` that
+ * `computeOwnDomainRating` above uses for "is this our own domain" (this
+ * page does not strip "www." or subdomains for that check, so neither does
+ * this, to avoid the two disagreeing about what "our own site" means).
  */
 function buildPageSerpVerdict(
   result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>,
   ratings: DomainRatings | null,
   ownDomainRating: number | null,
+  projectDomain: string | null,
 ) {
+  const competitorResults = result.results.filter(
+    (item) => !(item.domain && item.domain === projectDomain),
+  );
+
   return buildSerpVerdict({
     keyword: result.keyword,
     ownDomainRating,
-    competitorRatings: result.results
+    competitorRatings: competitorResults
       .map((item) => (item.domain ? (ratings?.[item.domain] ?? null) : null))
       .filter((value): value is number => value != null),
-    resultCount: result.results.length,
+    resultCount: competitorResults.length,
     paaQuestions: result.paaQuestions,
   });
 }
@@ -158,6 +171,50 @@ function AnalyzeButton({
         )}
         Analyze
       </button>
+    </div>
+  );
+}
+
+/**
+ * The keyword-stats KPI row: volume, difficulty, CPC, and organic result
+ * count. Split out (like `AnalyzeButton` and `SerpResultsTable` below) so
+ * this page's render function doesn't spend its line budget on four
+ * near-identical `InsightTile` calls.
+ */
+function SerpKeywordStatsTiles({
+  result,
+}: {
+  result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
+}) {
+  return (
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <InsightTile
+        icon={BarChart3}
+        label="Volume"
+        value={formatCount(result.keywordStats?.searchVolume)}
+        tone="primary"
+      />
+      <InsightTile
+        icon={Gauge}
+        label="Difficulty"
+        value={result.keywordStats?.keywordDifficulty ?? "—"}
+        tone={difficultyTone(result.keywordStats?.keywordDifficulty)}
+      />
+      <InsightTile
+        icon={CircleDollarSign}
+        label="CPC"
+        value={
+          result.keywordStats?.cpc != null
+            ? `$${result.keywordStats.cpc.toFixed(2)}`
+            : "—"
+        }
+        tone="info"
+      />
+      <InsightTile
+        icon={ListOrdered}
+        label="Organic results"
+        value={result.totalOrganic}
+      />
     </div>
   );
 }
@@ -448,35 +505,7 @@ export function SerpOverviewPage({
 
       {result ? (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <InsightTile
-              icon={BarChart3}
-              label="Volume"
-              value={formatCount(result.keywordStats?.searchVolume)}
-              tone="primary"
-            />
-            <InsightTile
-              icon={Gauge}
-              label="Difficulty"
-              value={result.keywordStats?.keywordDifficulty ?? "—"}
-              tone={difficultyTone(result.keywordStats?.keywordDifficulty)}
-            />
-            <InsightTile
-              icon={CircleDollarSign}
-              label="CPC"
-              value={
-                result.keywordStats?.cpc != null
-                  ? `$${result.keywordStats.cpc.toFixed(2)}`
-                  : "—"
-              }
-              tone="info"
-            />
-            <InsightTile
-              icon={ListOrdered}
-              label="Organic results"
-              value={result.totalOrganic}
-            />
-          </div>
+          <SerpKeywordStatsTiles result={result} />
 
           {result.serpFeatures.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -498,7 +527,12 @@ export function SerpOverviewPage({
           <SerpStrengthCards results={result.results} ratings={ratings} />
 
           <NextStepsCard
-            verdict={buildPageSerpVerdict(result, ratings, ownDomainRating)}
+            verdict={buildPageSerpVerdict(
+              result,
+              ratings,
+              ownDomainRating,
+              projectDomain,
+            )}
           />
 
           <SerpResultsTable
