@@ -31,7 +31,17 @@ export type TargetArea = {
 export type ResolvedGeo = {
   locationCode: number;
   languageCode: string;
-  provider: "labs" | "google_ads" | "serp" | "business";
+  /**
+   * "none" means no provider can serve this need for this geography at all
+   * — not a fetch that might fail, but a figure that does not exist. Only
+   * reachable for the three Labs-only needs (difficulty, intent, domain
+   * analytics) when the resolved country is Google-Ads-only (e.g. Iceland):
+   * Labs is the sole source for those three and simply has no data there,
+   * unlike keyword-volume/SERP, which Google Ads/the SERP API still cover.
+   * Callers must treat this as "does not exist here", not retry or blame a
+   * transient error.
+   */
+  provider: "labs" | "google_ads" | "serp" | "business" | "none";
   /** What the resulting figure actually describes. Drives the UI label. */
   scope: GeoScope;
   /** Human label for that geography, e.g. "Dallas-Fort Worth TX". */
