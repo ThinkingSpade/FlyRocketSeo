@@ -180,6 +180,13 @@ describe("buildPublishQueue", () => {
 
 // The double-publish guard: the one property that causes real user harm
 // (a duplicate post on a client's live Google profile) if it's ever wrong.
+// canStartPublishing below is only the IN-PROCESS half of that guard (belt);
+// it has no notion of "another caller already claimed this row," so it
+// cannot exercise the property that actually prevents two concurrent
+// publishes. The DB-level compare-and-swap that does -- claimForPublishing's
+// `status = 'scheduled'` WHERE predicate -- is tested against a real
+// (in-memory) conditional update in
+// src/server/features/gbp/repositories/GbpScheduledPostRepository.test.ts.
 describe("canStartPublishing", () => {
   it("allows a scheduled post to start publishing", () => {
     expect(canStartPublishing("scheduled")).toBe(true);
