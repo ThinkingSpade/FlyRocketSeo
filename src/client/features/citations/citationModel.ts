@@ -69,9 +69,22 @@ export type CitationMatch = {
 };
 
 export type CitationReport = {
+  /** CONFIRMED matches only (finding A1) -- the "N of total" figure and any
+   *  positive verdict tone are computed from this array's length alone. An
+   *  unconfirmed domain match is real evidence the directory appeared, but
+   *  not that this business is listed there, so it must never inflate
+   *  coverage -- see `unconfirmed` below for where it's reported instead. */
   found: CitationMatch[];
-  /** Empty whenever coverage can't be judged honestly (see the thin-data
-   *  branch below) -- never populated just to show a scary-looking count. */
+  /** Domain matched, but not corroborated as this business's own listing
+   *  (CitationMatch.confirmed === false for every entry here) -- reported
+   *  separately so a caller can label the group honestly ("appeared, but we
+   *  could not confirm it's your listing") instead of folding it into either
+   *  `found`'s coverage count or `missing`'s absence claim. */
+  unconfirmed: CitationMatch[];
+  /** Directories that did not appear in these results AT ALL -- confirmed or
+   *  not. Empty whenever coverage can't be judged honestly (see the
+   *  thin-data branch below) -- never populated just to show a
+   *  scary-looking count. */
   missing: DirectoryEntry[];
   verdict: Verdict;
 };
@@ -154,10 +167,15 @@ function nameAppearsInTitle(name: string, title: string | null): boolean {
   );
 }
 
-// Path segments that mark a directory's own search or category page rather
-// than an individual listing -- e.g. Yelp's /search. Not an exhaustive list
-// of every directory's URL scheme: it only needs to catch the common cases,
-// since a miss here still leaves the title check as a second chance.
+// Path segments that mark a directory's own search/category page, or other
+// non-listing content, rather than an individual business listing -- e.g.
+// Yelp's /search, or a directory's own /blog post. Not an exhaustive list of
+// every directory's URL scheme: it only needs to catch the common cases,
+// since a miss here still leaves the title check as a second chance. Checked
+// against EVERY path segment, not just the last one (finding A1): a listing
+// domain's own editorial content is often nested under a section prefix
+// (e.g. yelp.com/blog/top-pizza), and a last-segment-only check would read
+// that slug as though it were an individual listing.
 const SEARCH_PAGE_PATH_SEGMENTS = new Set([
   "search",
   "results",
@@ -166,13 +184,26 @@ const SEARCH_PAGE_PATH_SEGMENTS = new Set([
   "browse",
   "explore",
   "directory",
+  "blog",
+  "news",
+  "press",
+  "help",
+  "support",
+  "faq",
+  "about",
+  "careers",
+  "terms",
+  "privacy",
+  "login",
+  "signin",
+  "signup",
+  "pricing",
 ]);
 
-/** True when `url`'s last path segment looks like an individual listing's
- *  own slug rather than a search/category page -- the second corroborating
- *  signal (see isCorroborated). A bare domain or homepage (no path segments
- *  at all) doesn't count either: that's the directory itself, not evidence
- *  of a specific business's page. */
+/** True when NONE of `url`'s path segments mark a search/category/editorial
+ *  page -- the second corroborating signal (see isCorroborated). A bare
+ *  domain or homepage (no path segments at all) doesn't count either: that's
+ *  the directory itself, not evidence of a specific business's page. */
 function looksLikeListingPath(url: string): boolean {
   let parsed: URL;
   try {
@@ -181,8 +212,10 @@ function looksLikeListingPath(url: string): boolean {
     return false;
   }
   const segments = parsed.pathname.split("/").filter(Boolean);
-  const lastSegment = segments.at(-1)?.toLowerCase();
-  return lastSegment != null && !SEARCH_PAGE_PATH_SEGMENTS.has(lastSegment);
+  if (segments.length === 0) return false;
+  return !segments.some((segment) =>
+    SEARCH_PAGE_PATH_SEGMENTS.has(segment.toLowerCase()),
+  );
 }
 
 /**
@@ -244,6 +277,22 @@ function pluralResults(count: number): string {
   return count === 1 ? "result" : "results";
 }
 
+function pluralDirectories(count: number): string {
+  return count === 1 ? "directory" : "directories";
+}
+
+/**
+ * A trailing sentence naming the unconfirmed group (finding A1) -- appeared
+ * in search, but never corroborated as this business's own listing (see
+ * isCorroborated). Appended to every tone's read text rather than folded
+ * into the confirmed count itself, so the headline number always means
+ * "confirmed", and this stays a clearly separate, honestly-labelled callout.
+ */
+function unconfirmedNote(unconfirmed: CitationMatch[]): string {
+  if (unconfirmed.length === 0) return "";
+  return ` ${unconfirmed.length} more ${pluralDirectories(unconfirmed.length)} appeared in search too, but couldn't be confirmed as this business's own listing -- worth checking by hand.`;
+}
+
 export function buildCitationReport(input: {
   business: CitationBusiness;
   results: CitationSerpResult[];
@@ -252,11 +301,15 @@ export function buildCitationReport(input: {
   const label = subjectLabel(business);
 
   if (results.length < minReliableResults(business)) {
+    // A genuine match is still real evidence even in a thin sample -- only
+    // the *absence* claim ("missing") is unreliable this early, so that's
+    // the one withheld below, not both. Still split confirmed/unconfirmed
+    // (finding A1): an unconfirmed hit is no more trustworthy just because
+    // the sample is thin.
+    const allMatches = findCitations(business, results);
     return {
-      // A genuine match is still real evidence even in a thin sample --
-      // only the *absence* claim ("missing") is unreliable this early, so
-      // that's the one withheld below, not both.
-      found: findCitations(business, results),
+      found: allMatches.filter((match) => match.confirmed),
+      unconfirmed: allMatches.filter((match) => !match.confirmed),
       missing: [],
       verdict: unknownVerdict(
         `Only ${results.length} organic ${pluralResults(results.length)} came back for ${label} -- too few to judge citation coverage one way or the other.`,
@@ -264,22 +317,32 @@ export function buildCitationReport(input: {
     };
   }
 
-  const found = findCitations(business, results);
-  const foundIds = new Set(found.map((match) => match.directory.id));
+  const allMatches = findCitations(business, results);
+  // Coverage counts CONFIRMED matches only (finding A1): a domain match
+  // alone proves the directory appeared, never that this business is the
+  // listing that appeared there (see isCorroborated). Folding unconfirmed
+  // matches into `found` would let a directory's own search/category page
+  // inflate the "N of total" figure and the tone right along with it.
+  const found = allMatches.filter((match) => match.confirmed);
+  const unconfirmed = allMatches.filter((match) => !match.confirmed);
+  // "Missing" means the directory never appeared at all -- confirmed or not.
+  // An unconfirmed appearance still rules a directory out of this list; it
+  // belongs in `unconfirmed` instead (reported separately above).
+  const appearedIds = new Set(allMatches.map((match) => match.directory.id));
   const missing = DIRECTORIES.filter(
-    (directory) => !foundIds.has(directory.id),
+    (directory) => !appearedIds.has(directory.id),
   );
   const total = DIRECTORIES.length;
 
   const tone: VerdictTone =
-    missing.length === 0 ? "good" : found.length === 0 ? "bad" : "mixed";
+    found.length === total ? "good" : found.length === 0 ? "bad" : "mixed";
 
   const read =
     tone === "good"
-      ? `${label} showed up in search for all ${total} directories on this list. A strong footprint among the majors -- though this list isn't every citation that could exist.`
+      ? `${label} showed up in search as a confirmed listing for all ${total} directories on this list. A strong footprint among the majors -- though this list isn't every citation that could exist.`
       : tone === "bad"
-        ? `${label} didn't show up in search for any of the ${total} directories on this list -- that's not evidence the listings don't exist, only that none surfaced in this search. A listing may well exist already; worth checking by hand before creating anything new.`
-        : `${label} showed up in search for ${found.length} of ${total} directories on this list. The other ${missing.length} didn't surface in this search -- worth checking manually, since a listing may well exist that just didn't come up here.`;
+        ? `${label} didn't show up in search as a confirmed listing for any of the ${total} directories on this list -- that's not evidence the listings don't exist, only that none were confirmed in this search. A listing may well exist already; worth checking by hand before creating anything new.${unconfirmedNote(unconfirmed)}`
+        : `${label} showed up in search as a confirmed listing for ${found.length} of ${total} directories on this list. The other ${missing.length} didn't surface in this search at all -- worth checking manually, since a listing may well exist that just didn't come up here.${unconfirmedNote(unconfirmed)}`;
 
   const actions: Verdict["actions"] =
     missing.length > 0
@@ -292,5 +355,5 @@ export function buildCitationReport(input: {
         ]
       : [];
 
-  return { found, missing, verdict: { read, tone, actions } };
+  return { found, unconfirmed, missing, verdict: { read, tone, actions } };
 }

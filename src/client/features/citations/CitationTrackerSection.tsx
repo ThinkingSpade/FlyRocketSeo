@@ -45,12 +45,12 @@ function combineCityRegion(
   return city ?? region ?? null;
 }
 
-/** A domain match alone only proves the directory appeared somewhere in
- *  results, never that this particular result is the business's own listing
- *  (finding 10, citationModel.ts's isCorroborated) -- an unconfirmed row
- *  says so plainly instead of linking it as "View listing" like a confirmed
- *  one. Not dropped either: the directory did appear, which is still real,
- *  useful information. */
+/** Every entry here is a CONFIRMED match (report.found -- see
+ *  citationModel.ts's finding-A1 doc): a corroborating signal backs up the
+ *  domain match, so "View listing" is an honest label. An unconfirmed
+ *  appearance is a different, separately-labelled group below
+ *  (CitationUnconfirmedList) -- never mixed into this count or this link
+ *  text. */
 function CitationFoundList({ found }: { found: CitationMatch[] }) {
   if (found.length === 0) return null;
   return (
@@ -64,20 +64,9 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
             key={match.directory.id}
             className="flex items-center justify-between gap-2 py-1.5 text-sm"
           >
-            <span className="flex flex-col gap-0.5">
-              <span className="flex items-center gap-1.5">
-                <InsightIcon
-                  icon={match.confirmed ? CircleCheck : CircleHelp}
-                  tone={match.confirmed ? "success" : "neutral"}
-                />
-                {match.directory.name}
-              </span>
-              {!match.confirmed && (
-                <span className="text-xs text-base-content/50">
-                  Appeared in search -- could not confirm it&rsquo;s your
-                  listing
-                </span>
-              )}
+            <span className="flex items-center gap-1.5">
+              <InsightIcon icon={CircleCheck} tone="success" />
+              {match.directory.name}
             </span>
             <a
               href={match.url}
@@ -85,7 +74,61 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
               rel="noreferrer"
               className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
-              {match.confirmed ? "View listing" : "Check this result"}
+              View listing
+              <ExternalLink className="size-3" />
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/**
+ * A domain match alone only proves the directory appeared somewhere in
+ * results, never that this particular result is the business's own listing
+ * (finding A1, citationModel.ts's isCorroborated) -- a directory's own
+ * search/category page, or unrelated editorial content on the same domain,
+ * matches just as well as an actual listing does. Reported here as its own
+ * clearly-labelled group rather than folded into "Found in search"
+ * (report.found), and never counted toward citation coverage. Not dropped
+ * either: the directory did appear, which is still real, useful information
+ * worth a manual look.
+ */
+function CitationUnconfirmedList({
+  unconfirmed,
+}: {
+  unconfirmed: CitationMatch[];
+}) {
+  if (unconfirmed.length === 0) return null;
+  return (
+    <div>
+      <h3 className="text-xs font-semibold uppercase tracking-wide text-base-content/50">
+        Appeared, but not confirmed as your listing ({unconfirmed.length})
+      </h3>
+      <p className="mt-0.5 text-xs text-base-content/50">
+        These directories turned up in search, but nothing tied the result to
+        this business specifically -- it may be a search page, a category page,
+        or someone else&rsquo;s listing. Worth checking by hand; not counted
+        toward the coverage figure above.
+      </p>
+      <ul className="mt-1 divide-y divide-base-200">
+        {unconfirmed.map((match) => (
+          <li
+            key={match.directory.id}
+            className="flex items-center justify-between gap-2 py-1.5 text-sm"
+          >
+            <span className="flex items-center gap-1.5">
+              <InsightIcon icon={CircleHelp} tone="neutral" />
+              {match.directory.name}
+            </span>
+            <a
+              href={match.url}
+              target="_blank"
+              rel="noreferrer"
+              className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
+            >
+              Check this result
               <ExternalLink className="size-3" />
             </a>
           </li>
@@ -295,6 +338,7 @@ export function CitationTrackerSection({
               tab="Citation Tracker"
             />
             <CitationFoundList found={report.found} />
+            <CitationUnconfirmedList unconfirmed={report.unconfirmed} />
             <CitationMissingList missing={report.missing} />
           </>
         ) : !run.authorized && !restoredRun ? (

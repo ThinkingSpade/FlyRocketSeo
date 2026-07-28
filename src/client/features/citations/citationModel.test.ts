@@ -174,7 +174,7 @@ describe("buildCitationReport", () => {
     });
   });
 
-  it("calls coverage good when every known directory turns up in search", () => {
+  it("calls coverage good when every known directory turns up in search, confirmed", () => {
     const results = DIRECTORIES.map((directory) => ({
       domain: directory.domain,
       url: `https://${directory.domain}/joes-pizza`,
@@ -188,11 +188,37 @@ describe("buildCitationReport", () => {
 
     expect(report.verdict.tone).toBe("good");
     expect(report.missing).toEqual([]);
+    expect(report.unconfirmed).toEqual([]);
     expect(report.found).toHaveLength(DIRECTORIES.length);
     expect(report.verdict.read).toBe(
-      `Joe's Pizza in Brooklyn showed up in search for all ${DIRECTORIES.length} directories on this list. A strong footprint among the majors -- though this list isn't every citation that could exist.`,
+      `Joe's Pizza in Brooklyn showed up in search as a confirmed listing for all ${DIRECTORIES.length} directories on this list. A strong footprint among the majors -- though this list isn't every citation that could exist.`,
     );
     expect(report.verdict.actions).toEqual([]);
+  });
+
+  it("never calls coverage good on unconfirmed matches alone, however many directories appear (finding A1)", () => {
+    // Every directory's domain turns up, but only via a generic page: a
+    // title that names no business, and a URL shaped like a search page --
+    // exactly the "19 generic category pages" scenario finding A1 flagged.
+    // None of that is evidence any of them is this business's own listing.
+    const results = DIRECTORIES.map((directory) => ({
+      domain: directory.domain,
+      url: `https://${directory.domain}/search?q=pizza`,
+      title: "Best local businesses near you",
+    }));
+
+    const report = buildCitationReport({
+      business: disambiguatedBusiness,
+      results,
+    });
+
+    expect(report.found).toEqual([]);
+    expect(report.unconfirmed).toHaveLength(DIRECTORIES.length);
+    expect(report.verdict.tone).not.toBe("good");
+    expect(report.verdict.read).not.toContain("strong footprint");
+    expect(report.verdict.read).not.toContain(
+      "showed up in search as a confirmed listing for all",
+    );
   });
 
   it("calls coverage bad when a properly sized search finds none of the known directories", () => {
@@ -203,9 +229,10 @@ describe("buildCitationReport", () => {
 
     expect(report.verdict.tone).toBe("bad");
     expect(report.found).toEqual([]);
+    expect(report.unconfirmed).toEqual([]);
     expect(report.missing).toHaveLength(DIRECTORIES.length);
     expect(report.verdict.read).toBe(
-      `Joe's Pizza in Brooklyn didn't show up in search for any of the ${DIRECTORIES.length} directories on this list -- that's not evidence the listings don't exist, only that none surfaced in this search. A listing may well exist already; worth checking by hand before creating anything new.`,
+      `Joe's Pizza in Brooklyn didn't show up in search as a confirmed listing for any of the ${DIRECTORIES.length} directories on this list -- that's not evidence the listings don't exist, only that none were confirmed in this search. A listing may well exist already; worth checking by hand before creating anything new.`,
     );
     expect(report.verdict.actions).toEqual([
       {
@@ -216,7 +243,7 @@ describe("buildCitationReport", () => {
     ]);
   });
 
-  it("calls coverage mixed when some but not all known directories turn up", () => {
+  it("calls coverage mixed when some but not all known directories turn up confirmed", () => {
     const results = [
       {
         domain: "yelp.com",
@@ -238,9 +265,10 @@ describe("buildCitationReport", () => {
 
     expect(report.verdict.tone).toBe("mixed");
     expect(report.found).toHaveLength(2);
+    expect(report.unconfirmed).toEqual([]);
     expect(report.missing).toHaveLength(DIRECTORIES.length - 2);
     expect(report.verdict.read).toBe(
-      `Joe's Pizza in Brooklyn showed up in search for 2 of ${DIRECTORIES.length} directories on this list. The other ${DIRECTORIES.length - 2} didn't surface in this search -- worth checking manually, since a listing may well exist that just didn't come up here.`,
+      `Joe's Pizza in Brooklyn showed up in search as a confirmed listing for 2 of ${DIRECTORIES.length} directories on this list. The other ${DIRECTORIES.length - 2} didn't surface in this search at all -- worth checking manually, since a listing may well exist that just didn't come up here.`,
     );
   });
 
@@ -268,11 +296,21 @@ describe("buildCitationReport", () => {
 
     expect(report.verdict.tone).toBe("bad");
   });
+});
 
-  it("does not confirm a directory's own search page as the business's listing (finding 10)", () => {
-    // The exact failing input from finding 10: a Yelp search results page,
-    // not a listing -- the title names no business, and the URL is a
-    // /search path.
+// Split from the describe block above purely to stay under this repo's
+// max-lines-per-function budget (which applies to `describe` callbacks) --
+// these tests are still exercising buildCitationReport, just the
+// confirmed-vs-unconfirmed corroboration behavior specifically (finding A1
+// and its predecessor findings 10/11/12) rather than the coverage-tone
+// arithmetic covered above.
+describe("buildCitationReport confirmed vs unconfirmed corroboration (findings 10, 11, 12, A1)", () => {
+  it("does not confirm a directory's own search page as the business's listing, and does not count it as coverage (finding 10 / A1)", () => {
+    // The exact failing input from finding A1 (originally reported fixed as
+    // finding 10, but the coverage count regressed): a Yelp search results
+    // page, not a listing -- the title names no business, and the URL is a
+    // /search path. Before the A1 fix this still landed in report.found,
+    // rendered "Found in search (1)", and counted toward "N of 19".
     const report = buildCitationReport({
       business: disambiguatedBusiness,
       results: [
@@ -285,14 +323,51 @@ describe("buildCitationReport", () => {
       ],
     });
 
-    const yelpMatch = report.found.find(
+    // Not counted as a found (confirmed) citation...
+    expect(
+      report.found.find((match) => match.directory.id === "yelp"),
+    ).toBeUndefined();
+    expect(report.found).toEqual([]);
+    // ...but reported in the separate unconfirmed group, not silently dropped.
+    expect(report.unconfirmed).toEqual([
+      {
+        directory: YELP,
+        url: "https://yelp.com/search?find_desc=pizza",
+        confirmed: false,
+      },
+    ]);
+    // The verdict counts confirmed matches only: 0 of 19, not 1 of 19.
+    expect(report.verdict.tone).toBe("bad");
+    expect(report.verdict.read).toContain(
+      `didn't show up in search as a confirmed listing for any of the ${DIRECTORIES.length} directories`,
+    );
+    expect(report.verdict.read).toContain(
+      "1 more directory appeared in search too, but couldn't be confirmed as this business's own listing",
+    );
+  });
+
+  it("does not treat a directory's own blog/editorial post as a listing, even with a listing-length path (finding A1)", () => {
+    // A "View listing"-worthy URL used to mean "any final path segment not
+    // on a small search/category blacklist" -- which let non-listing
+    // editorial content (a blog post) through as though it were the
+    // business's own page, just because "top-pizza" isn't "search".
+    const report = buildCitationReport({
+      business: disambiguatedBusiness,
+      results: [
+        {
+          domain: "yelp.com",
+          url: "https://yelp.com/blog/top-pizza",
+          title: "Top Pizza Restaurants",
+        },
+        ...UNRELATED_RESULTS,
+      ],
+    });
+
+    expect(report.found).toEqual([]);
+    const yelpMatch = report.unconfirmed.find(
       (match) => match.directory.id === "yelp",
     );
-    expect(yelpMatch).toEqual({
-      directory: YELP,
-      url: "https://yelp.com/search?find_desc=pizza",
-      confirmed: false,
-    });
+    expect(yelpMatch).toMatchObject({ confirmed: false });
   });
 
   it("confirms a match via a listing-shaped URL alone, without the name in the title (finding 10)", () => {
@@ -349,7 +424,7 @@ describe("buildCitationReport", () => {
 
     expect(report.verdict.tone).toBe("bad");
     expect(report.verdict.read).toBe(
-      `Joe's Pizza in Brooklyn didn't show up in search for any of the ${DIRECTORIES.length} directories on this list -- that's not evidence the listings don't exist, only that none surfaced in this search. A listing may well exist already; worth checking by hand before creating anything new.`,
+      `Joe's Pizza in Brooklyn didn't show up in search as a confirmed listing for any of the ${DIRECTORIES.length} directories on this list -- that's not evidence the listings don't exist, only that none were confirmed in this search. A listing may well exist already; worth checking by hand before creating anything new.`,
     );
     // Not a substring check: "Create" must not appear anywhere, in any casing.
     expect(report.verdict.read.toLowerCase()).not.toContain("create");
