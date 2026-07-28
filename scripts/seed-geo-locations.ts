@@ -39,6 +39,11 @@
  * opts into explicitly — local is the default specifically so a bare,
  * flag-less run can never touch a self-hoster's production database by
  * accident.
+ *
+ * D1-only: this script has no Postgres write path. It refuses to run (see
+ * `assertD1Provider` below) when `DATABASE_PROVIDER=postgres` is set in
+ * `.env.local`, rather than silently seeding D1 while a Postgres deployment
+ * keeps reading an empty `geo_locations` table.
  */
 import { execFileSync } from "node:child_process";
 import { rmSync, writeFileSync } from "node:fs";
@@ -70,6 +75,8 @@ try {
 }
 
 async function main(): Promise<void> {
+  assertD1Provider();
+
   const apiKey = process.env.DATAFORSEO_API_KEY;
   if (!apiKey) {
     printMissingKeyAndExit();
@@ -95,6 +102,50 @@ async function main(): Promise<void> {
 
   applyToD1(rows, scope);
   printCountsByType(rows);
+}
+
+/**
+ * This app is provider-aware (`DATABASE_PROVIDER`; see src/db/provider.ts):
+ * D1 by default, Postgres opt-in for self-hosters who outgrow it (see
+ * docs/DEPLOY_INTERNET_FACING.md's "Choose your database" step). This
+ * script only ever writes D1 — `applyToD1` below shells out to `wrangler d1
+ * execute`, with no Postgres path at all. Running it unconditionally
+ * against a Postgres deployment would silently seed a database the app
+ * never reads: `searchGeoLocations` (Task 7) would keep returning nothing
+ * from the REAL (Postgres) `geo_locations` table, with no error anywhere to
+ * explain why. Fail loudly instead of guessing which database to write.
+ *
+ * Reads `process.env.DATABASE_PROVIDER` directly rather than importing
+ * src/db/provider.ts's `getDatabaseProvider()`: that module reads
+ * Cloudflare's `cloudflare:workers` env binding, which does not exist
+ * outside a Worker, so it cannot be imported into this standalone Node
+ * script. This mirrors the same dev-time-env constraint this file's own
+ * header already notes for `DATAFORSEO_API_KEY`: set
+ * `DATABASE_PROVIDER=postgres` in `.env.local` here to match whatever value
+ * this deployment's Worker actually has configured as a secret — the two
+ * are read from different places but must agree for this guard to see the
+ * truth.
+ */
+function assertD1Provider(): void {
+  const provider = process.env.DATABASE_PROVIDER;
+  if (provider === undefined || provider === "" || provider === "d1") return;
+  if (provider !== "postgres") {
+    exit(
+      `Unsupported DATABASE_PROVIDER "${provider}". Expected "d1" or ` +
+        '"postgres" (matching src/db/provider.ts\'s own getDatabaseProvider()).',
+    );
+  }
+  exit(
+    "DATABASE_PROVIDER=postgres, but this script only writes D1 and has no " +
+      "Postgres path (see this function's own doc comment above). Seeding D1 " +
+      "here would write a database this deployment never reads, leaving the " +
+      "picker silently empty with no error to explain why. This script does " +
+      "not support Postgres yet — port fetchLocations/buildGeoLocationRows " +
+      "above onto a Postgres write (scripts/migrate-d1-to-postgres.ts already " +
+      "shows this codebase's own POSTGRES_DATABASE_URL connection pattern), " +
+      "or run this script against a D1 deployment instead if that is viable " +
+      "for you. Refusing to run.",
+  );
 }
 
 function printMissingKeyAndExit(): never {
