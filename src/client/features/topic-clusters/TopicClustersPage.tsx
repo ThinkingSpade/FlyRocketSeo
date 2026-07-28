@@ -15,6 +15,9 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ClusterPlan } from "@/client/features/topic-clusters/ClusterPlan";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -101,6 +104,11 @@ export function TopicClustersPage({
   // The URL's own `loc` param always wins; the project's configured market
   // only fills in for a tab opened with no location in the URL at all.
   const activeLocation = locationCode ?? market.locationCode;
+  // The header ScopeControl's own state -- a SEPARATE concept from the
+  // country-only `locationInput` field below, which stays untouched here.
+  // Must never be read into `run`'s key or `clustersQuery`'s queryKey;
+  // wiring the chosen area into the actual fetch is Task 6's job.
+  const targetAreaScope = useTargetAreaScope(projectId, activeLocation);
 
   const suggestions = useProjectSuggestions(projectId, "topic-gap");
   const handoff = useHandoff(projectId);
@@ -201,17 +209,25 @@ export function TopicClustersPage({
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Network className="size-5" />
-          Topic Clusters
-        </h1>
-        <p className="text-sm text-base-content/60">
-          Turn one topic into a hub-and-spoke content plan: the hub page&rsquo;s
-          keyword set plus the subtopic clusters worth their own articles — each
-          one a click away from a full content brief.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <Network className="size-5" />
+            Topic Clusters
+          </h1>
+          <p className="text-sm text-base-content/60">
+            Turn one topic into a hub-and-spoke content plan: the hub
+            page&rsquo;s keyword set plus the subtopic clusters worth their own
+            articles — each one a click away from a full content brief.
+          </p>
+        </div>
+        <ScopeControl
+          area={targetAreaScope.area}
+          onChange={targetAreaScope.onChange}
+        />
       </div>
+
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
