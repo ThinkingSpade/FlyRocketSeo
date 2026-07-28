@@ -3,10 +3,12 @@ import {
   buildPublishQueue,
   canStartPublishing,
   describePublishBlockReason,
+  describeScheduleValidationErrors,
   GBP_POST_CONTENT_MAX_LENGTH,
   orderPublishQueue,
   selectDuePosts,
   validateScheduledPost,
+  type GbpPostValidationError,
   type GbpScheduledPostRecord,
   type GbpScheduledPostStatus,
 } from "./gbpPostSchedule";
@@ -410,5 +412,40 @@ describe("validateScheduledPost", () => {
       ]),
     );
     expect(errors).toHaveLength(3);
+  });
+});
+
+describe("describeScheduleValidationErrors (finding A3)", () => {
+  // The exact failing input from finding A3: validateScheduledPost re-run
+  // server-side rejects on "scheduled_in_past" (the time passed between the
+  // form's own check and the request reaching the server) -- a LOCAL
+  // validation failure. Google's API is never called on this path (see
+  // GbpWriteService.schedulePost, which returns before ever creating the
+  // scheduled row), so the message must not attribute it to Google.
+  it("describes a scheduled_in_past error without attributing it to Google", () => {
+    const message = describeScheduleValidationErrors(["scheduled_in_past"]);
+    expect(message).toBe("Pick a time in the future.");
+    expect(message.toLowerCase()).not.toContain("google");
+  });
+
+  it.each<GbpPostValidationError>([
+    "empty_content",
+    "content_too_long",
+    "cta_url_required",
+    "cta_url_not_allowed_for_call",
+  ])("describes a %s error without attributing it to Google", (error) => {
+    const message = describeScheduleValidationErrors([error]);
+    expect(message.toLowerCase()).not.toContain("google reject");
+    expect(message.length).toBeGreaterThan(0);
+  });
+
+  it("joins every applicable error into one message", () => {
+    const message = describeScheduleValidationErrors([
+      "empty_content",
+      "scheduled_in_past",
+    ]);
+    expect(message).toBe(
+      "Write something before scheduling. Pick a time in the future.",
+    );
   });
 });

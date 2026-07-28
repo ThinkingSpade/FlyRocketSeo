@@ -198,3 +198,38 @@ export function validateScheduledPost(
     ...validateCallToAction(input.callToActionType, input.callToActionUrl),
   ];
 }
+
+/** One human-readable sentence per GbpPostValidationError -- the single
+ *  source of truth for both the compose form's inline per-field list and the
+ *  submit-time toast (see GbpPostComposer.tsx), so the two surfaces can never
+ *  drift into describing the same error differently. `Record<
+ *  GbpPostValidationError, string>` (not `Record<string, string>`) so adding
+ *  a new error variant without a matching entry here fails to compile. */
+export const GBP_POST_VALIDATION_COPY: Record<GbpPostValidationError, string> =
+  {
+    empty_content: "Write something before scheduling.",
+    content_too_long: `Content is over Google's ${GBP_POST_CONTENT_MAX_LENGTH}-character limit.`,
+    scheduled_in_past: "Pick a time in the future.",
+    cta_url_required: "This action button needs a URL to send people to.",
+    cta_url_not_allowed_for_call:
+      "A Call button dials your listed phone number -- it can't also have a URL.",
+  };
+
+/**
+ * Describes a schedulePost server response's validation errors for a toast
+ * (finding A3). `schedulePost` re-validates server-side as defense in depth
+ * -- e.g. the scheduled time can pass between the form's own client-side
+ * check and the request actually reaching the server -- so this path is a
+ * LOCAL validation failure, never a rejection from Google's API (Google is
+ * never called before schedulePost returns `{ errors }`; see
+ * GbpWriteService.schedulePost). The message must say so honestly rather
+ * than attributing a local validation failure to Google.
+ */
+export function describeScheduleValidationErrors(
+  errors: GbpPostValidationError[],
+): string {
+  const messages = errors.map((error) => GBP_POST_VALIDATION_COPY[error]);
+  return messages.length > 0
+    ? messages.join(" ")
+    : "This post didn't pass validation -- check the highlighted fields.";
+}

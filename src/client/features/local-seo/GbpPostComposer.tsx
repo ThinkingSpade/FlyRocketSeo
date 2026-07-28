@@ -6,9 +6,12 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { scheduleGbpPost } from "@/serverFunctions/gbp";
 import {
+  describeScheduleValidationErrors,
   GBP_POST_CONTENT_MAX_LENGTH,
+  GBP_POST_VALIDATION_COPY,
   validateScheduledPost,
   type GbpCallToActionType,
+  type GbpPostValidationError,
 } from "./gbpPostSchedule";
 
 const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
@@ -19,15 +22,6 @@ const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
   { value: "SIGN_UP", label: "Sign up" },
   { value: "CALL", label: "Call now" },
 ];
-
-const VALIDATION_COPY: Record<string, string> = {
-  empty_content: "Write something before scheduling.",
-  content_too_long: `Content is over Google's ${GBP_POST_CONTENT_MAX_LENGTH}-character limit.`,
-  scheduled_in_past: "Pick a time in the future.",
-  cta_url_required: "This action button needs a URL to send people to.",
-  cta_url_not_allowed_for_call:
-    "A Call button dials your listed phone number -- it can't also have a URL.",
-};
 
 /** Local `datetime-local` input value -> the ISO instant the rest of the
  *  system (validateScheduledPost, the DB column, the publish queue) works
@@ -69,7 +63,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
   const [confirming, setConfirming] = React.useState(false);
 
   const scheduledAtIso = toIsoInstant(scheduledAtLocal);
-  const errors =
+  const errors: GbpPostValidationError[] =
     scheduledAtIso == null
       ? ["scheduled_in_past"]
       : validateScheduledPost(
@@ -98,9 +92,11 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
     onSuccess: (result) => {
       setConfirming(false);
       if ("errors" in result) {
-        toast.error(
-          "Google rejected this post -- check the highlighted fields.",
-        );
+        // schedulePost's server-side re-validation is a LOCAL check (see its
+        // own doc comment) -- Google's API is never called on this path, so
+        // the message must describe what actually failed here, not
+        // attribute it to Google (finding A3).
+        toast.error(describeScheduleValidationErrors(result.errors));
         return;
       }
       toast.success("Post scheduled");
@@ -201,7 +197,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         {errors.length > 0 && (content.trim() !== "" || scheduledAtLocal) ? (
           <ul className="space-y-0.5 text-xs text-error">
             {errors.map((error) => (
-              <li key={error}>{VALIDATION_COPY[error] ?? error}</li>
+              <li key={error}>{GBP_POST_VALIDATION_COPY[error]}</li>
             ))}
           </ul>
         ) : null}
