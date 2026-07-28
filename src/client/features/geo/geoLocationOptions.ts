@@ -171,26 +171,68 @@ export function buildCityAreas(
 }
 
 /**
- * Gates the city group on the debounced QUERY's own length, not just on
- * whatever rows the last fetch happened to return. `useQuery`'s
- * `placeholderData: keepPreviousData` (see GeoLocationSelect.tsx) reports its
- * last successful result as placeholder data even once the query has been
- * disabled — verified against the installed `@tanstack/query-core`, whose
- * `QueryObserver` only checks `data === undefined && status === "pending"`,
- * never `enabled` — so after a real, non-empty search resolves (e.g. "dal" ->
- * Dallas) and the user clears the box back to empty, the raw query result
- * would otherwise keep reporting that stale Dallas row forever, attached to a
- * query that no longer says "dal" anywhere. An empty debounced query means
- * "no search has been asked", so it always renders zero cities regardless of
- * what is sitting in the query cache; a non-empty one still shows
- * `results` as-is, which is what lets a genuinely in-flight fetch keep
+ * A `DMA Region` row from the seeded `geo_locations` table becomes a
+ * selectable metro on its own. `US_DMAS` (usDmas.ts) ships intentionally
+ * EMPTY — no public, no-credential source publishes Nielsen's licensed DMA
+ * codes — so it is an INSTANT accelerator for the un-seeded case, never a
+ * whitelist a real seeded row has to clear against. Cross-referencing D1
+ * results against `US_DMAS` (as an earlier version of this module did) meant
+ * a correctly seeded deployment could never show a single metro, because the
+ * one table that could confirm a DMA row was always the empty one. DMA
+ * region names already embed their state (e.g. "Dallas-Fort Worth TX", per
+ * `filterMetroAreas`'s own comment above), so no extra disambiguation suffix
+ * is needed here, matching how the bundled metros format their own label.
+ */
+export function buildMetroAreasFromSearch(
+  results: readonly GeoSearchResult[],
+): TargetArea[] {
+  return results
+    .filter((result) => result.type === "DMA Region")
+    .map((result) => ({
+      kind: "metro",
+      locationCode: result.code,
+      label: result.name,
+      parentCountryCode: result.countryCode,
+    }));
+}
+
+/**
+ * Whether a debounced query justifies trusting whatever is sitting in a D1
+ * search-result cache. Shared by every group backed by `searchGeoLocations`
+ * (cities and, now, seeded metros): `@tanstack/query`'s `keepPreviousData`
+ * reports the LAST successful result as placeholder data even once the query
+ * has been disabled — verified against the installed `@tanstack/query-core`,
+ * whose `QueryObserver` only checks `data === undefined && status ===
+ * "pending"`, never `enabled` — so after a real, non-empty search resolves
+ * (e.g. "dal" -> Dallas) and the user clears the box back to empty, the raw
+ * query result would otherwise keep reporting those stale rows forever,
+ * attached to a query that no longer says "dal" anywhere. An empty debounced
+ * query means "no search has been asked", so it always renders zero rows
+ * regardless of what is sitting in the query cache; a non-empty one still
+ * shows the rows as-is, which is what lets a genuinely in-flight fetch keep
  * showing the previous batch (no layout jump) while a newer one resolves.
  */
+function hasActiveGeoQuery(debouncedQuery: string): boolean {
+  return debouncedQuery.trim().length > 0;
+}
+
 export function selectCityAreas(
   debouncedQuery: string,
   results: readonly GeoSearchResult[],
 ): TargetArea[] {
-  return debouncedQuery.trim().length > 0 ? buildCityAreas(results) : [];
+  return hasActiveGeoQuery(debouncedQuery) ? buildCityAreas(results) : [];
+}
+
+/** Same gating as `selectCityAreas`, for the metro areas D1 search results
+ * seed (see `buildMetroAreasFromSearch`'s own doc comment for why those must
+ * not be filtered out just because `US_DMAS` is empty). */
+export function selectMetroAreasFromSearch(
+  debouncedQuery: string,
+  results: readonly GeoSearchResult[],
+): TargetArea[] {
+  return hasActiveGeoQuery(debouncedQuery)
+    ? buildMetroAreasFromSearch(results)
+    : [];
 }
 
 /** Assembles the ordered, non-empty groups. "A group is omitted entirely
@@ -248,7 +290,7 @@ export function isSameArea(
 
 /**
  * What to show once every group above comes back empty. This state is
- * genuinely ambiguous in an unseeded deployment: a real city query
+ * genuinely ambiguous in an unseeded deployment: a real city/metro query
  * ("dallas") and a nonsense one ("zzzzzz") both come back as zero rows from
  * every source, because `geo_locations` has zero rows either way — the
  * response shape cannot tell the two situations apart, so claiming "no such
@@ -256,18 +298,22 @@ export function isSameArea(
  *
  * Instead this states two separate, individually true things: what WAS
  * actually checked (the bundled states/countries — the only sources that
- * don't depend on seeding), and, unconditionally, that city coverage
- * depends on a seed step. The second clause holds regardless of whether
- * *this* particular query would have hit a real city, so it never overclaims
- * in either direction, including a future deployment that HAS been seeded
- * and simply has no match for this query.
+ * don't depend on seeding), and, unconditionally, that metro and city
+ * coverage depends on a seed step. Metros are named specifically, not folded
+ * into "city": `US_DMAS` never populates on its own (see that file's own
+ * header — no public source publishes the data), so for metros the seed
+ * step is not just faster, it is the ONLY way this deployment ever shows one,
+ * which is not equally true of cities. The second clause holds regardless of
+ * whether *this* particular query would have hit a real metro or city, so it
+ * never overclaims in either direction, including a future deployment that
+ * HAS been seeded and simply has no match for this query.
  */
 export function describeNoGeoMatches(query: string): string {
   const trimmed = query.trim();
   return (
-    `No states or countries match “${trimmed}”. City results depend on ` +
-    "this deployment's location data being seeded (see " +
-    "scripts/seed-geo-locations.ts) — if you expected a city here, that's " +
-    "the most likely reason."
+    `No states or countries match “${trimmed}”. Metro and city results ` +
+    "depend on this deployment's location data being seeded (see " +
+    "scripts/seed-geo-locations.ts) — if you expected a metro or city " +
+    "here, that's the most likely reason."
   );
 }

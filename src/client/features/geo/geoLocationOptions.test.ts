@@ -6,6 +6,7 @@ import { US_DMAS } from "./usDmas";
 import {
   areaKey,
   buildCityAreas,
+  buildMetroAreasFromSearch,
   describeNoGeoMatches,
   filterCountryAreas,
   filterMetroAreas,
@@ -15,8 +16,63 @@ import {
   groupGeoAreas,
   isSameArea,
   selectCityAreas,
+  selectMetroAreasFromSearch,
   type GeoSearchResult,
 } from "./geoLocationOptions";
+
+// Shared across buildCityAreas/buildMetroAreasFromSearch below: one row of
+// every `geo_locations.type` this app produces, so each function's filter can
+// be pinned against the SAME mixed batch a real seeded search could return
+// (rather than each function inventing its own single-type fixture) — this is
+// exactly what proves buildMetroAreasFromSearch keeps a DMA row while
+// dropping City/State/Country ones out of the identical array
+// buildCityAreas keeps City from and drops the rest of.
+const SPRINGFIELD_IL: GeoSearchResult = {
+  code: 1_017_962,
+  name: "Springfield",
+  type: "City",
+  stateCode: "IL",
+  countryCode: 2840,
+};
+const DALLAS_FORT_WORTH_DMA: GeoSearchResult = {
+  code: 1_026_339,
+  name: "Dallas-Fort Worth TX",
+  type: "DMA Region",
+  stateCode: "TX",
+  countryCode: 2840,
+};
+const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
+  SPRINGFIELD_IL,
+  {
+    code: 1_017_961,
+    name: "Springfield",
+    type: "City",
+    stateCode: "MO",
+    countryCode: 2840,
+  },
+  {
+    code: 21_176,
+    name: "Texas",
+    type: "State",
+    stateCode: "TX",
+    countryCode: 2840,
+  },
+  {
+    code: 2840,
+    name: "United States",
+    type: "Country",
+    stateCode: null,
+    countryCode: 2840,
+  },
+  {
+    code: 1_006_932,
+    name: "Paris",
+    type: "City",
+    stateCode: null,
+    countryCode: 2250,
+  },
+  DALLAS_FORT_WORTH_DMA,
+];
 
 describe("filterMetroAreas", () => {
   // US_DMAS ships intentionally empty (see that file's own header) until an
@@ -101,56 +157,19 @@ describe("formatCityLabel", () => {
 });
 
 describe("buildCityAreas", () => {
-  const results: GeoSearchResult[] = [
-    {
-      code: 1_017_962,
-      name: "Springfield",
-      type: "City",
-      stateCode: "IL",
-      countryCode: 2840,
-    },
-    {
-      code: 1_017_961,
-      name: "Springfield",
-      type: "City",
-      stateCode: "MO",
-      countryCode: 2840,
-    },
-    // geo_locations holds every Google geotarget type, not just cities — a
-    // seeded deployment could return a State/Country row for a query that
-    // also happens to prefix-match a place name. These must be dropped, or
-    // the picker would double up with US_STATES/LOCATION_OPTIONS.
-    {
-      code: 21_176,
-      name: "Texas",
-      type: "State",
-      stateCode: "TX",
-      countryCode: 2840,
-    },
-    {
-      code: 2840,
-      name: "United States",
-      type: "Country",
-      stateCode: null,
-      countryCode: 2840,
-    },
-    {
-      code: 1_006_932,
-      name: "Paris",
-      type: "City",
-      stateCode: null,
-      countryCode: 2250,
-    },
-  ];
-
+  // geo_locations holds every Google geotarget type, not just cities — a
+  // seeded deployment could return a State/Country/DMA row for a query that
+  // also happens to prefix-match a place name. These must be dropped, or the
+  // picker would double up with US_STATES/LOCATION_OPTIONS, or show a metro
+  // as a city.
   it("keeps only City-typed rows", () => {
-    const areas = buildCityAreas(results);
+    const areas = buildCityAreas(MIXED_TYPE_RESULTS);
     expect(areas).toHaveLength(3);
     expect(areas.every((area) => area.kind === "city")).toBe(true);
   });
 
   it("disambiguates and carries the row's own country as parentCountryCode", () => {
-    const areas = buildCityAreas(results);
+    const areas = buildCityAreas(MIXED_TYPE_RESULTS);
     expect(areas).toEqual([
       {
         kind: "city",
@@ -178,36 +197,83 @@ describe("buildCityAreas", () => {
   });
 });
 
-describe("selectCityAreas", () => {
-  const springfield: GeoSearchResult = {
-    code: 1_017_962,
-    name: "Springfield",
-    type: "City",
-    stateCode: "IL",
-    countryCode: 2840,
-  };
+describe("buildMetroAreasFromSearch", () => {
+  it("turns a seeded DMA Region row into a metro TargetArea, dropping every other type in the same batch", () => {
+    // The exact failing input from the review: US_DMAS ships empty (see
+    // usDmas.ts's own header), and a seeded "DMA Region" row must still
+    // become a selectable metro on its own — the empty bundled table is an
+    // accelerator, never a whitelist a real seeded row has to clear. Reusing
+    // MIXED_TYPE_RESULTS (rather than a DMA-only fixture) also proves the
+    // City/State/Country rows in that same batch are correctly dropped.
+    expect(US_DMAS).toHaveLength(0);
+    expect(buildMetroAreasFromSearch(MIXED_TYPE_RESULTS)).toEqual([
+      {
+        kind: "metro",
+        locationCode: 1_026_339,
+        label: "Dallas-Fort Worth TX",
+        parentCountryCode: 2840,
+      },
+    ]);
+  });
 
+  it("returns nothing when no row in the batch is DMA-Region-typed", () => {
+    expect(buildMetroAreasFromSearch(MIXED_TYPE_RESULTS.slice(0, -1))).toEqual(
+      [],
+    );
+  });
+
+  it("returns nothing for an empty result set", () => {
+    expect(buildMetroAreasFromSearch([])).toEqual([]);
+  });
+});
+
+describe("selectCityAreas", () => {
   it("returns nothing for an empty debounced query, regardless of what the query cache holds", () => {
     // Reproduces the exact scenario this function exists to prevent: real
     // rows sitting in the cache (e.g. a resolved fetch for "spring") plus a
     // debounced query that has since gone back to empty (box cleared). See
     // this function's own doc comment for why the raw query result can't be
     // trusted here -- `keepPreviousData` reports it regardless of `enabled`.
-    expect(selectCityAreas("", [springfield])).toEqual([]);
+    expect(selectCityAreas("", [SPRINGFIELD_IL])).toEqual([]);
   });
 
   it("returns nothing for a debounced query that is only whitespace", () => {
-    expect(selectCityAreas("   ", [springfield])).toEqual([]);
+    expect(selectCityAreas("   ", [SPRINGFIELD_IL])).toEqual([]);
   });
 
   it("passes rows through unchanged for a non-empty debounced query", () => {
-    expect(selectCityAreas("spring", [springfield])).toEqual(
-      buildCityAreas([springfield]),
+    expect(selectCityAreas("spring", [SPRINGFIELD_IL])).toEqual(
+      buildCityAreas([SPRINGFIELD_IL]),
     );
   });
 
   it("returns nothing when the debounced query is non-empty but no rows have resolved yet", () => {
     expect(selectCityAreas("spring", [])).toEqual([]);
+  });
+});
+
+describe("selectMetroAreasFromSearch", () => {
+  it("returns nothing for an empty debounced query, regardless of what the query cache holds", () => {
+    // Same staleness scenario selectCityAreas guards against, for the metro
+    // group: a resolved "dal" fetch sitting in the query cache must not leak
+    // through once the box is cleared back to empty.
+    expect(selectMetroAreasFromSearch("", [DALLAS_FORT_WORTH_DMA])).toEqual([]);
+  });
+
+  it("returns nothing for a debounced query that is only whitespace", () => {
+    expect(selectMetroAreasFromSearch("   ", [DALLAS_FORT_WORTH_DMA])).toEqual(
+      [],
+    );
+  });
+
+  it("passes rows through unchanged for a non-empty debounced query", () => {
+    expect(selectMetroAreasFromSearch("dal", [DALLAS_FORT_WORTH_DMA])).toEqual(
+      buildMetroAreasFromSearch([DALLAS_FORT_WORTH_DMA]),
+    );
+  });
+
+  it("returns nothing when the debounced query is non-empty but no rows have resolved yet", () => {
+    expect(selectMetroAreasFromSearch("dal", [])).toEqual([]);
   });
 });
 
@@ -327,6 +393,14 @@ describe("describeNoGeoMatches", () => {
     const message = describeNoGeoMatches("zzzznonsense");
     expect(message.toLowerCase()).not.toContain("no such");
     expect(message).toContain("No states or countries match");
+  });
+
+  it("names metros specifically, not just cities", () => {
+    // Finding 4's second half: an unseeded deployment's empty state must say
+    // something true about metros — US_DMAS never populates on its own, so
+    // "seed this" is the ONLY path to a metro, not merely the faster one.
+    const message = describeNoGeoMatches("dallas");
+    expect(message.toLowerCase()).toContain("metro");
   });
 });
 

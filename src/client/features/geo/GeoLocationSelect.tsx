@@ -13,6 +13,7 @@ import {
   groupGeoAreas,
   isSameArea,
   selectCityAreas,
+  selectMetroAreasFromSearch,
   type GeoGroup,
 } from "./geoLocationOptions";
 
@@ -134,7 +135,10 @@ export function GeoLocationSelect({
     CITY_SEARCH_DEBOUNCE_MS,
   ).trim();
 
-  const cityQuery = useQuery({
+  // Named for what it searches, not just cities: the same free D1 lookup
+  // returns every seeded geotarget type prefix-matching the query, and both
+  // the city group (below) and the metro group's seeded half read from it.
+  const geoSearchQuery = useQuery({
     queryKey: ["geo-location-search", debouncedQuery],
     queryFn: () =>
       searchGeoLocations({
@@ -146,18 +150,30 @@ export function GeoLocationSelect({
     placeholderData: keepPreviousData,
   });
 
-  // Metros/states/countries key off the LIVE query -- they never touch the
-  // network, so there's no reason to make them wait on the same debounce
-  // that protects the city search from firing on every keystroke.
+  // States/countries key off the LIVE query -- they never touch the network,
+  // so there's no reason to make them wait on the same debounce that protects
+  // the D1 search from firing on every keystroke. Metros merge two sources:
+  // the bundled US_DMAS table (synchronous, LIVE query, empty until an
+  // operator has an independent verified source) and seeded "DMA Region"
+  // rows from that same D1 search (debounced, since they share its network
+  // round trip) -- the bundled table is an accelerator for the un-seeded
+  // case, never a whitelist the seeded rows have to clear (see
+  // buildMetroAreasFromSearch's own doc comment).
   const groups = useMemo(
     () =>
       groupGeoAreas({
-        metros: filterMetroAreas(query),
-        cities: selectCityAreas(debouncedQuery, cityQuery.data ?? []),
+        metros: [
+          ...filterMetroAreas(query),
+          ...selectMetroAreasFromSearch(
+            debouncedQuery,
+            geoSearchQuery.data ?? [],
+          ),
+        ],
+        cities: selectCityAreas(debouncedQuery, geoSearchQuery.data ?? []),
         states: filterStateAreas(query),
         countries: filterCountryAreas(query),
       }),
-    [query, debouncedQuery, cityQuery.data],
+    [query, debouncedQuery, geoSearchQuery.data],
   );
   const flatAreas = useMemo(() => flattenGeoGroups(groups), [groups]);
 
