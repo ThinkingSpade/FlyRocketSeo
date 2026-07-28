@@ -4,6 +4,10 @@ import { Loader2, MapPin, TriangleAlert } from "lucide-react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
+  isGeoLocationSeedChunkResult,
+  isStuckWithoutProgress,
+} from "@/client/features/geo/geoLocationSeedProgress";
+import {
   getGeoLocationSeedStatus,
   seedGeoLocationsChunk,
 } from "@/serverFunctions/geo";
@@ -12,6 +16,12 @@ const DATAFORSEO_LOCATIONS_DOCS_URL =
   "https://docs.dataforseo.com/v3/keywords_data/google_ads/locations/";
 
 type SeedProgress = { writtenSoFar: number; totalRows: number };
+
+// A full run needs ~48 calls at today's ~95k rows / 2,000-per-chunk
+// (GEO_SEED_ROWS_PER_CHUNK) -- this caps well above any plausible future
+// growth in DataForSEO's location list while still guaranteeing the loop
+// below cannot spin forever, even if a future bug made `done` never arrive.
+const MAX_SEED_CHUNK_CALLS = 500;
 
 /**
  * Operator setup action: seeds `geo_locations` (countries, states, metros
@@ -41,6 +51,17 @@ type SeedProgress = { writtenSoFar: number; totalRows: number };
  * `AnalyzeProjectCard.tsx` already uses for its own sequence of analyses —
  * until the whole list is written, showing the real written/total counts at
  * every step rather than a fabricated percentage.
+ *
+ * Trusts each chunk result defensively, not just by its declared type: a
+ * production incident here saw `seedGeoLocationsChunk` resolve to `undefined`
+ * (the Worker was re-fetching and re-deriving DataForSEO's entire ~95k-row
+ * location list on every chunk call, almost certainly blowing the Workers
+ * Free plan's per-invocation CPU ceiling — see GeoLocationSeedService.ts's
+ * own header for the server-side redesign that actually fixes this).
+ * `isGeoLocationSeedChunkResult`/`isStuckWithoutProgress` turn "the response
+ * wasn't usable" and "the response stopped making progress" into a message a
+ * user can act on instead of a raw TypeError or an infinite spin, regardless
+ * of whether the redesign above has fully eliminated the underlying cause.
  */
 export function GeoLocationSeedSection() {
   const queryClient = useQueryClient();
@@ -65,16 +86,37 @@ export function GeoLocationSeedSection() {
 
     try {
       let done = false;
-      while (!done) {
-        const result = await seedGeoLocationsChunk({
+      for (let call = 0; !done; call += 1) {
+        if (call >= MAX_SEED_CHUNK_CALLS) {
+          throw new Error(
+            "Seeding did not finish after an unusually large number of steps. Stopping rather than continuing indefinitely — try again, and contact support if this keeps happening.",
+          );
+        }
+
+        const rawResult = await seedGeoLocationsChunk({
           data: { offset: offsetRef.current },
         });
-        offsetRef.current = result.writtenSoFar;
+
+        // Defense in depth, not a symptom fix: see this component's own
+        // header for why `rawResult` isn't trusted just because its declared
+        // type says it's a real result.
+        if (!isGeoLocationSeedChunkResult(rawResult)) {
+          throw new Error(
+            "Seeding stopped: the server response was missing the expected progress data. Try again — if it keeps happening, contact support.",
+          );
+        }
+        if (isStuckWithoutProgress(offsetRef.current, rawResult)) {
+          throw new Error(
+            "Seeding stopped making progress without finishing. Try again — if it keeps happening, contact support.",
+          );
+        }
+
+        offsetRef.current = rawResult.writtenSoFar;
         setProgress({
-          writtenSoFar: result.writtenSoFar,
-          totalRows: result.totalRows,
+          writtenSoFar: rawResult.writtenSoFar,
+          totalRows: rawResult.totalRows,
         });
-        done = result.done;
+        done = rawResult.done;
       }
       toast.success(`Seeded ${offsetRef.current.toLocaleString()} locations.`);
       await queryClient.invalidateQueries({
