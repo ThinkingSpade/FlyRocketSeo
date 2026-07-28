@@ -22,6 +22,8 @@ import {
   LocalGscContext,
   useLocalSeoProjectContext,
 } from "@/client/features/local-seo/LocalProjectContext";
+import { buildGbpAudit } from "./gbpAudit";
+import { GbpAuditCard } from "./GbpAuditCard";
 import { LocalReviewsSection } from "./LocalReviewsSection";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
@@ -63,6 +65,12 @@ export function LocalSeoPage({
 }) {
   const [input, setInput] = useState(query);
   const [runKeyword, setRunKeyword] = useState<string | null>(null);
+  // Reported by LocalReviewsSection once its (user-triggered) review crawl
+  // completes -- undefined until then, which buildGbpAudit already treats
+  // as "not known" rather than assuming zero owner replies.
+  const [reviews, setReviews] = useState<
+    Array<{ ownerAnswer: string | null }> | undefined
+  >(undefined);
   const run = useAuthorizedRun(createMeteredRunKey(projectId, input.trim()));
   const projectContext = useLocalSeoProjectContext({
     projectId,
@@ -88,6 +96,27 @@ export function LocalSeoPage({
     profileQuery.data ??
     (runKeyword == null ? cachedBusiness?.profile : undefined);
   const profileKeyword = runKeyword ?? cachedBusiness?.keyword ?? businessGuess;
+  // Computed straight from data already on hand (the looked-up profile plus
+  // whatever reviews have loaded so far) -- pure arithmetic, no fetch of its
+  // own, so it's safe to recompute on every render rather than memoized.
+  const audit =
+    profile && profile.found
+      ? buildGbpAudit({
+          found: profile.found,
+          category: profile.category,
+          additionalCategories: profile.additionalCategories,
+          description: profile.description,
+          logo: profile.logo,
+          mainImage: profile.mainImage,
+          phone: profile.phone,
+          url: profile.url,
+          domain: profile.domain,
+          rating: profile.rating,
+          reviewsCount: profile.reviewsCount,
+          isClaimed: profile.isClaimed,
+          reviews,
+        })
+      : null;
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -188,10 +217,17 @@ export function LocalSeoPage({
         ) : (
           <>
             <ProfileCard profile={profile} />
+            {audit ? <GbpAuditCard audit={audit} /> : null}
             {profileKeyword ? (
               <LocalReviewsSection
+                // Remounts on a new business so a stale taskId/reviews list
+                // from the previous lookup can never get silently attributed
+                // to this one -- both this section's own display and the
+                // audit's owner-response check depend on that not happening.
+                key={profileKeyword}
                 projectId={projectId}
                 keyword={profileKeyword}
+                onReviewsLoaded={setReviews}
               />
             ) : null}
           </>

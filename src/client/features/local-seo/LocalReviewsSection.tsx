@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Star } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -11,9 +11,19 @@ import { ReviewAnalyticsCards } from "./ReviewAnalyticsCards";
 export function LocalReviewsSection({
   projectId,
   keyword,
+  onReviewsLoaded,
 }: {
   projectId: string;
   keyword: string;
+  /** Reports the crawled rows upward once loaded (undefined before or
+   *  between crawls) so a sibling GBP audit card can read owner-reply data
+   *  without this component knowing anything about audits. Optional and
+   *  side-effect-free to omit: gbpAudit.ts already treats "not supplied" as
+   *  unknown rather than assuming zero replies, so callers that don't need
+   *  it can simply leave it out. */
+  onReviewsLoaded?: (
+    reviews: Array<{ ownerAnswer: string | null }> | undefined,
+  ) => void;
 }) {
   const [taskId, setTaskId] = useState<string | null>(null);
 
@@ -32,6 +42,17 @@ export function LocalReviewsSection({
   });
 
   const outcome = resultQuery.data;
+  const loadedReviews =
+    outcome?.status === "completed" ? outcome.items : undefined;
+
+  // Reports already-fetched data upward -- never triggers a fetch of its
+  // own. `loadedReviews` only changes reference when react-query hands back
+  // genuinely new data, so this can't loop: re-reporting the same reviews
+  // array is a same-reference no-op React bails out of.
+  useEffect(() => {
+    onReviewsLoaded?.(loadedReviews);
+  }, [loadedReviews, onReviewsLoaded]);
+
   const isWorking =
     startMutation.isPending ||
     (taskId != null && (!outcome || outcome.status === "pending"));
