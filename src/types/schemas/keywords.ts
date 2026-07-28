@@ -185,10 +185,20 @@ export const serpAnalysisSchema = z.object({
  * own `resolveGeo("keyword-difficulty", ...)` resolved, not a value this
  * schema quietly fills in, since a silently-defaulted language could
  * disagree with the language the rest of that same run actually used.
+ *
+ * Keyword Research's own table pages can run larger than this (up to 500
+ * rows -- see KeywordResearchPagination.tsx's own page-size options), so its
+ * backfill hook caps a single page's request to this many keywords rather
+ * than assuming a page always fits in one call; the button's own count
+ * always matches whatever it actually sends, never the full page.
  */
+export const KEYWORD_DIFFICULTY_OVERVIEW_MAX_KEYWORDS = 100;
 export const keywordDifficultyOverviewSchema = z.object({
   projectId: z.string().min(1),
-  keywords: z.array(z.string().min(1)).min(1).max(100),
+  keywords: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(KEYWORD_DIFFICULTY_OVERVIEW_MAX_KEYWORDS),
   locationCode: z.number().int().positive(),
   languageCode: z.string().min(2).max(8),
 });

@@ -33,6 +33,8 @@ import {
 } from "@/client/components/table/TableBulkActionBar";
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
 import { getLanguageCode } from "@/client/features/keywords/locations";
+import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
+import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -101,6 +103,7 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
   const {
     activeFilterCount,
     filteredRows,
+    researchGeo,
     rows,
     selectedRows,
     sheetsExportRows,
@@ -110,6 +113,11 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
     useKeywordResearchPagination(filteredRows);
   const { projectId } = keywordsRoute.useParams();
   const [showTrackModal, setShowTrackModal] = useState(false);
+  // Task 6's on-demand difficulty backfill, bounded to THIS page -- same
+  // shared hook the desktop layout uses (KeywordResearchDesktopResults.tsx),
+  // not a second mechanism.
+  const { mergedRows, affordance: difficultyAffordance } =
+    useKeywordResearchDifficultyBackfill(projectId, pageRows, researchGeo);
 
   const keywordCountLabel =
     selectedRows.size > 0
@@ -247,10 +255,22 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
       />
 
       {showFilters ? <MobileFilters controller={controller} /> : null}
+      {difficultyAffordance ? (
+        <div className="shrink-0 border-b border-base-300 px-4 py-2">
+          <DifficultyOverviewControl
+            count={difficultyAffordance.count}
+            unavailableMessage={difficultyAffordance.unavailableMessage}
+            isLoading={difficultyAffordance.isLoading}
+            isError={difficultyAffordance.isError}
+            loaded={false}
+            onLoad={difficultyAffordance.onLoad}
+          />
+        </div>
+      ) : null}
 
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}
-        filteredRows={pageRows}
+        filteredRows={mergedRows}
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
         selectedRows={controller.selectedRows}

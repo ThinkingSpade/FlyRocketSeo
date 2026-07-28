@@ -39,6 +39,8 @@ import {
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
 import { getLanguageCode } from "@/client/features/keywords/locations";
 import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
+import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
+import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -133,6 +135,11 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
     useKeywordResearchPagination(filteredRows);
   const { projectId } = keywordsRoute.useParams();
   const [showTrackModal, setShowTrackModal] = useState(false);
+  // Task 6's on-demand difficulty backfill, bounded to THIS page
+  // (`pageRows`) -- see the hook's own header for why it never spans the
+  // whole result set.
+  const { mergedRows, affordance: difficultyAffordance } =
+    useKeywordResearchDifficultyBackfill(projectId, pageRows, researchGeo);
 
   const isSliced = activeFilterCount > 0 || controller.groupTerm != null;
   const keywordCountLabel =
@@ -274,9 +281,21 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
       />
 
       {showFilters ? <DesktopFilters controller={controller} /> : null}
+      {difficultyAffordance ? (
+        <div className="shrink-0 border-b border-base-300 px-4 py-2">
+          <DifficultyOverviewControl
+            count={difficultyAffordance.count}
+            unavailableMessage={difficultyAffordance.unavailableMessage}
+            isLoading={difficultyAffordance.isLoading}
+            isError={difficultyAffordance.isError}
+            loaded={false}
+            onLoad={difficultyAffordance.onLoad}
+          />
+        </div>
+      ) : null}
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}
-        filteredRows={pageRows}
+        filteredRows={mergedRows}
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
         selectedRows={controller.selectedRows}
