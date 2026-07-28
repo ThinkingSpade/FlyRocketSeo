@@ -230,7 +230,29 @@ type ClustersVerdictInput = {
    *  clusters[0] as the lead candidate rather than re-ranking, so it can
    *  never disagree with the plan's own priority badges. */
   clusters: ClusterCandidate[];
+  /**
+   * The project's CONFIRMED target area, when one exists -- NOT whether it
+   * applied here (Task 6: Topic Clusters' keyword-idea source, Labs
+   * `keyword_suggestions`, has no metro-capable equivalent wired up, so
+   * volume/difficulty here are always national regardless). Set this
+   * whenever a target area is confirmed at all, so the verdict can flag the
+   * mismatch a user watching the header ScopeControl show a metro would
+   * otherwise reasonably assume applies here too. Optional so every
+   * pre-Task-6 caller/test keeps compiling unchanged.
+   */
+  confirmedAreaLabel?: string | null;
 };
+
+/** Appends the "these numbers are still nationwide" caveat when a target
+ *  area is confirmed but Topic Clusters can't use it -- see
+ *  `confirmedAreaLabel`'s own doc comment. No-ops otherwise. */
+function withUnusedAreaNote(
+  confirmedAreaLabel: string | null | undefined,
+  sentence: string,
+): string {
+  if (!confirmedAreaLabel) return sentence;
+  return `${sentence} (Volume and difficulty are nationwide; ${confirmedAreaLabel} isn't used for topic clusters yet.)`;
+}
 
 /** Below this combined monthly search volume across a cluster's keywords,
  *  there isn't enough real demand to justify a dedicated hub page -- a
@@ -251,7 +273,10 @@ export function buildClustersVerdict(input: ClustersVerdictInput): Verdict {
 
   if (lead.totalVolume < MIN_CLUSTER_VOLUME) {
     return {
-      read: `None of the ${pluralize(input.clusters.length, "cluster")} found for "${input.topic}" have much search demand -- the strongest, "${lead.name}", totals only ${formatCount(lead.totalVolume)} searches/mo across ${pluralize(lead.keywordCount, "keyword")}.`,
+      read: withUnusedAreaNote(
+        input.confirmedAreaLabel,
+        `None of the ${pluralize(input.clusters.length, "cluster")} found for "${input.topic}" have much search demand -- the strongest, "${lead.name}", totals only ${formatCount(lead.totalVolume)} searches/mo across ${pluralize(lead.keywordCount, "keyword")}.`,
+      ),
       tone: "bad",
       actions: [
         {
@@ -273,7 +298,10 @@ export function buildClustersVerdict(input: ClustersVerdictInput): Verdict {
     lead.averageDifficulty >= HIGH_DIFFICULTY_KD
   ) {
     return {
-      read: `"${lead.name}" is the strongest gap found for "${input.topic}" -- ${pluralize(lead.keywordCount, "keyword")} totaling ${formatCount(lead.totalVolume)} searches/mo, but${difficultyClause}, it won't be an easy hub to rank.`,
+      read: withUnusedAreaNote(
+        input.confirmedAreaLabel,
+        `"${lead.name}" is the strongest gap found for "${input.topic}" -- ${pluralize(lead.keywordCount, "keyword")} totaling ${formatCount(lead.totalVolume)} searches/mo, but${difficultyClause}, it won't be an easy hub to rank.`,
+      ),
       tone: "mixed",
       actions: [
         {
@@ -286,7 +314,10 @@ export function buildClustersVerdict(input: ClustersVerdictInput): Verdict {
   }
 
   return {
-    read: `"${lead.name}" is the strongest gap worth a hub page -- ${pluralize(lead.keywordCount, "keyword")} totaling ${formatCount(lead.totalVolume)} searches/mo${difficultyClause}.`,
+    read: withUnusedAreaNote(
+      input.confirmedAreaLabel,
+      `"${lead.name}" is the strongest gap worth a hub page -- ${pluralize(lead.keywordCount, "keyword")} totaling ${formatCount(lead.totalVolume)} searches/mo${difficultyClause}.`,
+    ),
     tone: "good",
     actions: [
       {

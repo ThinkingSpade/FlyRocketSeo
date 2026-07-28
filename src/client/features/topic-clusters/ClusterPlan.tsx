@@ -26,9 +26,15 @@ import { buildClustersVerdict } from "@/client/features/insights/verdicts/conten
 export function ClusterPlan({
   plan,
   projectId,
+  confirmedAreaLabel = null,
 }: {
   plan: NonNullable<Awaited<ReturnType<typeof getTopicClusters>>>;
   projectId: string;
+  /** The project's CONFIRMED target area label, if any (Task 6) -- passed
+   *  straight through to buildClustersVerdict's own field of the same name;
+   *  see that field's doc comment for why this is "confirmed", not
+   *  "applied". */
+  confirmedAreaLabel?: string | null;
 }) {
   // Priority ranking + totals are pure client-side cuts of the fetched plan.
   const clusters = useMemo(() => prioritizeClusters(plan.clusters), [plan]);
@@ -47,8 +53,9 @@ export function ClusterPlan({
           totalVolume: cluster.totalVolume,
           averageDifficulty: cluster.averageDifficulty,
         })),
+        confirmedAreaLabel,
       }),
-    [plan.topic, clusters],
+    [plan.topic, clusters, confirmedAreaLabel],
   );
   const coverageState = useTopicPlanCoverage({
     projectId,

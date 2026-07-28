@@ -376,7 +376,25 @@ export function TopicClustersPage({
         </div>
       ) : null}
 
-      {plan ? <ClusterPlan plan={plan} projectId={projectId} /> : null}
+      {plan ? (
+        <ClusterPlan
+          plan={plan}
+          projectId={projectId}
+          // Task 6: Topic Clusters' keyword-idea source (Labs
+          // keyword_suggestions) has no metro-capable equivalent, so
+          // volume/difficulty here are always national -- passing the
+          // CONFIRMED area (not "whether it applied") lets the verdict flag
+          // that mismatch instead of silently ignoring a metro the header
+          // ScopeControl visibly shows. A plain country (nothing confirmed)
+          // is not a mismatch, so it stays null.
+          confirmedAreaLabel={
+            targetAreaScope.hasConfirmedArea &&
+            targetAreaScope.area.kind !== "country"
+              ? targetAreaScope.area.label
+              : null
+          }
+        />
+      ) : null}
     </div>
   );
 }

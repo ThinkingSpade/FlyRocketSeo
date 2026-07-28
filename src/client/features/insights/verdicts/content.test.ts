@@ -399,3 +399,38 @@ describe("buildClustersVerdict", () => {
     ]);
   });
 });
+
+describe("buildClustersVerdict area labeling (Task 6)", () => {
+  const cluster = {
+    name: "Office coffee subscription",
+    keywordCount: 6,
+    totalVolume: 200,
+    averageDifficulty: null,
+  };
+
+  it("flags a confirmed-but-unused target area rather than staying silent", () => {
+    const verdict = buildClustersVerdict({
+      topic: "office coffee",
+      clusters: [cluster],
+      confirmedAreaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read).toContain("nationwide");
+    expect(verdict.read).toContain("Dallas-Ft. Worth, TX");
+  });
+
+  it("says nothing extra with no confirmed area -- identical to omitting the field", () => {
+    const withNull = buildClustersVerdict({
+      topic: "office coffee",
+      clusters: [cluster],
+      confirmedAreaLabel: null,
+    });
+    const omitted = buildClustersVerdict({
+      topic: "office coffee",
+      clusters: [cluster],
+    });
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read).not.toContain("nationwide");
+  });
+});
