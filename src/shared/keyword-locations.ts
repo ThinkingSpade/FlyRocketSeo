@@ -729,15 +729,40 @@ export function isLabsLocationCode(locationCode: number): boolean {
 }
 
 /**
+ * Below this, a location code cannot be a real sub-country geotarget:
+ * measured directly off this file's own tables, every country code in
+ * LOCATION_OPTIONS tops out at 2894 (Zambia), while the smallest real
+ * sub-country code this app bundles is 21132 (Alaska, in
+ * `src/client/features/geo/usStates.ts`) — DMA and city codes run into the
+ * millions (e.g. 1026339). 10,000 sits cleanly between the two, so anything
+ * below it is not a plausible geotarget of any kind — a typo'd
+ * `locationCode: 1`, not merely an unrecognised country — and must not be
+ * routed to a metered Google Ads call as if it were.
+ */
+const MIN_SUB_COUNTRY_LOCATION_CODE = 10_000;
+
+/**
  * Country codes are 4-digit (2xxx); every geotarget below country level has a
  * larger code. Labs is country-only and rejects sub-country codes outright, so
- * anything unrecognised here must go to Google Ads, whose geotarget coverage
- * includes metros and cities. Falling through to Labs — the previous
- * behaviour — turned a supported metro into a hard API error.
+ * a recognised sub-country-shaped code must go to Google Ads, whose geotarget
+ * coverage includes metros and cities. Falling through to Labs for THOSE —
+ * the previous behaviour — turned a supported metro into a hard API error.
+ *
+ * But an unrecognised code that is too small to be a real sub-country
+ * geotarget (e.g. `locationCode: 1`) is not a metro that fell through the
+ * cracks — it is garbage, and routing it to Google Ads would spend a metered
+ * call on a nonsense location instead of failing the free validation that
+ * catches it today (schemas.ts's assertLanguageForLocation/
+ * assertLabsLocationCode, both keyed off this function's return value).
+ * Falling back to "labs" for that band restores exactly the pre-existing
+ * guard: Labs was always the fallback for anything this function didn't
+ * recognise, and unrecognised-but-plausible-metro codes are the ONLY case
+ * that needed to change.
  */
 export function getKeywordDataProvider(
   locationCode: number,
 ): KeywordDataProvider {
   if (LABS_LOCATION_CODES.has(locationCode)) return "labs";
-  return "google_ads";
+  if (LOCATION_CODES.has(locationCode)) return "google_ads"; // recognised googleAdsOnly country, e.g. Iceland
+  return locationCode >= MIN_SUB_COUNTRY_LOCATION_CODE ? "google_ads" : "labs";
 }
