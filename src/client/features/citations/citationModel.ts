@@ -170,12 +170,21 @@ function nameAppearsInTitle(name: string, title: string | null): boolean {
 // Path segments that mark a directory's own search/category page, or other
 // non-listing content, rather than an individual business listing -- e.g.
 // Yelp's /search, or a directory's own /blog post. Not an exhaustive list of
-// every directory's URL scheme: it only needs to catch the common cases,
-// since a miss here still leaves the title check as a second chance. Checked
-// against EVERY path segment, not just the last one (finding A1): a listing
-// domain's own editorial content is often nested under a section prefix
-// (e.g. yelp.com/blog/top-pizza), and a last-segment-only check would read
-// that slug as though it were an individual listing.
+// every directory's URL scheme, and DELIBERATELY used only as a
+// DISQUALIFIER now (see isClearlyNonListingUrl), never as proof of the
+// opposite (final wave item 4): this list used to also stand in for "yes,
+// this is a listing" via "not found on this list", which is backwards -- a
+// finite blacklist can never enumerate every non-listing path a directory
+// might publish (a new editorial section, a fresh URL scheme), so a page
+// that simply wasn't on the list -- e.g. /guides/top-pizza -- was wrongly
+// treated as listing-shaped. Used as a disqualifier, an incomplete list is
+// safe to leave incomplete: missing an entry here just means one more
+// non-listing shape falls through to the positive checks below, which still
+// default to unconfirmed absent real evidence. Checked against EVERY path
+// segment, not just the last one (finding A1): a listing domain's own
+// editorial content is often nested under a section prefix (e.g.
+// yelp.com/blog/top-pizza), and a last-segment-only check would read that
+// slug as though it were an individual listing.
 const SEARCH_PAGE_PATH_SEGMENTS = new Set([
   "search",
   "results",
@@ -200,11 +209,15 @@ const SEARCH_PAGE_PATH_SEGMENTS = new Set([
   "pricing",
 ]);
 
-/** True when NONE of `url`'s path segments mark a search/category/editorial
- *  page -- the second corroborating signal (see isCorroborated). A bare
- *  domain or homepage (no path segments at all) doesn't count either: that's
- *  the directory itself, not evidence of a specific business's page. */
-function looksLikeListingPath(url: string): boolean {
+/** True when some path segment marks `url` as a search/category/editorial
+ *  page -- a HARD disqualifier (final wave item 4): a URL this obviously
+ *  shaped must never be corroborated, regardless of what its title says. A
+ *  bare domain/homepage or an unparseable URL returns false here (not
+ *  "clearly" anything) rather than true -- ambiguous is not the same as
+ *  disqualifying, so it falls through to the positive checks below instead
+ *  of being forced to false ahead of a title match that might still confirm
+ *  it. */
+function isClearlyNonListingUrl(url: string): boolean {
   let parsed: URL;
   try {
     parsed = new URL(url);
@@ -212,10 +225,43 @@ function looksLikeListingPath(url: string): boolean {
     return false;
   }
   const segments = parsed.pathname.split("/").filter(Boolean);
-  if (segments.length === 0) return false;
-  return !segments.some((segment) =>
+  return segments.some((segment) =>
     SEARCH_PAGE_PATH_SEGMENTS.has(segment.toLowerCase()),
   );
+}
+
+/** Same idea as normalizeForMatch, but drops apostrophes entirely instead of
+ *  turning them into a word break. URL slugs conventionally drop them too
+ *  ("Joe's Pizza" -> "joes-pizza", never "joe-s-pizza"), so comparing a
+ *  business name against a URL path needs this instead of normalizeForMatch
+ *  (which would normalize "Joe's" to "joe s", never matching a slug's
+ *  "joes"). Title text doesn't have this problem -- a title is prose, not a
+ *  generated slug -- so nameAppearsInTitle keeps using normalizeForMatch. */
+function normalizeSlugForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/'/g, "")
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** True when the business's own name appears somewhere in `url`'s PATH --
+ *  positive evidence a result is specifically about this business (finding
+ *  10), preferred over blacklist-absence (final wave item 4). Only the
+ *  pathname is checked, never the query string: a search URL's query often
+ *  carries the searched-for name too (e.g. "?find_desc=Joe%27s+Pizza"),
+ *  which would otherwise let a genuine search page slip through as though
+ *  its path named the business. */
+function urlMentionsBusinessName(name: string, url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const normalizedName = normalizeSlugForMatch(name);
+  if (!normalizedName) return false;
+  return normalizeSlugForMatch(parsed.pathname).includes(normalizedName);
 }
 
 /**
@@ -224,18 +270,33 @@ function looksLikeListingPath(url: string): boolean {
  * a specific result is this business's own listing -- a directory's search
  * or category page matches the domain just as well as an actual listing
  * does (e.g. Yelp's own "Top Pizza Restaurants" search page for "yelp.com").
- * A match only counts as corroborated once at least one independent signal
- * backs it up. Neither signal alone is proof -- a listing can have a
- * generic title, a search page can happen to have a listing-shaped path --
- * but either is real evidence, and requiring one raises the bar above "the
- * domain happened to match".
+ *
+ * Order matters here (final wave item 4): a URL that is clearly a
+ * search/category/editorial page is checked FIRST and disqualifies the
+ * match outright, before the title is ever consulted. The previous version
+ * checked the title first and returned early on a match, so a /search page
+ * whose title happened to name the business (a common pattern -- many sites
+ * title search pages "<query> - Search results") was confirmed without the
+ * URL's shape ever being considered; that is exactly how 19 /search pages
+ * became 19 "confirmed" listings. Only once a URL clears that bar does
+ * either remaining signal count: the name recognizable in the title, or the
+ * name recognizable in the URL's own path (urlMentionsBusinessName) --
+ * POSITIVE evidence in both cases, not merely "not on a list of known-bad
+ * words". Neither signal alone is proof -- a listing can have a generic
+ * title, a business's name could coincidentally appear in an unrelated
+ * page's slug -- but either is real evidence, and requiring one raises the
+ * bar above "the domain happened to match". Where neither can be
+ * established, the match stays unconfirmed.
  */
 function isCorroborated(
   business: CitationBusiness,
   result: CitationSerpResult,
 ): boolean {
+  if (result.url != null && isClearlyNonListingUrl(result.url)) return false;
   if (nameAppearsInTitle(business.name, result.title)) return true;
-  return result.url != null && looksLikeListingPath(result.url);
+  return (
+    result.url != null && urlMentionsBusinessName(business.name, result.url)
+  );
 }
 
 /** Every known directory that appears among `results`, each with the first
