@@ -29,6 +29,15 @@ declare namespace Cloudflare {
     };
     GOOGLE_CLIENT_ID?: string;
     GOOGLE_CLIENT_SECRET?: string;
+    // Google OAuth client for the SEPARATE Google Business Profile write
+    // connection (posts + listing updates). Deliberately its own pair, not a
+    // reuse of GOOGLE_CLIENT_ID/SECRET above: its mere presence is the
+    // capability signal (see getClientRuntimeConfig's gbpWriteAvailable) that
+    // the operator has *specifically* configured and Google-verified the
+    // restricted `business.manage` scope -- setting up GSC alone must never
+    // make GBP writing look available. See src/shared/gbp.ts.
+    GBP_GOOGLE_CLIENT_ID?: string;
+    GBP_GOOGLE_CLIENT_SECRET?: string;
     LOOPS_API_KEY?: string;
     LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID?: string;
     LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID?: string;

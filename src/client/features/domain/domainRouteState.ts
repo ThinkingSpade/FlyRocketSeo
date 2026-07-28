@@ -29,6 +29,12 @@ export type DomainOverviewRouteState = {
   order: SortOrder;
   tab: DomainActiveTab;
   locationCode: number;
+  /** Whether `loc` actually appeared in the URL, before the Labs-location
+   *  normalization below folds a missing or invalid one into the default.
+   *  The market-default autofill needs this raw signal: `locationCode` alone
+   *  can't tell "the project's market happens to be the default" apart from
+   *  "the URL explicitly asked for the default". */
+  hasExplicitLocationCode: boolean;
   page: number;
   pageSize: number;
   appliedFilters: DomainFilterValues;
@@ -59,6 +65,7 @@ export function getDomainRouteState(
     order: resolveSortOrder(normalizedSort, toSortOrder(search.order ?? null)),
     tab: search.tab ?? "keywords",
     locationCode: normalizedLocationCode,
+    hasExplicitLocationCode: search.loc != null,
     page: search.page != null && search.page > 0 ? search.page : 1,
     pageSize: search.size ?? DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
     appliedFilters: {

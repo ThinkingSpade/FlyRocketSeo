@@ -38,3 +38,6 @@ dist-sourcemaps/
 # Local Claude config (skills are shared)
 .claude/*
 !.claude/skills/
+
+# Superpowers SDD scratch (briefs, reports, review packages, ledger)
+.superpowers/

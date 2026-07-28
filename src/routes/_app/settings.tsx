@@ -7,6 +7,7 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { exportBackup } from "@/serverFunctions/backup";
 import { GscOAuthConfigSection } from "@/client/features/gsc/GscOAuthConfigSection";
+import { GeoLocationSeedSection } from "@/client/features/geo/GeoLocationSeedSection";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -111,6 +112,8 @@ function SettingsPage() {
             </div>
           </div>
         </section>
+
+        <GeoLocationSeedSection />
 
         {isHosted ? (
           <section className="space-y-3">

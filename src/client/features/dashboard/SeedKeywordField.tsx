@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Lightbulb } from "lucide-react";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import { getSavedKeywords } from "@/serverFunctions/keywords";
+import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 
 /**
  * Picks the keyword the keyword-driven analyses run on.
@@ -90,40 +90,15 @@ export function SeedKeywordField({
         />
       </label>
 
-      {suggestions.length > 0 ? (
-        <div className="flex flex-wrap items-center gap-1.5">
-          <Lightbulb className="size-3.5 shrink-0 text-base-content/40" />
-          {suggestions.map((suggestion) => {
-            const active =
-              suggestion.keyword.toLowerCase() === value.trim().toLowerCase();
-            return (
-              <button
-                key={suggestion.keyword}
-                type="button"
-                disabled={disabled}
-                onClick={() => onChange(suggestion.keyword)}
-                title={suggestion.hint}
-                className={`btn btn-xs h-auto min-h-0 gap-1 py-1 font-normal ${
-                  active ? "btn-primary" : "btn-ghost border border-base-300"
-                }`}
-              >
-                <span className="max-w-[14rem] truncate">
-                  {suggestion.keyword}
-                </span>
-                <span
-                  className={
-                    active
-                      ? "text-primary-content/70"
-                      : "text-base-content/45 tabular-nums"
-                  }
-                >
-                  {suggestion.hint}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      ) : null}
+      <SuggestionChips
+        suggestions={suggestions.map((s) => ({
+          value: s.keyword,
+          hint: s.hint,
+        }))}
+        value={value}
+        disabled={disabled}
+        onSelect={onChange}
+      />
 
       <span className="text-xs text-base-content/50">
         {suggestions.length > 0

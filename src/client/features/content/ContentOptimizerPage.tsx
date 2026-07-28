@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { NotebookPen, Search } from "lucide-react";
-import { BriefTargets } from "@/client/features/content/BriefTargets";
+import { BriefTargets, quantile } from "@/client/features/content/BriefTargets";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
 import { useContentBriefHistory } from "@/client/features/content/useContentBriefHistory";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -14,10 +14,7 @@ import { contentBriefSchema } from "@/types/schemas/content";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
-import {
-  DEFAULT_LOCATION_CODE,
-  LOCATION_OPTIONS,
-} from "@/shared/keyword-locations";
+import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import { CompetitorOutlines } from "@/client/features/content/CompetitorOutlines";
 import { DraftGrader } from "@/client/features/content/DraftGrader";
 import {
@@ -25,6 +22,15 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
+import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -39,6 +45,63 @@ type CompetitorAnalysis = {
   h3: string[];
 } | null;
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls `keyword` off the
+ * stored content-brief result. A shape that has drifted (or isn't this
+ * feature's result at all) returns null rather than throwing — the tab
+ * simply has no last-run value to offer, same contract as the hook itself.
+ */
+function extractStoredKeyword(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  return typeof result.keyword === "string" ? result.keyword : null;
+}
+
+/**
+ * The submit button, paired with an invisible copy of the "Target keyword"/
+ * "Location" label row above it. The form aligns its columns with
+ * `items-start` so the keyword column's chips (rendered after the input) can
+ * never drag the other columns down -- but that only works if every column
+ * starts with the same label-row height. This column has no real label, so
+ * the phantom one here lands the button's own control at the input's
+ * y-offset instead of flush with the "Target keyword"/"Location" text.
+ * `hidden`/`sm:block` keeps it out of the stacked mobile layout, where
+ * nothing pushes the button down and this spacer would only add dead space.
+ */
+function BuildBriefButton({
+  disabled,
+  isFetching,
+}: {
+  disabled: boolean;
+  isFetching: boolean;
+}) {
+  return (
+    <div className="form-control">
+      <span
+        aria-hidden="true"
+        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+      >
+        Build brief
+      </span>
+      <button
+        type="submit"
+        className="btn btn-primary btn-sm gap-1.5"
+        disabled={disabled}
+      >
+        {isFetching ? (
+          <span className="loading loading-spinner loading-xs" />
+        ) : (
+          <Search className="size-3.5" />
+        )}
+        Build brief
+      </button>
+    </div>
+  );
+}
+
 export function ContentOptimizerPage({
   projectId,
   navigate,
@@ -50,9 +113,70 @@ export function ContentOptimizerPage({
   query: string;
   locationCode: number | undefined;
 }) {
-  const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
+  const market = useProjectMarket(projectId);
+  // The URL's own `loc` param always wins; the project's configured market
+  // only fills in for a tab opened with no location in the URL at all.
+  const activeLocation = locationCode ?? market.locationCode;
+
+  const suggestions = useProjectSuggestions(projectId, "under-clicked");
+  const handoff = useHandoff(projectId);
+  // This page already imports RUN_FEATURES for its RestoreRail; reuse the
+  // same feature key so both read one cache entry.
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.contentBrief,
+    extractStoredKeyword,
+  );
+
+  // The URL param wins, then a keyword carried from another tab, then what
+  // this tab last ran, then the under-clicked ranking. Resolved only for the
+  // field's initial value — after that the user owns the input.
+  const prefill = resolvePrefill({
+    kind: "keyword",
+    searchParam: query,
+    handoff,
+    lastRun,
+    suggestions,
+    projectDefault: null,
+  });
+
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
+  const [inputTouched, setInputTouched] = useState(false);
+  const [locationTouched, setLocationTouched] = useState(false);
+
+  // Every prefill source above resolves after first paint, so the `useState`
+  // initializer can never see it. Seed the field once a value lands, but
+  // never fight the user: bail as soon as they've typed or picked a chip
+  // (inputTouched), and even before that, bail if the field is non-empty.
+  useEffect(() => {
+    if (inputTouched) return;
+    if (input.trim() !== "") return;
+    if (prefill.value === "") return;
+    setInput(prefill.value);
+  }, [inputTouched, input, prefill.value]);
+
+  // `activeLocation` has the same deferred-arrival problem as the keyword
+  // prefill above, and it's worse here: on a cold load (hard refresh,
+  // bookmark, shared link) the `["projects"]` query behind `useProjectMarket`
+  // hasn't resolved on first render, so `activeLocation` reads the US
+  // fallback and `locationInput` locks onto it via the `useState` initializer.
+  // Without this effect the select would silently keep showing "United
+  // States" even after the project's real market arrives a render later --
+  // and the metered lookup below bills a wrong-country analysis with no
+  // error and no visual cue. Bail on an explicit `loc` URL param (it already
+  // won at first paint, synchronously -- there's nothing to re-sync) and on
+  // a location the user picked themselves (locationTouched), so precedence
+  // stays URL param > user selection > project market > US fallback.
+  // Depending on the primitive `activeLocation` (not the `market` object)
+  // keeps this from re-running every render: an unstable object dependency
+  // has caused a real render loop in this codebase before.
+  useEffect(() => {
+    if (locationCode != null) return;
+    if (locationTouched) return;
+    setLocationInput(String(activeLocation));
+  }, [locationCode, locationTouched, activeLocation]);
+
   const [runInput, setRunInput] = useState<{
     keyword: string;
     locationCode: number;
@@ -147,6 +271,10 @@ export function ContentOptimizerPage({
   const h2Counts = loadedAnalyses
     .map((analysis) => analysis.h2.length)
     .toSorted((a, b) => a - b);
+  // Read once and threaded into both BriefTargets and DraftGrader's verdict
+  // below, so the two can never disagree on what "the target" is.
+  const targetWordCount =
+    wordCounts.length > 0 ? quantile(wordCounts, 0.5) : null;
 
   const headingIdeas = [
     ...new Set(
@@ -163,7 +291,7 @@ export function ContentOptimizerPage({
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
           <form
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
+            className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
               event.preventDefault();
               const next = input.trim();
@@ -174,6 +302,13 @@ export function ContentOptimizerPage({
                 locationCode: Number(locationInput),
               });
               run.authorize();
+              writeHandoff(projectId, {
+                kind: "keyword",
+                value: next,
+                locationCode: Number(locationInput),
+                source: "Content Optimizer",
+                at: Date.now(),
+              });
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -184,18 +319,32 @@ export function ContentOptimizerPage({
               });
             }}
           >
-            <label className="form-control w-full sm:max-w-md">
-              <span className="label-text pb-1 text-xs font-medium">
-                Target keyword
-              </span>
-              <input
-                type="text"
-                className="input input-bordered input-sm w-full"
-                placeholder="office vending machines dallas"
+            <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
+              <label className="form-control w-full">
+                <span className="label-text pb-1 text-xs font-medium">
+                  Target keyword
+                </span>
+                <input
+                  type="text"
+                  className="input input-bordered input-sm w-full"
+                  placeholder="office coffee service dallas"
+                  value={input}
+                  onChange={(event) => {
+                    setInputTouched(true);
+                    setInput(event.target.value);
+                  }}
+                />
+              </label>
+              <SuggestionChips
+                suggestions={suggestions}
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onSelect={(next) => {
+                  setInputTouched(true);
+                  setInput(next);
+                }}
+                disabled={briefQuery.isFetching}
               />
-            </label>
+            </div>
             <label className="form-control w-full sm:max-w-56">
               <span className="label-text pb-1 text-xs font-medium">
                 Location
@@ -203,7 +352,10 @@ export function ContentOptimizerPage({
               <select
                 className="select select-bordered select-sm w-full"
                 value={locationInput}
-                onChange={(event) => setLocationInput(event.target.value)}
+                onChange={(event) => {
+                  setLocationTouched(true);
+                  setLocationInput(event.target.value);
+                }}
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option.code} value={option.code}>
@@ -212,18 +364,10 @@ export function ContentOptimizerPage({
                 ))}
               </select>
             </label>
-            <button
-              type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+            <BuildBriefButton
               disabled={!input.trim() || briefQuery.isFetching}
-            >
-              {briefQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
-              ) : (
-                <Search className="size-3.5" />
-              )}
-              Build brief
-            </button>
+              isFetching={briefQuery.isFetching}
+            />
           </form>
         </div>
       </div>
@@ -436,6 +580,9 @@ export function ContentOptimizerPage({
           <CompetitorOutlines analyses={loadedAnalyses} />
 
           <DraftGrader
+            projectId={projectId}
+            keyword={brief.keyword}
+            targetWordCount={targetWordCount}
             terms={brief.terms}
             questions={brief.paaQuestions}
             outlines={loadedAnalyses.map((analysis) => analysis.h2)}

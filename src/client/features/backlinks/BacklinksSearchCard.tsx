@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useForm } from "@tanstack/react-form";
+import { useForm, useStore } from "@tanstack/react-form";
 import { Search } from "lucide-react";
 import {
   createFormValidationErrors,
@@ -54,12 +54,16 @@ export function BacklinksSearchCard({
   errorMessage,
   initialValues,
   onSubmit,
+  prefillTarget,
   tabLimit,
 }: {
   canOpenSearch?: (values: SearchDraft) => boolean;
   errorMessage: string | null;
   initialValues: SearchDraft;
   onSubmit: (values: SearchDraft) => void;
+  /** A handoff, last-run, or project-domain value the page resolved to seed
+   *  the target field with; "" means it found nothing to offer. */
+  prefillTarget: string;
   tabLimit?: number;
 }) {
   const [userSelectedScope, setUserSelectedScope] = useState(false);
@@ -96,6 +100,28 @@ export function BacklinksSearchCard({
     form.reset(initialValues);
     setUserSelectedScope(false);
   }, [form, initialValues]);
+
+  const currentTarget = useStore(form.store, (state) => state.values.target);
+  const targetIsDirty = useStore(
+    form.store,
+    (state) => state.fieldMeta.target?.isDirty ?? false,
+  );
+  // Every prefill source resolves after first paint, so `initialValues`
+  // (URL-only, via `form`'s `defaultValues`) can never see it. Seed the field
+  // once a value lands, but never fight the user: bail as soon as they've
+  // typed (targetIsDirty), and even before that, bail if the field is
+  // non-empty (a `target` URL param already won). `dontUpdateMeta` keeps this
+  // programmatic fill from masquerading as the user's own edit. Typing here
+  // never navigates mid-keystroke -- only submit does -- so `isDirty` stays a
+  // stable "user touched it" signal for the life of this form, unlike a
+  // control whose own onChange commits straight to the URL and would have its
+  // meta wiped by the reset effect above on the very next render.
+  useEffect(() => {
+    if (targetIsDirty) return;
+    if (currentTarget.trim() !== "") return;
+    if (prefillTarget === "") return;
+    form.setFieldValue("target", prefillTarget, { dontUpdateMeta: true });
+  }, [targetIsDirty, currentTarget, prefillTarget, form]);
 
   return (
     <div className="card bg-base-100 border border-base-300">

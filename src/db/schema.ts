@@ -69,4 +69,7 @@ export const {
   billingCustomerStatus,
   gscConnections,
   gscOauthConfig,
+  geoLocations,
+  gbpConnections,
+  gbpScheduledPosts,
 } = schema;

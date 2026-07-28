@@ -19,6 +19,7 @@ import { toPath } from "@/client/features/link-insights/useLinkInsights";
 import {
   buildOpportunities,
   buildTechnicalIssues,
+  quickWinHint,
   type Opportunity,
   type OpportunityKind,
 } from "./opportunityModel";
@@ -123,6 +124,13 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           icon={Lightbulb}
           label="Opportunities"
           value={opportunitySourcesFailed ? "—" : opportunities.length}
+          // Suppressed alongside the count when a source failed: the hint is
+          // derived from the opportunities we managed to load, so showing
+          // "3 quick wins" beside a "—" would state a figure the run did not
+          // actually establish.
+          hint={
+            opportunitySourcesFailed ? undefined : quickWinHint(opportunities)
+          }
           tone="primary"
         />
         <InsightTile

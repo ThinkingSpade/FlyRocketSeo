@@ -1,4 +1,5 @@
-import { useForm } from "@tanstack/react-form";
+import { useEffect } from "react";
+import { useForm, useStore } from "@tanstack/react-form";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -17,6 +18,13 @@ import {
   shouldValidateFieldOnChange,
 } from "@/client/lib/forms";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import {
+  useHandoff,
+  writeHandoff,
+} from "@/client/features/insights/handoffStore";
+import { buildProjectStartUrl } from "@/client/features/audit/launch/projectStartUrl";
 
 function getLaunchValidationErrors(
   value: LaunchFormValues,
@@ -56,6 +64,32 @@ export function useLaunchController({
     historyRefetch: historyQuery.refetch,
   });
 
+  const projectDomain = useProjectDomain(projectId);
+  const handoff = useHandoff(projectId);
+  // historyQuery above already reads this project's audit history for free;
+  // its newest row (AuditRepository.getAuditsByProject orders by
+  // `desc(audits.startedAt)`) is this tab's "last run" signal. Site audits
+  // are never written to `analysis_runs`, so there's no matching
+  // `useLastRunInput` call to make the way other tabs do -- this is that
+  // tier of the precedence chain, just sourced from the query this
+  // controller already had.
+  const lastRunUrl = historyQuery.data?.[0]?.startUrl ?? null;
+  // The URL param wins (this form has no query param of its own to seed
+  // from -- confirmed via `auditSearchSchema`, which only carries `auditId`
+  // and `tab`), then a URL carried from another tab, then the URL last
+  // crawled, then the project's own domain. Resolved only for the field's
+  // initial value -- after that the user owns the input. There's no
+  // URL-shaped suggestion source, so this kind always passes an empty
+  // suggestions list.
+  const urlPrefill = resolvePrefill({
+    kind: "url",
+    searchParam: null,
+    handoff,
+    lastRun: lastRunUrl,
+    suggestions: [],
+    projectDefault: buildProjectStartUrl(projectDomain),
+  });
+
   const launchForm = useForm({
     defaultValues: DEFAULT_LAUNCH_FORM_VALUES,
     validators: {
@@ -88,6 +122,17 @@ export function useLaunchController({
         });
         toast.success("Audit started!");
         onAuditStarted(result.auditId);
+        // Site Audit is the ninth wave-1 tab required to write a handoff on a
+        // successful run (design doc, "Cross-tab handoff") -- opening
+        // Backlinks right after an audit should inherit the domain just
+        // crawled instead of making the user retype it. No `locationCode`:
+        // this form has none, matching the Backlinks precedent.
+        writeHandoff(projectId, {
+          kind: "url",
+          value: value.url,
+          source: "Site Audit",
+          at: Date.now(),
+        });
       } catch (error) {
         formApi.setErrorMap({
           onSubmit: createFormValidationErrors({
@@ -97,6 +142,31 @@ export function useLaunchController({
       }
     },
   });
+
+  const currentUrl = useStore(launchForm.store, (state) => state.values.url);
+  const urlIsDirty = useStore(
+    launchForm.store,
+    (state) => state.fieldMeta.url?.isDirty ?? false,
+  );
+
+  // Every prefill source above resolves after first paint (the project
+  // domain and any handoff both arrive from async/late sources), so the
+  // form's `defaultValues` above can never see them. Seed the field once a
+  // value lands, but never fight the user: bail as soon as they've typed
+  // (urlIsDirty), and even before that, bail if the field is already
+  // non-empty. `dontUpdateMeta` keeps this programmatic fill from
+  // masquerading as the user's own edit -- only a real keystroke should flip
+  // `isDirty`. Nothing in this file ever calls `launchForm.reset(...)`
+  // (there is no route-state to resync from, unlike Domain Overview's
+  // location field), so `isDirty` can't be wiped out from under this effect.
+  useEffect(() => {
+    if (urlIsDirty) return;
+    if (currentUrl.trim() !== "") return;
+    if (urlPrefill.value === "") return;
+    launchForm.setFieldValue("url", urlPrefill.value, {
+      dontUpdateMeta: true,
+    });
+  }, [urlIsDirty, currentUrl, urlPrefill.value, launchForm]);
 
   return {
     launchForm,

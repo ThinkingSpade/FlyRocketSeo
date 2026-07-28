@@ -38,9 +38,15 @@ const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
 type Props = {
   controller: KeywordResearchControllerState;
+  /** This project's own Ahrefs domain rating, for the per-row "needs DR X+"
+   *  notes in the difficulty column below. */
+  ownDomainRating: number | null;
 };
 
-export function KeywordResearchMobileResults({ controller }: Props) {
+export function KeywordResearchMobileResults({
+  controller,
+  ownDomainRating,
+}: Props) {
   const { filteredRows, mobileTab } = controller;
 
   return (
@@ -69,7 +75,10 @@ export function KeywordResearchMobileResults({ controller }: Props) {
       </div>
 
       {mobileTab === "keywords" ? (
-        <MobileKeywordResults controller={controller} />
+        <MobileKeywordResults
+          controller={controller}
+          ownDomainRating={ownDomainRating}
+        />
       ) : (
         <div className="flex-1 overflow-y-auto p-4">
           <SerpAnalysisCard
@@ -88,7 +97,7 @@ export function KeywordResearchMobileResults({ controller }: Props) {
   );
 }
 
-function MobileKeywordResults({ controller }: Props) {
+function MobileKeywordResults({ controller, ownDomainRating }: Props) {
   const {
     activeFilterCount,
     filteredRows,
@@ -243,6 +252,7 @@ function MobileKeywordResults({ controller }: Props) {
         activeFilterCount={controller.activeFilterCount}
         filteredRows={pageRows}
         overviewKeyword={controller.overviewKeyword}
+        ownDomainRating={ownDomainRating}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
         sortDir={controller.sortDir}
@@ -276,7 +286,11 @@ function MobileKeywordResults({ controller }: Props) {
   );
 }
 
-function MobileFilters({ controller }: Props) {
+function MobileFilters({
+  controller,
+}: {
+  controller: KeywordResearchControllerState;
+}) {
   const { activeFilterCount, filtersForm } = controller;
 
   return (

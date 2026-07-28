@@ -1033,7 +1033,32 @@ export function writeHandoff(projectId: string, entry: HandoffEntry): void {
     // A full or disabled sessionStorage costs us a convenience, nothing more.
     return;
   }
+  snapshotCache.delete(projectId);
   window.dispatchEvent(new Event(CHANGE_EVENT));
+}
+
+/**
+ * `useSyncExternalStore` compares snapshots by identity on every render, so
+ * returning a freshly parsed object each call throws "The result of
+ * getSnapshot should be cached to avoid an infinite loop". Cache per project
+ * and invalidate on write, exactly as `useSearchTabs` does with `stateCache`.
+ */
+const snapshotCache = new Map<string, HandoffEntry | null>();
+
+function getSnapshot(projectId: string): HandoffEntry | null {
+  if (snapshotCache.has(projectId)) {
+    const cached = snapshotCache.get(projectId) ?? null;
+    // An entry that has since aged out must stop being served, even though no
+    // write happened to invalidate it.
+    if (cached && Date.now() - cached.at > HANDOFF_TTL_MS) {
+      snapshotCache.set(projectId, null);
+      return null;
+    }
+    return cached;
+  }
+  const fresh = readHandoff(projectId);
+  snapshotCache.set(projectId, fresh);
+  return fresh;
 }
 
 function subscribe(onChange: () => void): () => void {
@@ -1042,20 +1067,17 @@ function subscribe(onChange: () => void): () => void {
   return () => window.removeEventListener(CHANGE_EVENT, onChange);
 }
 
-/**
- * Reactive read for components. The snapshot is re-parsed on each change
- * event; entries are single small objects, so this stays cheap.
- */
+/** Reactive read for components. */
 export function useHandoff(projectId: string): HandoffEntry | null {
   return useSyncExternalStore(
     subscribe,
-    () => readHandoff(projectId),
+    () => getSnapshot(projectId),
     () => null,
   );
 }
 ```
 
-**Note on `useSyncExternalStore`:** `readHandoff` allocates a new object each call, which would loop if React compared by identity on every render. It only re-reads on a change event here because the subscribe callback drives it — but if you see an infinite render warning, memoize the snapshot in a module-level cache keyed by projectId, invalidated in `writeHandoff`, exactly as `useSearchTabs` does with `stateCache`.
+**Testing note:** the tests above exercise `readHandoff` and `writeHandoff`, both of which touch sessionStorage directly and bypass `snapshotCache` — so no cache reset is needed and the test file stays exactly as written in Step 1. The cache sits only behind `getSnapshot`/`useHandoff`, which are React-only and therefore untested under `environment: "node"`. If you later add a test that asserts through `getSnapshot`, reset module state with `vi.resetModules()` rather than exporting a cache-clearing hatch from production code.
 
 - [ ] **Step 4: Run tests to verify they pass**
 
@@ -1556,6 +1578,33 @@ grep -rn "useQuery\|useMutation" <the tab's directory>
 ```
 
 Confirm every hook found is either explicitly `enabled`-gated on a user action, or reads a free/local source. If any hook would fire because a field became non-empty, stop and report it rather than wiring prefill into that tab.
+
+The real gate in this codebase is stronger than that grep suggests: metered tabs call
+`useMeteredQuery` (`src/client/lib/useMeteredQuery.ts`), which resolves
+`enabled: isMeteredQueryEnabled(authorized, enabled)`. `authorized` only becomes true through an
+explicit `run.authorize()` on a user action, so a prefilled field cannot spend. **Never add a
+`run.authorize()` call while wiring prefill, and never alter an existing `authorized`/`enabled`
+argument.**
+
+### Both deferred syncs are mandatory
+
+Task 9 shipped with only the keyword sync and a reviewer caught the consequence: making a location
+default read from `useProjectMarket` turns a previously synchronous constant into an async value,
+but `useState` reads its initializer once. On a cold load — hard refresh, bookmark, shared link —
+`["projects"]` has not resolved at first render, the select locks to the US fallback, and the
+**metered analysis then runs against the wrong country with no error and no visual cue.**
+
+Every tab in this phase that has a location control therefore needs _two_ deferred-sync effects,
+not one. Copy the pair from `src/client/features/serp/SerpOverviewPage.tsx` (search
+`inputTouched` and `locationTouched`). Both must:
+
+- bail when an explicit URL search param supplied the value,
+- bail once the user has touched that control,
+- depend only on primitives — never on the `market` object, which is a fresh reference per render
+  and has caused a real render loop in this codebase,
+- converge, so the effect cannot fire repeatedly.
+
+Precedence, in both effects: URL param > user selection > project market > US fallback.
 
 ### Task 9: SERP Overview autofill
 
@@ -2137,25 +2186,24 @@ In `SerpOverviewPage.tsx`, after the `<SerpStrengthCards>` line and before `<Ser
 
 Add `const projectDomain = useProjectDomain(projectId);` if the page does not already have it.
 
-In `SerpResultsTable`, render the row note under the URL line:
+Thread `ownDomainRating` into `SerpResultsTable` as a prop. Inside the existing `result.results.map(...)` callback, beside the `const estimate = ...` line already there, add:
+
+```tsx
+const rowNote = serpRowNote(
+  { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
+  { ownDomainRating },
+);
+```
+
+Then render it under the URL line, after the existing `<div className="line-clamp-1 text-xs text-success/80">{item.url}</div>`:
 
 ```tsx
 {
-  serpRowNote(
-    { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
-    { ownDomainRating },
-  ) ? (
-    <div className="text-xs text-base-content/45">
-      {serpRowNote(
-        { domainRating: item.domain ? (ratings?.[item.domain] ?? null) : null },
-        { ownDomainRating },
-      )}
-    </div>
+  rowNote ? (
+    <div className="text-xs text-base-content/45">{rowNote}</div>
   ) : null;
 }
 ```
-
-Thread `ownDomainRating` into `SerpResultsTable` as a prop. Compute the note once into a variable rather than calling it twice — the double call above is written out only to show both branches.
 
 - [ ] **Step 6: Verify and commit**
 

@@ -71,13 +71,13 @@ app already populates, so the suggestion layer adds zero network requests and is
 structurally incapable of triggering a metered call — the same guarantee
 `useAutoRestoredRun` documents.
 
-| Source                                | Query key                                               | Provides                                                                                                              |
-| ------------------------------------- | ------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| `getSearchPerformanceReport`          | `["searchPerformance", id, "overview", "last_28_days"]` | `connected`, `totals`, `prevTotals`, `queryTotals`, `queryPages`, `strikingDistance`, `ctrOpportunities`, `countries` |
-| `getSavedKeywords`                    | `["savedKeywords", id, ...]`                            | user's own list with volumes                                                                                          |
-| `getProjects`                         | `["projects"]`                                          | domain, `locationCode`, `languageCode`                                                                                |
-| `getAuditHistory` / `getAuditResults` | `["auditHistory", id]`                                  | crawled pages, issue counts                                                                                           |
-| `restoreLatestRun`                    | `["analysisRun", "latest", id, feature]`                | last-run memory, R2-backed                                                                                            |
+| Source                                | Query key                                               | Provides                                                            |
+| ------------------------------------- | ------------------------------------------------------- | ------------------------------------------------------------------- |
+| `getSearchPerformanceReport`          | `["searchPerformance", id, "overview", "last_28_days"]` | `queryTotals`, `pageTotals`, `strikingDistance`, `ctrOpportunities` |
+| `getSavedKeywords`                    | `["savedKeywords", id, ...]`                            | user's own list with volumes                                        |
+| `getProjects`                         | `["projects"]`                                          | domain, `locationCode`, `languageCode`                              |
+| `getAuditHistory` / `getAuditResults` | `["auditHistory", id]`                                  | crawled pages, issue counts                                         |
+| `restoreLatestRun`                    | `["analysisRun", "latest", id, feature]`                | last-run memory, R2-backed                                          |
 
 Adding a sixth source to this list is a design change, not an implementation
 detail. The contract is what keeps the layer free.

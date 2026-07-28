@@ -10,10 +10,13 @@ import {
 } from "@/client/features/keywords/keywordResearchTypes";
 import { isLabsLocationCode } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
+import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import type { SeedSuggestion } from "@/client/features/insights/types";
 import type { KeywordResearchControllerState } from "./types";
 
 type Props = {
   controller: KeywordResearchControllerState;
+  suggestions: SeedSuggestion[];
 };
 
 function getTextareaRows(value: string): number {
@@ -22,8 +25,8 @@ function getTextareaRows(value: string): number {
   return Math.min(MAX_KEYWORDS_PER_SUBMIT, Math.max(1, lines));
 }
 
-export function KeywordResearchSearchBar({ controller }: Props) {
-  const { controlsForm, handleSearchSubmit } = controller;
+export function KeywordResearchSearchBar({ controller, suggestions }: Props) {
+  const { controlsForm, handleSearchSubmit, isLoading } = controller;
 
   return (
     <div className="card border border-base-300 bg-base-100">
@@ -38,32 +41,42 @@ export function KeywordResearchSearchBar({ controller }: Props) {
               const rows = getTextareaRows(field.state.value);
 
               return (
-                <label
-                  className={`flex w-full lg:flex-1 lg:min-w-0 lg:max-w-md items-start gap-2 rounded-lg border bg-base-100 px-4 py-3 transition-colors focus-within:border-primary ${
-                    keywordError ? "border-error" : "border-base-300"
-                  }`}
-                >
-                  <Search className="mt-0.5 size-4 shrink-0 text-base-content/60" />
-                  <textarea
-                    className="grow min-w-0 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-base-content/40"
-                    rows={rows}
-                    placeholder="Enter keywords, one per line"
-                    value={field.state.value}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    onKeyDown={(event) => {
-                      // Cmd/Ctrl+Enter submits without leaving a stray newline.
-                      // Bare Enter stays as the textarea default (insert newline)
-                      // so multi-keyword input remains discoverable.
-                      if (
-                        event.key === "Enter" &&
-                        (event.metaKey || event.ctrlKey)
-                      ) {
-                        event.preventDefault();
-                        void controlsForm.handleSubmit();
+                <div className="flex w-full flex-col gap-1.5 lg:flex-1 lg:min-w-0 lg:max-w-md">
+                  <label
+                    className={`flex w-full items-start gap-2 rounded-lg border bg-base-100 px-4 py-3 transition-colors focus-within:border-primary ${
+                      keywordError ? "border-error" : "border-base-300"
+                    }`}
+                  >
+                    <Search className="mt-0.5 size-4 shrink-0 text-base-content/60" />
+                    <textarea
+                      className="grow min-w-0 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-base-content/40"
+                      rows={rows}
+                      placeholder="Enter keywords, one per line"
+                      value={field.state.value}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
                       }
-                    }}
+                      onKeyDown={(event) => {
+                        // Cmd/Ctrl+Enter submits without leaving a stray newline.
+                        // Bare Enter stays as the textarea default (insert newline)
+                        // so multi-keyword input remains discoverable.
+                        if (
+                          event.key === "Enter" &&
+                          (event.metaKey || event.ctrlKey)
+                        ) {
+                          event.preventDefault();
+                          void controlsForm.handleSubmit();
+                        }
+                      }}
+                    />
+                  </label>
+                  <SuggestionChips
+                    suggestions={suggestions}
+                    value={field.state.value}
+                    onSelect={(next) => field.handleChange(next)}
+                    disabled={isLoading}
                   />
-                </label>
+                </div>
               );
             }}
           </controlsForm.Field>

@@ -3,7 +3,21 @@ import {
   buildOpportunities,
   buildTechnicalIssues,
   quickWinClicks,
+  quickWinHint,
+  type Opportunity,
 } from "./opportunityModel";
+
+function opportunity(overrides: Partial<Opportunity> = {}): Opportunity {
+  return {
+    kind: "quick-win",
+    query: "a query",
+    page: "https://x.com/a",
+    position: 9,
+    impressions: 500,
+    clicksAtStake: 20,
+    ...overrides,
+  };
+}
 
 function auditPage(
   overrides: Partial<Parameters<typeof buildTechnicalIssues>[0][number]> = {},
@@ -104,6 +118,46 @@ describe("buildOpportunities", () => {
         cannibalization: [],
       }),
     ).toEqual([]);
+  });
+});
+
+describe("quickWinHint", () => {
+  it("returns undefined for an empty list -- nothing to break down", () => {
+    expect(quickWinHint([])).toBeUndefined();
+  });
+
+  it("returns undefined when every opportunity is already a quick win", () => {
+    const opportunities = [
+      opportunity({ kind: "quick-win" }),
+      opportunity({ kind: "quick-win" }),
+    ];
+    expect(quickWinHint(opportunities)).toBeUndefined();
+  });
+
+  it("names the count when some but not all are quick wins", () => {
+    const opportunities = [
+      opportunity({ kind: "quick-win" }),
+      opportunity({ kind: "ctr" }),
+      opportunity({ kind: "consolidate" }),
+    ];
+    expect(quickWinHint(opportunities)).toBe("1 quick win");
+  });
+
+  it("pluralizes for more than one", () => {
+    const opportunities = [
+      opportunity({ kind: "quick-win" }),
+      opportunity({ kind: "quick-win" }),
+      opportunity({ kind: "ctr" }),
+    ];
+    expect(quickWinHint(opportunities)).toBe("2 quick wins");
+  });
+
+  it("still reports zero when none are quick wins, since that's real signal", () => {
+    const opportunities = [
+      opportunity({ kind: "ctr" }),
+      opportunity({ kind: "consolidate" }),
+    ];
+    expect(quickWinHint(opportunities)).toBe("0 quick wins");
   });
 });
 

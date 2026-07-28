@@ -62,7 +62,10 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
           icon={MessageSquareWarning}
           label="Unanswered ≤3★"
           value={analytics.unansweredNegativeCount}
-          hint="Reply to protect the rating"
+          // Softened (final wave item 5): replying to a review is not
+          // something this feature measures an effect on -- widely-held
+          // local-SEO practice, not a claim about this profile's data.
+          hint="Widely thought to help protect the rating"
           tone={analytics.unansweredNegativeCount > 0 ? "warning" : "success"}
         />
         <InsightTile
@@ -134,8 +137,8 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
               ))}
             </div>
             <p className="text-xs text-base-content/50">
-              Crawled reviews per month, trailing 12 months. Steady flow beats
-              bursts for local rankings.
+              Crawled reviews per month, trailing 12 months. A steady flow is
+              widely believed to help local rankings more than bursts do.
             </p>
           </div>
         </div>

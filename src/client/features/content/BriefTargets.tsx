@@ -71,7 +71,10 @@ export function BriefTargets({
   );
 }
 
-function quantile(sorted: number[], q: number): number {
+/** Exported so the page can compute the same median word-count target it
+ *  hands to this component and thread it to DraftGrader's verdict too --
+ *  one computation, so the two can never disagree on what "the target" is. */
+export function quantile(sorted: number[], q: number): number {
   if (sorted.length === 0) return 0;
   const pos = (sorted.length - 1) * q;
   const base = Math.floor(pos);

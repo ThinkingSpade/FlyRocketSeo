@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   BadgeCheck,
   MapPin,
@@ -22,7 +22,12 @@ import {
   LocalGscContext,
   useLocalSeoProjectContext,
 } from "@/client/features/local-seo/LocalProjectContext";
+import { buildGbpAudit, toGbpAuditInput } from "./gbpAudit";
+import { scopeReviewsToBusiness, type ScopedReviews } from "./gbpReviewsScope";
+import { GbpAuditCard } from "./GbpAuditCard";
+import { GbpWriteSection } from "./GbpWriteSection";
 import { LocalReviewsSection } from "./LocalReviewsSection";
+import { CitationTrackerSection } from "@/client/features/citations/CitationTrackerSection";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -63,6 +68,14 @@ export function LocalSeoPage({
 }) {
   const [input, setInput] = useState(query);
   const [runKeyword, setRunKeyword] = useState<string | null>(null);
+  // Reported by LocalReviewsSection once its (user-triggered) review crawl
+  // completes -- tagged with the business it was crawled for (see
+  // gbpReviewsScope.ts) because LocalReviewsSection remounting on a new
+  // business resets its OWN state, but not whatever is stored here above
+  // it. Read `reviews` below, not this, when building the audit input.
+  const [storedReviews, setStoredReviews] = useState<ScopedReviews | null>(
+    null,
+  );
   const run = useAuthorizedRun(createMeteredRunKey(projectId, input.trim()));
   const projectContext = useLocalSeoProjectContext({
     projectId,
@@ -88,6 +101,40 @@ export function LocalSeoPage({
     profileQuery.data ??
     (runKeyword == null ? cachedBusiness?.profile : undefined);
   const profileKeyword = runKeyword ?? cachedBusiness?.keyword ?? businessGuess;
+  // Google's own identifiers first (stable across re-lookups of the same
+  // business), falling back to the lookup keyword only when neither is
+  // available. Only meaningful once a profile is actually found -- a
+  // not-found or not-yet-fetched profile has nothing for reviews to be
+  // scoped to.
+  const businessKey = profile?.found
+    ? (profile.placeId ?? profile.cid ?? profileKeyword ?? null)
+    : null;
+  // Re-derived every render instead of reset in an effect: see
+  // gbpReviewsScope.ts for why that's what actually prevents a previous
+  // business's reviews from being attributed to a newly looked-up one.
+  const reviews = scopeReviewsToBusiness(storedReviews, businessKey);
+  // Wrapped in useCallback so this prop keeps a stable identity while
+  // businessKey doesn't change -- LocalReviewsSection's effect depends on
+  // this callback, so a new function identity on every parent render would
+  // re-fire it (and re-store the same reviews) on every unrelated render.
+  const handleReviewsLoaded = useCallback(
+    (loaded: Array<{ ownerAnswer: string | null }> | undefined) => {
+      if (businessKey == null || loaded == null) return;
+      setStoredReviews((prev) =>
+        prev && prev.businessKey === businessKey && prev.reviews === loaded
+          ? prev
+          : { businessKey, reviews: loaded },
+      );
+    },
+    [businessKey],
+  );
+  // Computed straight from data already on hand (the looked-up profile plus
+  // whatever reviews have loaded so far) -- pure arithmetic, no fetch of its
+  // own, so it's safe to recompute on every render rather than memoized.
+  const audit =
+    profile && profile.found
+      ? buildGbpAudit(toGbpAuditInput(profile, projectDomain, reviews))
+      : null;
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -188,12 +235,36 @@ export function LocalSeoPage({
         ) : (
           <>
             <ProfileCard profile={profile} />
+            {audit ? (
+              <GbpAuditCard audit={audit} projectId={projectId} />
+            ) : null}
+            <GbpWriteSection projectId={projectId} />
             {profileKeyword ? (
               <LocalReviewsSection
+                // Remounts on a new business so a stale taskId/reviews list
+                // from the previous lookup can never get silently attributed
+                // to this one -- both this section's own display and the
+                // audit's owner-response check depend on that not happening.
+                // handleReviewsLoaded tags what it stores with businessKey,
+                // which is the other half of that guarantee: see
+                // gbpReviewsScope.ts for why the remount alone isn't enough.
+                key={profileKeyword}
                 projectId={projectId}
                 keyword={profileKeyword}
+                onReviewsLoaded={handleReviewsLoaded}
               />
             ) : null}
+            <CitationTrackerSection
+              // Same remount-on-new-business reasoning as LocalReviewsSection
+              // above -- a stale authorized run for the previous business
+              // must never be silently reused for this one.
+              key={profileKeyword}
+              projectId={projectId}
+              businessName={profile.title ?? profileKeyword}
+              city={profile.city}
+              region={profile.region}
+              phone={profile.phone}
+            />
           </>
         )
       ) : null}
@@ -218,7 +289,10 @@ function ProfileCard({ profile }: { profile: ProfileData }) {
           <div className="min-w-0 flex-1">
             <h2 className="text-lg font-semibold">{profile.title}</h2>
             <p className="text-sm text-base-content/60">
-              {[profile.category, ...profile.additionalCategories]
+              {/* additionalCategories is null when DataForSEO didn't return
+                  it at all (see LocalSeoService); nothing to add to the
+                  label list in that case, same as if it were empty. */}
+              {[profile.category, ...(profile.additionalCategories ?? [])]
                 .filter(Boolean)
                 .join(" · ")}
             </p>

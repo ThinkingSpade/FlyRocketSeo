@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { StatCard } from "@/client/features/audit/shared";
+import { useQuery } from "@tanstack/react-query";
+import { AlertTriangle } from "lucide-react";
+import { InsightIcon } from "@/client/components/InsightTile";
+import { extractPathname, StatCard } from "@/client/features/audit/shared";
 import {
   exportPages,
   exportPerformance,
@@ -7,13 +10,62 @@ import {
 import type { AuditResultsData } from "@/client/features/audit/results/types";
 import { computeLighthouseSummary } from "@/client/features/audit/results/auditDiff";
 import { AuditComparison } from "@/client/features/audit/results/AuditComparison";
+import { classifyAuditIssues } from "@/client/features/audit/results/auditIssues";
 import {
   ExportDropdown,
   PagesTable,
   PerformanceTable,
 } from "@/client/features/audit/results/ResultsTables";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import {
+  auditRowNote,
+  buildAuditVerdict,
+  type AuditIssueSummary,
+} from "@/client/features/insights/verdicts/audit";
+import { getContentPerformance } from "@/serverFunctions/searchPerformance";
 
 type ResultsTab = "pages" | "performance";
+
+/** Enough top-clicked pages to judge whether a crawl issue lands on real
+ *  traffic, without pulling in the whole site's page list. */
+const TOP_PAGES_BY_CLICKS_LIMIT = 20;
+
+/**
+ * Top page paths by GSC clicks over the last 28 days -- free, first-party
+ * data already fetched the same way for the same "top pages" concept
+ * elsewhere (ContentPerformanceTab). Not connected, or connected with zero
+ * clicks, both degrade to an empty list rather than an error: a missing
+ * Search Console connection should make the verdict decline the
+ * traffic-intersection claim, not break the tab.
+ *
+ * The query key matches what ContentPerformanceTab would use with no
+ * device/country filter, so a warm cache from that tab means this one issues
+ * no request at all.
+ */
+function useTopPagePathsByClicks(projectId: string): string[] {
+  const query = useQuery({
+    queryKey: [
+      "contentPerformance",
+      projectId,
+      "last_28_days",
+      undefined,
+      undefined,
+    ],
+    queryFn: () =>
+      getContentPerformance({
+        data: { projectId, dateRange: "last_28_days" },
+      }),
+  });
+
+  return useMemo(() => {
+    const report = query.data;
+    if (!report || !report.connected) return [];
+    return report.current
+      .toSorted((a, b) => b.clicks - a.clicks)
+      .slice(0, TOP_PAGES_BY_CLICKS_LIMIT)
+      .map((row) => extractPathname(row.page));
+  }, [query.data]);
+}
 
 export function ResultsView({
   projectId,
@@ -30,6 +82,24 @@ export function ResultsView({
   const hasPerformanceTab = lighthouse.length > 0;
   const activeTab = hasPerformanceTab ? tab : "pages";
   const stats = useResultStats(pages, lighthouse);
+  const { issues, pathsByIssue } = useMemo(
+    () => classifyAuditIssues(pages),
+    [pages],
+  );
+  const topPagePaths = useTopPagePathsByClicks(projectId);
+  const verdict = useMemo(
+    () =>
+      buildAuditVerdict({
+        // pages.length (rows actually available), not audit.pagesCrawled (the
+        // DB counter) -- if those ever disagree, the honest read is "we could
+        // not check", not "the crawl found nothing".
+        pagesCrawled: pages.length,
+        issues,
+        topPagePaths,
+        pathsByIssue,
+      }),
+    [pages.length, issues, topPagePaths, pathsByIssue],
+  );
 
   return (
     <>
@@ -42,6 +112,9 @@ export function ResultsView({
       />
 
       <AuditComparison projectId={projectId} current={data} />
+
+      <NextStepsCard verdict={verdict} projectId={projectId} tab="Site Audit" />
+      <AuditIssuesList issues={issues} />
 
       <div className="card bg-base-100 border border-base-300">
         <div className="card-body gap-3">
@@ -95,6 +168,47 @@ function useResultStats(
   );
 
   return { averageResponseMs, lighthouseSummary };
+}
+
+/** Issue types the crawl found, most-affected first, each with its literal
+ *  fix as a muted note -- absent entirely on a clean crawl. */
+function AuditIssuesList({ issues }: { issues: AuditIssueSummary[] }) {
+  if (issues.length === 0) return null;
+  const sorted = issues.toSorted((a, b) => b.pageCount - a.pageCount);
+
+  return (
+    <div className="card bg-base-100 border border-base-300">
+      <div className="card-body gap-2 p-4">
+        <h3 className="flex items-center gap-2 text-sm font-semibold">
+          <InsightIcon icon={AlertTriangle} />
+          Issues found
+        </h3>
+        <ul className="space-y-2">
+          {sorted.map((issue) => {
+            // Computed once per issue, rendered once below -- never called
+            // twice for the same row.
+            const rowNote = auditRowNote(issue.key);
+            return (
+              <li
+                key={issue.key}
+                className="flex items-baseline justify-between gap-2 text-sm"
+              >
+                <div className="min-w-0">
+                  <span>{issue.label}</span>
+                  {rowNote ? (
+                    <p className="text-xs text-base-content/45">{rowNote}</p>
+                  ) : null}
+                </div>
+                <span className="shrink-0 tabular-nums text-base-content/60">
+                  {issue.pageCount}
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      </div>
+    </div>
+  );
 }
 
 function ResultsHeader({

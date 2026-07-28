@@ -617,3 +617,141 @@ export const analysisRuns = sqliteTable(
     ),
   ],
 );
+
+// Google geotargets (countries, regions, metros/DMAs, cities). Lives in D1
+// rather than a bundled table because the full list is large and `src/shared`
+// is in the Worker's startup graph — the same graph whose size previously
+// caused multi-second cold starts. Seeded by scripts/seed-geo-locations.ts.
+export const geoLocations = sqliteTable(
+  "geo_locations",
+  {
+    code: integer("code").primaryKey(),
+    name: text("name").notNull(),
+    /** DataForSEO location_type, e.g. "Country", "DMA Region", "City". */
+    type: text("type").notNull(),
+    /** Two-letter state/region code where applicable, e.g. "TX". */
+    stateCode: text("state_code"),
+    /** The metro this place rolls up into, when it has one. */
+    parentMetroCode: integer("parent_metro_code"),
+    countryCode: integer("country_code").notNull(),
+    /** Drives search ranking so "dal" surfaces Dallas before Dalton. */
+    population: integer("population"),
+  },
+  (table) => [
+    // The picker searches by name prefix within a country, ordered by
+    // population. Without this the search is a full scan on every keystroke.
+    index("geo_locations_country_name_idx").on(table.countryCode, table.name),
+    index("geo_locations_type_idx").on(table.type),
+  ],
+);
+
+// ============================================================================
+// Google Business Profile write tables
+// ============================================================================
+// The read-only GBP Audit (gbpAudit.ts) sources its data from DataForSEO and
+// needs none of this. These tables back the WRITE half of Local SEO: posts
+// and listing-field updates via Google's own Business Profile API, gated on
+// the business.manage OAuth scope (see src/shared/gbp.ts and
+// src/server/features/gbp/selfHostedGbpOAuth.ts).
+
+// Which Google Business Profile location a project publishes/patches to, and
+// whose business.manage grant to use for it. Mirrors gscConnections' shape
+// exactly, but is a wholly SEPARATE table/grant -- connecting, reconnecting or
+// disconnecting GBP must never read or write a project's gscConnections row.
+export const gbpConnections = sqliteTable(
+  "gbp_connections",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    // Bare Business Information API resource name, e.g. "locations/987654321"
+    // -- that API's own locations.get/locations.patch require exactly this
+    // shape (NOT prefixed with "accounts/*"). Never normalize -- Google's API
+    // matches it verbatim.
+    locationName: text("location_name").notNull(),
+    // The account's OWN resource name, e.g. "accounts/123456789" -- kept
+    // separate from locationName because the two Google APIs this feature
+    // calls disagree on what a location's parent path looks like: Business
+    // Information API's locations.get/patch take the bare locationName above,
+    // while the legacy v4 accounts.locations.localPosts.create requires the
+    // composed "accounts/*/locations/*" parent, which only exists by joining
+    // this column with locationName. Nullable so pre-existing rows (from
+    // before this column existed) don't need a backfill -- GbpWriteService
+    // treats a null value as "needs reconnect" rather than composing a
+    // broken parent. Not to be confused with Google's OWN "accountName"
+    // field, which is a human-readable business name -- see
+    // GbpConnectionService's GbpLocationOption.accountDisplayName for that.
+    accountName: text("account_name"),
+    // Whose google-business-profile grant getAccessToken should use.
+    connectedByUserId: text("connected_by_user_id").notNull(),
+    connectedAccountEmail: text("connected_account_email"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // One connected location per project in v1; reconnecting replaces the row.
+    uniqueIndex("gbp_connections_project_idx").on(table.projectId),
+    index("gbp_connections_organization_idx").on(table.organizationId),
+  ],
+);
+
+/**
+ * One row per composed Google Business Profile post, queued for scheduled
+ * publish. `status` is the state machine gbpPostSchedule.ts's pure model
+ * reasons over (draft -> scheduled -> publishing -> published, with a
+ * terminal failed) -- see that module for the due-selection, ordering, and
+ * double-publish-guard logic, and GbpWriteService for what actually flips
+ * these transitions.
+ */
+export const gbpScheduledPosts = sqliteTable(
+  "gbp_scheduled_posts",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    mediaUrl: text("media_url"),
+    // Google's LocalPost.CallToAction.ActionType values, minus
+    // ACTION_TYPE_UNSPECIFIED (a null column already means "no CTA").
+    callToActionType: text("call_to_action_type", {
+      enum: ["BOOK", "ORDER", "SHOP", "LEARN_MORE", "SIGN_UP", "CALL"],
+    }),
+    // Required for every actionType except CALL (Google rejects a url on a
+    // CALL action) -- see gbpPostSchedule.ts's validateScheduledPost.
+    callToActionUrl: text("call_to_action_url"),
+    scheduledAt: text("scheduled_at").notNull(),
+    status: text("status", {
+      enum: ["draft", "scheduled", "publishing", "published", "failed"],
+    })
+      .notNull()
+      .default("draft"),
+    // Google's resource name for the created post, once published.
+    publishedPostId: text("published_post_id"),
+    errorMessage: text("error_message"),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("gbp_scheduled_posts_project_idx").on(table.projectId),
+    // Drives "which posts are due" (gbpPostSchedule.ts's selectDuePosts) --
+    // without it, finding due posts across all projects is a full table scan.
+    index("gbp_scheduled_posts_status_scheduled_idx").on(
+      table.status,
+      table.scheduledAt,
+    ),
+  ],
+);
