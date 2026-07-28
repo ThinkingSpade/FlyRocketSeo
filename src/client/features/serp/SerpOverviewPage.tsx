@@ -51,6 +51,9 @@ import {
   buildSerpVerdict,
   serpRowNote,
 } from "@/client/features/insights/verdicts/serp";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -304,6 +307,14 @@ export function SerpOverviewPage({
     setLocationInput(String(activeLocation));
   }, [locationCode, locationTouched, activeLocation]);
 
+  // The confirmed target area (or the project's country, before anything is
+  // confirmed) that `ScopeControl` shows in the header -- a SEPARATE concept
+  // from the country-only `locationInput` field above, which stays
+  // untouched here. `targetAreaScope.area` must never be read into `run`'s
+  // key or `serpQuery` below -- wiring it into the actual fetch is Task 6's
+  // job, not this one's (see `useTargetAreaScope`'s own doc comment).
+  const targetAreaScope = useTargetAreaScope(projectId, activeLocation);
+
   const [runInput, setRunInput] = useState<{
     keyword: string;
     locationCode: number;
@@ -361,17 +372,26 @@ export function SerpOverviewPage({
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <ListOrdered className="size-5" />
-          SERP Overview
-        </h1>
-        <p className="text-sm text-base-content/60">
-          See who ranks in the live top results for any keyword — with each
-          page&rsquo;s authority, estimated traffic, and backlinks — plus the
-          SERP features and People-Also-Ask questions you&rsquo;d compete with.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <ListOrdered className="size-5" />
+            SERP Overview
+          </h1>
+          <p className="text-sm text-base-content/60">
+            See who ranks in the live top results for any keyword — with each
+            page&rsquo;s authority, estimated traffic, and backlinks — plus the
+            SERP features and People-Also-Ask questions you&rsquo;d compete
+            with.
+          </p>
+        </div>
+        <ScopeControl
+          area={targetAreaScope.area}
+          onChange={targetAreaScope.onChange}
+        />
       </div>
+
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
