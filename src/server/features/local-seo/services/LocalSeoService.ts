@@ -15,7 +15,13 @@ const businessProfileSchema = z.object({
   found: z.boolean(),
   title: z.string().nullable(),
   category: z.string().nullable(),
-  additionalCategories: z.array(z.string()),
+  // Nullable, not defaulted: DataForSEO omits this field rather than
+  // returning an empty array when it has nothing to say about additional
+  // categories, and collapsing that omission to `[]` here would be
+  // indistinguishable from a business that genuinely has none by the time
+  // gbpAudit.ts sees it -- see buildCategoryCheck's null-vs-empty handling,
+  // which this field exists to feed honestly.
+  additionalCategories: z.array(z.string()).nullable(),
   address: z.string().nullable(),
   city: z.string().nullable().default(null),
   region: z.string().nullable().default(null),
@@ -46,7 +52,12 @@ function readReviewsCount(item: GoogleBusinessInfoItem): number | null {
   return typeof votes === "number" ? votes : null;
 }
 
-function mapBusinessProfile(
+/** Exported (rather than left module-private like the rest of this file's
+ *  helpers) so its null-vs-empty mapping for `additionalCategories` --
+ *  the one place this service turns DataForSEO's own item shape into ours
+ *  -- can be tested directly instead of only through a full, mocked
+ *  `getBusinessProfile` call. */
+export function mapBusinessProfile(
   item: GoogleBusinessInfoItem | null,
   fetchedAt: string,
 ): BusinessProfile {
@@ -55,7 +66,7 @@ function mapBusinessProfile(
       found: false,
       title: null,
       category: null,
-      additionalCategories: [],
+      additionalCategories: null,
       address: null,
       city: null,
       region: null,
@@ -79,7 +90,11 @@ function mapBusinessProfile(
     found: true,
     title: item.title ?? null,
     category: item.category ?? null,
-    additionalCategories: item.additional_categories ?? [],
+    // `?? null`, not `?? []`: DataForSEO not returning this field at all
+    // (`undefined`) means we can't see it, which is a different fact from
+    // DataForSEO returning it as an empty array (the business genuinely has
+    // no additional categories). Only the latter is a real finding.
+    additionalCategories: item.additional_categories ?? null,
     address: item.address ?? null,
     city: item.address_info?.city ?? null,
     region: item.address_info?.region ?? null,

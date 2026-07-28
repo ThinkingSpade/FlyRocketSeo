@@ -62,10 +62,12 @@ function formatProfileText(keyword: string, profile: BusinessProfile): string {
     `- website: ${profile.url ?? "—"}`,
     `- claimed: ${profile.isClaimed == null ? "—" : profile.isClaimed ? "yes" : "no"}`,
   ];
-  if (profile.additionalCategories.length > 0) {
-    lines.push(
-      `- additional categories: ${profile.additionalCategories.join(", ")}`,
-    );
+  // Local default: this line is purely "list them if we know of any," so
+  // treating "not returned" the same as "returned empty" costs nothing here
+  // -- unlike gbpAudit.ts, this text never claims the business has none.
+  const additionalCategories = profile.additionalCategories ?? [];
+  if (additionalCategories.length > 0) {
+    lines.push(`- additional categories: ${additionalCategories.join(", ")}`);
   }
   return lines.join("\n");
 }
