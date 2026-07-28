@@ -273,6 +273,7 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
         filteredRows={mergedRows}
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
+        researchGeo={researchGeo}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
         sortDir={controller.sortDir}
