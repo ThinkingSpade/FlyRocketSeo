@@ -38,6 +38,7 @@ import {
 } from "@/client/components/table/TableBulkActionBar";
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
 import { getLanguageCode } from "@/client/features/keywords/locations";
+import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -112,11 +113,22 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
   const {
     activeFilterCount,
     filteredRows,
+    researchGeo,
     rows,
     selectedRows,
     sheetsExportRows,
     showFilters,
   } = controller;
+  // Muted per-metric suffix, e.g. "total vol · DFW" / "avg KD · US" -- from
+  // the geo CAPTURED for this run (researchGeo), never re-derived from the
+  // live scope control. Null before any search, or for a restored (not
+  // re-run) result this app has no stored location for at all
+  // (keywordResearchResultSchema carries no locationCode) -- both cases
+  // render the bare label, honestly claiming no particular geography.
+  const volumeSuffix = researchGeo ? geoMetricSuffix(researchGeo.volume) : "";
+  const difficultySuffix = researchGeo
+    ? geoMetricSuffix(researchGeo.difficulty)
+    : "";
   const { page, pageSize, pageRows, setPage, setPageSize } =
     useKeywordResearchPagination(filteredRows);
   const { projectId } = keywordsRoute.useParams();
@@ -183,8 +195,9 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
             title="Summed monthly volume and average difficulty of the keywords shown"
           >
             · {formatCompactNumber(totals.totalVolume)} total vol
+            {volumeSuffix ? ` (${volumeSuffix})` : ""}
             {totals.averageDifficulty != null
-              ? ` · avg KD ${totals.averageDifficulty}`
+              ? ` · avg KD ${totals.averageDifficulty}${difficultySuffix ? ` (${difficultySuffix})` : ""}`
               : ""}
           </span>
         ) : null}

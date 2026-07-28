@@ -175,6 +175,38 @@ describe("buildKeywordsVerdict", () => {
   });
 });
 
+describe("buildKeywordsVerdict area labeling (Task 6)", () => {
+  it("notes the national/local mismatch when the ideas were locally scoped", () => {
+    const verdict = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(3, () => 20),
+      ownDomainRating: 40,
+      areaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read).toContain(
+      "Difficulty reflects nationwide data; these keyword ideas are scoped to Dallas-Ft. Worth, TX.",
+    );
+  });
+
+  it("says nothing extra for a national result -- identical to omitting the field", () => {
+    const withNull = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(3, () => 20),
+      ownDomainRating: 40,
+      areaLabel: null,
+    });
+    const omitted = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(3, () => 20),
+      ownDomainRating: 40,
+    });
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read).not.toContain("Dallas");
+  });
+});
+
 describe("keywordRowNote", () => {
   it("says nothing when the row has no known difficulty score", () => {
     expect(

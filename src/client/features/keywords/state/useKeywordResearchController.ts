@@ -36,6 +36,22 @@ import {
   useResolvedKeywordLocation,
 } from "./keywordControllerInternals";
 import { useKeywordOverviewState } from "./useKeywordOverviewState";
+import { resolveRunGeo } from "@/client/features/geo/resolveRunGeo";
+import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+
+// Not exported: consumers read this off `KeywordResearchControllerState`
+// (`ReturnType<typeof useKeywordResearchController>`) rather than importing
+// the type directly -- knip flags an unused export.
+//
+/** The geo captured for the run currently in `authorizedResearchInput` --
+ *  volume can go genuinely local (Google Ads); difficulty stays Labs-only
+ *  national regardless (see resolveGeo.ts's NATIONAL_ONLY set). Bundled so
+ *  the results view can label each column from ONE captured object, never
+ *  by re-deriving from the live scope control. */
+type KeywordResearchGeo = {
+  volume: ResolvedGeo;
+  difficulty: ResolvedGeo;
+};
 
 type OpenKeywordTabInput = {
   keyword: string;
@@ -65,11 +81,25 @@ export type KeywordResearchControllerInput = {
   onFormSubmit: (value: KeywordControlsValues) => void;
 };
 
+/**
+ * `targetArea` is a separate parameter (not folded into `input`) so
+ * `KeywordResearchControllerInput` -- and therefore `KeywordResearchPage`'s
+ * own `Props` type, which every route caller already supplies -- stays
+ * unchanged; only `KeywordResearchPage` itself needs to thread the header
+ * ScopeControl's area through.
+ */
 export function useKeywordResearchController(
   input: KeywordResearchControllerInput,
+  targetArea: TargetArea,
 ) {
   const [authorizedResearchInput, setAuthorizedResearchInput] =
     useState<KeywordControlsValues | null>(null);
+  // Captured in the SAME submit callback as `authorizedResearchInput` below,
+  // never recomputed later from the live scope control -- see
+  // resolveRunGeo.ts's own header for why that matters.
+  const [authorizedGeo, setAuthorizedGeo] = useState<KeywordResearchGeo | null>(
+    null,
+  );
   const [researchRunNonce, setResearchRunNonce] = useState(0);
   const { locationCode, setPreferredLocationCode } =
     useResolvedKeywordLocation(input);
@@ -145,9 +175,17 @@ export function useKeywordResearchController(
           ...authorizedResearchInput,
           projectId: input.projectId,
           keywordInput: authorizedResearchInput.keyword,
+          // Overridden with the CAPTURED geo's own locationCode -- a metro
+          // when the confirmed target area applies, else unchanged from
+          // whatever the form submitted. Never re-derived here from live
+          // scope; `authorizedGeo` already froze that choice at submit time.
+          locationCode:
+            authorizedGeo?.volume.locationCode ??
+            authorizedResearchInput.locationCode,
         }
       : null,
     researchRunNonce,
+    authorizedGeo?.volume.languageCode ?? null,
   );
   const setSearchParams = useKeywordSearchParams();
   const saveMutation = useKeywordSaveMutation(input.projectId);
@@ -182,6 +220,18 @@ export function useKeywordResearchController(
     (value) => {
       setPreferredLocationCode(value.locationCode);
       setAuthorizedResearchInput(value);
+      // Captured HERE, at the exact moment this run is authorized -- the
+      // form's own submitted locationCode is this run's session location,
+      // matched against the CURRENT target area. A later scope change can
+      // never retroactively relabel what already fetched.
+      setAuthorizedGeo({
+        volume: resolveRunGeo("keyword-volume", targetArea, value.locationCode),
+        difficulty: resolveRunGeo(
+          "keyword-difficulty",
+          targetArea,
+          value.locationCode,
+        ),
+      });
       setResearchRunNonce((previous) => previous + 1);
       onFormSubmit(value);
     },
@@ -271,6 +321,10 @@ export function useKeywordResearchController(
     activeSerpKeyword,
     confirmSave,
     controlsForm,
+    // The geo CAPTURED for the run whose rows/verdict are on screen right
+    // now -- null before the first search. Consumers must read this, not
+    // `useTargetAreaScope` live, when labeling volume/difficulty.
+    researchGeo: authorizedGeo,
     exportCsv,
     sheetsExportRows,
     filteredRows,

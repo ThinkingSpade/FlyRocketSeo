@@ -48,11 +48,11 @@ function isKeywordSearchTab(tab: SearchTab): tab is KeywordSearchTab {
 export function KeywordResearchPage(input: Props) {
   const setSearchParams = useKeywordSearchParams();
   const projectId = input.projectId;
-  // The header ScopeControl's own state -- a SEPARATE concept from this
-  // tab's own location resolution (useResolvedKeywordLocation, deep inside
-  // useKeywordResearchController: URL param > per-user preferred location >
-  // project market). Must never be read into the controller's research
-  // query; wiring the chosen area into the actual fetch is Task 6's job.
+  // The header ScopeControl's state -- separate from this tab's own
+  // location resolution (useResolvedKeywordLocation, deep inside the
+  // controller). Passed as the controller's own 2nd argument, not folded
+  // into `controllerInput`, so it reaches resolveRunGeo() without changing
+  // `Props`' shape -- see useKeywordResearchController's own doc comment.
   const market = useProjectMarket(projectId);
   const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
 
@@ -205,10 +205,10 @@ export function KeywordResearchPage(input: Props) {
           },
     [activeTab, getOpenKeywordTabs, input, searchTabs.limit],
   );
-  const controller = useKeywordResearchController({
-    ...controllerInput,
-    onFormSubmit,
-  });
+  const controller = useKeywordResearchController(
+    { ...controllerInput, onFormSubmit },
+    targetAreaScope.area,
+  );
   useEffect(() => {
     controller.controlsForm.setErrorMap({ onSubmit: undefined });
     controller.controlsForm.setFieldMeta("keyword", (meta) => ({

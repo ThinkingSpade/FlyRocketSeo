@@ -30,7 +30,29 @@ type KeywordsVerdictInput = {
   rows: KeywordCandidate[];
   /** The project's own domain rating, for the reachability call. */
   ownDomainRating: number | null;
+  /**
+   * The metro these keyword IDEAS were scoped to, when the run went local
+   * (Task 6's geo activation) -- optional so every pre-Task-6 caller/test
+   * above keeps compiling unchanged. Keyword difficulty itself is always
+   * Labs-only/national regardless of this (see resolveGeo.ts's
+   * NATIONAL_ONLY set), so this never claims the DIFFICULTY score is local
+   * -- it only flags that the reachability read below is judging a LOCAL
+   * keyword list against a NATIONAL difficulty score, the "leans on a
+   * national figure" case this task's defensibility rule requires stating.
+   */
+  areaLabel?: string | null;
 };
+
+/** Appends a parenthetical noting the national/local mismatch -- see
+ *  `areaLabel`'s own doc comment above. No-ops when there's no local area
+ *  to flag (the common case), leaving every pre-Task-6 read unchanged. */
+function withNationalDifficultyNote(
+  areaLabel: string | null | undefined,
+  sentence: string,
+): string {
+  if (!areaLabel) return sentence;
+  return `${sentence} (Difficulty reflects nationwide data; these keyword ideas are scoped to ${areaLabel}.)`;
+}
 
 /** Below this many rows with a known difficulty score, "N winnable" is just
  *  a couple of keywords restated as a fraction, not a real read on the
@@ -102,7 +124,10 @@ export function buildKeywordsVerdict(input: KeywordsVerdictInput): Verdict {
       (a, b) => a.keywordDifficulty - b.keywordDifficulty,
     )[0];
     return {
-      read: `None of the ${formatCount(ratedCount)} keywords with a known difficulty score are within reach of your DR ${ownDomainRating} site.`,
+      read: withNationalDifficultyNote(
+        input.areaLabel,
+        `None of the ${formatCount(ratedCount)} keywords with a known difficulty score are within reach of your DR ${ownDomainRating} site.`,
+      ),
       tone: "bad",
       actions: [
         {
@@ -126,14 +151,20 @@ export function buildKeywordsVerdict(input: KeywordsVerdictInput): Verdict {
 
   if (winnableCount / ratedCount >= WINNABLE_MAJORITY_SHARE) {
     return {
-      read: `${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site.`,
+      read: withNationalDifficultyNote(
+        input.areaLabel,
+        `${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site.`,
+      ),
       tone: "good",
       actions: [action],
     };
   }
 
   return {
-    read: `Only ${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site -- the rest need more authority than you currently have.`,
+    read: withNationalDifficultyNote(
+      input.areaLabel,
+      `Only ${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site -- the rest need more authority than you currently have.`,
+    ),
     tone: "mixed",
     actions: [action],
   };

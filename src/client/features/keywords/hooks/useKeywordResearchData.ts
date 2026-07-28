@@ -43,8 +43,18 @@ type KeywordResearchRequest = {
 
 export const KEYWORD_RESEARCH_STALE_TIME_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * `languageCodeOverride` is Task 6's geo threading: when `input.locationCode`
+ * is a resolved metro/DMA code (see `resolveRunGeo`), the bare
+ * `getLanguageCode(input.locationCode)` fallback below would miss (that
+ * table is keyed by country code only) and silently default to "en" --
+ * correct today by coincidence (every seeded metro is US), wrong the moment
+ * a non-English country gets metro rows. Passing the geo's OWN resolved
+ * language sidesteps that instead of relying on the coincidence.
+ */
 export function buildKeywordResearchRequest(
   input: KeywordResearchQueryInput,
+  languageCodeOverride?: string,
 ): KeywordResearchRequest | null {
   const keywords = parseKeywordInput(input.keywordInput);
   const seedKeyword = keywords[0] ?? "";
@@ -55,7 +65,7 @@ export function buildKeywordResearchRequest(
     keywords,
     seedKeyword,
     locationCode: input.locationCode,
-    languageCode: getLanguageCode(input.locationCode),
+    languageCode: languageCodeOverride ?? getLanguageCode(input.locationCode),
     resultLimit: input.resultLimit,
     mode: input.mode,
     clickstream: input.clickstream,
@@ -98,12 +108,23 @@ export function useKeywordResearchData(
   addSearch: AddSearchFn,
   authorizedInput: KeywordResearchQueryInput | null,
   runNonce: number,
+  // The language CAPTURED alongside `authorizedInput` at authorize()-time
+  // (see useKeywordResearchController.ts) -- already `authorizedInput`'s own
+  // `locationCode` may be a resolved metro code by the time it reaches here,
+  // so this must come from the same capture rather than being re-derived
+  // from that (non-country) code.
+  authorizedLanguageCode: string | null = null,
 ) {
   const { projectId } = input;
   const request = useMemo<KeywordResearchRequest | null>(
     () =>
-      authorizedInput ? buildKeywordResearchRequest(authorizedInput) : null,
-    [authorizedInput],
+      authorizedInput
+        ? buildKeywordResearchRequest(
+            authorizedInput,
+            authorizedLanguageCode ?? undefined,
+          )
+        : null,
+    [authorizedInput, authorizedLanguageCode],
   );
   const queryKey = useMemo(
     () => buildKeywordResearchQueryKey(request),
