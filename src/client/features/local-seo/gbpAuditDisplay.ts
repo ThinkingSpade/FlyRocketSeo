@@ -2,6 +2,24 @@ import type { InsightTone } from "@/client/components/InsightTile";
 import type { GbpCheck, GbpCheckStatus } from "./gbpAudit";
 
 /**
+ * States the score's basis whenever it rests on less than the full check
+ * set: computeScore (gbpAudit.ts) excludes `unknown` checks from the
+ * denominator entirely, so a profile with a few unknowns can still show a
+ * clean-looking "100" while some fraction of it was never actually seen.
+ * Naming the fraction here is what stops that number from overclaiming.
+ *
+ * Returns undefined once every check was evaluable: "10 of 10 checks
+ * evaluated" would just restate the full-marks score two ways, so silence
+ * is the more honest choice there (mirrors why a null score already gets no
+ * "0 of 10" -- see scoreUnknownHint in GbpAuditCard.tsx).
+ */
+export function scoreBasisHint(checks: GbpCheck[]): string | undefined {
+  const evaluated = checks.filter((check) => check.status !== "unknown").length;
+  if (evaluated === checks.length) return undefined;
+  return `${evaluated} of ${checks.length} checks evaluated`;
+}
+
+/**
  * Pure presentation rules for the GBP audit card, split out from
  * GbpAuditCard.tsx because Vitest here only collects `src/**\/*.test.ts` --
  * a `.tsx` component gets no test coverage at all, so any logic worth

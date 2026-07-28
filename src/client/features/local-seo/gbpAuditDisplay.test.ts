@@ -3,6 +3,7 @@ import type { GbpCheck, GbpCheckStatus } from "./gbpAudit";
 import {
   CHECK_STATUS_TONE,
   orderChecksForDisplay,
+  scoreBasisHint,
   scoreTone,
 } from "./gbpAuditDisplay";
 
@@ -83,5 +84,39 @@ describe("scoreTone", () => {
   it("is error below the warning threshold", () => {
     expect(scoreTone(49)).toBe("error");
     expect(scoreTone(0)).toBe("error");
+  });
+});
+
+describe("scoreBasisHint", () => {
+  it("names the fraction when some checks are unknown", () => {
+    const checks = [
+      check("claimed", "pass", 100),
+      check("category", "unknown", 90),
+      check("phone", "fail", 80),
+      check("website", "unknown", 45),
+    ];
+    expect(scoreBasisHint(checks)).toBe("2 of 4 checks evaluated");
+  });
+
+  it("says nothing when every check was evaluable, rather than '10 of 10'", () => {
+    const checks = [
+      check("claimed", "pass", 100),
+      check("category", "fail", 90),
+      check("phone", "warn", 80),
+    ];
+    expect(scoreBasisHint(checks)).toBeUndefined();
+  });
+
+  it("says nothing for a single-check, fully-evaluable list", () => {
+    expect(scoreBasisHint([check("claimed", "pass", 100)])).toBeUndefined();
+  });
+
+  it("still names the fraction when only one check out of many is unknown", () => {
+    const checks = [
+      check("a", "pass", 90),
+      check("b", "pass", 80),
+      check("c", "unknown", 70),
+    ];
+    expect(scoreBasisHint(checks)).toBe("2 of 3 checks evaluated");
   });
 });

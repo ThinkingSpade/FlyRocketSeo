@@ -10,6 +10,7 @@ import type { GbpAudit, GbpCheck } from "./gbpAudit";
 import {
   CHECK_STATUS_TONE,
   orderChecksForDisplay,
+  scoreBasisHint,
   scoreTone,
 } from "./gbpAuditDisplay";
 
@@ -59,7 +60,7 @@ export function GbpAuditCard({ audit }: { audit: GbpAudit }) {
               value={audit.score ?? "—"}
               hint={
                 audit.score != null
-                  ? "Out of 100"
+                  ? scoreBasisHint(audit.checks)
                   : scoreUnknownHint(audit.checks)
               }
               tone={scoreTone(audit.score)}

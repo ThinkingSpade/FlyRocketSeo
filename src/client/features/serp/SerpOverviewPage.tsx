@@ -214,6 +214,15 @@ function SerpKeywordStatsTiles({
         icon={ListOrdered}
         label="Organic results"
         value={result.totalOrganic}
+        // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
+        // when that's fewer than the total, the table below isn't the whole
+        // picture, which the bare count alone can't tell you. Once nothing
+        // was truncated, this would just repeat the value above it.
+        hint={
+          result.results.length < result.totalOrganic
+            ? `Top ${result.results.length} shown`
+            : undefined
+        }
       />
     </div>
   );

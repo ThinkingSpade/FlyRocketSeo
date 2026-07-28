@@ -19,6 +19,7 @@ import { toPath } from "@/client/features/link-insights/useLinkInsights";
 import {
   buildOpportunities,
   buildTechnicalIssues,
+  quickWinHint,
   type Opportunity,
   type OpportunityKind,
 } from "./opportunityModel";
@@ -126,6 +127,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           icon={Lightbulb}
           label="Opportunities"
           value={opportunities.length}
+          hint={quickWinHint(opportunities)}
           tone="primary"
         />
         <InsightTile
