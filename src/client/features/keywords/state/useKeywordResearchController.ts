@@ -36,8 +36,14 @@ import {
   useResolvedKeywordLocation,
 } from "./keywordControllerInternals";
 import { useKeywordOverviewState } from "./useKeywordOverviewState";
-import { resolveRunGeo } from "@/client/features/geo/resolveRunGeo";
+import {
+  parseStoredGeo,
+  resolveRunGeo,
+  toStoredMetricGeo,
+} from "@/client/features/geo/resolveRunGeo";
 import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import { keywordResearchGeoBundleSchema } from "@/types/schemas/keywords";
+import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
 
 // Not exported: consumers read this off `KeywordResearchControllerState`
 // (`ReturnType<typeof useKeywordResearchController>`) rather than importing
@@ -47,11 +53,51 @@ import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
  *  volume can go genuinely local (Google Ads); difficulty stays Labs-only
  *  national regardless (see resolveGeo.ts's NATIONAL_ONLY set). Bundled so
  *  the results view can label each column from ONE captured object, never
- *  by re-deriving from the live scope control. */
+ *  by re-deriving from the live scope control. `parentCountryCode` (Defect
+ *  1 fix) is the single session location this WHOLE bundle was captured
+ *  against -- see `toStoredMetricGeo`'s own doc comment for why one value
+ *  covers every metric here -- carried so the bundle can be persisted for
+ *  a later restore. */
 type KeywordResearchGeo = {
   volume: ResolvedGeo;
   difficulty: ResolvedGeo;
+  parentCountryCode: number;
 };
+
+/** The wire payload sent alongside a live request purely so the server can
+ *  persist it -- this controller never reads its own return value back for
+ *  anything (see `parseRestoredKeywordResearchGeo` below for the restore
+ *  side). */
+function buildKeywordResearchGeoPayload(geo: KeywordResearchGeo) {
+  return {
+    v: STORED_GEO_BUNDLE_VERSION,
+    volume: toStoredMetricGeo(geo.volume, geo.parentCountryCode),
+    difficulty: toStoredMetricGeo(geo.difficulty, geo.parentCountryCode),
+  } as const;
+}
+
+/**
+ * For a restored/auto-restored search that never went through this
+ * session's own authorize() call -- reads the geo bundle THAT SEARCH
+ * persisted (Defect 1 fix), never the live scope control, and never
+ * reconstructed from the bare stored `locationCode` (which, for a local
+ * search, is itself a metro code -- indistinguishable from an unrecognised
+ * country without the bundle). A search recorded before this bundle
+ * existed (or a corrupt one) returns null -- "geography unknown for this
+ * run" -- which every render below already treats the same as no geo at
+ * all.
+ */
+function parseRestoredKeywordResearchGeo(
+  params: unknown,
+): KeywordResearchGeo | null {
+  const bundle = parseStoredGeo(keywordResearchGeoBundleSchema, params);
+  if (!bundle) return null;
+  return {
+    volume: bundle.volume,
+    difficulty: bundle.difficulty,
+    parentCountryCode: bundle.volume.parentCountryCode,
+  };
+}
 
 type OpenKeywordTabInput = {
   keyword: string;
@@ -185,7 +231,14 @@ export function useKeywordResearchController(
         }
       : null,
     researchRunNonce,
-    authorizedGeo?.volume.languageCode ?? null,
+    {
+      languageCode: authorizedGeo?.volume.languageCode ?? null,
+      // Defect 1 fix: sent purely so the server can persist it in this
+      // run's history -- never read back to decide anything about the
+      // request itself, which is already fully determined by the other
+      // fields passed above.
+      geo: authorizedGeo ? buildKeywordResearchGeoPayload(authorizedGeo) : null,
+    },
   );
   const setSearchParams = useKeywordSearchParams();
   const saveMutation = useKeywordSaveMutation(input.projectId);
@@ -231,6 +284,7 @@ export function useKeywordResearchController(
           targetArea,
           value.locationCode,
         ),
+        parentCountryCode: value.locationCode,
       });
       setResearchRunNonce((previous) => previous + 1);
       onFormSubmit(value);
@@ -313,6 +367,16 @@ export function useKeywordResearchController(
     setSerpPage(0);
   };
 
+  // Defect 1 fix: when nothing has been searched THIS session, fall back to
+  // whatever geo bundle the restored search itself persisted -- never
+  // re-derive from the live scope control, and never reconstruct from a
+  // bare stored locationCode (see `parseRestoredKeywordResearchGeo`'s own
+  // doc comment). `authorizedGeo` (a live/just-re-run capture) always wins
+  // when both exist.
+  const researchGeo =
+    authorizedGeo ??
+    (restoredRun ? parseRestoredKeywordResearchGeo(restoredRun.params) : null);
+
   return {
     restoredRun,
     selectedRunId,
@@ -322,9 +386,10 @@ export function useKeywordResearchController(
     confirmSave,
     controlsForm,
     // The geo CAPTURED for the run whose rows/verdict are on screen right
-    // now -- null before the first search. Consumers must read this, not
-    // `useTargetAreaScope` live, when labeling volume/difficulty.
-    researchGeo: authorizedGeo,
+    // now -- null before the first search AND before any restore. Consumers
+    // must read this, not `useTargetAreaScope` live, when labeling
+    // volume/difficulty.
+    researchGeo,
     exportCsv,
     sheetsExportRows,
     filteredRows,

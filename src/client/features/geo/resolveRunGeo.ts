@@ -1,6 +1,8 @@
+import type { ZodType } from "zod";
 import { resolveGeo } from "@/shared/geo/resolveGeo";
 import { getLanguageCode } from "@/shared/keyword-locations";
 import type { GeoNeed, ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import type { StoredMetricGeo } from "@/types/schemas/geo";
 
 /**
  * The ResolvedGeo for one metered run -- the single place every Task-6
@@ -54,23 +56,22 @@ export function resolveRunGeo(
 }
 
 /**
- * The geo for a PAST result that was not captured through this session's
- * own authorize()-time snapshot -- a restored or auto-restored run, shown
- * from a stored `locationCode`/`languageCode` rather than a live submit.
+ * The geo for a stored code KNOWN to already be a country -- e.g. Topic
+ * Clusters' `plan.locationCode`, which its own "Location" `<select>` only
+ * ever fills from `LOCATION_OPTIONS` (that tab has no metro-capable data
+ * source at all, so nothing ever writes a metro/DMA code there). For a tab
+ * that CAN go local, do not call this on its bare stored `locationCode` --
+ * a metro code is indistinguishable from an unrecognised country code here,
+ * which is exactly the bug this function used to be misused for (see the
+ * "cannot tell a metro from a country" test below). Restoring one of those
+ * runs must instead read the persisted bundle via `parseStoredGeo` and the
+ * feature's own `xGeoBundleSchema` -- never reconstruct from one bare code.
  *
- * Deliberately does NOT consult the live scope control: a restored run's
- * stored `locationCode` is the only source of truth for what geography it
- * actually describes, and re-applying whatever area happens to be active
- * *now* would reproduce exactly the stale-label failure this whole task
+ * Deliberately does NOT consult the live scope control: even for a
+ * genuinely country-level stored code, re-applying whatever area happens to
+ * be active *now* would reproduce the stale-label failure this whole task
  * exists to prevent (a since-changed scope control silently relabelling
- * data that was never fetched under it). There is also no cached
- * human-readable name for an arbitrary historical sub-country code without
- * a fresh D1 lookup this helper has no access to -- a recognised COUNTRY
- * code gets its real name via `resolveGeo`'s own no-area branch; anything
- * else (a metro/city/region code from a past local run) gets an honestly
- * empty label rather than a fabricated one. `geoMetricSuffix`
- * (`geoMetricLabel.ts`) already renders an empty label as no suffix at all,
- * so this degrades to "no claim" rather than a wrong one.
+ * data that was never fetched under it).
  */
 export function resolveStoredGeo(
   need: GeoNeed,
@@ -81,4 +82,68 @@ export function resolveStoredGeo(
     locationCode: storedLocationCode,
     languageCode: storedLanguageCode,
   });
+}
+
+/**
+ * Packages one CAPTURED `ResolvedGeo` for persistence in a run's
+ * `paramsJson` (Defect 1 fix) -- see `types/schemas/geo.ts`'s own header
+ * for why a bare `locationCode` isn't enough and `parentCountryCode` has to
+ * ride along explicitly.
+ *
+ * `parentCountryCode` is always the single `sessionLocationCode` this run's
+ * WHOLE bundle was captured against (`resolveRunGeo`'s own 3rd argument):
+ * every metric `resolveRunGeo`/`resolveGeo` can produce for one capture
+ * resolves to (or falls back to) that same country, whether or not an area
+ * applied -- `resolveRunGeo`'s own gating requires `area.parentCountryCode
+ * === sessionLocationCode` before an area is even considered, so the two
+ * are never different. Callers pass the one session code captured
+ * alongside every metric in the same run, not a per-metric re-derivation.
+ */
+export function toStoredMetricGeo(
+  geo: ResolvedGeo,
+  parentCountryCode: number,
+): StoredMetricGeo {
+  return {
+    locationCode: geo.locationCode,
+    parentCountryCode,
+    languageCode: geo.languageCode,
+    provider: geo.provider,
+    scope: geo.scope,
+    label: geo.label,
+  };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * Validates a run's OWN persisted geo bundle against `schema` (one of the
+ * per-tab `xGeoBundleSchema`s in `types/schemas/*`), returning null for
+ * anything that doesn't match: a run recorded before this bundle existed,
+ * a version bump, a single corrupt metric. This is the ONLY way a restore
+ * may recover a run's geography -- callers must treat a null return as
+ * "geography unknown for this historical run" and render accordingly
+ * (typically the same bare/no-suffix label an absent geo already renders
+ * as elsewhere), never fall back to guessing via `resolveStoredGeo` or
+ * assume it was national.
+ *
+ * `params` is a run's FULL restored params blob (`useAutoRestoredRun`'s own
+ * `params: unknown`) -- e.g. `{ keyword, locationCode, languageCode, geo }`
+ * -- not the bundle itself: every `record()` call site nests the bundle
+ * under one `geo` key alongside the tab's other canonical inputs (see e.g.
+ * TrendsService.ts's own `recordRun`), so this reads THAT key out before
+ * validating against `schema`. An `isRecord` check (never `as`) is required
+ * here because `params` is untrusted, already-parsed JSON -- a non-object
+ * value (or a value with no `geo` key at all, e.g. a run recorded before
+ * this bundle existed) degrades to null exactly like a schema mismatch
+ * would.
+ */
+export function parseStoredGeo<T>(
+  schema: ZodType<T>,
+  params: unknown,
+): T | null {
+  if (!isRecord(params)) return null;
+  const parsed = schema.safeParse(params.geo);
+  return parsed.success ? parsed.data : null;
 }

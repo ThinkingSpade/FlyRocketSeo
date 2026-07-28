@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
-import { resolveRunGeo, resolveStoredGeo } from "./resolveRunGeo";
+import { z } from "zod";
+import {
+  parseStoredGeo,
+  resolveRunGeo,
+  resolveStoredGeo,
+  toStoredMetricGeo,
+} from "./resolveRunGeo";
 import { resolveDefaultScopeArea } from "./resolveScopeArea";
 import type { TargetArea } from "@/shared/geo/types";
+import { storedMetricGeoSchema } from "@/types/schemas/geo";
 
 const US = 2840;
 const CANADA = 2124;
@@ -100,11 +107,108 @@ describe("resolveStoredGeo (labeling a restored run from its own stored location
     expect(stored.scope).toBe("national");
   });
 
-  it("degrades to an honestly empty label for a historical sub-country code it cannot name", () => {
-    // 200623 (the real DFW DMA code) is not itself a LOCATION_OPTIONS
-    // country row, so there is no cached human name to show -- this must
-    // return an empty label (no suffix rendered), never a fabricated one.
+  it("cannot tell a metro code from a country -- exactly why a restore no longer calls this function on a value that might be one", () => {
+    // This test used to assert that feeding 200623 (the real DFW DMA code)
+    // to resolveStoredGeo and getting back scope "national" with an empty
+    // label was the CORRECT restore behaviour -- i.e. it blessed the bug
+    // Codex found: a restored Dallas-Ft.-Worth run silently relabelled as
+    // an unnamed national result, because this function has no way to know
+    // 200623 was ever local. It now asserts the opposite: this is a
+    // MISLEADING result (scope claims "national" when the real run was
+    // local) that only happens because this function was called on a
+    // value it cannot safely interpret. That is exactly why SERP Overview,
+    // Content Optimizer, Keyword Research and Trends no longer call
+    // `resolveStoredGeo` to restore a run that might have gone local --
+    // they read the persisted per-metric bundle (`parseStoredGeo` below)
+    // instead. `resolveStoredGeo` remains correct and in use ONLY where the
+    // stored code is confirmed to already be a country (Topic Clusters'
+    // `plan.locationCode` -- see resolveStoredGeo's own updated doc
+    // comment), which is what the first two tests in this block cover.
     const stored = resolveStoredGeo("keyword-volume", 200_623, "en");
+    expect(stored.scope).toBe("national");
     expect(stored.label).toBe("");
+  });
+});
+
+describe("toStoredMetricGeo (packaging a captured geo for persistence)", () => {
+  it("carries every field a later restore needs, including the parent country", () => {
+    const geo = resolveRunGeo("keyword-volume", DFW, US);
+    expect(toStoredMetricGeo(geo, US)).toEqual({
+      locationCode: 200623,
+      parentCountryCode: US,
+      languageCode: "en",
+      provider: "google_ads",
+      scope: "local",
+      label: "Dallas-Ft. Worth, TX",
+    });
+  });
+
+  it("stamps the SAME parentCountryCode onto a national metric from the same capture", () => {
+    // keyword-difficulty is NATIONAL_ONLY, so it resolves to the country
+    // itself rather than the metro -- but the bundle still records which
+    // session this was captured against, same as the local metric above.
+    const geo = resolveRunGeo("keyword-difficulty", DFW, US);
+    expect(toStoredMetricGeo(geo, US)).toMatchObject({
+      locationCode: US,
+      parentCountryCode: US,
+      scope: "national",
+    });
+  });
+});
+
+describe("parseStoredGeo (validating a restored run's persisted geo bundle)", () => {
+  const bundleSchema = z.object({
+    v: z.literal(1),
+    volume: storedMetricGeoSchema,
+  });
+
+  it("returns the parsed bundle from the params blob's own `geo` key", () => {
+    // `params` here is a run's FULL restored params -- e.g. exactly what
+    // TrendsService.ts's `recordRun` writes -- not the bundle itself; the
+    // bundle always lives nested under `geo`, alongside the tab's other
+    // canonical inputs.
+    const stored = toStoredMetricGeo(
+      resolveRunGeo("keyword-volume", DFW, US),
+      US,
+    );
+    const params = {
+      keyword: "coffee",
+      locationCode: US,
+      geo: { v: 1, volume: stored },
+    };
+    expect(parseStoredGeo(bundleSchema, params)).toEqual({
+      v: 1,
+      volume: stored,
+    });
+  });
+
+  it("returns null for a run recorded before this bundle existed", () => {
+    // The exact shape a pre-Defect-1 run's paramsJson parses to: real
+    // fields, but no `geo` key at all.
+    const params = { keyword: "coffee", locationCode: US };
+    expect(parseStoredGeo(bundleSchema, params)).toBeNull();
+  });
+
+  it("returns null for a version mismatch rather than misreading an incompatible shape", () => {
+    const stored = toStoredMetricGeo(
+      resolveRunGeo("keyword-volume", DFW, US),
+      US,
+    );
+    const params = { geo: { v: 2, volume: stored } };
+    expect(parseStoredGeo(bundleSchema, params)).toBeNull();
+  });
+
+  it("returns null when a single metric is corrupt, rather than a partially-trusted bundle", () => {
+    const params = { geo: { v: 1, volume: { locationCode: 200623 } } };
+    expect(parseStoredGeo(bundleSchema, params)).toBeNull();
+  });
+
+  it("returns null for non-object params (corrupt JSON, not a parse failure)", () => {
+    expect(parseStoredGeo(bundleSchema, null)).toBeNull();
+    expect(parseStoredGeo(bundleSchema, "not an object")).toBeNull();
+  });
+
+  it("returns null when `geo` itself is present but not an object", () => {
+    expect(parseStoredGeo(bundleSchema, { geo: null })).toBeNull();
   });
 });

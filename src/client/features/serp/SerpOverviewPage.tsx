@@ -55,8 +55,9 @@ import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import {
+  parseStoredGeo,
   resolveRunGeo,
-  resolveStoredGeo,
+  toStoredMetricGeo,
 } from "@/client/features/geo/resolveRunGeo";
 import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
 import {
@@ -66,6 +67,8 @@ import {
 import { useKeywordDifficultyOverview } from "@/client/features/keywords/hooks/useKeywordDifficultyOverview";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
 import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import { serpGeoBundleSchema } from "@/types/schemas/serp";
+import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -99,11 +102,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  *  set), and the SERP results themselves have their own provider label.
  *  Bundled together because every render path below needs all three at
  *  once, and a bundle can't accidentally mix a captured value for one need
- *  with a live one for another. */
+ *  with a live one for another. `parentCountryCode` (Defect 1 fix) is the
+ *  single session location this WHOLE bundle was captured against -- see
+ *  `toStoredMetricGeo`'s own doc comment for why one value covers every
+ *  metric here -- carried so the bundle can be persisted for a later
+ *  restore. */
 type SerpRunGeo = {
   serp: ResolvedGeo;
   volume: ResolvedGeo;
   difficulty: ResolvedGeo;
+  parentCountryCode: number;
 };
 
 /**
@@ -122,26 +130,42 @@ function captureSerpRunGeo(
     serp: resolveRunGeo("serp", area, sessionLocationCode),
     volume: resolveRunGeo("keyword-volume", area, sessionLocationCode),
     difficulty: resolveRunGeo("keyword-difficulty", area, sessionLocationCode),
+    parentCountryCode: sessionLocationCode,
   };
 }
 
-/** For a restored/auto-restored run that never went through this session's
- *  own authorize() call -- labels strictly from what that run itself
- *  stored, never from the live scope control (see resolveStoredGeo.ts's own
- *  header: re-applying today's scope to yesterday's data is the exact
- *  stale-label failure this task exists to prevent). */
-function storedSerpRunGeo(
-  locationCode: number,
-  languageCode: string,
-): SerpRunGeo {
+/** The wire payload sent alongside a live request purely so the server can
+ *  persist it -- this page never reads its own return value back for
+ *  anything (see `parseRestoredSerpRunGeo` below for the restore side). */
+function buildSerpGeoPayload(geo: SerpRunGeo) {
   return {
-    serp: resolveStoredGeo("serp", locationCode, languageCode),
-    volume: resolveStoredGeo("keyword-volume", locationCode, languageCode),
-    difficulty: resolveStoredGeo(
-      "keyword-difficulty",
-      locationCode,
-      languageCode,
-    ),
+    v: STORED_GEO_BUNDLE_VERSION,
+    serp: toStoredMetricGeo(geo.serp, geo.parentCountryCode),
+    volume: toStoredMetricGeo(geo.volume, geo.parentCountryCode),
+    difficulty: toStoredMetricGeo(geo.difficulty, geo.parentCountryCode),
+  } as const;
+}
+
+/**
+ * For a restored/auto-restored run that never went through this session's
+ * own authorize() call -- reads the geo bundle THAT RUN persisted (Defect 1
+ * fix), never the live scope control (re-applying today's scope to
+ * yesterday's data is the exact stale-label failure this task exists to
+ * prevent) and never reconstructed from the bare stored `locationCode`
+ * (which, for a local run, is itself a metro code -- see resolveRunGeo.ts's
+ * own header on `resolveStoredGeo` for why that used to mislabel a DFW run
+ * as an unnamed national one). A run recorded before this bundle existed
+ * (or a corrupt one) returns null -- "geography unknown for this run" --
+ * which every render below already treats the same as no geo at all.
+ */
+function parseRestoredSerpRunGeo(params: unknown): SerpRunGeo | null {
+  const bundle = parseStoredGeo(serpGeoBundleSchema, params);
+  if (!bundle) return null;
+  return {
+    serp: bundle.serp,
+    volume: bundle.volume,
+    difficulty: bundle.difficulty,
+    parentCountryCode: bundle.serp.parentCountryCode,
   };
 }
 
@@ -362,8 +386,8 @@ function SerpSearchForm({
  * near-identical `InsightTile` calls.
  *
  * `geo` is the bundle CAPTURED for this specific run (see
- * `captureSerpRunGeo`/`storedSerpRunGeo`) -- every label below is derived
- * from it, never from `useTargetAreaScope`'s live area, which this
+ * `captureSerpRunGeo`/`parseRestoredSerpRunGeo`) -- every label below is
+ * derived from it, never from `useTargetAreaScope`'s live area, which this
  * component never even receives.
  */
 function SerpKeywordStatsTiles({
@@ -569,6 +593,11 @@ export function SerpOverviewPage({
           keyword: runInput?.keyword ?? "",
           locationCode: runInput?.locationCode ?? activeLocation,
           languageCode: runInput?.languageCode,
+          // Defect 1 fix: sent purely so the server can persist it in this
+          // run's history -- never read back to decide anything about THIS
+          // request, which is already fully determined by the two fields
+          // above.
+          geo: runGeo ? buildSerpGeoPayload(runGeo) : undefined,
         },
       }),
   });
@@ -591,16 +620,13 @@ export function SerpOverviewPage({
   // and "Run again" below), so the two are never out of sync: whenever a
   // live run is active, `runGeo` describes it; otherwise (a restored run,
   // gated on `runInput == null` same as `restoredRun` above) this falls back
-  // to reading the RESTORED run's own stored locationCode/languageCode --
-  // never today's live scope control.
+  // to that run's OWN persisted geo bundle (Defect 1 fix) -- never today's
+  // live scope control, and never reconstructed from the bare stored
+  // locationCode/languageCode (see `parseRestoredSerpRunGeo`'s own doc
+  // comment for why that used to mislabel a local run).
   const effectiveGeo: SerpRunGeo | null =
     runGeo ??
-    (restoredRun
-      ? storedSerpRunGeo(
-          restoredRun.result.locationCode,
-          restoredRun.result.languageCode,
-        )
-      : null);
+    (restoredRun ? parseRestoredSerpRunGeo(restoredRun.params) : null);
   const errorMessage = serpQuery.isError
     ? describeGeoRunErrorForSerp(
         effectiveGeo,

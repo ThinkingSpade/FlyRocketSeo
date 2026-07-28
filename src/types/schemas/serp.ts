@@ -1,10 +1,27 @@
 import { z } from "zod";
+import { STORED_GEO_BUNDLE_VERSION, storedMetricGeoSchema } from "./geo";
+
+/** The three geographies one SERP Overview run captures (see
+ *  SerpOverviewPage.tsx's own `SerpRunGeo`) -- sent purely so the server can
+ *  persist it in this run's `paramsJson`; a restore reads it back directly
+ *  instead of reconstructing it from the bare `locationCode` below. */
+export const serpGeoBundleSchema = z.object({
+  v: z.literal(STORED_GEO_BUNDLE_VERSION),
+  serp: storedMetricGeoSchema,
+  volume: storedMetricGeoSchema,
+  difficulty: storedMetricGeoSchema,
+});
 
 export const serpOverviewRequestSchema = z.object({
   projectId: z.string().uuid(),
   keyword: z.string().trim().min(1).max(200),
   locationCode: z.number().int().positive().optional(),
   languageCode: z.string().min(2).max(8).optional(),
+  /** Optional: older callers (the MCP tool) and callers with no confirmed
+   *  target area send nothing, and this run's history simply carries no geo
+   *  bundle -- see resolveRunGeo.ts's own header for why that must degrade
+   *  to "geography unknown", never an assumed national fallback. */
+  geo: serpGeoBundleSchema.optional(),
 });
 
 /* ------------------------------------------------------------------ */

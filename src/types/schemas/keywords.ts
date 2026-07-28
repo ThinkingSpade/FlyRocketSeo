@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { TAG_COLOR_KEYS } from "@/shared/tag-colors";
 import { booleanSearchParamSchema } from "@/types/schemas/domain";
+import {
+  STORED_GEO_BUNDLE_VERSION,
+  storedMetricGeoSchema,
+} from "@/types/schemas/geo";
+
+/** The two geographies one Keyword Research run captures (see
+ *  useKeywordResearchController.ts's own `KeywordResearchGeo`) -- sent
+ *  purely so the server can persist it in this run's `paramsJson`; a
+ *  restore reads it back directly instead of reconstructing it from the
+ *  bare `locationCode` below (which, for a local run, is itself a metro
+ *  code -- indistinguishable from an unrecognised country without this). */
+export const keywordResearchGeoBundleSchema = z.object({
+  v: z.literal(STORED_GEO_BUNDLE_VERSION),
+  volume: storedMetricGeoSchema,
+  difficulty: storedMetricGeoSchema,
+});
 
 const savedKeywordTagSchema = z.string().trim().min(1).max(64);
 const tagColorSchema = z.enum(TAG_COLOR_KEYS);
@@ -29,6 +45,11 @@ export const researchKeywordsSchema = z.object({
     .default("auto"),
   // Clickstream-refined volumes double the DataForSEO request cost; opt-in.
   clickstream: z.boolean().optional().default(false),
+  /** Optional: older callers (search tabs restored pre-fix, the MCP tool)
+   *  send nothing, and this run's history simply carries no geo bundle --
+   *  see resolveRunGeo.ts's own header for why that must degrade to
+   *  "geography unknown", never an assumed national fallback. */
+  geo: keywordResearchGeoBundleSchema.optional(),
 });
 
 export const saveKeywordsSchema = z

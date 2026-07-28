@@ -42,6 +42,10 @@ async function getSerpOverview(
     keyword: string;
     locationCode?: number;
     languageCode?: string;
+    /** The client's own captured geo bundle (Defect 1 fix) -- opaque here,
+     *  forwarded verbatim into `params` purely so a later restore can read
+     *  it back; this service never inspects or resolves it itself. */
+    geo?: unknown;
   },
   billingCustomer: BillingCustomerContext,
 ): Promise<SerpOverviewResponse> {
@@ -61,7 +65,7 @@ async function getSerpOverview(
     AnalysisRunService.record({
       projectId: input.projectId,
       feature: RUN_FEATURES.serpOverview,
-      params: { keyword, locationCode, languageCode },
+      params: { keyword, locationCode, languageCode, geo: input.geo ?? null },
       cacheKey,
       label: keyword,
     });

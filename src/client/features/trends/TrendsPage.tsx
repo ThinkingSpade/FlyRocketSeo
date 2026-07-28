@@ -34,9 +34,15 @@ import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
-import { resolveRunGeo } from "@/client/features/geo/resolveRunGeo";
+import {
+  parseStoredGeo,
+  resolveRunGeo,
+  toStoredMetricGeo,
+} from "@/client/features/geo/resolveRunGeo";
 import { describeGeoRunError } from "@/client/features/geo/geoUnavailableMessage";
 import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import { trendsGeoBundleSchema } from "@/types/schemas/trends";
+import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -224,10 +230,17 @@ export function TrendsPage({
   const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
   // The geo CAPTURED for the run in `runKeywords` -- set in the same breath
   // as `runKeywords` itself (submit / "Run again" below), never recomputed
-  // from live scope afterward. Null for a restored (not re-run) result:
-  // trendsResultSchema stores no locationCode at all, so there is nothing
-  // honest to derive a label from -- see the restore branch below.
+  // from live scope afterward. Null for a restored (not re-run) result --
+  // see the `effectiveGeo`/restore branch below, which reads that run's OWN
+  // persisted geo bundle instead.
   const [runGeo, setRunGeo] = useState<ResolvedGeo | null>(null);
+  // The session location `runGeo` above was captured against (Defect 1
+  // fix) -- captured alongside it, never re-read from `market.locationCode`
+  // later, so a persisted bundle's `parentCountryCode` always describes
+  // what this run actually used even if the project's market later changes.
+  const [runGeoCountryCode, setRunGeoCountryCode] = useState<number | null>(
+    null,
+  );
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, parseKeywords(input)),
   );
@@ -252,6 +265,17 @@ export function TrendsPage({
           locationCode:
             runGeo?.scope === "local" ? runGeo.locationCode : undefined,
           languageCode: runGeo?.languageCode,
+          // Defect 1 fix: sent purely so the server can persist it in this
+          // run's history -- never read back to decide anything about THIS
+          // request, which is already fully determined by the two fields
+          // above.
+          geo:
+            runGeo && runGeoCountryCode != null
+              ? {
+                  v: STORED_GEO_BUNDLE_VERSION,
+                  interest: toStoredMetricGeo(runGeo, runGeoCountryCode),
+                }
+              : undefined,
         },
       }),
   });
@@ -316,6 +340,15 @@ export function TrendsPage({
   });
   const result = trendsQuery.data ?? restored?.result;
   const restoredRun = trendsQuery.data == null ? restored : null;
+  // Defect 1 fix: a restored run's OWN persisted geo bundle -- null for a
+  // run recorded before this bundle existed, which must read as "geography
+  // unknown" (bare "Interest", same as no geo at all) rather than guessing
+  // it was worldwide or national. `runGeo` (a live/just-re-run capture)
+  // always wins when both exist, matching `result`'s own `??` precedence.
+  const restoredGeo =
+    parseStoredGeo(trendsGeoBundleSchema, restoredRun?.params)?.interest ??
+    null;
+  const effectiveGeo = runGeo ?? restoredGeo;
   const seriesByKeyword = useMemo(
     () =>
       toSeriesByKeyword(
@@ -361,6 +394,7 @@ export function TrendsPage({
               setRunGeo(
                 captureTrendsRunGeo(targetAreaScope.area, market.locationCode),
               );
+              setRunGeoCountryCode(market.locationCode);
               setRunKeywords(next);
               run.authorize();
               // Hands the primary (first) keyword to whichever tab the user
@@ -439,6 +473,7 @@ export function TrendsPage({
             setRunGeo(
               captureTrendsRunGeo(targetAreaScope.area, market.locationCode),
             );
+            setRunGeoCountryCode(market.locationCode);
             setRunKeywords(restoredRun.result.keywords);
             run.authorize(
               createMeteredRunKey(projectId, restoredRun.result.keywords),
@@ -472,7 +507,7 @@ export function TrendsPage({
               keywords={result.keywords}
               averages={result.averages}
               points={result.points}
-              geoLabel={trendsMetricLabel(runGeo)}
+              geoLabel={trendsMetricLabel(effectiveGeo)}
             />
           )}
         </div>
@@ -483,7 +518,8 @@ export function TrendsPage({
           verdict={buildTrendsVerdict({
             keywords: result.keywords,
             seriesByKeyword,
-            areaLabel: runGeo?.scope === "local" ? runGeo.label : null,
+            areaLabel:
+              effectiveGeo?.scope === "local" ? effectiveGeo.label : null,
           })}
           projectId={projectId}
           tab="Keyword Trends"

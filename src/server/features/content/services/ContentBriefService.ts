@@ -47,6 +47,10 @@ async function getContentBrief(
     locationCode?: number;
     serpLocationCode?: number;
     serpLanguageCode?: string;
+    /** The client's own captured geo bundle (Defect 1 fix) -- opaque here,
+     *  forwarded verbatim into `params` purely so a later restore can read
+     *  it back; this service never inspects or resolves it itself. */
+    geo?: unknown;
   },
   billingCustomer: BillingCustomerContext,
 ): Promise<ContentBrief> {
@@ -76,7 +80,12 @@ async function getContentBrief(
     AnalysisRunService.record({
       projectId: input.projectId,
       feature: RUN_FEATURES.contentBrief,
-      params: { keyword, locationCode, serpLocationCode },
+      params: {
+        keyword,
+        locationCode,
+        serpLocationCode,
+        geo: input.geo ?? null,
+      },
       cacheKey,
       label: keyword,
     });

@@ -17,6 +17,17 @@ type AutoRestoredRun<T> = {
   label: string;
   lastRanAt: string;
   runCount: number;
+  /**
+   * The run's own canonicalized inputs, parsed from JSON best-effort --
+   * `null` when the stored value isn't valid JSON (shouldn't happen in
+   * practice, but a restore must never throw over a corrupt row). This
+   * hook is feature-agnostic and doesn't know each tab's own params shape,
+   * so it exposes the parsed value as `unknown` rather than validating it
+   * itself -- callers narrow whatever slice they need (e.g. a per-run
+   * geography bundle; see resolveRunGeo.ts's `parseStoredGeo`) the same
+   * way they already validate `result` against their own schema above.
+   */
+  params: unknown;
 };
 
 export function useAutoRestoredRun<T>({
@@ -67,11 +78,23 @@ export function useAutoRestoredRun<T>({
     const parsed = schema.safeParse(raw);
     if (!parsed.success) return null;
 
+    // Best-effort like resultJson above, but a parse failure here must not
+    // sink the whole restore -- the result itself already parsed fine, so
+    // this degrades to null (the same "nothing to validate" shape a caller
+    // already handles for an old, pre-bundle run) rather than throwing.
+    let params: unknown = null;
+    try {
+      params = JSON.parse(row.paramsJson);
+    } catch {
+      params = null;
+    }
+
     return {
       result: parsed.data,
       label: row.label,
       lastRanAt: row.lastRanAt,
       runCount: row.runCount,
+      params,
     };
   }, [query.data, schema]);
 

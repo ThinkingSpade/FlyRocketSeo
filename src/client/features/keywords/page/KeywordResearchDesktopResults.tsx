@@ -123,10 +123,12 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
   } = controller;
   // Muted per-metric suffix, e.g. "total vol · DFW" / "avg KD · US" -- from
   // the geo CAPTURED for this run (researchGeo), never re-derived from the
-  // live scope control. Null before any search, or for a restored (not
-  // re-run) result this app has no stored location for at all
-  // (keywordResearchResultSchema carries no locationCode) -- both cases
-  // render the bare label, honestly claiming no particular geography.
+  // live scope control. Null before any search, or for a restored run
+  // recorded before Defect 1's geo bundle existed -- both cases render the
+  // bare label, honestly claiming no particular geography rather than
+  // guessing. A restored run recorded AFTER that fix carries its own
+  // bundle, so this reads its real geography instead (see
+  // useKeywordResearchController.ts's own `researchGeo`).
   const volumeSuffix = researchGeo ? geoMetricSuffix(researchGeo.volume) : "";
   const difficultySuffix = researchGeo
     ? geoMetricSuffix(researchGeo.difficulty)

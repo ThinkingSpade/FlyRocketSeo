@@ -289,6 +289,11 @@ export async function research(
         resultLimit: effectiveInput.resultLimit,
         mode,
         clickstream: effectiveInput.clickstream,
+        // Defect 1 fix: the client's own captured geo bundle, forwarded
+        // verbatim so a later restore reads it back instead of
+        // reconstructing geography from `locationCode` alone (which, for a
+        // local run, is itself a metro code).
+        geo: effectiveInput.geo ?? null,
       },
       cacheKey,
       label: uniqueKeywords.join(", "),

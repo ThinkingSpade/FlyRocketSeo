@@ -47,6 +47,10 @@ async function getTrends(
     languageCode: string;
     dateFrom?: string;
     dateTo?: string;
+    /** The client's own captured geo bundle (Defect 1 fix) -- opaque here,
+     *  forwarded verbatim into `params` purely so a later restore can read
+     *  it back; this service never inspects or resolves it itself. */
+    geo?: unknown;
   },
   billingCustomer: BillingCustomerContext,
 ): Promise<TrendsResult> {
@@ -72,6 +76,7 @@ async function getTrends(
         keywords,
         locationCode: input.locationCode ?? null,
         languageCode: input.languageCode,
+        geo: input.geo ?? null,
       },
       cacheKey,
       label: keywords.join(", "),

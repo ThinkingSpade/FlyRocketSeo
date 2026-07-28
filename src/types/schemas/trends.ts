@@ -1,6 +1,16 @@
 import { z } from "zod";
+import { STORED_GEO_BUNDLE_VERSION, storedMetricGeoSchema } from "./geo";
 
 export const MAX_TRENDS_KEYWORDS = 5;
+
+/** Trends' single geography (see TrendsPage.tsx's own `captureTrendsRunGeo`)
+ *  -- sent purely so the server can persist it in this run's `paramsJson`;
+ *  a restore reads it back directly instead of assuming the worldwide
+ *  default every run without a stored bundle would otherwise fall back to. */
+export const trendsGeoBundleSchema = z.object({
+  v: z.literal(STORED_GEO_BUNDLE_VERSION),
+  interest: storedMetricGeoSchema,
+});
 
 export const keywordTrendsRequestSchema = z.object({
   projectId: z.string().uuid(),
@@ -15,6 +25,11 @@ export const keywordTrendsRequestSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  /** Optional: older callers send nothing, and this run's history simply
+   *  carries no geo bundle -- see resolveRunGeo.ts's own header for why
+   *  that must degrade to "geography unknown", never an assumed national
+   *  fallback (nor Trends' own worldwide default). */
+  geo: trendsGeoBundleSchema.optional(),
 });
 
 /* ------------------------------------------------------------------ */

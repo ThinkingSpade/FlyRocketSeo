@@ -30,12 +30,16 @@ import {
   type TargetAreaScope,
 } from "@/client/features/geo/useTargetAreaScope";
 import {
+  parseStoredGeo,
   resolveRunGeo,
   resolveStoredGeo,
+  toStoredMetricGeo,
 } from "@/client/features/geo/resolveRunGeo";
 import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
 import { describeGeoRunError } from "@/client/features/geo/geoUnavailableMessage";
 import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import { contentGeoBundleSchema } from "@/types/schemas/content";
+import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -70,11 +74,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * wired up, so it is ALWAYS resolved with no area at all, honestly
  * national regardless of the confirmed target area. Bundled together so
  * every render path reads one captured object instead of two independent
- * ones that could drift.
+ * ones that could drift. `parentCountryCode` (Defect 1 fix) is the single
+ * session location this WHOLE bundle was captured against -- see
+ * `toStoredMetricGeo`'s own doc comment for why one value covers every
+ * metric here -- carried so the bundle can be persisted for a later
+ * restore.
  */
 type ContentRunGeo = {
   competitors: ResolvedGeo;
   terms: ResolvedGeo;
+  parentCountryCode: number;
 };
 
 /** Captured once at authorize()-time -- see resolveRunGeo.ts's own header
@@ -94,6 +103,38 @@ function captureContentRunGeo(
       sessionLocationCode,
       sessionLanguageCode,
     ),
+    parentCountryCode: sessionLocationCode,
+  };
+}
+
+/** The wire payload sent alongside a live request purely so the server can
+ *  persist it -- this page never reads its own return value back for
+ *  anything (see `parseRestoredContentRunGeo` below for the restore side). */
+function buildContentGeoPayload(geo: ContentRunGeo) {
+  return {
+    v: STORED_GEO_BUNDLE_VERSION,
+    competitors: toStoredMetricGeo(geo.competitors, geo.parentCountryCode),
+    terms: toStoredMetricGeo(geo.terms, geo.parentCountryCode),
+  } as const;
+}
+
+/**
+ * For a restored/auto-restored brief that never went through this
+ * session's own authorize() call -- reads the geo bundle THAT RUN
+ * persisted (Defect 1 fix), never the live scope control, and never
+ * reconstructed from the bare stored `locationCode` (which, for a local
+ * `competitors` lookup, is itself a metro code). A brief recorded before
+ * this bundle existed (or a corrupt one) returns null -- "geography
+ * unknown for this run" -- which every render below already treats the
+ * same as no geo at all.
+ */
+function parseRestoredContentRunGeo(params: unknown): ContentRunGeo | null {
+  const bundle = parseStoredGeo(contentGeoBundleSchema, params);
+  if (!bundle) return null;
+  return {
+    competitors: bundle.competitors,
+    terms: bundle.terms,
+    parentCountryCode: bundle.competitors.parentCountryCode,
   };
 }
 
@@ -259,6 +300,10 @@ export function ContentOptimizerPage({
           locationCode: runInput?.locationCode ?? activeLocation,
           serpLocationCode: runGeo?.competitors.locationCode,
           serpLanguageCode: runGeo?.competitors.languageCode,
+          // Defect 1 fix: sent purely so the server can persist it in this
+          // run's history -- never read back to decide anything about THIS
+          // request, which is already fully determined by the fields above.
+          geo: runGeo ? buildContentGeoPayload(runGeo) : undefined,
         },
       }),
   });
@@ -276,27 +321,15 @@ export function ContentOptimizerPage({
   const restoredRun = briefQuery.data == null ? restored : null;
   // Same mutual-exclusivity as SERP Overview's `effectiveGeo`: `runGeo` only
   // ever gets set alongside `runInput`, so whenever a live run is active it
-  // describes THAT run; a restored brief (`runInput == null`) instead
-  // labels strictly from ITS OWN stored locationCode -- contentBriefSchema
-  // has no separate stored serpLocationCode, so a restored brief's
-  // competitors get the same honest national-only treatment as its terms,
-  // rather than guessing they were ever local.
+  // describes THAT run; a restored brief (`runInput == null`) instead reads
+  // that run's OWN persisted geo bundle (Defect 1 fix) -- never today's
+  // live scope control, and never reconstructed from the bare stored
+  // locationCode (which used to force BOTH competitors and terms into the
+  // same national-only guess, ignoring a genuinely local competitors fetch
+  // entirely).
   const effectiveGeo: ContentRunGeo | null =
     runGeo ??
-    (restoredRun
-      ? {
-          competitors: resolveStoredGeo(
-            "serp",
-            restoredRun.result.locationCode,
-            restoredRun.result.languageCode,
-          ),
-          terms: resolveStoredGeo(
-            "keyword-volume",
-            restoredRun.result.locationCode,
-            restoredRun.result.languageCode,
-          ),
-        }
-      : null);
+    (restoredRun ? parseRestoredContentRunGeo(restoredRun.params) : null);
   const errorMessage = briefQuery.isError
     ? describeGeoRunError(
         "this brief's ranking pages",
