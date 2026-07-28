@@ -13,6 +13,7 @@ import {
 } from "@/serverFunctions/gbp";
 import { startGbpLink } from "./startGbpLink";
 import { GbpLocationPicker } from "./GbpLocationPicker";
+import { NotConfiguredCard } from "./GbpNotConfiguredCard";
 
 /**
  * Connect/manage card for GBP writing. Three states, in order of precedence:
@@ -204,38 +205,6 @@ function ConnectedState({
         >
           Disconnect
         </button>
-      </div>
-    </div>
-  );
-}
-
-function NotConfiguredCard() {
-  return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
-        <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={MapPin} tone="neutral" />
-          Google Business Profile writing
-        </h2>
-        <p className="text-sm text-base-content/70">
-          Connecting would let you schedule and publish Google Business Profile
-          posts, and push fixes for the profile audit above (description,
-          categories) straight to Google — directly from this tab.
-        </p>
-        <div className="rounded-lg border border-base-300 bg-base-200/40 p-3 text-xs text-base-content/60">
-          <p className="font-medium text-base-content/70">
-            Not available yet on this deployment
-          </p>
-          <p className="mt-1">
-            This needs the operator to add the restricted{" "}
-            <code className="font-mono">business.manage</code> Google scope to
-            this app&apos;s OAuth consent screen, complete Google&apos;s
-            verification review for it, and set{" "}
-            <code className="font-mono">GBP_GOOGLE_CLIENT_ID</code> /{" "}
-            <code className="font-mono">GBP_GOOGLE_CLIENT_SECRET</code> (see
-            .env.example).
-          </p>
-        </div>
       </div>
     </div>
   );
