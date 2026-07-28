@@ -10,7 +10,7 @@
  * — the grep that proves this boundary greps for their names, and a match
  * inside a comment describing the rule would be a confusing false positive.)
  */
-import { and, eq, sql } from "drizzle-orm";
+import { and, count as countFn, eq, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { geoLocations } from "@/db/schema";
 import { buildNamePrefixPattern } from "./likePattern";
@@ -68,4 +68,18 @@ async function search(input: SearchInput): Promise<GeoLocationSearchResult[]> {
     .limit(input.limit);
 }
 
-export const GeoLocationRepository = { search } as const;
+/**
+ * Total row count — what the Settings page's "Seed location data" section
+ * shows before an operator triggers anything, so they can see whether a
+ * previous run already finished (or got partway) rather than guessing. Still
+ * a plain read: no external call, and reusing this file rather than adding a
+ * count to `GeoLocationSeedRepository.ts` keeps every table READ in one
+ * place, matching this file's own "reads only" charter — the seed
+ * repository stays exclusively about the write path it exists for.
+ */
+async function count(): Promise<number> {
+  const [result] = await db.select({ value: countFn() }).from(geoLocations);
+  return result?.value ?? 0;
+}
+
+export const GeoLocationRepository = { search, count } as const;
