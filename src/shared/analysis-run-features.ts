@@ -16,4 +16,5 @@ export const RUN_FEATURES = {
   serpOverview: "serp_overview",
   contentBrief: "content_brief",
   topicClusters: "topic_clusters",
+  citationTracker: "citation_tracker",
 } as const;

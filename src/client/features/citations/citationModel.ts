@@ -21,13 +21,17 @@ import {
  * rather than collapsing it into a confident-sounding total.
  */
 
-export type CitationSerpResult = {
+// Not exported: nothing outside this file constructs one of these by name
+// today (callers pass an inline object literal to buildCitationReport and
+// let structural typing check it) -- CitationMatch/CitationReport below are
+// the model's actual cross-file contract, returned to and named by callers.
+type CitationSerpResult = {
   domain: string | null;
   url: string | null;
   title: string | null;
 };
 
-export type CitationBusiness = {
+type CitationBusiness = {
   name: string;
   /** Folded into the verdict's read text when known, so a multi-location
    *  business can tell which location a run is about. */

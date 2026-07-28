@@ -25,6 +25,7 @@ import {
 import { buildGbpAudit } from "./gbpAudit";
 import { GbpAuditCard } from "./GbpAuditCard";
 import { LocalReviewsSection } from "./LocalReviewsSection";
+import { CitationTrackerSection } from "@/client/features/citations/CitationTrackerSection";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -230,6 +231,17 @@ export function LocalSeoPage({
                 onReviewsLoaded={setReviews}
               />
             ) : null}
+            <CitationTrackerSection
+              // Same remount-on-new-business reasoning as LocalReviewsSection
+              // above -- a stale authorized run for the previous business
+              // must never be silently reused for this one.
+              key={profileKeyword}
+              projectId={projectId}
+              businessName={profile.title ?? profileKeyword}
+              city={profile.city}
+              region={profile.region}
+              phone={profile.phone}
+            />
           </>
         )
       ) : null}
