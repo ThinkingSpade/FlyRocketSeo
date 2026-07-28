@@ -8,6 +8,7 @@ import {
   getRankTrackingConfigSummaries,
 } from "@/serverFunctions/rank-tracking";
 import { Modal } from "@/client/components/Modal";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import {
@@ -15,12 +16,17 @@ import {
   LOCATIONS,
 } from "@/client/features/keywords/locations";
 import { domainField, normalizeDomain } from "@/types/schemas/domain";
+import {
+  estimateRankCheckCredits,
+  scheduleLabel,
+} from "@/shared/rank-tracking";
+import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 
-// Defaults mirror RankTrackingConfigModal so a domain created from this shortcut
-// behaves identically to one created through the full config flow.
+// Keep the shortcut's rank-check shape aligned with the full config flow, but
+// leave recurring spend off until the user explicitly chooses a schedule.
 const DEFAULT_SERP_DEPTH = 40;
 const DEFAULT_DEVICES = "mobile";
-const DEFAULT_SCHEDULE = "weekly";
+const DEFAULT_SCHEDULE = "manual";
 
 type Mode = "existing" | "create";
 
@@ -39,6 +45,15 @@ type Props = {
 
 function locationLabel(locationCode: number): string {
   return LOCATIONS[locationCode] ?? String(locationCode);
+}
+
+function checksPerMonth(
+  schedule: RankTrackingConfig["scheduleInterval"],
+): number {
+  if (schedule === "daily") return 30;
+  if (schedule === "weekly") return 4;
+  if (schedule === "monthly") return 1;
+  return 0;
 }
 
 export function TrackKeywordsModal({
@@ -69,9 +84,31 @@ export function TrackKeywordsModal({
   const [domain, setDomain] = useState(projectDomain ?? "");
   const [locationCode, setLocationCode] = useState(defaultLocationCode);
   const [languageCode, setLanguageCode] = useState(defaultLanguageCode);
+  const [schedule, setSchedule] =
+    useState<RankTrackingConfig["scheduleInterval"]>(DEFAULT_SCHEDULE);
 
   const count = keywords.length;
   const keywordLabel = `${count} keyword${count !== 1 ? "s" : ""}`;
+  const selectedConfig = configs.find(
+    (config) => config.id === effectiveConfigId,
+  );
+  const effectiveSchedule =
+    mode === "create"
+      ? schedule
+      : (selectedConfig?.scheduleInterval ?? "manual");
+  const recurringCost =
+    effectiveSchedule === "manual"
+      ? null
+      : estimateRankCheckCredits(
+          count,
+          mode === "create"
+            ? DEFAULT_DEVICES
+            : (selectedConfig?.devices ?? DEFAULT_DEVICES),
+          mode === "create"
+            ? DEFAULT_SERP_DEPTH
+            : (selectedConfig?.serpDepth ?? DEFAULT_SERP_DEPTH),
+          "queued",
+        ).costUsd * checksPerMonth(effectiveSchedule);
 
   const mutation = useMutation({
     mutationFn: async () => {
@@ -87,7 +124,7 @@ export function TrackKeywordsModal({
             languageCode,
             devices: DEFAULT_DEVICES,
             serpDepth: DEFAULT_SERP_DEPTH,
-            scheduleInterval: DEFAULT_SCHEDULE,
+            scheduleInterval: schedule,
           },
         });
         configId = created.configId;
@@ -121,6 +158,7 @@ export function TrackKeywordsModal({
   const isPending = mutation.isPending;
   const confirmDisabled =
     isPending ||
+    configsQuery.isError ||
     count === 0 ||
     (mode === "create" ? !domain.trim() : !effectiveConfigId);
 
@@ -155,7 +193,13 @@ export function TrackKeywordsModal({
         </div>
       ) : null}
 
-      {configsQuery.isLoading ? (
+      {configsQuery.isError ? (
+        <InlineQueryError
+          message="Tracked domains could not be loaded."
+          retrying={configsQuery.isFetching}
+          onRetry={() => void configsQuery.refetch()}
+        />
+      ) : configsQuery.isLoading ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-base-content/50">
           <Loader2 className="size-4 animate-spin" />
           Loading tracked domains…
@@ -231,10 +275,62 @@ export function TrackKeywordsModal({
                   Rankings are checked in this location for every keyword.
                 </div>
               </div>
+
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text font-medium">Schedule</span>
+                </label>
+                <select
+                  className="select select-bordered w-full"
+                  value={schedule}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    if (
+                      value === "manual" ||
+                      value === "daily" ||
+                      value === "weekly" ||
+                      value === "monthly"
+                    ) {
+                      setSchedule(value);
+                    }
+                  }}
+                >
+                  <option value="manual">Manual only (no auto-spend)</option>
+                  <option value="daily">Daily</option>
+                  <option value="weekly">Weekly</option>
+                  <option value="monthly">Monthly</option>
+                </select>
+                <div className="mt-1.5 text-xs text-base-content/50">
+                  Recurring checks are off unless you explicitly choose a
+                  schedule.
+                </div>
+              </div>
             </div>
           )}
         </>
       )}
+
+      {!configsQuery.isLoading && !configsQuery.isError ? (
+        <div className="flex items-start gap-2 rounded-lg border border-base-300 bg-base-200/40 px-3 py-2.5 text-xs text-base-content/70">
+          <Info className="mt-0.5 size-3.5 shrink-0 text-base-content/45" />
+          {recurringCost == null ? (
+            <span>
+              {mode === "create"
+                ? "Manual only: creating this tracker will not schedule paid checks."
+                : "This tracked domain is manual only, so these keywords will not create recurring spend."}
+            </span>
+          ) : (
+            <span>
+              {scheduleLabel(effectiveSchedule)} paid checks for these{" "}
+              {keywordLabel} will add approximately{" "}
+              <span className="font-mono font-semibold text-base-content">
+                ${recurringCost.toFixed(2)}/month
+              </span>
+              .
+            </span>
+          )}
+        </div>
+      ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
         <button

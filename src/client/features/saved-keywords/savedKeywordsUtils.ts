@@ -39,6 +39,25 @@ export function toSavedKeywordSort(
   return "createdAt";
 }
 
+export function getSavedKeywordsTrackLocation(
+  rows: SavedKeywordRow[],
+  defaultLocationCode: number,
+) {
+  const counts = new Map<number, number>();
+  for (const row of rows) {
+    counts.set(row.locationCode, (counts.get(row.locationCode) ?? 0) + 1);
+  }
+  let locationCode = defaultLocationCode;
+  let bestCount = -1;
+  for (const [code, occurrences] of counts) {
+    if (occurrences > bestCount) {
+      bestCount = occurrences;
+      locationCode = code;
+    }
+  }
+  return { locationCode, mixed: counts.size > 1 };
+}
+
 export function formatSavedKeywordNumber(value: number | null | undefined) {
   if (value == null) return "-";
   return new Intl.NumberFormat().format(value);

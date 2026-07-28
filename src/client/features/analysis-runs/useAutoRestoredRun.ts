@@ -34,7 +34,13 @@ export function useAutoRestoredRun<T>({
   enabled: boolean;
   /** Restore this specific past run instead of the most recent one. */
   runId?: string | null;
-}): { restored: AutoRestoredRun<T> | null; isRestoring: boolean } {
+}): {
+  restored: AutoRestoredRun<T> | null;
+  isRestoring: boolean;
+  isError: boolean;
+  isRetrying: boolean;
+  retry: () => void;
+} {
   const query = useQuery({
     queryKey: ["analysisRun", runId ?? "latest", projectId, feature],
     queryFn: () =>
@@ -69,5 +75,11 @@ export function useAutoRestoredRun<T>({
     };
   }, [query.data, schema]);
 
-  return { restored, isRestoring: enabled && query.isPending };
+  return {
+    restored,
+    isRestoring: enabled && query.isPending,
+    isError: enabled && query.isError,
+    isRetrying: enabled && query.isFetching,
+    retry: () => void query.refetch(),
+  };
 }

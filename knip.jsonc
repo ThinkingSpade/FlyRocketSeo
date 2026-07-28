@@ -26,7 +26,12 @@
     // family above, applied to a public UI entry point instead of a barrel.
     "src/client/features/geo/GeoLocationSelect.tsx",
   ],
-  "project": ["**/*.{js,mjs,ts,tsx}", "!src/routeTree.gen.ts", "!web/**"],
+  "project": [
+    "**/*.{js,mjs,ts,tsx}",
+    "!src/routeTree.gen.ts",
+    "!web/**",
+    "!.claude/worktrees/**",
+  ],
   "ignore": ["drizzle-prod.config.ts"],
   // Disable Drizzle plugin - it tries to load drizzle.config.ts which imports cloudflare:workers
   "drizzle": false,
@@ -34,5 +39,7 @@
     // Tailwindcss used via @tailwindcss/vite plugin
     "tailwindcss",
     "daisyui",
+    // Spawned by scripts/cross-platform.mjs for the agent dev server.
+    "portless",
   ],
 }
