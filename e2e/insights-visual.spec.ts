@@ -447,3 +447,117 @@ for (const [viewportName, viewportSize] of VIEWPORTS) {
     }
   });
 }
+
+/**
+ * Final-verification addition: the geo-activation plan's per-tab "which
+ * geography" switcher (`ScopeControl.tsx`, Task 5) and its confirmation
+ * banner (`TargetAreaBanner.tsx`), on the six tabs the plan actually wires
+ * them into. Desktop viewport only (one pass, not tripled across the three
+ * viewports above) -- this is functional coverage of new interactive
+ * behaviour, not the layout/overflow regression sweep the loop above already
+ * does at three breakpoints for every route it covers.
+ *
+ * This fixture-backed project has never confirmed a target area and has no
+ * cached GBP/GSC signal for `detectTargetArea` to find (no real crawl ever
+ * ran against it), so its own actual state is "no target area, no proposal"
+ * -- the exact case `buildTargetAreaBannerViewModel` (unit-tested on its own,
+ * `targetAreaBannerViewModel.test.ts`) says renders nothing. That is
+ * asserted here live, on six real pages, rather than only in isolation. The
+ * banner's OWN populated (proposal-present) state is NOT re-created here --
+ * seeding a fake GBP/GSC signal into this E2E project is a heavier lift this
+ * pass didn't take on; that state stays covered by the unit-test file alone.
+ *
+ * Selector note: `ScopeControl` renders `GeoLocationSelect`, a
+ * `<button aria-haspopup="listbox">` whose own picker's search input has
+ * placeholder "Search locations". On every route except Keyword Research
+ * that is the ONLY such button on the page. Keyword Research's own search
+ * form ALSO has a country field (`KeywordResearchSearchBar` ->
+ * `LocationSelect`, a DIFFERENT component with the same
+ * `aria-haspopup="listbox"` button pattern but a "Search countries"
+ * placeholder) -- confirmed by reading both components directly, not
+ * guessed. `.first()` resolves to `ScopeControl`'s own trigger there because
+ * it renders earlier in KeywordResearchPage.tsx's own JSX (the header row,
+ * before the search form) -- and the placeholder-text assertion after
+ * opening it independently double-checks that this in fact opened the geo
+ * picker and not the country-only one, so a wrong `.first()` resolution
+ * would fail loudly here rather than silently pass.
+ */
+const SCOPE_CONTROL_ROUTES: ReadonlyArray<{
+  name: string;
+  url: (id: string) => string;
+}> = [
+  { name: "keywords", url: (id) => `/p/${id}/keywords` },
+  { name: "serp", url: (id) => `/p/${id}/serp` },
+  { name: "content", url: (id) => `/p/${id}/content` },
+  { name: "trends", url: (id) => `/p/${id}/trends` },
+  { name: "clusters", url: (id) => `/p/${id}/clusters` },
+  { name: "rank-tracking", url: (id) => `/p/${id}/rank-tracking` },
+];
+
+test.describe("target area scope control + banner", () => {
+  test.use({ viewport: { width: 1280, height: 900 } });
+
+  for (const route of SCOPE_CONTROL_ROUTES) {
+    test(`${route.name}: scope control opens the picker; no unconfirmed-proposal banner`, async ({
+      page,
+    }) => {
+      // Deliberately NOT reusing `attachDiagnostics` here: it folds a page's
+      // generic "Failed to load resource: ... 404" console messages in with
+      // real thrown exceptions under one `consoleErrors` array. Confirmed
+      // live (manual browser session against this same fixture config) that
+      // `AUTH_MODE=local_noauth` itself produces exactly that generic
+      // message from a `/api/auth/get-session` 404 on EVERY page load,
+      // completely unrelated to this feature -- asserting the combined array
+      // is empty would fail on that pre-existing, harmless noise rather than
+      // on anything this test actually exercises. `pageerror` (an uncaught
+      // JS exception) is the meaningfully different, genuinely-actionable
+      // signal a broken component would raise, so only that is tracked here.
+      const pageErrors: string[] = [];
+      page.on("pageerror", (error) => pageErrors.push(error.message));
+
+      const projectId = await getProjectId(page);
+      await gotoAndSettle(page, route.url(projectId));
+      await dismissSetupModalIfPresent(page);
+
+      // The banner only ever renders for an UNCONFIRMED PROPOSAL
+      // (buildTargetAreaBannerViewModel) -- this project has never confirmed
+      // an area and has no cached GBP/GSC signal for detection to find, so
+      // it must be absent. Guards against the regression this whole plan
+      // step exists to avoid: a proposal silently treated as accepted.
+      await expect(page.getByText(/Looks like you serve/)).toHaveCount(0);
+
+      const scopeTrigger = page
+        .locator('button[aria-haspopup="listbox"]')
+        .first();
+      await expect(scopeTrigger).toBeVisible({ timeout: 15_000 });
+
+      await scopeTrigger.click();
+      const listbox = page.getByRole("listbox");
+      await expect(listbox).toBeVisible();
+      // Confirms `.first()` really opened ScopeControl's OWN picker (see
+      // this block's own header) and not some other trigger.
+      const searchInput = page.getByPlaceholder("Search locations");
+      await expect(searchInput).toBeVisible();
+
+      // Exercises the free, debounced `searchGeoLocations` D1 lookup --
+      // proves the picker doesn't crash or dead-end while searching. The
+      // no-spend PROOF itself is the static grep across each tab's
+      // useQuery/useMutation/useMeteredQuery calls (this repo's final
+      // verification does that separately, in the report) -- this is a
+      // functional smoke check, not a network-traffic assertion.
+      await searchInput.fill("New York");
+      await page.waitForTimeout(400);
+
+      // Escape closes WITHOUT selecting -- dismissing the picker must never
+      // silently apply a choice, same rule the banner's own "Dismiss"
+      // button follows.
+      await page.keyboard.press("Escape");
+      await expect(listbox).toBeHidden();
+
+      expect(
+        pageErrors,
+        `${route.name}: scope control interaction threw an uncaught exception`,
+      ).toEqual([]);
+    });
+  }
+});
