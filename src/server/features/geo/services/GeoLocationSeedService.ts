@@ -10,16 +10,20 @@
  * never on render, navigation, or app start.
  *
  * CHUNKING — why, and why this shape:
- * DataForSEO's `/v3/keywords_data/google_ads/locations` returns the ENTIRE
- * Google geotarget list in one response (their own docs describe roughly
- * 95k rows across every supported country combined). There IS a
- * `/locations/$country` path variant mentioned in DataForSEO's docs (the SDK
- * even types it, `KeywordsDataApi.googleAdsLocationsCountry`), but no worked
- * example anywhere gives the exact value `$country` expects (ISO code?
- * numeric Google location code? full name?) — building the seed path around
- * an unverified parameter format, with no test key available to confirm it,
- * is a worse risk than the one this comment is about to accept. So this
- * service always fetches the full list, exactly like the script does.
+ * DataForSEO's unscoped `/v3/keywords_data/google_ads/locations` returns the
+ * ENTIRE Google geotarget list in one response (~94,933 rows across every
+ * supported country combined — confirmed against DataForSEO's own live docs
+ * and an independently-reported `result_count`, not recalled from memory).
+ * An earlier version of this service always fetched that full list, exactly
+ * like the script did, reasoning that the country-scoped `/locations/
+ * $country` path variant's exact parameter format (ISO code? numeric Google
+ * location code? full name?) was unverified in any worked example, and
+ * building the seed path around a guess was a worse risk than the one that
+ * reasoning was accepting instead. See the "SECOND PRODUCTION FAILURE"
+ * section below for why that conclusion needed to be re-checked rather than
+ * trusted a second time, and `geoLocationSeedMapping.ts`'s "Country scoping"
+ * block for the now-verified request shape and the `GEO_SEED_COUNTRY`/
+ * `buildGoogleAdsLocationsPath` this service builds `LOCATIONS_PATH` from.
  *
  * THIS USED TO ALSO RE-FETCH AND RE-DERIVE THE FULL LIST ON EVERY CHUNK
  * CALL, and that was a production bug, not a simplicity trade-off. The
@@ -42,20 +46,60 @@
  * `undefined` (see `GeoLocationSeedSection.tsx`'s own header for the client
  * side of this fix).
  *
- * The fix: fetch and derive the full list ONCE per run, then stage it in R2
- * via `GeoLocationSeedStore` so every later chunk call reads back only its
- * own ~2,000-row slice — see that module's own header for why the staged
- * data is newline-delimited JSON read by exact byte range rather than one
- * blob re-parsed whole (that alone would still risk the same 10ms ceiling),
- * and why chunks are NOT all written to R2 up front in the same invocation
- * (that would still risk the Free plan's separate 50-subrequest-per-
- * invocation ceiling, since R2 operations count against the same limit as
- * the DataForSEO fetch and the D1 write batches). If even the one remaining
- * per-run fetch+derive pass turns out to be too tight for a self-hoster's
- * Free-plan CPU ceiling, the two escape hatches this service always had
- * still work: bump `limits.cpu_ms` on a paid Workers plan (wrangler.jsonc
- * already documents this), or run `scripts/seed-geo-locations.ts` locally
- * with a copy of the key.
+ * The fix (attempt 2): fetch and derive the full list ONCE per run, then
+ * stage it in R2 via `GeoLocationSeedStore` so every later chunk call reads
+ * back only its own ~2,000-row slice — see that module's own header for why
+ * the staged data is newline-delimited JSON read by exact byte range rather
+ * than one blob re-parsed whole (that alone would still risk the same 10ms
+ * ceiling), and why chunks are NOT all written to R2 up front in the same
+ * invocation (that would still risk the Free plan's separate
+ * 50-subrequest-per-invocation ceiling, since R2 operations count against
+ * the same limit as the DataForSEO fetch and the D1 write batches).
+ *
+ * SECOND PRODUCTION FAILURE, AND THE COUNTRY-SCOPING FIX (attempt 3):
+ * Attempt 2 above did not fix production — it failed again, the same
+ * "Seeding stopped: the server response was missing the expected progress
+ * data" symptom as before. This is exactly the risk attempt 2's own
+ * disclosure already flagged ("if even the one remaining per-run
+ * fetch+derive pass turns out to be too tight for a self-hoster's Free-plan
+ * CPU ceiling..."): a ~94,933-row, several-megabyte JSON response is very
+ * likely still too much to fetch, `JSON.parse`, and derive every row's
+ * country/state/metro code for, in ONE invocation, within a fixed 10ms CPU
+ * budget — even paid only once per run instead of once per chunk.
+ *
+ * Attempt 3 shrinks the INPUT to that one remaining pass instead of trying
+ * to make the pass itself cheaper: `fetchAndMapAllRows` below now calls
+ * DataForSEO's country-scoped endpoint (`LOCATIONS_PATH`, built from
+ * `buildGoogleAdsLocationsPath(GEO_SEED_COUNTRY)` — see
+ * `geoLocationSeedMapping.ts`'s "Country scoping" block for the verified
+ * request shape and why "us") instead of the unscoped one, so the ONE
+ * fetch+parse+derive pass a run still does only ever processes one
+ * country's rows, not all ~94,933.
+ *
+ * The stage-once-then-range-read design from attempt 2 is KEPT here, not
+ * removed, even though the scoped list is presumably much smaller: chunked
+ * D1 writes are still required regardless of input size (the Free plan's
+ * ~50-subrequest ceiling bounds a single invocation's D1 batches
+ * independently of how big the source list is, so some multi-invocation
+ * shape survives no matter what), and — with no DataForSEO key available in
+ * this environment to actually measure the scoped response's real byte size
+ * or row count (see "What remains unverified" in this feature's own
+ * handoff report) — there is no way to confirm "small enough to skip
+ * staging entirely" rather than just hope it. Keeping the staging layer
+ * costs nothing extra on a run that turns out small enough not to need it
+ * (offset 0 still stages once — cheaply, if the scoped list really is
+ * small — and every other offset still reads back a cheap R2 range instead
+ * of re-deriving), and it remains correct if the scoped list turns out
+ * larger than expected (the US, being Google Ads' most granular market by
+ * far — state, county, congressional district, DMA/metro, and city-level
+ * subdivisions — is not obviously a "small fraction" of the global total
+ * just because it's one of ~200+ countries in it). Deleting this layer on
+ * an unverified assumption, only to be wrong a third time, is the one
+ * outcome this whole change exists to avoid. The two escape hatches this
+ * service always had still work on top of all of the above: bump
+ * `limits.cpu_ms` on a paid Workers plan (wrangler.jsonc already documents
+ * this), or run `scripts/seed-geo-locations.ts` locally with a copy of the
+ * key.
  *
  * Idempotent and resumable: `GeoLocationSeedRepository.upsertRows` is an
  * upsert keyed on `code` (the primary key), so replaying the same offset —
@@ -78,6 +122,8 @@ import {
   buildUsStateCodeMap,
   toRawLocationRow,
   sliceGeoLocationRowsChunk,
+  buildGoogleAdsLocationsPath,
+  GEO_SEED_COUNTRY,
   type GeoLocationRow,
 } from "@/server/features/geo/geoLocationSeedMapping";
 import { GeoLocationSeedRepository } from "@/server/features/geo/repositories/GeoLocationSeedRepository";
@@ -86,7 +132,9 @@ import {
   type StagedGeoLocationManifest,
 } from "@/server/features/geo/geoLocationSeedStore";
 
-const LOCATIONS_PATH = "/v3/keywords_data/google_ads/locations";
+// Country-scoped — see geoLocationSeedMapping.ts's "Country scoping" block
+// for the verified request shape and why GEO_SEED_COUNTRY defaults to "us".
+const LOCATIONS_PATH = buildGoogleAdsLocationsPath(GEO_SEED_COUNTRY);
 
 // See this file's own header for the full reasoning. In short: 20
 // D1/Postgres write batches (100 rows each, via executeInBatches) is 20
@@ -95,9 +143,13 @@ const LOCATIONS_PATH = "/v3/keywords_data/google_ads/locations";
 // on every other call — both comfortably under the Workers Free plan's
 // 50-subrequest-per-invocation ceiling
 // (developers.cloudflare.com/workers/platform/limits), with headroom for
-// retries, while still making meaningful progress per call (~48 calls to
-// seed the full ~95k-row list, instead of ~190 at a stingier chunk size). A
-// larger chunk size is strictly better here up to that ceiling.
+// retries. This was originally sized against the full ~94,933-row unscoped
+// list (~48 calls end to end at this chunk size, vs. ~190 at a stingier
+// size); now that the fetch is scoped to GEO_SEED_COUNTRY, a full run needs
+// meaningfully fewer calls than that — the exact count is unverified until
+// deploy (no DataForSEO key available here), but 2,000 stays a safe,
+// conservative chunk size either way, comfortably under the subrequest
+// ceiling regardless of the real row count.
 export const GEO_SEED_ROWS_PER_CHUNK = 2000;
 
 export type GeoLocationSeedChunkResult = {

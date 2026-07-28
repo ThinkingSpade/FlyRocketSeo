@@ -306,4 +306,27 @@ describe("GeoLocationSeedService.seedChunk", () => {
       done: true,
     });
   });
+
+  // --- Regression coverage for the country-scoping fix: production failed
+  // TWICE fetching DataForSEO's unscoped, ~94,933-row global location list
+  // (see this service's own header for the full history) -- even after the
+  // fetch was staged to run only once per run, that one remaining pass over
+  // the full list was still almost certainly too much CPU-bound work for the
+  // Workers Free plan's fixed 10ms-per-invocation ceiling. The literal
+  // expected string below is deliberately NOT built from
+  // `buildGoogleAdsLocationsPath`/`GEO_SEED_COUNTRY` (unlike the service's
+  // own `LOCATIONS_PATH`) -- asserting against the same helper the service
+  // uses would make this test pass even if that shared helper regressed back
+  // to the unscoped path. ---
+
+  it("fetches the country-scoped locations endpoint, not the unscoped global list", async () => {
+    mocks.dataforseoGetJson.mockResolvedValue(locationsEnvelope());
+    const { GeoLocationSeedService } = await import("./GeoLocationSeedService");
+
+    await GeoLocationSeedService.seedChunk(0, 3);
+
+    expect(mocks.dataforseoGetJson).toHaveBeenCalledExactlyOnceWith(
+      "/v3/keywords_data/google_ads/locations/us",
+    );
+  });
 });

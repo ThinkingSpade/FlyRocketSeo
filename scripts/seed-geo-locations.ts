@@ -16,6 +16,17 @@
  * metros, no cities. Running this is a REQUIRED setup step for every
  * self-hosted deployment, not a nice-to-have.
  *
+ * SCOPED TO ONE COUNTRY (`GEO_SEED_COUNTRY` in geoLocationSeedMapping.ts,
+ * "us" by default), matching the in-Worker "Seed location data" action
+ * (`GeoLocationSeedService.ts`) rather than fetching DataForSEO's unscoped,
+ * ~94,933-row global list the way this script originally did. This script
+ * itself has no Cloudflare CPU ceiling to work around — it's a plain Node
+ * process — but the actual gap this script exists to fill (see above) is US
+ * DMA/metro rows specifically, a concept that only exists for the US in the
+ * first place, so scoping here too avoids writing tens of thousands of
+ * non-US rows this app has no use for, and keeps this script and the
+ * in-Worker action reporting the same row counts for the same deployment.
+ *
  * Usage:
  *   pnpm tsx scripts/seed-geo-locations.ts            # local D1 (default)
  *   pnpm tsx scripts/seed-geo-locations.ts --remote   # production D1 — the
@@ -74,13 +85,25 @@ import {
   readNumber,
   readString,
   toRawLocationRow,
+  buildGoogleAdsLocationsPath,
+  GEO_SEED_COUNTRY,
   type GeoLocationRow,
   type RawLocationRow,
 } from "../src/server/features/geo/geoLocationSeedMapping";
 import { loadLocalEnv, parseArgs } from "./cli-utils";
 
 const API_BASE = "https://api.dataforseo.com";
-const LOCATIONS_PATH = "/v3/keywords_data/google_ads/locations";
+// Scoped to GEO_SEED_COUNTRY (see geoLocationSeedMapping.ts's "Country
+// scoping" block) rather than the unscoped `.../locations` endpoint, so this
+// CLI route and the in-Worker "Seed location data" action
+// (GeoLocationSeedService.ts) always agree on what they seed. This script has
+// no Cloudflare CPU ceiling of its own to worry about — it could still fetch
+// the full ~94,933-row unscoped list — but this app's one actual gap is US
+// DMA/metro data (see this file's own header above), so seeding the same
+// scope here avoids writing tens of thousands of non-US rows this app has no
+// use for, and avoids a self-hoster ever wondering why the CLI and the
+// in-app action reported different row counts.
+const LOCATIONS_PATH = buildGoogleAdsLocationsPath(GEO_SEED_COUNTRY);
 const D1_BINDING = "DB"; // matches package.json's db:migrate:local / db:migrate:prod
 const UPSERT_BATCH_SIZE = 200; // rows per multi-row INSERT statement
 
@@ -104,7 +127,9 @@ async function main(): Promise<void> {
 
   const scope: "local" | "remote" = args.remote === "true" ? "remote" : "local";
 
-  console.log("Fetching the Google Ads locations list from DataForSEO...");
+  console.log(
+    `Fetching the Google Ads locations list from DataForSEO (scoped to "${GEO_SEED_COUNTRY}")...`,
+  );
   const rawRows = await fetchLocations(apiKey);
   console.log(`Fetched ${rawRows.length} raw location rows.`);
 
@@ -237,7 +262,11 @@ function toResponseShape(value: unknown): DataforseoResponseShape {
  * src/server/lib/dataforseo/core.ts's `dataforseoGetJson` pattern for the
  * same class of endpoint, and the identical deliberate deviation
  * scripts/verify-geo-support.ts already made for this exact endpoint (see
- * .superpowers/sdd/geo-t1-t2-report.md).
+ * .superpowers/sdd/geo-t1-t2-report.md). `LOCATIONS_PATH` (module scope,
+ * above) is the country-scoped `/locations/$country` path, not the unscoped
+ * `/locations` path this file's older comments elsewhere still describe by
+ * name — see this file's own header and geoLocationSeedMapping.ts's
+ * "Country scoping" block for why.
  */
 async function fetchLocations(apiKey: string): Promise<RawLocationRow[]> {
   const response = await fetch(`${API_BASE}${LOCATIONS_PATH}`, {

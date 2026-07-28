@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
   buildGeoLocationRows,
+  buildGoogleAdsLocationsPath,
   buildUsStateCodeMap,
+  GEO_SEED_COUNTRY,
   readNumber,
   readString,
   sliceGeoLocationRowsChunk,
@@ -327,5 +329,38 @@ describe("sliceGeoLocationRowsChunk", () => {
     expect(first.done).toBe(false);
     const second = sliceGeoLocationRowsChunk(rows.slice(0, 20), 10, 10);
     expect(second.done).toBe(true);
+  });
+});
+
+// Regression coverage for the country-scoping fix: production failed twice
+// fetching DataForSEO's unscoped, ~94,933-row global location list, even
+// after that fetch was staged to run only once per run (see
+// GeoLocationSeedService.ts's own header for the full history). These tests
+// pin the request this app now actually sends, so a future change can't
+// silently widen back to the unscoped endpoint without a test noticing.
+describe("GEO_SEED_COUNTRY / buildGoogleAdsLocationsPath", () => {
+  it("defaults to the US -- this app's actual gap is US DMA/metro rows", () => {
+    expect(GEO_SEED_COUNTRY).toBe("us");
+  });
+
+  it("builds the documented country-scoped path with a lowercase ISO-2 code", () => {
+    expect(buildGoogleAdsLocationsPath("us")).toBe(
+      "/v3/keywords_data/google_ads/locations/us",
+    );
+  });
+
+  it("builds the real default path GEO_SEED_COUNTRY resolves to", () => {
+    expect(buildGoogleAdsLocationsPath(GEO_SEED_COUNTRY)).toBe(
+      "/v3/keywords_data/google_ads/locations/us",
+    );
+  });
+
+  it("URL-encodes the country segment rather than interpolating it raw", () => {
+    // No real value should ever need escaping (ISO-2 codes are two plain
+    // letters), but this pins that a future, wider value can't silently
+    // corrupt the path.
+    expect(buildGoogleAdsLocationsPath("u s")).toBe(
+      "/v3/keywords_data/google_ads/locations/u%20s",
+    );
   });
 });

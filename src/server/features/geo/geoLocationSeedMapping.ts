@@ -245,19 +245,93 @@ export function buildGeoLocationRows(
 }
 
 // ---------------------------------------------------------------------------
-// Chunking. A single DataForSEO response holds the ENTIRE Google geotarget
-// list (tens of thousands of rows — DataForSEO's own docs describe roughly
-// 95k across every country combined) with no verified, documented way to ask
-// this endpoint for less (see `GeoLocationSeedService.ts`'s own header for
-// why an undocumented-by-example `/locations/$country` path variant exists
-// but isn't relied on here). Writing all of it in one Worker invocation would
-// exceed both the Cloudflare Free plan's ~50-subrequest-per-request ceiling
-// and its fixed CPU-time ceiling — this codebase has already been broken by
-// exactly this class of limit once (see `siteAuditWorkflowFallback.ts`).
-// `sliceGeoLocationRowsChunk` bounds a single invocation's write to
-// `chunkSize` rows and reports whether more remain, so the caller can repeat
-// the call — client-driven, like `AnalyzeProjectCard` — until the whole list
-// is written.
+// Country scoping. WHY this exists, verified rather than assumed:
+//
+// DataForSEO's unscoped `GET /v3/keywords_data/google_ads/locations` returns
+// the ENTIRE Google geotarget list in one response — ~94,933 rows (confirmed
+// directly against docs.dataforseo.com/v3/keywords_data/google_ads/locations/
+// and an independently DataForSEO-reported `result_count`, not recalled from
+// memory). An earlier version of this seed feature always fetched that full
+// list because the country-scoped sibling endpoint's exact `$country`
+// parameter format was unverified in any worked example, and building around
+// a guess seemed like the worse risk. That full-list fetch then broke
+// production TWICE even after being redesigned to pay its cost only once per
+// run instead of once per chunk (see `GeoLocationSeedService.ts`'s own
+// header for the full two-attempt history) — a several-megabyte, ~95k-row
+// JSON parse plus per-row ancestor-chain derivation is simply too much
+// synchronous CPU-bound work for the Cloudflare Workers Free plan's fixed
+// ~10ms-per-invocation ceiling (wrangler.jsonc), no matter how many chunk
+// calls it gets spread across.
+//
+// Re-verifying the country-scoped variant directly (not trusting the old
+// "unverified" conclusion a second time) confirms: `GET
+// https://api.dataforseo.com/v3/keywords_data/google_ads/locations/$country`,
+// with `$country` substituted as a plain, lowercase ISO-2 URL path segment
+// (e.g. "us" — DataForSEO's own docs example, and note this differs from
+// this codebase's own `LOCATION_OPTIONS.shortLabel` convention of uppercase
+// "US"; don't "fix" the casing here to match that). This exactly matches the
+// vendored `dataforseo-client` SDK's own shipped implementation of
+// `KeywordsDataApi.googleAdsLocationsCountry(country)`
+// (`dist/esm/api/KeywordsDataApi.js`: builds
+// `/v3/keywords_data/google_ads/locations/{country}`, then
+// `url_.replace("{country}", encodeURIComponent("" + country))`, plain GET,
+// no request body), and returns the identical `tasks[].result[]` row shape
+// as the unscoped endpoint — no changes needed anywhere else in this file's
+// row-derivation logic, only to what gets fetched.
+//
+// `buildGoogleAdsLocationsPath` is the one function that builds this path,
+// imported by both `GeoLocationSeedService.ts` (the in-Worker path) and
+// `scripts/seed-geo-locations.ts` (the CLI path) — a shared helper rather
+// than duplicated string interpolation, so the two callers can never drift
+// onto two different path formats for the same endpoint.
+// ---------------------------------------------------------------------------
+
+/**
+ * "us" specifically, not just "whichever country is smallest": this app's
+ * actual, documented data gap is US DMA/metro rows (Nielsen-licensed,
+ * present in NO free bulk export this codebase could find — see
+ * `usDmas.ts`'s own header for the four sources checked). The 50 US states
+ * already ship bundled (`usStates.ts`), and every other country this app
+ * supports already has *some* usable location data via `LOCATION_OPTIONS`.
+ * So scoping to the one country this product actually needs isn't a
+ * workaround forced by the CPU ceiling — it happens to be exactly the data
+ * the real gap calls for anyway.
+ *
+ * To widen this later (e.g. a self-hoster who also wants non-US metro/city
+ * granularity): change this constant, or — better, if that's ever actually
+ * needed — loop over a small list of countries and stage/write each one as
+ * its own independent run, so any single fetch+parse+derive pass stays
+ * bounded regardless of how many countries eventually get seeded. Do not
+ * revert to the unscoped endpoint to "seed everything at once" — that is
+ * the exact design this comment's history shows failing twice.
+ */
+export const GEO_SEED_COUNTRY = "us";
+
+/**
+ * Builds the request path for DataForSEO's country-scoped Google Ads
+ * locations endpoint — see the "Country scoping" block above for the
+ * verified request shape this mirrors. `encodeURIComponent` matches the
+ * vendored SDK's own `googleAdsLocationsCountry` implementation exactly,
+ * even though a bare lowercase ISO-2 code never actually needs escaping:
+ * cheap insurance against `GEO_SEED_COUNTRY` ever being widened to a value
+ * that does.
+ */
+export function buildGoogleAdsLocationsPath(country: string): string {
+  return `/v3/keywords_data/google_ads/locations/${encodeURIComponent(country)}`;
+}
+
+// ---------------------------------------------------------------------------
+// Chunking. Even scoped to one country, the fetched list is large enough
+// (unverified exact size — no DataForSEO key is available in this
+// environment to measure it; see `GeoLocationSeedService.ts`'s own header)
+// that writing it in one Worker invocation would risk both the Cloudflare
+// Free plan's ~50-subrequest-per-request ceiling and its fixed CPU-time
+// ceiling — this codebase has already been broken by exactly this class of
+// limit once elsewhere (see `siteAuditWorkflowFallback.ts`), and the geo
+// seed's own unscoped fetch broke it twice more. `sliceGeoLocationRowsChunk`
+// bounds a single invocation's write to `chunkSize` rows and reports whether
+// more remain, so the caller can repeat the call — client-driven, like
+// `AnalyzeProjectCard` — until the whole list is written.
 // ---------------------------------------------------------------------------
 
 // Not exported: nothing outside this module needs the type by name, only

@@ -17,20 +17,27 @@ const DATAFORSEO_LOCATIONS_DOCS_URL =
 
 type SeedProgress = { writtenSoFar: number; totalRows: number };
 
-// A full run needs ~48 calls at today's ~95k rows / 2,000-per-chunk
-// (GEO_SEED_ROWS_PER_CHUNK) -- this caps well above any plausible future
-// growth in DataForSEO's location list while still guaranteeing the loop
-// below cannot spin forever, even if a future bug made `done` never arrive.
+// The server fetch is now scoped to one country (GEO_SEED_COUNTRY in
+// geoLocationSeedMapping.ts, "us" by default) rather than DataForSEO's
+// unscoped ~94,933-row global list, so a full run needs meaningfully fewer
+// than the ~48 calls the old full-world fetch would have taken at
+// 2,000-per-chunk (GEO_SEED_ROWS_PER_CHUNK) -- the exact scoped row count is
+// unverified until deploy (no DataForSEO key available while building this).
+// 500 keeps the same kind of safety margin either way: comfortably above any
+// plausible call count while still guaranteeing the loop below cannot spin
+// forever, even if a future bug made `done` never arrive.
 const MAX_SEED_CHUNK_CALLS = 500;
 
 /**
- * Operator setup action: seeds `geo_locations` (countries, states, metros
- * and cities) from DataForSEO's Google Ads locations list, so the geo
- * picker's city/metro search (`GeoLocationSelect.tsx`, via
- * `searchGeoLocations`) has data to search at all. Needed on every
- * deployment — hosted or self-hosted — until run at least once; see
- * `scripts/seed-geo-locations.ts`'s own header for why no free,
- * no-credential bulk export can supply this instead.
+ * Operator setup action: seeds `geo_locations` with U.S. location data (the
+ * country row, states, DMA metros and cities) from DataForSEO's Google Ads
+ * locations list, so the geo picker's city/metro search
+ * (`GeoLocationSelect.tsx`, via `searchGeoLocations`) has U.S. metro data to
+ * search at all -- the one gap `LOCATION_OPTIONS` and the bundled state/city
+ * tables don't cover (see `scripts/seed-geo-locations.ts`'s own header for
+ * why no free, no-credential bulk export can supply US DMA rows instead, and
+ * `geoLocationSeedMapping.ts`'s `GEO_SEED_COUNTRY` for why this action is
+ * scoped to just the US rather than every country DataForSEO supports).
  *
  * Lives in Settings, not the picker's own empty state: this triggers a real
  * external fetch plus a bulk rewrite of the table, meant for whoever
@@ -52,16 +59,20 @@ const MAX_SEED_CHUNK_CALLS = 500;
  * until the whole list is written, showing the real written/total counts at
  * every step rather than a fabricated percentage.
  *
- * Trusts each chunk result defensively, not just by its declared type: a
- * production incident here saw `seedGeoLocationsChunk` resolve to `undefined`
- * (the Worker was re-fetching and re-deriving DataForSEO's entire ~95k-row
- * location list on every chunk call, almost certainly blowing the Workers
- * Free plan's per-invocation CPU ceiling — see GeoLocationSeedService.ts's
- * own header for the server-side redesign that actually fixes this).
+ * Trusts each chunk result defensively, not just by its declared type: TWO
+ * separate production incidents here saw `seedGeoLocationsChunk` resolve to
+ * something that wasn't a usable result -- first because the Worker was
+ * re-fetching and re-deriving DataForSEO's entire ~95k-row location list on
+ * every chunk call, then again (after that was fixed to fetch+derive only
+ * once per run) because even that one remaining pass over the full unscoped
+ * list was almost certainly still blowing the Workers Free plan's
+ * per-invocation CPU ceiling -- see GeoLocationSeedService.ts's own header
+ * for the full two-attempt history and the country-scoping fix that
+ * shrinks what that one remaining pass has to process.
  * `isGeoLocationSeedChunkResult`/`isStuckWithoutProgress` turn "the response
  * wasn't usable" and "the response stopped making progress" into a message a
  * user can act on instead of a raw TypeError or an infinite spin, regardless
- * of whether the redesign above has fully eliminated the underlying cause.
+ * of whether the fix above has fully eliminated the underlying cause.
  */
 export function GeoLocationSeedSection() {
   const queryClient = useQueryClient();
@@ -175,10 +186,10 @@ export function GeoLocationSeedSection() {
                 >
                   their docs
                 </a>
-                ). Still a bulk operation: it fetches Google&apos;s full
-                worldwide location list (countries, states, metros and cities)
-                and writes it in chunks, replacing any existing rows. Takes a
-                few minutes.
+                ). Still a bulk operation: it fetches U.S. location data
+                (states, DMA metros and cities) from DataForSEO&apos;s Google
+                Ads locations list and writes it in chunks — matching rows are
+                updated, not deleted. Takes a few minutes.
               </span>
             </p>
             <div className="flex gap-2">
