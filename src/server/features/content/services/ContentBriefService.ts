@@ -45,12 +45,19 @@ async function getContentBrief(
     projectId: string;
     keyword: string;
     locationCode?: number;
+    serpLocationCode?: number;
+    serpLanguageCode?: string;
   },
   billingCustomer: BillingCustomerContext,
 ): Promise<ContentBrief> {
   const keyword = input.keyword.trim().toLowerCase();
   const locationCode = input.locationCode ?? DEFAULT_LOCATION_CODE;
   const languageCode = getLanguageCode(locationCode);
+  // Only the internal ranking-competitors lookup ever gets a different
+  // (possibly local/metro) geo than the rest of this brief -- see this
+  // field's own doc comment in contentBriefRequestSchema.
+  const serpLocationCode = input.serpLocationCode ?? locationCode;
+  const serpLanguageCode = input.serpLanguageCode ?? languageCode;
 
   const cacheKey = await buildCacheKey("content:brief", {
     organizationId: billingCustomer.organizationId,
@@ -58,12 +65,18 @@ async function getContentBrief(
     keyword,
     locationCode,
     languageCode,
+    // Included so a metro-scoped competitors fetch and a national one for
+    // the SAME (keyword, locationCode) never share a cache entry -- without
+    // this, whichever scope ran first would silently serve its competitors
+    // list to the other.
+    serpLocationCode,
+    serpLanguageCode,
   });
   const recordRun = () =>
     AnalysisRunService.record({
       projectId: input.projectId,
       feature: RUN_FEATURES.contentBrief,
-      params: { keyword, locationCode },
+      params: { keyword, locationCode, serpLocationCode },
       cacheKey,
       label: keyword,
     });
@@ -75,7 +88,12 @@ async function getContentBrief(
   }
 
   const overview = await SerpOverviewService.getSerpOverview(
-    { projectId: input.projectId, keyword, locationCode },
+    {
+      projectId: input.projectId,
+      keyword,
+      locationCode: serpLocationCode,
+      languageCode: serpLanguageCode,
+    },
     billingCustomer,
   );
 

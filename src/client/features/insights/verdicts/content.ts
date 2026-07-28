@@ -143,6 +143,15 @@ type ContentVerdictInput = {
   /** Total People-Also-Ask questions checked, for the same reason
    *  `totalSubtopics` is needed above. */
   totalQuestions: number;
+  /**
+   * The metro the analyzed competitor pages were ranked in (Task 6), when
+   * the brief's ranking-pages lookup resolved to a LOCAL geo -- every
+   * dimension this verdict reads (target length, subtopics, questions) is
+   * derived from that same competitor set, so a local scope qualifies the
+   * whole read, not just one clause. Optional so every pre-Task-6
+   * caller/test keeps compiling unchanged.
+   */
+  areaLabel?: string | null;
 };
 
 export function buildContentVerdict(input: ContentVerdictInput): Verdict {
@@ -177,7 +186,13 @@ export function buildContentVerdict(input: ContentVerdictInput): Verdict {
   const actions = dimensions
     .map((dimension) => dimension.action)
     .filter((action): action is NonNullable<typeof action> => action != null);
-  const read = `Your draft for "${input.keyword}" ${joinWithAnd(dimensions.map((d) => d.clause))}.`;
+  const bareRead = `Your draft for "${input.keyword}" ${joinWithAnd(dimensions.map((d) => d.clause))}.`;
+  // Every dimension above traces back to the same analyzed competitor set,
+  // so a local scope qualifies the whole sentence -- see `areaLabel`'s own
+  // doc comment.
+  const read = input.areaLabel
+    ? `In ${input.areaLabel}, ${bareRead.charAt(0).toLowerCase()}${bareRead.slice(1)}`
+    : bareRead;
 
   const tone: Verdict["tone"] =
     gapCount === 0
