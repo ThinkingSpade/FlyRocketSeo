@@ -23,6 +23,12 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import {
+  useTargetAreaScope,
+  type TargetAreaScope,
+} from "@/client/features/geo/useTargetAreaScope";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -117,6 +123,11 @@ export function ContentOptimizerPage({
   // The URL's own `loc` param always wins; the project's configured market
   // only fills in for a tab opened with no location in the URL at all.
   const activeLocation = locationCode ?? market.locationCode;
+  // The header ScopeControl's own state -- a SEPARATE concept from the
+  // country-only `locationInput` field below, which stays untouched here.
+  // Must never be read into `run`'s key or `briefQuery`'s queryKey; wiring
+  // the chosen area into the actual fetch is Task 6's job.
+  const targetAreaScope = useTargetAreaScope(projectId, activeLocation);
 
   const suggestions = useProjectSuggestions(projectId, "under-clicked");
   const handoff = useHandoff(projectId);
@@ -286,7 +297,8 @@ export function ContentOptimizerPage({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
-      <ContentOptimizerHeading />
+      <ContentOptimizerHeading scope={targetAreaScope} />
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
@@ -598,18 +610,21 @@ export function ContentOptimizerPage({
   );
 }
 
-function ContentOptimizerHeading() {
+function ContentOptimizerHeading({ scope }: { scope: TargetAreaScope }) {
   return (
-    <div>
-      <h1 className="flex items-center gap-2 text-xl font-semibold">
-        <NotebookPen className="size-5" />
-        Content Optimizer
-      </h1>
-      <p className="text-sm text-base-content/60">
-        Build a data-backed content brief from the pages that actually rank:
-        target length, subtopics to cover, terms to include, and the questions
-        searchers ask.
-      </p>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          <NotebookPen className="size-5" />
+          Content Optimizer
+        </h1>
+        <p className="text-sm text-base-content/60">
+          Build a data-backed content brief from the pages that actually rank:
+          target length, subtopics to cover, terms to include, and the questions
+          searchers ask.
+        </p>
+      </div>
+      <ScopeControl area={scope.area} onChange={scope.onChange} />
     </div>
   );
 }
