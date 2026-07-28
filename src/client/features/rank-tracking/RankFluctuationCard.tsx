@@ -16,23 +16,13 @@ import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import {
+  BREADTH_PATTERN_LABEL,
   buildRankFluctuationVerdict,
   describeTransition,
   type BreadthPattern,
   type KeywordMovement,
   type RankFluctuationResult,
 } from "./rankFluctuation";
-
-// Short, at-a-glance label per pattern for the headline tile -- the full
-// reasoning (with exact counts) lives in the NextStepsCard sentence below it.
-const PATTERN_LABEL: Record<BreadthPattern, string> = {
-  none: "Steady",
-  "broad-down": "Broad drop",
-  "broad-up": "Broad gain",
-  "isolated-down": "Isolated drop",
-  "isolated-up": "Isolated gain",
-  mixed: "Mixed",
-};
 
 // Mirrors the verdict's own tone per pattern (see rankFluctuation.ts):
 // broad-down is the one genuinely bad-news pattern, isolated-down and mixed
@@ -110,7 +100,7 @@ export function RankFluctuationCard({
           <InsightTile
             icon={Waves}
             label="Breadth"
-            value={PATTERN_LABEL[result.breadth.pattern]}
+            value={BREADTH_PATTERN_LABEL[result.breadth.pattern]}
             hint={`${result.breadth.trackedCount} keywords compared`}
             tone={PATTERN_TONE[result.breadth.pattern]}
           />

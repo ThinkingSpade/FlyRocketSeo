@@ -598,3 +598,29 @@ export function describeTransition(
   const sign = delta > 0 ? "+" : "";
   return `#${previousPosition} → #${currentPosition} (${sign}${delta})`;
 }
+
+/**
+ * Short, at-a-glance label per breadth pattern for RankFluctuationCard's
+ * headline tile -- the full reasoning (with exact counts) lives in the
+ * verdict sentence below it (movementRead/noneVerdict above).
+ *
+ * Finding A8: "none" used to read "Steady", but "none" only means no
+ * keyword individually crossed SIGNIFICANT_MOVE_THRESHOLD (5+ places) or a
+ * tracked-depth boundary -- it does NOT mean nothing moved. Ten or more
+ * keywords could all shift four places in the same direction (below the
+ * per-keyword significance bar) and this pattern would still be "none",
+ * even though noneVerdict's own sentence correctly says "moved
+ * significantly", never "steady" or "unchanged". "Steady" as a headline
+ * overclaimed stillness the detail sentence never asserted. "No
+ * significant moves" mirrors that same qualifier and is equally true
+ * whether nothing moved at all or everything moved by a uniform,
+ * sub-threshold amount.
+ */
+export const BREADTH_PATTERN_LABEL: Record<BreadthPattern, string> = {
+  none: "No significant moves",
+  "broad-down": "Broad drop",
+  "broad-up": "Broad gain",
+  "isolated-down": "Isolated drop",
+  "isolated-up": "Isolated gain",
+  mixed: "Mixed",
+};

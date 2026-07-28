@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  BREADTH_PATTERN_LABEL,
   buildRankFluctuationVerdict,
   describeTransition,
   type KeywordMovement,
@@ -194,6 +195,56 @@ describe("describeTransition (finding 9)", () => {
     const description = describeTransition(input, trackedDepth);
     expect(description).toBe(expected);
     expect(description).not.toContain("Not ranking");
+  });
+});
+
+describe("BREADTH_PATTERN_LABEL headline matches the detailed verdict (finding A8)", () => {
+  it("does not call the 'none' pattern Steady", () => {
+    expect(BREADTH_PATTERN_LABEL.none).not.toBe("Steady");
+    expect(BREADTH_PATTERN_LABEL.none.toLowerCase()).not.toContain("steady");
+  });
+
+  it("the exact failing input: ten keywords all moving 10->14 gets a headline that matches the 'moved significantly' detail, not 'Steady'", () => {
+    // The exact failing input from finding A8: ten or more keywords all move
+    // from position 10 to 14 -- a uniform, real shift, but each individual
+    // move (|delta| = 4) falls just under SIGNIFICANT_MOVE_THRESHOLD (5), so
+    // the breadth pattern is "none". The detail sentence correctly hedges
+    // ("moved significantly"); the headline must say the same thing, not
+    // flatly assert stillness.
+    const moves = Array.from({ length: 12 }, (_, i) => ({
+      id: `k${i}`,
+      previous: 10,
+      current: 14,
+    }));
+    const result = buildRankFluctuationVerdict(buildSnapshots(moves), DEPTH);
+
+    expect(result.breadth.pattern).toBe("none");
+    expect(result.verdict.read).toContain("moved significantly");
+    expect(result.verdict.read).not.toContain("Steady");
+
+    const headline = BREADTH_PATTERN_LABEL[result.breadth.pattern];
+    expect(headline).not.toBe("Steady");
+    expect(headline.toLowerCase()).toContain("significant");
+  });
+
+  it("still uses the same 'no significant moves' headline when nothing moved at all", () => {
+    // A genuinely flat set (every keyword identical both runs) also lands on
+    // "none" -- the headline must read true in this case too, not just the
+    // uniform-sub-threshold-shift case above.
+    const flatMoves = Array.from({ length: 12 }, (_, i) => ({
+      id: `flat${i}`,
+      previous: 10,
+      current: 10,
+    }));
+    const result = buildRankFluctuationVerdict(
+      buildSnapshots(flatMoves),
+      DEPTH,
+    );
+
+    expect(result.breadth.pattern).toBe("none");
+    expect(BREADTH_PATTERN_LABEL[result.breadth.pattern]).toBe(
+      "No significant moves",
+    );
   });
 });
 
