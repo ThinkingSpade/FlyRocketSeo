@@ -35,8 +35,12 @@ export interface RankFluctuationSnapshot {
   checkedAt: string;
   trackingKeywordId: string;
   keyword: string;
-  /** null = checked but not found in the top 20 -- a real result, not a
-   *  missing measurement. See the rank_snapshots comment in app.schema.ts. */
+  /** null = checked but not found within the config's tracked depth -- a
+   *  real result, not a missing measurement. (app.schema.ts's own comment
+   *  says "top 20", but serpDepth is actually configurable per config,
+   *  10-100 and defaulting to 40 -- see RankTrackingConfigModal.tsx /
+   *  clampSerpDepth in serp.ts -- so this model takes the real depth as a
+   *  parameter rather than repeating that stale "20".) */
   position: number | null;
 }
 
@@ -51,8 +55,8 @@ export interface KeywordMovement {
   /**
    * Positions gained (positive) or lost (negative), only when both runs have
    * a real position. Null for "entered"/"left": the keyword is known to have
-   * crossed the top-20 boundary, but not by how much, and inventing a number
-   * here would be a claim the snapshots can't back up.
+   * crossed the tracked-depth boundary, but not by how much, and inventing a
+   * number here would be a claim the snapshots can't back up.
    */
   delta: number | null;
 }
@@ -108,12 +112,14 @@ const BROAD_MOVEMENT_SHARE = 0.3;
 // more movers.
 const MIXED_MINORITY_SHARE = 0.35;
 
-// position: null means "not found in the top 20" (see RankFluctuationSnapshot
-// above) -- one past that is the boundary a keyword must cross to flip
-// between a real position and null.
-const TRACKED_DEPTH = 20;
-
-const SIGNIFICANCE_CRITERIA = `${SIGNIFICANT_MOVE_THRESHOLD}+ places, or in/out of the top 20 entirely`;
+/** Wording shared by every verdict sentence for what counts as a real move:
+ *  a big enough in-range shift, or crossing the tracked-depth boundary
+ *  entirely. `trackedDepth` is the caller's actual configured serpDepth
+ *  (10-100), never a hardcoded number -- see RankFluctuationSnapshot's doc
+ *  on why "top 20" isn't safe to assume. */
+function significanceCriteria(trackedDepth: number): string {
+  return `${SIGNIFICANT_MOVE_THRESHOLD}+ places, or in/out of the top ${trackedDepth} entirely`;
+}
 
 const MONTH_ABBREVIATIONS = [
   "Jan",
@@ -178,8 +184,8 @@ function classifyDirection(
   previous: number | null,
   current: number | null,
 ): MovementDirection {
-  // null -> null: still not found in the top 20 both times. Nothing changed,
-  // and this must never be counted as movement.
+  // null -> null: still outside the tracked depth both times. Nothing
+  // changed, and this must never be counted as movement.
   if (previous == null && current == null) return "flat";
   if (previous == null) return "entered";
   if (current == null) return "left";
@@ -220,34 +226,43 @@ function buildMovements(
 /**
  * Lower-bound movement size, used only to order movers -- never surfaced as
  * a claimed number. For "entered"/"left" this is the minimum distance implied
- * by crossing the top-20 boundary (e.g. leaving from #18 must be a drop of
- * at least 3), which is true even though the exact drop isn't knowable.
+ * by crossing the tracked-depth boundary (e.g. leaving from #18 of a 20-deep
+ * config must be a drop of at least 3), which is true even though the exact
+ * drop isn't knowable.
  */
-function sortMagnitude(movement: KeywordMovement): number {
+function sortMagnitude(
+  movement: KeywordMovement,
+  trackedDepth: number,
+): number {
   if (movement.delta != null) return Math.abs(movement.delta);
+  const boundary = trackedDepth + 1; // one past the tracked depth
   if (movement.direction === "entered" && movement.currentPosition != null) {
-    return TRACKED_DEPTH + 1 - movement.currentPosition;
+    return boundary - movement.currentPosition;
   }
   if (movement.direction === "left" && movement.previousPosition != null) {
-    return TRACKED_DEPTH + 1 - movement.previousPosition;
+    return boundary - movement.previousPosition;
   }
   return 0;
 }
 
 /** Biggest move first; ties broken alphabetically for a deterministic,
  *  testable order. */
-function rankMovers(movements: KeywordMovement[]): KeywordMovement[] {
+function rankMovers(
+  movements: KeywordMovement[],
+  trackedDepth: number,
+): KeywordMovement[] {
   return movements.toSorted((a, b) => {
-    const magnitudeDiff = sortMagnitude(b) - sortMagnitude(a);
+    const magnitudeDiff =
+      sortMagnitude(b, trackedDepth) - sortMagnitude(a, trackedDepth);
     return magnitudeDiff !== 0
       ? magnitudeDiff
       : a.keyword.localeCompare(b.keyword);
   });
 }
 
-/** Crossing the top-20 boundary is inherently meaningful regardless of
- *  magnitude (see the module doc on 18->null); an in-range move only counts
- *  once it clears SIGNIFICANT_MOVE_THRESHOLD. */
+/** Crossing the tracked-depth boundary is inherently meaningful regardless
+ *  of magnitude (see the module doc on 18->null); an in-range move only
+ *  counts once it clears SIGNIFICANT_MOVE_THRESHOLD. */
 function isSignificant(movement: KeywordMovement): boolean {
   if (movement.direction === "entered" || movement.direction === "left") {
     return true;
@@ -293,11 +308,12 @@ function broadVerdict(
   count: number,
   trackedCount: number,
   dateLabel: string,
+  criteria: string,
 ): Verdict {
   const read =
     `${count} of ${trackedCount} keywords moved ${direction} significantly ` +
-    `(${SIGNIFICANCE_CRITERIA}) since ${dateLabel} -- movement this broad ` +
-    `usually points to something site-wide rather than any one page.`;
+    `(${criteria}) since ${dateLabel} -- movement this broad usually points ` +
+    `to something site-wide rather than any one page.`;
   return {
     read,
     // A broad decline is the headline risk here; a broad improvement is
@@ -321,12 +337,13 @@ function isolatedVerdict(
   count: number,
   trackedCount: number,
   dateLabel: string,
+  criteria: string,
 ): Verdict {
   const read =
     `${count} of ${trackedCount} keywords moved ${direction} significantly ` +
-    `(${SIGNIFICANCE_CRITERIA}) since ${dateLabel}, with the rest holding ` +
-    `steady -- a move this isolated usually traces back to that specific ` +
-    `page rather than anything site-wide.`;
+    `(${criteria}) since ${dateLabel}, with the rest holding steady -- a ` +
+    `move this isolated usually traces back to that specific page rather ` +
+    `than anything site-wide.`;
   return {
     read,
     // An isolated decline is worth a page-level look; an isolated gain on
@@ -349,21 +366,26 @@ function mixedVerdict(
   upCount: number,
   downCount: number,
   dateLabel: string,
+  criteria: string,
 ): Verdict {
   return {
     read:
       `${upCount} keyword${upCount === 1 ? "" : "s"} moved up and ${downCount} ` +
-      `moved down significantly (${SIGNIFICANCE_CRITERIA}) since ${dateLabel}, ` +
-      `with neither direction standing out -- this doesn't read as one ` +
+      `moved down significantly (${criteria}) since ${dateLabel}, with ` +
+      `neither direction standing out -- this doesn't read as one ` +
       `site-wide event.`,
     tone: "mixed",
     actions: [],
   };
 }
 
-function noneVerdict(trackedCount: number, dateLabel: string): Verdict {
+function noneVerdict(
+  trackedCount: number,
+  dateLabel: string,
+  criteria: string,
+): Verdict {
   return {
-    read: `None of the ${trackedCount} tracked keywords moved significantly (${SIGNIFICANCE_CRITERIA}) since ${dateLabel}.`,
+    read: `None of the ${trackedCount} tracked keywords moved significantly (${criteria}) since ${dateLabel}.`,
     tone: "good",
     actions: [],
   };
@@ -376,26 +398,40 @@ function assertNeverPattern(pattern: never): never {
   throw new Error(`Unhandled breadth pattern: ${String(pattern)}`);
 }
 
+/** Bundles the breadth-verdict inputs that would otherwise be five separate
+ *  parameters, to stay under the project's max-params lint limit. */
+interface BreadthContext {
+  upCount: number;
+  downCount: number;
+  trackedCount: number;
+  dateLabel: string;
+  criteria: string;
+}
+
 function buildBreadthVerdict(
   pattern: BreadthPattern,
-  upCount: number,
-  downCount: number,
-  trackedCount: number,
-  dateLabel: string,
+  context: BreadthContext,
 ): Verdict {
+  const { upCount, downCount, trackedCount, dateLabel, criteria } = context;
   switch (pattern) {
     case "none":
-      return noneVerdict(trackedCount, dateLabel);
+      return noneVerdict(trackedCount, dateLabel, criteria);
     case "broad-down":
-      return broadVerdict("down", downCount, trackedCount, dateLabel);
+      return broadVerdict("down", downCount, trackedCount, dateLabel, criteria);
     case "broad-up":
-      return broadVerdict("up", upCount, trackedCount, dateLabel);
+      return broadVerdict("up", upCount, trackedCount, dateLabel, criteria);
     case "isolated-down":
-      return isolatedVerdict("down", downCount, trackedCount, dateLabel);
+      return isolatedVerdict(
+        "down",
+        downCount,
+        trackedCount,
+        dateLabel,
+        criteria,
+      );
     case "isolated-up":
-      return isolatedVerdict("up", upCount, trackedCount, dateLabel);
+      return isolatedVerdict("up", upCount, trackedCount, dateLabel, criteria);
     case "mixed":
-      return mixedVerdict(upCount, downCount, dateLabel);
+      return mixedVerdict(upCount, downCount, dateLabel, criteria);
     default:
       return assertNeverPattern(pattern);
   }
@@ -406,9 +442,14 @@ function buildBreadthVerdict(
  * device (the caller picks which device's snapshots to pass in -- see the
  * module doc) and classifies the breadth of movement across the tracked
  * keyword set.
+ *
+ * `trackedDepth` must be the config's actual serpDepth: it defines both what
+ * "entered"/"left" means (crossing that exact boundary) and the wording of
+ * the verdict, so a wrong value here would misdescribe the data.
  */
 export function buildRankFluctuationVerdict(
   snapshots: RankFluctuationSnapshot[],
+  trackedDepth: number,
 ): RankFluctuationResult {
   const runs = groupByRun(snapshots);
 
@@ -426,7 +467,7 @@ export function buildRankFluctuationVerdict(
   const latestRun = runs[runs.length - 1];
   const movements = buildMovements(previousRun, latestRun);
   const trackedCount = movements.length;
-  const movers = rankMovers(movements);
+  const movers = rankMovers(movements, trackedDepth);
 
   if (trackedCount < MIN_TRACKED_FOR_BREADTH_CLAIM) {
     return {
@@ -446,15 +487,16 @@ export function buildRankFluctuationVerdict(
   const downCount = significant.length - upCount;
   const pattern = classifyBreadth(upCount, downCount, trackedCount);
   const dateLabel = formatCheckedDate(latestRun.checkedAt);
+  const criteria = significanceCriteria(trackedDepth);
 
   return {
-    verdict: buildBreadthVerdict(
-      pattern,
+    verdict: buildBreadthVerdict(pattern, {
       upCount,
       downCount,
       trackedCount,
       dateLabel,
-    ),
+      criteria,
+    }),
     movers,
     breadth: { trackedCount, upCount, downCount, pattern },
   };

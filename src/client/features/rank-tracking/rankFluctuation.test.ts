@@ -7,6 +7,11 @@ import {
 const RUN_1 = "2026-07-01 09:00:00";
 const RUN_2 = "2026-07-08 09:00:00";
 
+// The config's configured serpDepth used throughout this suite. Chosen as a
+// concrete, valid value (RankTrackingConfigModal allows 10-100) rather than
+// assumed -- see rankFluctuation.ts's doc on why "top 20" is never hardcoded.
+const DEPTH = 20;
+
 function snap(
   runId: string,
   checkedAt: string,
@@ -49,7 +54,7 @@ function buildSnapshots(
 
 describe("buildRankFluctuationVerdict", () => {
   it("returns unknown with no completed runs at all", () => {
-    const result = buildRankFluctuationVerdict([]);
+    const result = buildRankFluctuationVerdict([], DEPTH);
     expect(result.verdict.tone).toBe("unknown");
     expect(result.verdict.read).toBe(
       "No rank checks have completed yet, so there is nothing to compare.",
@@ -64,7 +69,10 @@ describe("buildRankFluctuationVerdict", () => {
   });
 
   it("returns unknown with only one completed run", () => {
-    const result = buildRankFluctuationVerdict([snap("r1", RUN_1, "k1", 5)]);
+    const result = buildRankFluctuationVerdict(
+      [snap("r1", RUN_1, "k1", 5)],
+      DEPTH,
+    );
     expect(result.verdict.tone).toBe("unknown");
     expect(result.verdict.read).toBe(
       "Only one completed check is on record -- at least two are needed before movement can be compared.",
@@ -79,7 +87,7 @@ describe("buildRankFluctuationVerdict", () => {
       previous: null,
       current: null,
     }));
-    const result = buildRankFluctuationVerdict(buildSnapshots(moves));
+    const result = buildRankFluctuationVerdict(buildSnapshots(moves), DEPTH);
 
     expect(result.breadth).toEqual({
       trackedCount: 12,
@@ -93,9 +101,10 @@ describe("buildRankFluctuationVerdict", () => {
     expect(result.verdict.tone).toBe("good");
   });
 
-  it("classifies 18 -> null as leaving the top 20, without inventing a delta", () => {
+  it("classifies 18 -> null as leaving the tracked depth, without inventing a delta", () => {
     const result = buildRankFluctuationVerdict(
       buildSnapshots([{ id: "k1", previous: 18, current: null }], 9),
+      DEPTH,
     );
     const mover = result.movers.find((m) => m.trackingKeywordId === "k1");
     expect(mover).toMatchObject({
@@ -110,9 +119,10 @@ describe("buildRankFluctuationVerdict", () => {
     expect(result.breadth.downCount).toBe(1);
   });
 
-  it("classifies null -> 18 as entering the top 20, without inventing a delta", () => {
+  it("classifies null -> 18 as entering the tracked depth, without inventing a delta", () => {
     const result = buildRankFluctuationVerdict(
       buildSnapshots([{ id: "k1", previous: null, current: 18 }], 9),
+      DEPTH,
     );
     const mover = result.movers.find((m) => m.trackingKeywordId === "k1");
     expect(mover).toMatchObject({
@@ -131,7 +141,10 @@ describe("buildRankFluctuationVerdict", () => {
       previous: 5,
       current: 15,
     }));
-    const result = buildRankFluctuationVerdict(buildSnapshots(dropping, 17));
+    const result = buildRankFluctuationVerdict(
+      buildSnapshots(dropping, 17),
+      DEPTH,
+    );
 
     expect(result.breadth).toMatchObject({
       trackedCount: 40,
@@ -155,6 +168,7 @@ describe("buildRankFluctuationVerdict", () => {
   it("reports an isolated large drop as isolated, not broad", () => {
     const result = buildRankFluctuationVerdict(
       buildSnapshots([{ id: "big-drop", previous: 3, current: 18 }], 39),
+      DEPTH,
     );
 
     expect(result.breadth).toMatchObject({
@@ -182,6 +196,7 @@ describe("buildRankFluctuationVerdict", () => {
     }));
     const result = buildRankFluctuationVerdict(
       buildSnapshots([...up, ...down], 22),
+      DEPTH,
     );
 
     expect(result.breadth).toMatchObject({
@@ -203,7 +218,7 @@ describe("buildRankFluctuationVerdict", () => {
       previous: 5,
       current: 15,
     }));
-    const result = buildRankFluctuationVerdict(buildSnapshots(moves));
+    const result = buildRankFluctuationVerdict(buildSnapshots(moves), DEPTH);
 
     expect(result.verdict.tone).toBe("unknown");
     expect(result.verdict.read).toBe(
@@ -217,7 +232,7 @@ describe("buildRankFluctuationVerdict", () => {
       previous: 5,
       current: 15,
     }));
-    const result = buildRankFluctuationVerdict(buildSnapshots(moves));
+    const result = buildRankFluctuationVerdict(buildSnapshots(moves), DEPTH);
 
     expect(result.verdict.tone).not.toBe("unknown");
     expect(result.breadth.trackedCount).toBe(10);
@@ -229,6 +244,7 @@ describe("buildRankFluctuationVerdict", () => {
         { id: "k1", previous: 5, current: 15 },
         { id: "k2", previous: 3, current: null },
       ]),
+      DEPTH,
     );
 
     expect(result.verdict.tone).toBe("unknown");
@@ -246,7 +262,7 @@ describe("buildRankFluctuationVerdict", () => {
       8,
     );
     snapshots.push(snap("r2", RUN_2, "k-new", 4));
-    const result = buildRankFluctuationVerdict(snapshots);
+    const result = buildRankFluctuationVerdict(snapshots, DEPTH);
 
     expect(
       result.movers.find((m) => m.trackingKeywordId === "k-new"),
@@ -263,6 +279,7 @@ describe("buildRankFluctuationVerdict", () => {
         ],
         8,
       ),
+      DEPTH,
     );
 
     expect(
@@ -282,6 +299,7 @@ describe("buildRankFluctuationVerdict", () => {
         { id: "entered-at-3", previous: null, current: 3 }, // >= 18 bound
         { id: "small-down", previous: 10, current: 13 }, // delta -3
       ]),
+      DEPTH,
     );
 
     expect(result.movers.map((m) => m.trackingKeywordId)).toEqual([
@@ -290,6 +308,37 @@ describe("buildRankFluctuationVerdict", () => {
       "small-up",
       "small-down",
     ]);
+  });
+
+  it("uses the caller's tracked depth for the minimum bound, not a hardcoded 20", () => {
+    // Depth 40: leaving from #35 must have moved at least (41 - 35) = 6, and
+    // should rank above a known move of 5 -- but would be a nonsensical
+    // negative bound if depth were wrongly assumed to be 20.
+    const result = buildRankFluctuationVerdict(
+      buildSnapshots([
+        { id: "left-from-35", previous: 35, current: null },
+        { id: "known-move-5", previous: 10, current: 5 },
+      ]),
+      40,
+    );
+
+    expect(result.movers.map((m) => m.trackingKeywordId)).toEqual([
+      "left-from-35",
+      "known-move-5",
+    ]);
+  });
+
+  it("names the caller's tracked depth in the verdict sentence", () => {
+    const dropping = Array.from({ length: 23 }, (_, i) => ({
+      id: `drop${i}`,
+      previous: 5,
+      current: 15,
+    }));
+    const result = buildRankFluctuationVerdict(
+      buildSnapshots(dropping, 17),
+      40,
+    );
+    expect(result.verdict.read).toContain("in/out of the top 40 entirely");
   });
 
   it("stays isolated one point below the broad-share floor, at the 10-keyword minimum", () => {
@@ -302,6 +351,7 @@ describe("buildRankFluctuationVerdict", () => {
         ],
         8,
       ),
+      DEPTH,
     );
     expect(result.breadth.pattern).toBe("isolated-down");
   });
@@ -317,6 +367,7 @@ describe("buildRankFluctuationVerdict", () => {
         ],
         7,
       ),
+      DEPTH,
     );
     expect(result.breadth.pattern).toBe("broad-down");
   });
