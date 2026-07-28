@@ -81,7 +81,16 @@ export function getTopicCoverage(
   };
 }
 
-function landingTopic(page: string): string | null {
+/**
+ * Exported so the server-side target-area detection cascade
+ * (`src/server/features/geo/services/TargetAreaService.ts`) can turn a local
+ * landing page's own URL into a candidate place name to look up against
+ * `geo_locations` (e.g. ".../service-areas/plano" -> "plano") -- reusing
+ * this rather than re-deriving the same last-path-segment logic a second
+ * time server-side. Behaviour is unchanged for `buildPromptStarters`, its
+ * original (and only other) caller.
+ */
+export function landingTopic(page: string): string | null {
   try {
     const segments = new URL(page).pathname
       .split("/")
@@ -151,8 +160,17 @@ export function getBrandedQueries(
     .slice(0, 5);
 }
 
+/**
+ * `Pick<ProjectGscReport, "queryPages">` rather than the full report: this
+ * function only ever reads `report.queryPages`, and the target-area
+ * detection cascade needs to call it from the server with just that slice
+ * (a plain `["query","page"]` GSC fetch), not the whole striking-distance /
+ * totals / countries report `getSearchPerformanceReport` builds for the
+ * Search Performance tab. A full `ProjectGscReport` still satisfies this
+ * narrower type, so every existing caller is unaffected.
+ */
 export function getLocalLandingPages(
-  report: ProjectGscReport,
+  report: Pick<ProjectGscReport, "queryPages">,
   locationCandidates: Array<string | null | undefined>,
 ): LocalLandingPage[] {
   const locations = locationCandidates

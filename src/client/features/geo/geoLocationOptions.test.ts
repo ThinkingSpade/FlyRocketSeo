@@ -38,6 +38,9 @@ const SPRINGFIELD_IL: GeoSearchResult = {
   type: "City",
   stateCode: "IL",
   countryCode: 2840,
+  // No DMA in this fixture set rolls this row up (only DALLAS_FORT_WORTH_DMA
+  // below is a metro), so null is the honest value here, not a placeholder.
+  parentMetroCode: null,
 };
 const DALLAS_FORT_WORTH_DMA: GeoSearchResult = {
   // Real Dallas-Ft. Worth DMA code, verified against seeded production data
@@ -48,6 +51,9 @@ const DALLAS_FORT_WORTH_DMA: GeoSearchResult = {
   type: "DMA Region",
   stateCode: "TX",
   countryCode: 2840,
+  // A metro has no "parent metro" of its own — see
+  // geoLocationSeedMapping.ts's resolveParentMetroCode for the same rule.
+  parentMetroCode: null,
 };
 const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
   SPRINGFIELD_IL,
@@ -57,6 +63,7 @@ const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
     type: "City",
     stateCode: "MO",
     countryCode: 2840,
+    parentMetroCode: null,
   },
   {
     code: 21_176,
@@ -64,6 +71,7 @@ const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
     type: "State",
     stateCode: "TX",
     countryCode: 2840,
+    parentMetroCode: null,
   },
   {
     code: 2840,
@@ -71,6 +79,7 @@ const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
     type: "Country",
     stateCode: null,
     countryCode: 2840,
+    parentMetroCode: null,
   },
   {
     code: 1_006_932,
@@ -84,6 +93,7 @@ const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
     type: "City",
     stateCode: null,
     countryCode: 2250,
+    parentMetroCode: null,
   },
   DALLAS_FORT_WORTH_DMA,
 ];
