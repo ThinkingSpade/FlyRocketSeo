@@ -36,10 +36,19 @@ type SearchInput = {
  * `ESCAPE '\'` pairs with buildNamePrefixPattern's own escaping of `%`/`_`/`\`
  * so a place name containing one of those characters can't be mismatched
  * against as a wildcard.
+ *
+ * Wrapping `name` in `lower(...)` and lowercasing the query in JS before
+ * building the pattern, rather than bare `name LIKE pattern`, is required for
+ * dialect parity: SQLite's LIKE is ASCII case-insensitive by default, but
+ * PostgreSQL's is case-SENSITIVE, so a seeded Postgres row "Dallas" would
+ * match `query: "dal"` on D1 and silently return zero rows on Postgres.
+ * Matches KeywordResearchRepository.buildSavedKeywordWhere's identical
+ * `lower(column) like <pre-lowercased literal>` convention, used there for
+ * the exact same cross-dialect reason, rather than relying on collation.
  */
 async function search(input: SearchInput): Promise<GeoLocationSearchResult[]> {
-  const pattern = buildNamePrefixPattern(input.query);
-  const nameMatches = sql`${geoLocations.name} LIKE ${pattern} ESCAPE '\'`;
+  const pattern = buildNamePrefixPattern(input.query.toLocaleLowerCase());
+  const nameMatches = sql`lower(${geoLocations.name}) LIKE ${pattern} ESCAPE '\'`;
   const where =
     input.countryCode === undefined
       ? nameMatches
