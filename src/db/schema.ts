@@ -70,4 +70,6 @@ export const {
   gscConnections,
   gscOauthConfig,
   geoLocations,
+  gbpConnections,
+  gbpScheduledPosts,
 } = schema;

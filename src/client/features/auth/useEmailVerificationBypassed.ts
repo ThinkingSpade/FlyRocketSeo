@@ -12,6 +12,7 @@ const CLIENT_RUNTIME_CONFIG_STALE_TIME = 5 * 60 * 1000;
 type ClientRuntimeConfigQueryData = {
   emailVerificationBypassed: boolean;
   aiExplainAvailable: boolean;
+  gbpWriteAvailable: boolean;
   source: "prerender" | "runtime";
 };
 
@@ -40,6 +41,7 @@ function useClientRuntimeConfigQuery({
     initialData: {
       emailVerificationBypassed: prerenderedConfig.emailVerificationBypassed,
       aiExplainAvailable: prerenderedConfig.aiExplainAvailable,
+      gbpWriteAvailable: prerenderedConfig.gbpWriteAvailable,
       source: "prerender",
     },
     // The prerendered value is only a first-paint hint. Mark it stale so the
@@ -86,4 +88,17 @@ export function useEmailVerificationBypassed({
 export function useAiExplainAvailable(): boolean {
   const { data, isResolved } = useClientRuntimeConfigQuery();
   return isResolved && data.aiExplainAvailable;
+}
+
+/**
+ * Gates GBP writing (scheduled posts + listing updates, src/client/features/
+ * local-seo). Same trust rule as the two flags above: a prerendered `true` is
+ * only a hint until the live refetch (owned by ClientRuntimeConfigBootstrap)
+ * confirms it against the real Worker env -- otherwise a build made before
+ * GBP_GOOGLE_CLIENT_ID/SECRET were set would hide the feature forever, even
+ * after the operator finishes Cloud Console + verification and adds them.
+ */
+export function useGbpWriteAvailable(): boolean {
+  const { data, isResolved } = useClientRuntimeConfigQuery();
+  return isResolved && data.gbpWriteAvailable;
 }

@@ -641,3 +641,99 @@ export const geoLocations = sqliteTable(
     index("geo_locations_type_idx").on(table.type),
   ],
 );
+
+// ============================================================================
+// Google Business Profile write tables
+// ============================================================================
+// The read-only GBP Audit (gbpAudit.ts) sources its data from DataForSEO and
+// needs none of this. These tables back the WRITE half of Local SEO: posts
+// and listing-field updates via Google's own Business Profile API, gated on
+// the business.manage OAuth scope (see src/shared/gbp.ts and
+// src/server/features/gbp/selfHostedGbpOAuth.ts).
+
+// Which Google Business Profile location a project publishes/patches to, and
+// whose business.manage grant to use for it. Mirrors gscConnections' shape
+// exactly, but is a wholly SEPARATE table/grant -- connecting, reconnecting or
+// disconnecting GBP must never read or write a project's gscConnections row.
+export const gbpConnections = sqliteTable(
+  "gbp_connections",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    organizationId: text("organization_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    // Google resource name, e.g. "accounts/123456789/locations/987654321".
+    // Never normalize -- the Business Profile API matches it verbatim.
+    locationName: text("location_name").notNull(),
+    // Whose google-business-profile grant getAccessToken should use.
+    connectedByUserId: text("connected_by_user_id").notNull(),
+    connectedAccountEmail: text("connected_account_email"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // One connected location per project in v1; reconnecting replaces the row.
+    uniqueIndex("gbp_connections_project_idx").on(table.projectId),
+    index("gbp_connections_organization_idx").on(table.organizationId),
+  ],
+);
+
+/**
+ * One row per composed Google Business Profile post, queued for scheduled
+ * publish. `status` is the state machine gbpPostSchedule.ts's pure model
+ * reasons over (draft -> scheduled -> publishing -> published, with a
+ * terminal failed) -- see that module for the due-selection, ordering, and
+ * double-publish-guard logic, and GbpWriteService for what actually flips
+ * these transitions.
+ */
+export const gbpScheduledPosts = sqliteTable(
+  "gbp_scheduled_posts",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    content: text("content").notNull(),
+    mediaUrl: text("media_url"),
+    // Google's LocalPost.CallToAction.ActionType values, minus
+    // ACTION_TYPE_UNSPECIFIED (a null column already means "no CTA").
+    callToActionType: text("call_to_action_type", {
+      enum: ["BOOK", "ORDER", "SHOP", "LEARN_MORE", "SIGN_UP", "CALL"],
+    }),
+    // Required for every actionType except CALL (Google rejects a url on a
+    // CALL action) -- see gbpPostSchedule.ts's validateScheduledPost.
+    callToActionUrl: text("call_to_action_url"),
+    scheduledAt: text("scheduled_at").notNull(),
+    status: text("status", {
+      enum: ["draft", "scheduled", "publishing", "published", "failed"],
+    })
+      .notNull()
+      .default("draft"),
+    // Google's resource name for the created post, once published.
+    publishedPostId: text("published_post_id"),
+    errorMessage: text("error_message"),
+    createdByUserId: text("created_by_user_id").notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("gbp_scheduled_posts_project_idx").on(table.projectId),
+    // Drives "which posts are due" (gbpPostSchedule.ts's selectDuePosts) --
+    // without it, finding due posts across all projects is a full table scan.
+    index("gbp_scheduled_posts_status_scheduled_idx").on(
+      table.status,
+      table.scheduledAt,
+    ),
+  ],
+);

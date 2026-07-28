@@ -37,6 +37,7 @@ import { Route as AppHelpDataforseoApiKeyRouteImport } from './routes/_app/help/
 import { Route as ProjectPProjectIdRouteRouteImport } from './routes/_project/p/$projectId/route'
 import { Route as ProjectPProjectIdIndexRouteImport } from './routes/_project/p/$projectId/index'
 import { Route as ApiGscOauthCallbackRouteImport } from './routes/api/gsc/oauth/callback'
+import { Route as ApiGbpOauthCallbackRouteImport } from './routes/api/gbp/oauth/callback'
 import { Route as ProjectPProjectIdTrendsRouteImport } from './routes/_project/p/$projectId/trends'
 import { Route as ProjectPProjectIdSettingsRouteImport } from './routes/_project/p/$projectId/settings'
 import { Route as ProjectPProjectIdSerpRouteImport } from './routes/_project/p/$projectId/serp'
@@ -204,6 +205,11 @@ const ProjectPProjectIdIndexRoute = ProjectPProjectIdIndexRouteImport.update({
 const ApiGscOauthCallbackRoute = ApiGscOauthCallbackRouteImport.update({
   id: '/api/gsc/oauth/callback',
   path: '/api/gsc/oauth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiGbpOauthCallbackRoute = ApiGbpOauthCallbackRouteImport.update({
+  id: '/api/gbp/oauth/callback',
+  path: '/api/gbp/oauth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProjectPProjectIdTrendsRoute = ProjectPProjectIdTrendsRouteImport.update({
@@ -411,6 +417,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/serp': typeof ProjectPProjectIdSerpRoute
   '/p/$projectId/settings': typeof ProjectPProjectIdSettingsRoute
   '/p/$projectId/trends': typeof ProjectPProjectIdTrendsRoute
+  '/api/gbp/oauth/callback': typeof ApiGbpOauthCallbackRoute
   '/api/gsc/oauth/callback': typeof ApiGscOauthCallbackRoute
   '/p/$projectId/': typeof ProjectPProjectIdIndexRoute
   '/p/$projectId/rank-tracking/$configId': typeof ProjectPProjectIdRankTrackingConfigIdRoute
@@ -462,6 +469,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/serp': typeof ProjectPProjectIdSerpRoute
   '/p/$projectId/settings': typeof ProjectPProjectIdSettingsRoute
   '/p/$projectId/trends': typeof ProjectPProjectIdTrendsRoute
+  '/api/gbp/oauth/callback': typeof ApiGbpOauthCallbackRoute
   '/api/gsc/oauth/callback': typeof ApiGscOauthCallbackRoute
   '/p/$projectId': typeof ProjectPProjectIdIndexRoute
   '/p/$projectId/rank-tracking/$configId': typeof ProjectPProjectIdRankTrackingConfigIdRoute
@@ -521,6 +529,7 @@ export interface FileRoutesById {
   '/_project/p/$projectId/serp': typeof ProjectPProjectIdSerpRoute
   '/_project/p/$projectId/settings': typeof ProjectPProjectIdSettingsRoute
   '/_project/p/$projectId/trends': typeof ProjectPProjectIdTrendsRoute
+  '/api/gbp/oauth/callback': typeof ApiGbpOauthCallbackRoute
   '/api/gsc/oauth/callback': typeof ApiGscOauthCallbackRoute
   '/_project/p/$projectId/': typeof ProjectPProjectIdIndexRoute
   '/_project/p/$projectId/rank-tracking/$configId': typeof ProjectPProjectIdRankTrackingConfigIdRoute
@@ -577,6 +586,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/serp'
     | '/p/$projectId/settings'
     | '/p/$projectId/trends'
+    | '/api/gbp/oauth/callback'
     | '/api/gsc/oauth/callback'
     | '/p/$projectId/'
     | '/p/$projectId/rank-tracking/$configId'
@@ -628,6 +638,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/serp'
     | '/p/$projectId/settings'
     | '/p/$projectId/trends'
+    | '/api/gbp/oauth/callback'
     | '/api/gsc/oauth/callback'
     | '/p/$projectId'
     | '/p/$projectId/rank-tracking/$configId'
@@ -686,6 +697,7 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/serp'
     | '/_project/p/$projectId/settings'
     | '/_project/p/$projectId/trends'
+    | '/api/gbp/oauth/callback'
     | '/api/gsc/oauth/callback'
     | '/_project/p/$projectId/'
     | '/_project/p/$projectId/rank-tracking/$configId'
@@ -705,6 +717,7 @@ export interface RootRouteChildren {
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   ApiAutumnSplatRoute: typeof ApiAutumnSplatRoute
+  ApiGbpOauthCallbackRoute: typeof ApiGbpOauthCallbackRoute
   ApiGscOauthCallbackRoute: typeof ApiGscOauthCallbackRoute
 }
 
@@ -904,6 +917,13 @@ declare module '@tanstack/react-router' {
       path: '/api/gsc/oauth/callback'
       fullPath: '/api/gsc/oauth/callback'
       preLoaderRoute: typeof ApiGscOauthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/gbp/oauth/callback': {
+      id: '/api/gbp/oauth/callback'
+      path: '/api/gbp/oauth/callback'
+      fullPath: '/api/gbp/oauth/callback'
+      preLoaderRoute: typeof ApiGbpOauthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_project/p/$projectId/trends': {
@@ -1287,6 +1307,7 @@ const rootRouteChildren: RootRouteChildren = {
     Char91DotwellKnownChar93OpenaiAppsChallengeRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   ApiAutumnSplatRoute: ApiAutumnSplatRoute,
+  ApiGbpOauthCallbackRoute: ApiGbpOauthCallbackRoute,
   ApiGscOauthCallbackRoute: ApiGscOauthCallbackRoute,
 }
 export const routeTree = rootRouteImport
