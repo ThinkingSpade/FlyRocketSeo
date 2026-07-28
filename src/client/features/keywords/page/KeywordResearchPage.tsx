@@ -312,6 +312,7 @@ export function KeywordResearchPage(input: Props) {
         <KeywordResearchSearchBar
           controller={controller}
           suggestions={suggestions}
+          targetArea={targetAreaScope.area}
         />
 
         <RestoreRail
