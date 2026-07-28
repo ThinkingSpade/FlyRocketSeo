@@ -321,7 +321,10 @@ export const rankSnapshots = sqliteTable(
     trackingKeywordId: text("tracking_keyword_id").notNull(),
     keyword: text("keyword").notNull(),
     device: text("device", { enum: ["desktop", "mobile"] }).notNull(),
-    position: integer("position"), // null = not found in top 20
+    // null = the target wasn't found within this config's configured search
+    // depth, which is per-config (10-100, default 40 — see
+    // rankTrackingConfigs.serpDepth), NOT a fixed "top 20".
+    position: integer("position"),
     url: text("url"),
     serpFeatures: text("serp_features"), // JSON array of feature type strings
     checkedAt: text("checked_at")
