@@ -132,10 +132,34 @@ describe("buildGbpAudit - review count", () => {
     expect(check.detail).toContain("0");
   });
 
+  // Group B: the fail-branch fix used to assert review count/recency were "a
+  // major local-ranking signal" -- an unmeasured magnitude claim. Reworded to
+  // read as widely-held practice rather than a measured fact, without being
+  // hedged into mush.
+  it("does not overclaim review count/recency as a 'major' signal", () => {
+    const audit = buildGbpAudit(baseInput({ reviewsCount: 0 }));
+    const check = expectCheck(audit, "reviewsCount", "fail");
+    expect(check.fix?.toLowerCase()).not.toContain("major");
+    expect(check.fix).toContain("Ask recent customers for a Google review");
+  });
+
   it("warns on a low review count", () => {
     const audit = buildGbpAudit(baseInput({ reviewsCount: 3 }));
     const check = expectCheck(audit, "reviewsCount", "warn");
     expect(check.detail).toContain("3");
+  });
+
+  // Group B: "a thin base for trust or ranking" and "build both trust and
+  // ranking signal" read as measured fact rather than widely-held practice.
+  it("reads the thin-review-base warning as practice, not measured fact", () => {
+    const audit = buildGbpAudit(baseInput({ reviewsCount: 5 }));
+    const check = expectCheck(audit, "reviewsCount", "warn");
+    expect(check.detail).toBe(
+      "Only 5 reviews on this profile -- typically too thin a base to carry much trust or ranking weight.",
+    );
+    expect(check.fix).toBe(
+      "Keep asking customers for reviews -- more (and more recent) reviews generally help build both trust and ranking signal.",
+    );
   });
 
   it("passes a healthy review count", () => {
@@ -153,6 +177,18 @@ describe("buildGbpAudit - rating", () => {
   it("warns below the healthy rating threshold", () => {
     const audit = buildGbpAudit(baseInput({ rating: 3.5 }));
     expectCheck(audit, "rating", "warn");
+  });
+
+  // Group B: "below the 4-star level most consumers filter for" claimed
+  // specific, unmeasured consumer behavior. Reworded as a commonly-cited
+  // threshold rather than an assertion about what "most consumers" do.
+  it("does not overclaim what 'most consumers' do below the healthy rating", () => {
+    const audit = buildGbpAudit(baseInput({ rating: 3.9 }));
+    const check = expectCheck(audit, "rating", "warn");
+    expect(check.detail.toLowerCase()).not.toContain("most consumers");
+    expect(check.detail).toBe(
+      "The average rating is 3.9, below the 4-star level commonly cited as a consumer filter threshold.",
+    );
   });
 
   it("passes at the healthy rating threshold", () => {
@@ -248,6 +284,33 @@ describe("buildGbpAudit - owner response rate", () => {
     expectCheck(audit, "ownerResponse", "unknown");
   });
 
+  it("does not claim 'no reviews yet' when reviewsCount contradicts an empty loaded array (finding A2)", () => {
+    // The exact failing input from finding A2: reviews loaded as an empty
+    // array, but the profile's own reviewsCount says 25 exist. Before the
+    // fix this said "This profile has no reviews yet" regardless -- directly
+    // contradicting the profile's own count instead of reporting that the
+    // load came back empty.
+    const audit = buildGbpAudit(baseInput({ reviews: [], reviewsCount: 25 }));
+    const check = expectCheck(audit, "ownerResponse", "unknown");
+    expect(check.detail.toLowerCase()).not.toContain("no reviews yet");
+    expect(check.detail).toContain("25");
+    expect(check.fix).toBeNull();
+  });
+
+  it("does not claim 'no reviews yet' when the review count is unknown either (finding A2)", () => {
+    const audit = buildGbpAudit(baseInput({ reviews: [], reviewsCount: null }));
+    const check = expectCheck(audit, "ownerResponse", "unknown");
+    expect(check.detail.toLowerCase()).not.toContain("no reviews yet");
+  });
+
+  it("still reports genuinely no reviews when reviewsCount agrees with the empty array (finding A2)", () => {
+    const audit = buildGbpAudit(baseInput({ reviews: [], reviewsCount: 0 }));
+    const check = expectCheck(audit, "ownerResponse", "unknown");
+    expect(check.detail).toBe(
+      "This profile has no reviews yet, so there is nothing to respond to.",
+    );
+  });
+
   it("fails at a 0% response rate and names the review count", () => {
     const audit = buildGbpAudit(
       baseInput({ reviews: reviewsWithReplies(3, 0) }),
@@ -257,6 +320,18 @@ describe("buildGbpAudit - owner response rate", () => {
     expect(check.detail).toContain("3");
   });
 
+  // Group B: the fail fix flatly asserted responsiveness "is a visible trust
+  // signal" as measured fact. Reworded to read as widely-held practice.
+  it("reads the 0%-response fix as widely-held practice, not measured fact", () => {
+    const audit = buildGbpAudit(
+      baseInput({ reviews: reviewsWithReplies(3, 0) }),
+    );
+    const check = expectCheck(audit, "ownerResponse", "fail");
+    expect(check.fix).toBe(
+      "Reply to every review, starting with the most recent -- responsiveness is widely seen as a visible trust signal to prospective customers.",
+    );
+  });
+
   it("warns at a low response rate with the exact percentage", () => {
     const audit = buildGbpAudit(
       baseInput({ reviews: reviewsWithReplies(7, 1) }),
@@ -264,6 +339,18 @@ describe("buildGbpAudit - owner response rate", () => {
     // 1 of 7 replied = 14.2857...% -> rounds to 14%.
     const check = expectCheck(audit, "ownerResponse", "warn");
     expect(check.detail).toContain("14%");
+  });
+
+  // Group B: the warn fix flatly asserted Google notices responsiveness --
+  // an internal-ranking-mechanism claim this app cannot establish.
+  it("does not assert what Google's algorithm notices as established fact", () => {
+    const audit = buildGbpAudit(
+      baseInput({ reviews: reviewsWithReplies(7, 1) }),
+    );
+    const check = expectCheck(audit, "ownerResponse", "warn");
+    expect(check.fix).toBe(
+      "Reply to more reviews -- responsiveness is widely treated as a trust signal to customers, and commonly believed to factor into Google's local ranking too.",
+    );
   });
 
   it("passes at a high response rate", () => {

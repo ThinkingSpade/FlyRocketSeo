@@ -131,6 +131,18 @@ describe("buildGbpAudit - categories", () => {
     expect(check.detail).toContain("Plumber");
   });
 
+  // Group B: "every unused slot IS reach left on the table" asserted a
+  // specific, unmeasured claim as fact. Reworded as commonly-held practice.
+  it("reads the additional-categories fix as commonly-held practice, not asserted fact", () => {
+    const audit = buildGbpAudit(
+      baseInput({ category: "Plumber", additionalCategories: [] }),
+    );
+    const check = expectCheck(audit, "category", "warn");
+    expect(check.fix).toBe(
+      "Add additional categories -- Google allows up to 9, and unused slots are commonly considered reach left on the table.",
+    );
+  });
+
   it("treats a null additionalCategories as unknown once the primary category is known", () => {
     // Finding 3's failing input: DataForSEO returns a category but omits
     // additional_categories entirely -- distinct from returning it empty,
@@ -179,6 +191,17 @@ describe("buildGbpAudit - imagery", () => {
   it("warns when the main image is genuinely empty", () => {
     const audit = buildGbpAudit(baseInput({ mainImage: "" }));
     expectCheck(audit, "mainImage", "warn");
+  });
+
+  // Group B: "get substantially more customer engagement" claimed a specific,
+  // unmeasured magnitude. Reworded to read as a general tendency instead.
+  it("does not overclaim the magnitude of a photo's engagement effect", () => {
+    const audit = buildGbpAudit(baseInput({ mainImage: "" }));
+    const check = expectCheck(audit, "mainImage", "warn");
+    expect(check.fix?.toLowerCase()).not.toContain("substantially");
+    expect(check.fix).toBe(
+      "Add a primary photo -- listings with a photo typically see more customer engagement than ones without.",
+    );
   });
 
   it("passes when a main image is set", () => {

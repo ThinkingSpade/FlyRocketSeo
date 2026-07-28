@@ -203,7 +203,7 @@ function buildCategoryCheck(
     return categoryCheck(
       "warn",
       `Only the primary category ("${primary}") is set; no additional categories are used.`,
-      `Add additional categories -- Google allows up to ${MAX_ADDITIONAL_CATEGORIES}, and every unused slot is reach left on the table.`,
+      `Add additional categories -- Google allows up to ${MAX_ADDITIONAL_CATEGORIES}, and unused slots are commonly considered reach left on the table.`,
     );
   }
   const count = additionalCategories.length;
@@ -279,7 +279,7 @@ function buildMainImageCheck(mainImage: string | null): GbpCheck {
   return mainImageCheck(
     "warn",
     "No main photo is set on this profile.",
-    "Add a primary photo -- profiles with photos get substantially more customer engagement.",
+    "Add a primary photo -- listings with a photo typically see more customer engagement than ones without.",
   );
 }
 
@@ -392,14 +392,14 @@ function buildReviewsCountCheck(reviewsCount: number | null): GbpCheck {
     return reviewsCountCheck(
       "fail",
       "This profile has 0 reviews.",
-      "Ask recent customers for a Google review -- review count and recency are a major local-ranking signal.",
+      "Ask recent customers for a Google review -- review count and recency are widely treated as a local-ranking signal.",
     );
   }
   if (reviewsCount < MIN_HEALTHY_REVIEWS_COUNT) {
     return reviewsCountCheck(
       "warn",
-      `Only ${reviewsCount} review${reviewsCount === 1 ? "" : "s"} on this profile, a thin base for trust or ranking.`,
-      "Keep asking customers for reviews -- more (and more recent) reviews build both trust and ranking signal.",
+      `Only ${reviewsCount} review${reviewsCount === 1 ? "" : "s"} on this profile -- typically too thin a base to carry much trust or ranking weight.`,
+      "Keep asking customers for reviews -- more (and more recent) reviews generally help build both trust and ranking signal.",
     );
   }
   return reviewsCountCheck("pass", `${reviewsCount} reviews, a healthy base.`);
@@ -413,7 +413,7 @@ function buildRatingCheck(rating: number | null): GbpCheck {
   if (rating < MIN_HEALTHY_RATING) {
     return ratingCheck(
       "warn",
-      `The average rating is ${rating}, below the ${MIN_HEALTHY_RATING}-star level most consumers filter for.`,
+      `The average rating is ${rating}, below the ${MIN_HEALTHY_RATING}-star level commonly cited as a consumer filter threshold.`,
       "Ask satisfied customers for reviews to lift the average, and follow up on recent negative reviews.",
     );
   }
@@ -434,6 +434,7 @@ function hasOwnerReply(review: { ownerAnswer: string | null }): boolean {
 
 function buildOwnerResponseCheck(
   reviews: Array<{ ownerAnswer: string | null }> | undefined,
+  reviewsCount: number | null,
 ): GbpCheck {
   const ownerResponseCheck = checkKind(
     "ownerResponse",
@@ -447,10 +448,13 @@ function buildOwnerResponseCheck(
     );
   }
   if (reviews.length === 0) {
-    return ownerResponseCheck(
-      "unknown",
-      "This profile has no reviews yet, so there is nothing to respond to.",
-    );
+    // Genuinely no reviews only when reviewsCount agrees (finding A2) --
+    // otherwise the load came back empty, not the profile.
+    const detail =
+      reviewsCount === 0
+        ? "This profile has no reviews yet, so there is nothing to respond to."
+        : `Review data loaded empty, but this profile's review count ${reviewsCount == null ? "isn't available either" : `shows ${reviewsCount} review${reviewsCount === 1 ? "" : "s"}`} -- the reviews failed to load rather than there being none.`;
+    return ownerResponseCheck("unknown", detail);
   }
 
   const answered = reviews.filter(hasOwnerReply).length;
@@ -461,14 +465,14 @@ function buildOwnerResponseCheck(
     return ownerResponseCheck(
       "fail",
       `0 of ${reviews.length} reviews have an owner reply.`,
-      "Reply to every review, starting with the most recent -- responsiveness is a visible trust signal to prospective customers.",
+      "Reply to every review, starting with the most recent -- responsiveness is widely seen as a visible trust signal to prospective customers.",
     );
   }
   if (rate < MIN_HEALTHY_RESPONSE_RATE) {
     return ownerResponseCheck(
       "warn",
       `${pct}% of ${reviews.length} reviews have an owner reply, a thin response rate.`,
-      "Reply to more reviews -- responsiveness is a trust signal both customers and Google notice.",
+      "Reply to more reviews -- responsiveness is widely treated as a trust signal to customers, and commonly believed to factor into Google's local ranking too.",
     );
   }
   return ownerResponseCheck(
@@ -519,7 +523,7 @@ export function buildGbpAudit(input: GbpAuditInput): GbpAudit {
     buildWebsiteCheck(input.url, input.domain),
     buildReviewsCountCheck(input.reviewsCount),
     buildRatingCheck(input.rating),
-    buildOwnerResponseCheck(input.reviews),
+    buildOwnerResponseCheck(input.reviews, input.reviewsCount),
   ].toSorted((a, b) => b.weight - a.weight);
 
   return { score: computeScore(checks), checks };
