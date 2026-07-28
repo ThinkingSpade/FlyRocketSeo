@@ -665,9 +665,24 @@ export const gbpConnections = sqliteTable(
     organizationId: text("organization_id")
       .notNull()
       .references(() => organization.id, { onDelete: "cascade" }),
-    // Google resource name, e.g. "accounts/123456789/locations/987654321".
-    // Never normalize -- the Business Profile API matches it verbatim.
+    // Bare Business Information API resource name, e.g. "locations/987654321"
+    // -- that API's own locations.get/locations.patch require exactly this
+    // shape (NOT prefixed with "accounts/*"). Never normalize -- Google's API
+    // matches it verbatim.
     locationName: text("location_name").notNull(),
+    // The account's OWN resource name, e.g. "accounts/123456789" -- kept
+    // separate from locationName because the two Google APIs this feature
+    // calls disagree on what a location's parent path looks like: Business
+    // Information API's locations.get/patch take the bare locationName above,
+    // while the legacy v4 accounts.locations.localPosts.create requires the
+    // composed "accounts/*/locations/*" parent, which only exists by joining
+    // this column with locationName. Nullable so pre-existing rows (from
+    // before this column existed) don't need a backfill -- GbpWriteService
+    // treats a null value as "needs reconnect" rather than composing a
+    // broken parent. Not to be confused with Google's OWN "accountName"
+    // field, which is a human-readable business name -- see
+    // GbpConnectionService's GbpLocationOption.accountDisplayName for that.
+    accountName: text("account_name"),
     // Whose google-business-profile grant getAccessToken should use.
     connectedByUserId: text("connected_by_user_id").notNull(),
     connectedAccountEmail: text("connected_account_email"),

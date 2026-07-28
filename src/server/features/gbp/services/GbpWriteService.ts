@@ -174,6 +174,20 @@ async function publishPost(input: {
   const gate = await requireWritableConnection(input.projectId);
   if ("blocked" in gate) return gate.blocked;
 
+  // gbp_connections.accountName is nullable ONLY to accommodate rows saved
+  // before that column existed (see its schema comment) -- without it there
+  // is no way to compose the v4 localPosts parent, so refuse up front rather
+  // than calling Google with a broken URL and failing the post.
+  if (!gate.connection.accountName) {
+    return {
+      ok: false,
+      reason: "not_connected",
+      message:
+        "This location was connected before account information was captured -- reconnect it on the Local SEO tab, then try again.",
+    };
+  }
+  const gbpAccountName = gate.connection.accountName;
+
   const post = await GbpScheduledPostRepository.getById(input.postId);
   if (!post || post.projectId !== input.projectId) {
     throw new AppError(
@@ -205,26 +219,32 @@ async function publishPost(input: {
     const client = createGbpClient({
       userId: gate.connection.connectedByUserId,
     });
-    const result = await client.createLocalPost(gate.connection.locationName, {
-      summary: claimed.content,
-      ...(claimed.callToActionType
-        ? {
-            callToAction: {
-              actionType: claimed.callToActionType,
-              ...(claimed.callToActionUrl
-                ? { url: claimed.callToActionUrl }
-                : {}),
-            },
-          }
-        : {}),
-      ...(claimed.mediaUrl
-        ? {
-            media: [
-              { mediaFormat: "PHOTO" as const, sourceUrl: claimed.mediaUrl },
-            ],
-          }
-        : {}),
-    });
+    const result = await client.createLocalPost(
+      {
+        accountName: gbpAccountName,
+        locationName: gate.connection.locationName,
+      },
+      {
+        summary: claimed.content,
+        ...(claimed.callToActionType
+          ? {
+              callToAction: {
+                actionType: claimed.callToActionType,
+                ...(claimed.callToActionUrl
+                  ? { url: claimed.callToActionUrl }
+                  : {}),
+              },
+            }
+          : {}),
+        ...(claimed.mediaUrl
+          ? {
+              media: [
+                { mediaFormat: "PHOTO" as const, sourceUrl: claimed.mediaUrl },
+              ],
+            }
+          : {}),
+      },
+    );
     await GbpScheduledPostRepository.markPublished(
       claimed.id,
       result.publishedPostName,

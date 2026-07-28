@@ -19,6 +19,11 @@ async function upsert(input: {
   projectId: string;
   organizationId: string;
   locationName: string;
+  // The account's own resource name ("accounts/123") -- see the column
+  // comment on gbpConnections.accountName for why this is separate from
+  // locationName. Required here (every NEW connection provides it); the
+  // column stays nullable only to accommodate rows written before it existed.
+  accountName: string;
   connectedByUserId: string;
   connectedAccountEmail: string | null;
 }): Promise<GbpConnection> {
@@ -29,6 +34,7 @@ async function upsert(input: {
       target: gbpConnections.projectId,
       set: {
         locationName: input.locationName,
+        accountName: input.accountName,
         organizationId: input.organizationId,
         connectedByUserId: input.connectedByUserId,
         connectedAccountEmail: input.connectedAccountEmail,

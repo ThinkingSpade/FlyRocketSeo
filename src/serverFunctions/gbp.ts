@@ -17,6 +17,11 @@ const projectScopedSchema = z.object({ projectId: z.string().min(1) });
 const postIdSchema = projectScopedSchema.extend({ postId: z.string().min(1) });
 const setConnectionSchema = projectScopedSchema.extend({
   locationName: z.string().min(1),
+  // The chosen location's account resource name ("accounts/123") -- required
+  // so publishing can later compose the v4 localPosts parent. See
+  // gbpConnections.accountName's column comment for why this is separate
+  // from locationName.
+  accountName: z.string().min(1),
 });
 const startSelfHostedLinkSchema = z.object({
   callbackURL: z.string().min(1),
@@ -111,6 +116,7 @@ export const setGbpConnection = createServerFn({ method: "POST" })
       projectId: context.projectId,
       organizationId: context.organizationId,
       locationName: data.locationName,
+      accountName: data.accountName,
       userId: context.userId,
       userEmail: context.userEmail,
     });

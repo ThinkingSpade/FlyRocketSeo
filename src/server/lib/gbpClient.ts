@@ -189,15 +189,23 @@ export function createGbpClient(opts: { userId: string }) {
     },
 
     /** My Business v4 `accounts.locations.localPosts.create` -- still the
-     *  current documented endpoint for post creation. `locationName` is the
-     *  full resource name ("accounts/*\/locations/*"). Returns the created
-     *  post's own resource name for gbp_scheduled_posts.published_post_id. */
+     *  current documented endpoint for post creation:
+     *  https://developers.google.com/my-business/reference/rest/v4/accounts.locations.localPosts/create
+     *  Its `parent` path parameter MUST be the composed
+     *  "accounts/{accountId}/locations/{locationId}" form -- unlike the
+     *  Business Information API (getLocation/patchLocation below), which
+     *  takes the bare "locations/{locationId}" form. The two pieces are
+     *  passed separately (rather than one pre-joined string) so this is the
+     *  one place that knows how to combine them, matching how they're stored
+     *  separately on gbp_connections (locationName + accountName). Returns
+     *  the created post's own resource name for
+     *  gbp_scheduled_posts.published_post_id. */
     async createLocalPost(
-      locationName: string,
+      location: { accountName: string; locationName: string },
       post: GbpLocalPostInput,
     ): Promise<{ publishedPostName: string }> {
       const data = await request<{ name: string }>(
-        `${MY_BUSINESS_V4_BASE}/${locationName}/localPosts`,
+        `${MY_BUSINESS_V4_BASE}/${location.accountName}/${location.locationName}/localPosts`,
         {
           method: "POST",
           body: { languageCode: "en", topicType: "STANDARD", ...post },
@@ -242,10 +250,16 @@ export function createGbpClient(opts: { userId: string }) {
       );
     },
 
-    /** Business Information API `categories.search` -- resolves a free-text
+    /** Business Information API `categories.list` -- resolves a free-text
      *  name (what a user types) to Google's fixed category taxonomy IDs,
      *  which is what `categories.primaryCategory`/`additionalCategories`
-     *  actually require (a bare display name is rejected). */
+     *  actually require (a bare display name is rejected). There is no
+     *  `categories:search` method -- `regionCode`, `languageCode`, and `view`
+     *  are all REQUIRED query parameters:
+     *  https://developers.google.com/my-business/reference/businessinformation/rest/v1/categories/list
+     *  `view: "BASIC"` is enough -- GbpCategorySuggestion only needs
+     *  `displayName` and the category id (both included in BASIC); `FULL`
+     *  would also return service-type metadata this feature never uses. */
     async searchCategories(input: {
       query: string;
       regionCode: string;
@@ -254,10 +268,11 @@ export function createGbpClient(opts: { userId: string }) {
       const params = new URLSearchParams({
         regionCode: input.regionCode,
         languageCode: input.languageCode,
+        view: "BASIC",
         filter: `displayName=${input.query}`,
       });
       const data = await request<{ categories?: GbpCategorySuggestion[] }>(
-        `${BUSINESS_INFORMATION_BASE}/categories:search?${params.toString()}`,
+        `${BUSINESS_INFORMATION_BASE}/categories?${params.toString()}`,
       );
       return data.categories ?? [];
     },

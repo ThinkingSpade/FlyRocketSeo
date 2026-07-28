@@ -55,8 +55,12 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
   });
 
   const setConnectionMutation = useMutation({
-    mutationFn: (locationName: string) =>
-      setGbpConnection({ data: { projectId, locationName } }),
+    // Both the location AND its account's resource name are required --
+    // publishing later composes the v4 localPosts parent by joining them
+    // (see GbpWriteService.publishPost), so saving one without the other
+    // would silently produce a connection posts can never publish to.
+    mutationFn: (input: { locationName: string; accountName: string }) =>
+      setGbpConnection({ data: { projectId, ...input } }),
     onSuccess: () => {
       toast.success("Google Business Profile connected");
       setPicking(false);
@@ -113,10 +117,19 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
             locations={locationsQuery.data?.locations ?? []}
             selectedLocationName={selectedLocationName}
             onSelect={setSelectedLocationName}
-            onSave={() =>
-              selectedLocationName &&
-              setConnectionMutation.mutate(selectedLocationName)
-            }
+            onSave={() => {
+              // The <select> only carries the location's own name -- look up
+              // the full candidate to recover its account resource name too.
+              const location = locationsQuery.data?.locations.find(
+                (candidate) => candidate.name === selectedLocationName,
+              );
+              if (location) {
+                setConnectionMutation.mutate({
+                  locationName: location.name,
+                  accountName: location.accountName,
+                });
+              }
+            }}
             saving={setConnectionMutation.isPending}
             onReconnect={() => void startGbpLink(window.location.href)}
             onRetry={() => void locationsQuery.refetch()}

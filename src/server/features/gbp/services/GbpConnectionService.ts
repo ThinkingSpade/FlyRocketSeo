@@ -25,10 +25,23 @@ import {
 // consumes listAvailableLocationsForUser's return structurally, and the
 // client (GbpLocationPicker.tsx) deliberately declares its OWN local shape
 // rather than importing a server-only module into client code.
+//
+// Two DIFFERENT "account name" concepts live side by side here, both sourced
+// from Google's Account resource (see gbpClient.ts's GbpAccount) -- easy to
+// conflate because Google itself names them confusingly close:
+//  - accountName: the account's RESOURCE name ("accounts/123", from Google's
+//    Account.name). This is what gets persisted (gbp_connections.accountName)
+//    and later joined with the location's own resource name to compose the
+//    v4 localPosts parent -- see GbpWriteService.publishPost.
+//  - accountDisplayName: the human-readable business name on the account
+//    (from Google's OWN field literally called Account.accountName, e.g.
+//    "Joe's Pizza LLC"). Shown only in the picker so a grant covering more
+//    than one account is still disambiguable; never stored.
 type GbpLocationOption = {
   name: string;
   title: string;
   accountName: string;
+  accountDisplayName: string;
 };
 
 type GbpLocationsErrorReason = "requires_reconnect" | "temporary";
@@ -94,7 +107,8 @@ async function listAvailableLocationsForUser(userId: string): Promise<{
         locations.push({
           name: location.name,
           title: location.title,
-          accountName: acc.accountName,
+          accountName: acc.name,
+          accountDisplayName: acc.accountName,
         });
       }
     }
@@ -110,6 +124,10 @@ async function setConnection(input: {
   projectId: string;
   organizationId: string;
   locationName: string;
+  // The chosen location's account resource name ("accounts/123") -- see
+  // GbpLocationOption.accountName above. Required so publishing can compose
+  // the v4 localPosts parent later (GbpWriteService.publishPost).
+  accountName: string;
   userId: string;
   userEmail: string;
 }): Promise<GbpConnection> {
@@ -117,6 +135,7 @@ async function setConnection(input: {
     projectId: input.projectId,
     organizationId: input.organizationId,
     locationName: input.locationName,
+    accountName: input.accountName,
     connectedByUserId: input.userId,
     connectedAccountEmail: input.userEmail,
   });

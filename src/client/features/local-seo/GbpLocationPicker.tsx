@@ -4,7 +4,14 @@ import { InsightIcon } from "@/client/components/InsightTile";
 type LocationOption = {
   name: string;
   title: string;
+  // The account's resource name ("accounts/123") -- carried through so
+  // GbpConnectionCard can send it along with the location when saving; never
+  // shown in this UI (see accountDisplayName for that).
   accountName: string;
+  // Human-readable business name for the account, e.g. "Joe's Pizza LLC" --
+  // shown next to each location so a grant covering more than one account is
+  // still disambiguable.
+  accountDisplayName: string;
   isSelected: boolean;
 };
 
@@ -111,7 +118,7 @@ export function GbpLocationPicker({
           </option>
           {locations.map((location) => (
             <option key={location.name} value={location.name}>
-              {location.title} ({location.accountName})
+              {location.title} ({location.accountDisplayName})
             </option>
           ))}
         </select>
