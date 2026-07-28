@@ -11,6 +11,7 @@ import {
   createGbpClient,
   GbpApiError,
   GbpTokenError,
+  isNetworkTransportError,
   type GbpCategorySuggestion,
 } from "@/server/lib/gbpClient";
 import { isGbpWriteConfigured } from "@/server/features/gbp/oauth-config";
@@ -98,26 +99,47 @@ async function requireWritableConnection(
   return { connection };
 }
 
+/**
+ * Classifies a failure from an actual Google-side call (createLocalPost,
+ * patchLocation, getLocation, searchCategories) that has NOT yet succeeded --
+ * every branch here can honestly describe "this call to Google failed",
+ * because it did. Never call this for a failure that happens AFTER a
+ * Google call already succeeded (see publishPost's own two-phase try/catch
+ * below): the write went through, so nothing here -- rejection, an expired
+ * connection -- would be true anymore.
+ */
 function messageForGbpFailure(error: unknown): {
   reason: GbpBlockedReason;
   message: string;
 } {
   if (error instanceof GbpTokenError) {
+    // Final wave item 1: this can mean a genuinely revoked/expired grant,
+    // but getToken() cannot always tell that apart from an unrelated
+    // internal error (see gbpClient.ts's own doc comment on GbpTokenError).
+    // "Reconnect" is still the right remedy either way, but asserting
+    // "expired or was revoked" as an established fact is not.
     return {
       reason: "token_expired",
       message:
-        "Your Google Business Profile connection has expired or was revoked. Reconnect it and try again.",
+        "Couldn't verify your Google Business Profile connection is still valid. Reconnect it and try again.",
     };
   }
   if (error instanceof GbpApiError) {
     return { reason: "api_error", message: error.message };
+  }
+  if (isNetworkTransportError(error)) {
+    return {
+      reason: "api_error",
+      message:
+        "Couldn't reach Google Business Profile. Check your connection and try again.",
+    };
   }
   return {
     reason: "api_error",
     message:
       error instanceof Error
         ? error.message
-        : "Google Business Profile rejected this request.",
+        : "Something went wrong talking to Google Business Profile. Try again.",
   };
 }
 
@@ -225,6 +247,16 @@ async function publishPost(input: {
     };
   }
 
+  // Split deliberately into two try/catches (final wave item 1): whether
+  // Google actually accepted the post determines what an honest failure
+  // message can say. Everything up to and including createLocalPost either
+  // fails before Google saw the request or fails ON Google's own call, so
+  // messageForGbpFailure's classification (built for "a call to Google
+  // failed") is accurate there. Anything failing AFTER createLocalPost
+  // returns is failing on OUR side, after the write already went through --
+  // describing that as Google rejecting the request, or reusing
+  // messageForGbpFailure's classification at all, would be false.
+  let publishedPostName: string;
   try {
     const client = createGbpClient({
       userId: gate.connection.connectedByUserId,
@@ -255,16 +287,32 @@ async function publishPost(input: {
           : {}),
       },
     );
-    await GbpScheduledPostRepository.markPublished(
-      claimed.id,
-      result.publishedPostName,
-    );
-    return { ok: true, publishedPostId: result.publishedPostName };
+    publishedPostName = result.publishedPostName;
   } catch (error) {
     const { reason, message } = messageForGbpFailure(error);
     await GbpScheduledPostRepository.markFailed(claimed.id, message);
     return { ok: false, reason, message };
   }
+
+  try {
+    await GbpScheduledPostRepository.markPublished(
+      claimed.id,
+      publishedPostName,
+    );
+  } catch {
+    // Google ALREADY accepted this post -- createLocalPost above returned
+    // successfully. Left at `publishing` rather than marked `failed`: a
+    // `failed` row reads as "never went out" and would invite a retry that
+    // calls createLocalPost a SECOND time, risking a duplicate post on a
+    // listing that already has this one.
+    return {
+      ok: false,
+      reason: "blocked",
+      message:
+        "Google Business Profile accepted this post, but saving that here failed -- check the profile directly before retrying, to avoid posting it twice.",
+    };
+  }
+  return { ok: true, publishedPostId: publishedPostName };
 }
 
 type PublishDueOutcome = {

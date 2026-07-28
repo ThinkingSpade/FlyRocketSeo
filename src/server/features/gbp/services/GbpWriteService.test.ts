@@ -42,6 +42,10 @@ vi.mock("@/server/lib/gbpClient", () => ({
   createGbpClient: () => ({ createLocalPost: mocks.createLocalPost }),
   GbpApiError: class GbpApiError extends Error {},
   GbpTokenError: class GbpTokenError extends Error {},
+  // None of these tests exercise a transport-level failure -- always false,
+  // same as the real heuristic would say for a plain string/Error/
+  // GbpApiError/GbpTokenError that isn't a fetch-shaped TypeError.
+  isNetworkTransportError: () => false,
 }));
 
 const PROJECT_ID = "11111111-1111-1111-1111-111111111111";
@@ -190,5 +194,132 @@ describe("GbpWriteService.publishPost re-reads after a failed claim (finding A7)
       POST_ID,
       "accounts/123/locations/456/localPosts/1",
     );
+  });
+});
+
+/**
+ * Final wave item 1's last (and most serious) residual: a non-Error
+ * exception ANYWHERE in the publish/update catch path -- including AFTER
+ * Google already accepted the request -- used to report "Google Business
+ * Profile rejected this request." That is always a confident wrong
+ * diagnosis for a non-Error throw (rejection is a specific, established
+ * outcome this code hasn't observed), and it is actively FALSE once
+ * createLocalPost has already returned successfully: the write went
+ * through, so nothing was rejected. These tests pin: (1) createLocalPost
+ * itself failing is still honestly classified (nothing was accepted, so
+ * describing it as a failed Google call is accurate), and (2) a LATER
+ * failure -- after createLocalPost succeeded -- is never described as a
+ * rejection, and never recorded as `failed` (which would invite a retry
+ * that calls createLocalPost a second time, risking a duplicate post).
+ */
+describe("GbpWriteService.publishPost after a successful Google write (final wave item 1)", () => {
+  beforeEach(() => {
+    mocks.isGbpWriteConfigured.mockResolvedValue(true);
+    mocks.connectionGetByProjectId.mockResolvedValue({
+      accountName: "accounts/123",
+      locationName: "locations/456",
+      connectedByUserId: "u1",
+    });
+    mocks.postGetById.mockReset();
+    mocks.claimForPublishing.mockReset();
+    mocks.markPublished.mockReset();
+    mocks.markFailed.mockReset();
+    mocks.createLocalPost.mockReset();
+    mocks.postGetById.mockResolvedValue(post({ status: "scheduled" }));
+    mocks.claimForPublishing.mockResolvedValue(post({ status: "publishing" }));
+  });
+
+  it("does not claim rejection for a non-Error exception when Google's own call is what failed", async () => {
+    // A plain string rejection -- the exact non-Error shape the brief calls
+    // out ("a non-Error exception anywhere in the publish/update catch
+    // path").
+    mocks.createLocalPost.mockRejectedValue("weird non-error throw");
+    const { GbpWriteService } = await import("./GbpWriteService");
+
+    const result = await GbpWriteService.publishPost({
+      postId: POST_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message.toLowerCase()).not.toContain("rejected");
+    }
+    // Nothing was accepted -- this genuinely never reached a published
+    // state, so recording it as failed (unlike the post-success case below)
+    // is honest.
+    expect(mocks.markFailed).toHaveBeenCalled();
+    expect(mocks.markPublished).not.toHaveBeenCalled();
+  });
+
+  it("does not claim Google rejected the request when createLocalPost succeeded but recording it afterward failed", async () => {
+    mocks.createLocalPost.mockResolvedValue({
+      publishedPostName: "accounts/123/locations/456/localPosts/1",
+    });
+    // Same non-Error shape, this time failing the step AFTER Google's call
+    // already succeeded.
+    mocks.markPublished.mockRejectedValue("boom");
+    const { GbpWriteService } = await import("./GbpWriteService");
+
+    const result = await GbpWriteService.publishPost({
+      postId: POST_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message.toLowerCase()).not.toContain("rejected");
+    }
+  });
+
+  it("does not mark the post failed after Google already accepted it (that would invite a duplicate-post retry)", async () => {
+    mocks.createLocalPost.mockResolvedValue({
+      publishedPostName: "accounts/123/locations/456/localPosts/1",
+    });
+    mocks.markPublished.mockRejectedValue(new Error("db blip"));
+    const { GbpWriteService } = await import("./GbpWriteService");
+
+    await GbpWriteService.publishPost({
+      postId: POST_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(mocks.markFailed).not.toHaveBeenCalled();
+  });
+});
+
+describe("GbpWriteService.messageForGbpFailure honesty (final wave item 1)", () => {
+  beforeEach(() => {
+    mocks.isGbpWriteConfigured.mockResolvedValue(true);
+    mocks.connectionGetByProjectId.mockResolvedValue({
+      accountName: "accounts/123",
+      locationName: "locations/456",
+      connectedByUserId: "u1",
+    });
+    mocks.postGetById.mockReset();
+    mocks.claimForPublishing.mockReset();
+    mocks.markFailed.mockReset();
+    mocks.createLocalPost.mockReset();
+    mocks.postGetById.mockResolvedValue(post({ status: "scheduled" }));
+    mocks.claimForPublishing.mockResolvedValue(post({ status: "publishing" }));
+  });
+
+  it("does not assert the connection specifically expired or was revoked for a token error", async () => {
+    const { GbpTokenError } = await import("@/server/lib/gbpClient");
+    mocks.createLocalPost.mockRejectedValue(
+      new GbpTokenError("could not mint a token"),
+    );
+    const { GbpWriteService } = await import("./GbpWriteService");
+
+    const result = await GbpWriteService.publishPost({
+      postId: POST_ID,
+      projectId: PROJECT_ID,
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.message.toLowerCase()).not.toContain("has expired");
+      expect(result.message.toLowerCase()).not.toContain("was revoked");
+    }
   });
 });

@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { createGbpClient } from "./gbpClient";
 
 const mocks = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
@@ -40,6 +41,29 @@ function requireFetchedUrl(call: unknown[] | undefined): string {
     throw new Error("expected gbpClient to call fetch with a string URL");
   }
   return url;
+}
+
+type GbpClient = ReturnType<typeof createGbpClient>;
+
+/** Runs `run` against a fresh gbpClient and returns the Error it rejects
+ *  with -- shared by the operation-aware-messaging and getToken-honesty
+ *  describes below (final wave item 1), so each just supplies which call to
+ *  make and asserts on the resulting message text, rather than repeating
+ *  this same import + try/catch per test. Module-scoped (not defined inside
+ *  a describe) since it captures nothing from any test's local scope. */
+async function rejectedGbpCallError(
+  run: (client: GbpClient) => Promise<unknown>,
+): Promise<Error> {
+  const { createGbpClient: buildClient } = await import("./gbpClient");
+  try {
+    await run(buildClient({ userId: "u1" }));
+  } catch (error) {
+    if (error instanceof Error) return error;
+    throw new Error("expected the gbpClient call to reject with an Error", {
+      cause: error,
+    });
+  }
+  throw new Error("expected the gbpClient call to reject");
 }
 
 describe("gbpClient", () => {
@@ -179,6 +203,87 @@ describe("gbpClient", () => {
     // transient instead of a revoked grant.
     await expect(call).rejects.toBeInstanceOf(TypeError);
     await expect(call).rejects.toMatchObject({ message: "fetch failed" });
+  });
+
+  // Final wave item 1 (the root cause): messageForStatus used to describe
+  // EVERY endpoint's error as being about "this location", regardless of
+  // what actually failed. categories.list is the sharpest example -- it has
+  // no location parameter at all, so calling its 404 "location not found...
+  // unlinked or deleted" was simply wrong, not just imprecise.
+  describe("operation-aware error messages (final wave item 1)", () => {
+    it("does not describe a categories.list 401/403 as being about a location", async () => {
+      mocks.fetch.mockResolvedValue(jsonResponse({ error: "nope" }, 403));
+      const error = await rejectedGbpCallError((client) =>
+        client.searchCategories({
+          query: "Pizza",
+          regionCode: "US",
+          languageCode: "en",
+        }),
+      );
+      expect(error.message.toLowerCase()).not.toContain("location");
+    });
+
+    it("does not claim a location was unlinked or deleted on a categories.list 404 (that call has no location parameter)", async () => {
+      mocks.fetch.mockResolvedValue(jsonResponse({ error: "nope" }, 404));
+      const error = await rejectedGbpCallError((client) =>
+        client.searchCategories({
+          query: "Pizza",
+          regionCode: "US",
+          languageCode: "en",
+        }),
+      );
+      expect(error.message.toLowerCase()).not.toContain("unlinked or deleted");
+      expect(error.message.toLowerCase()).not.toContain("location");
+    });
+
+    it("still honestly names the location for a call that actually names one (patchLocation 404)", async () => {
+      mocks.fetch.mockResolvedValue(jsonResponse({ error: "nope" }, 404));
+      const error = await rejectedGbpCallError((client) =>
+        client.patchLocation(
+          "locations/1",
+          { profile: { description: "New hours" } },
+          ["profile.description"],
+        ),
+      );
+      expect(error.message.toLowerCase()).toContain("unlinked or deleted");
+    });
+
+    it("does not describe an accounts.list 403 as being about a location either", async () => {
+      mocks.fetch.mockResolvedValue(jsonResponse({ error: "nope" }, 403));
+      const error = await rejectedGbpCallError((client) =>
+        client.listAccounts(),
+      );
+      expect(error.message.toLowerCase()).not.toContain("location");
+    });
+  });
+
+  // Final wave item 1: any non-network exception from getAccessToken() was
+  // wrapped as GbpTokenError asserting "grant revoked or expired" -- a
+  // confident diagnosis this code has no way to actually establish. A DB
+  // blip, a bug elsewhere in the auth library, or a genuinely dead grant all
+  // looked identical here; only the wording is what's under test below (the
+  // classification itself -- still GbpTokenError -- is intentionally
+  // unchanged, see GbpConnectionService.classifyGbpError's own tests).
+  describe("getToken honesty (final wave item 1)", () => {
+    it("does not assert the grant was revoked or expired for an unclassifiable getAccessToken exception", async () => {
+      mocks.getAccessToken.mockRejectedValue(
+        new Error("some internal auth-library bug"),
+      );
+      const error = await rejectedGbpCallError((client) =>
+        client.listAccounts(),
+      );
+      expect(error.message.toLowerCase()).not.toContain("revoked");
+      expect(error.message.toLowerCase()).not.toContain("expired");
+    });
+
+    it("does not assert the grant was revoked or expired when the token response is merely missing accessToken", async () => {
+      mocks.getAccessToken.mockResolvedValue({});
+      const error = await rejectedGbpCallError((client) =>
+        client.listAccounts(),
+      );
+      expect(error.message.toLowerCase()).not.toContain("revoked");
+      expect(error.message.toLowerCase()).not.toContain("expired");
+    });
   });
 
   describe("pagination (finding A5)", () => {

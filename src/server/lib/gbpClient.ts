@@ -94,15 +94,77 @@ export function isNetworkTransportError(error: unknown): boolean {
   );
 }
 
-function messageForStatus(status: number, body: string): string {
+/**
+ * What a REST call is actually trying to do -- messageForStatus reads this
+ * so a status code is described honestly for THIS call, instead of every
+ * endpoint sharing one location-flavored sentence regardless of what it
+ * actually touched (the final wave's root cause: a 403 from accounts.list --
+ * before any location is even known -- and a 401/403/404 from
+ * categories.list, which has no location parameter at all, both used to
+ * talk about "this location").
+ */
+type GbpOperation =
+  | "list_accounts"
+  | "list_locations"
+  | "get_location"
+  | "patch_location"
+  | "create_post"
+  | "search_categories";
+
+/** What each operation's error text should call its subject, and whether a
+ *  404 can honestly be read as "this may have been unlinked or deleted" --
+ *  true only for calls that name ONE specific location resource.
+ *  list_accounts/list_locations/search_categories have no single location
+ *  that could have been deleted (search_categories is a taxonomy lookup with
+ *  no location parameter at all), so their 404s fall through to the generic
+ *  status-code message instead of asserting a cause this code cannot
+ *  establish. */
+const GBP_OPERATIONS: Record<
+  GbpOperation,
+  { subject: string; namesOneLocation: boolean }
+> = {
+  list_accounts: {
+    subject: "your Google Business Profile accounts",
+    namesOneLocation: false,
+  },
+  list_locations: {
+    subject: "this account's Business Profile locations",
+    namesOneLocation: false,
+  },
+  get_location: {
+    subject: "this Business Profile location",
+    namesOneLocation: true,
+  },
+  patch_location: {
+    subject: "this Business Profile location",
+    namesOneLocation: true,
+  },
+  create_post: {
+    subject: "this Business Profile location",
+    namesOneLocation: true,
+  },
+  search_categories: {
+    subject: "the Business Profile category list",
+    namesOneLocation: false,
+  },
+};
+
+function messageForStatus(
+  status: number,
+  body: string,
+  operation: GbpOperation,
+): string {
+  const { subject, namesOneLocation } = GBP_OPERATIONS[operation];
   if (status === 401 || status === 403) {
-    return "Google Business Profile denied access to this location (grant revoked, or missing permission on this listing).";
+    return `Google Business Profile denied access to ${subject} (grant revoked, or missing permission).`;
   }
   if (status === 429) {
     return "Google Business Profile rate limit reached. Retry shortly.";
   }
-  if (status === 404) {
-    return "Google Business Profile location not found. It may have been unlinked or deleted on Google's side.";
+  if (status === 404 && namesOneLocation) {
+    const capitalizedSubject =
+      subject.charAt(0).toUpperCase() + subject.slice(1);
+    return `${capitalizedSubject} wasn't found. It may have been unlinked or deleted on Google's side.`;
   }
   return `Google Business Profile API error (${status}): ${body.slice(0, 300)}`;
 }
@@ -183,14 +245,25 @@ export function createGbpClient(opts: { userId: string }) {
       // can read it as transient, the same way it already does for this
       // client's `request()` fetch calls below.
       if (isNetworkTransportError(error)) throw error;
+      // We cannot tell WHY Better Auth's own call failed -- it might be a
+      // revoked/expired grant, but just as easily an unrelated internal
+      // error (a DB blip resolving the stored token, a bug elsewhere in the
+      // auth library). Asserting "grant revoked or expired" for every
+      // unclassifiable exception was a confident diagnosis this code has no
+      // way to actually establish (final wave item 1) -- describe WHAT
+      // happened (a token couldn't be minted), not an unproven WHY. The
+      // original error is still reachable via `cause` for logs.
       throw new GbpTokenError(
-        "Could not mint a Business Profile access token (grant revoked or expired).",
+        "Could not mint a Business Profile access token.",
         error,
       );
     }
     if (!result?.accessToken) {
+      // Same honesty rule: a response shaped without accessToken doesn't by
+      // itself prove the grant is dead -- it could just as easily be a
+      // malformed/unexpected response from the token endpoint.
       throw new GbpTokenError(
-        "Business Profile returned no access token (grant revoked or expired).",
+        "Business Profile's token endpoint did not return an access token.",
       );
     }
     return result.accessToken;
@@ -198,6 +271,7 @@ export function createGbpClient(opts: { userId: string }) {
 
   async function request<T>(
     url: string,
+    operation: GbpOperation,
     init?: { method?: string; body?: unknown },
   ): Promise<T> {
     const token = await getToken();
@@ -214,7 +288,7 @@ export function createGbpClient(opts: { userId: string }) {
       const body = await response.text().catch(() => "");
       throw new GbpApiError(
         response.status,
-        messageForStatus(response.status, body),
+        messageForStatus(response.status, body, operation),
         body,
       );
     }
@@ -235,7 +309,7 @@ export function createGbpClient(opts: { userId: string }) {
         const data = await request<{
           accounts?: GbpAccount[];
           nextPageToken?: string;
-        }>(`${ACCOUNT_MANAGEMENT_BASE}/accounts${params}`);
+        }>(`${ACCOUNT_MANAGEMENT_BASE}/accounts${params}`, "list_accounts");
         return {
           items: data.accounts ?? [],
           nextPageToken: data.nextPageToken,
@@ -255,6 +329,7 @@ export function createGbpClient(opts: { userId: string }) {
           nextPageToken?: string;
         }>(
           `${BUSINESS_INFORMATION_BASE}/${accountName}/locations?${params.toString()}`,
+          "list_locations",
         );
         return {
           items: data.locations ?? [],
@@ -281,6 +356,7 @@ export function createGbpClient(opts: { userId: string }) {
     ): Promise<{ publishedPostName: string }> {
       const data = await request<{ name: string }>(
         `${MY_BUSINESS_V4_BASE}/${location.accountName}/${location.locationName}/localPosts`,
+        "create_post",
         {
           method: "POST",
           body: { languageCode: "en", topicType: "STANDARD", ...post },
@@ -307,6 +383,7 @@ export function createGbpClient(opts: { userId: string }) {
       const params = new URLSearchParams({ readMask: readMask.join(",") });
       return request(
         `${BUSINESS_INFORMATION_BASE}/${locationName}?${params.toString()}`,
+        "get_location",
       );
     },
 
@@ -321,6 +398,7 @@ export function createGbpClient(opts: { userId: string }) {
     ): Promise<void> {
       await request(
         `${BUSINESS_INFORMATION_BASE}/${locationName}?updateMask=${encodeURIComponent(updateMask.join(","))}`,
+        "patch_location",
         { method: "PATCH", body: fields },
       );
     },
@@ -348,6 +426,7 @@ export function createGbpClient(opts: { userId: string }) {
       });
       const data = await request<{ categories?: GbpCategorySuggestion[] }>(
         `${BUSINESS_INFORMATION_BASE}/categories?${params.toString()}`,
+        "search_categories",
       );
       return data.categories ?? [];
     },

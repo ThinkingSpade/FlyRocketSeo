@@ -62,10 +62,16 @@ export function GbpLocationPicker({
     );
   }
   if (errorReason === "requires_reconnect") {
+    // Covers BOTH a genuine 401 from Google AND an unclassifiable exception
+    // from getToken() (see gbpClient.ts's getToken doc comment) -- this copy
+    // can't always tell which, so it must not assert "expired" as an
+    // established fact (final wave item 1). "Reconnect" is still the right
+    // remedy either way.
     return (
       <div className="space-y-3">
         <p className="text-sm text-error">
-          Connection expired. Reconnect to continue.
+          Couldn&apos;t verify your Google Business Profile connection.
+          Reconnect to continue.
         </p>
         <button
           type="button"
@@ -79,15 +85,18 @@ export function GbpLocationPicker({
     );
   }
   if (errorReason === "access_denied") {
-    // A 403 means Google authenticated the request but denied it for this
-    // specific location (finding A4) -- distinct from an expired/revoked
-    // connection (401), so this must not say "expired". The account may
-    // simply not manage this listing, or manage a different one.
+    // A 403 means Google authenticated the request but denied it (finding
+    // A4) -- distinct from an expired/revoked connection (401), so this
+    // must not say "expired". This picker only ever renders BEFORE a
+    // location is chosen (accounts.list or locations.list failing), so it
+    // must not say "this location" either (final wave item 1 residual): no
+    // location exists yet to refer to. The account may simply not manage
+    // any listing this app can see, or manage a different one.
     return (
       <div className="space-y-3">
         <p className="text-sm text-error">
-          This Google account doesn&apos;t have permission to manage this
-          Business Profile location.
+          This Google account doesn&apos;t have permission to manage Business
+          Profile listings.
         </p>
         <button
           type="button"
