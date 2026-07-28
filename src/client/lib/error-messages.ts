@@ -1,5 +1,6 @@
 import { FREE_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { isErrorCode, type ErrorCode } from "@/shared/error-codes";
+import { GBP_WRITE_NOT_CONFIGURED_MESSAGE } from "@/shared/gbp";
 
 const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   UNAUTHENTICATED: "Please sign in and try again.",
@@ -30,8 +31,11 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   CONFLICT: "This request conflicts with existing data.",
   INTERNAL_ERROR:
     "An unexpected error occurred. Please check server logs and try again.",
-  GBP_NOT_CONFIGURED:
-    "Google Business Profile writing isn't configured for this deployment yet. Ask your operator to finish the Cloud Console setup and Google's verification review.",
+  // Sourced from shared/gbp.ts (final wave item 3, an A6 residual) --
+  // this was a byte-for-byte duplicate of GbpWriteService's own
+  // NOT_CONFIGURED_MESSAGE, and the two drifted once one of them got the
+  // A6 honesty fix and the other didn't.
+  GBP_NOT_CONFIGURED: GBP_WRITE_NOT_CONFIGURED_MESSAGE,
   GBP_NOT_CONNECTED:
     "This project isn't connected to a Google Business Profile location yet. Connect one from the Local SEO tab first.",
 };

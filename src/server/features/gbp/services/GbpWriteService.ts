@@ -1,4 +1,5 @@
 import { AppError } from "@/server/lib/errors";
+import { GBP_WRITE_NOT_CONFIGURED_MESSAGE } from "@/shared/gbp";
 import {
   buildPublishQueue,
   canStartPublishing,
@@ -59,8 +60,11 @@ type GbpBlockedOutcome = {
   message: string;
 };
 
-const NOT_CONFIGURED_MESSAGE =
-  "Google Business Profile writing isn't configured on this deployment yet. Ask your operator to finish the Cloud Console setup and Google's verification review.";
+// Sourced from shared/gbp.ts (final wave item 3, an A6 residual) rather than
+// kept as a local copy -- this was a byte-for-byte duplicate of
+// error-messages.ts's GBP_NOT_CONFIGURED text, and the two drifted apart
+// once one of them got the A6 honesty fix and the other didn't.
+const NOT_CONFIGURED_MESSAGE = GBP_WRITE_NOT_CONFIGURED_MESSAGE;
 const NOT_CONNECTED_MESSAGE =
   "This project isn't connected to a Google Business Profile location yet. Connect one on the Local SEO tab first.";
 

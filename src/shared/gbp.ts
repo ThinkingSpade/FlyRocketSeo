@@ -29,3 +29,25 @@ export const GBP_OAUTH_SCOPES = [
   "profile",
   "https://www.googleapis.com/auth/business.manage",
 ] as const;
+
+/**
+ * Canonical, honest copy for "GBP writing isn't available on this
+ * deployment yet" -- shown from TWO different code paths: GbpWriteService's
+ * server-side gate (a toast when a write action is attempted without the
+ * capability) and error-messages.ts's client-side GBP_NOT_CONFIGURED
+ * mapping (reached when connecting itself is blocked -- see
+ * selfHostedGbpOAuth.ts's createSelfHostedGbpAuthorizationUrl, whose thrown
+ * AppError crosses the server-function boundary as just the CODE, per
+ * toClientError -- this map's text is the only thing the user ever sees).
+ *
+ * ONE string, not two copies that can drift: this exact duplication is why
+ * an earlier honesty fix (finding A6 -- stop claiming which setup step is
+ * incomplete) landed in GbpNotConfiguredCard.tsx's prose but missed both of
+ * these, which kept the old "ask your operator to finish the Cloud Console
+ * setup and Google's verification review" claim. isGbpWriteConfigured() can
+ * only confirm env vars are present (oauth-config.ts) -- it has no way to
+ * check Google's scope/verification status at all, so this deliberately
+ * never asserts which piece is missing.
+ */
+export const GBP_WRITE_NOT_CONFIGURED_MESSAGE =
+  "Google Business Profile writing isn't available on this deployment yet. Ask your operator to check the Cloud Console setup, Google's verification review, and the required environment variables (see .env.example).";

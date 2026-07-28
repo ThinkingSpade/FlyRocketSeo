@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { MapPin } from "lucide-react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InsightIcon } from "@/client/components/InsightTile";
-import { useGbpWriteAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
+import { useGbpCapabilityState } from "@/client/features/auth/useEmailVerificationBypassed";
 import {
   disconnectGbp,
   getGbpConnection,
@@ -32,7 +32,15 @@ import { NotConfiguredCard } from "./GbpNotConfiguredCard";
  * predates that rule.
  */
 export function GbpConnectionCard({ projectId }: { projectId: string }) {
-  const gbpWriteAvailable = useGbpWriteAvailable();
+  // Final wave item 3 (an A6 residual): distinguishes "still confirming
+  // against the live Worker config" from "confirmed unavailable" -- see
+  // resolveGbpCapabilityState's own doc comment. Both `enabled:` gates below
+  // still only need the boolean (queries stay off for "checking" AND
+  // "unavailable" alike), but the RENDER branch below needs the distinction,
+  // since it decides between a neutral loading state and NotConfiguredCard's
+  // confident "isn't in place yet" copy.
+  const capabilityState = useGbpCapabilityState();
+  const gbpWriteAvailable = capabilityState === "available";
   const queryClient = useQueryClient();
   const [picking, setPicking] = React.useState(false);
   const [selectedLocationName, setSelectedLocationName] = React.useState("");
@@ -80,7 +88,27 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
     onError: (error) => toast.error(getStandardErrorMessage(error)),
   });
 
-  if (!gbpWriteAvailable) {
+  if (capabilityState === "checking") {
+    // Must not render NotConfiguredCard's "at least one of these isn't in
+    // place yet" here (final wave item 3): that claim hasn't been
+    // established yet, only the boolean gate has -- a neutral loading state
+    // is the honest thing to show while the live check is still in flight.
+    return (
+      <div className="card border border-base-300 bg-base-100">
+        <div className="card-body gap-3 p-4">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+            <InsightIcon icon={MapPin} tone="neutral" />
+            Google Business Profile writing
+          </h2>
+          <div className="flex items-center gap-2 text-sm text-base-content/50">
+            <span className="loading loading-spinner loading-sm" />
+            Checking…
+          </div>
+        </div>
+      </div>
+    );
+  }
+  if (capabilityState === "unavailable") {
     return <NotConfiguredCard />;
   }
 

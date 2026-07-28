@@ -102,3 +102,41 @@ export function useGbpWriteAvailable(): boolean {
   const { data, isResolved } = useClientRuntimeConfigQuery();
   return isResolved && data.gbpWriteAvailable;
 }
+
+// Not exported: nothing outside this file needs to name the type -- callers
+// compare the returned string directly (e.g. `capabilityState === "checking"`).
+type GbpCapabilityState = "checking" | "unavailable" | "available";
+
+/**
+ * Distinguishes "the live runtime-config check hasn't resolved yet" from
+ * "it resolved and GBP writing is confirmed unavailable" (final wave item
+ * 3, an A6 residual). Collapsing both into one boolean (useGbpWriteAvailable
+ * above) is the right call for GATING -- never trust a prerendered `true`
+ * either way -- but it is the WRONG call for DISPLAY: GbpConnectionCard
+ * renders NotConfiguredCard's confident "at least one of these isn't in
+ * place yet" copy whenever writing isn't available, and showing that while
+ * the check is merely still in flight asserts something this code hasn't
+ * actually established yet. Exported standalone (not just inside
+ * useGbpCapabilityState below) so this decision is independently testable
+ * without needing react-query/router context.
+ */
+export function resolveGbpCapabilityState(
+  isResolved: boolean,
+  gbpWriteAvailable: boolean,
+): GbpCapabilityState {
+  if (!isResolved) return "checking";
+  return gbpWriteAvailable ? "available" : "unavailable";
+}
+
+/**
+ * Same underlying query as useGbpWriteAvailable, for the one consumer
+ * (GbpConnectionCard) that renders confident copy and therefore needs the
+ * checking/unavailable/available distinction above. The simpler boolean
+ * hook stays as-is for GbpListingFixButton/GbpWriteSection, which only ever
+ * gate on/off and never render a claim either way -- collapsing "checking"
+ * into "false" costs nothing there.
+ */
+export function useGbpCapabilityState(): GbpCapabilityState {
+  const { data, isResolved } = useClientRuntimeConfigQuery();
+  return resolveGbpCapabilityState(isResolved, data.gbpWriteAvailable);
+}

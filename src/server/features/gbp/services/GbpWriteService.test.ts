@@ -288,6 +288,40 @@ describe("GbpWriteService.publishPost after a successful Google write (final wav
   });
 });
 
+/**
+ * Final wave item 3 (an A6 residual): GbpWriteService kept its OWN local
+ * copy of the "not configured" message, a byte-for-byte duplicate of the
+ * text error-messages.ts's GBP_NOT_CONFIGURED used to carry -- both said
+ * "ask your operator to finish the Cloud Console setup and Google's
+ * verification review", asserting those two specific steps are what's
+ * outstanding. isGbpWriteConfigured() can only confirm env vars are present
+ * (oauth-config.ts) -- it has no way to check Google's scope/verification
+ * status at all, so neither copy could honestly claim that. Fixed by
+ * sourcing both from one shared, honest constant (shared/gbp.ts) instead of
+ * two copies that can drift.
+ */
+describe("GbpWriteService not-configured message honesty (final wave item 3)", () => {
+  it("does not assert the Cloud Console setup or verification review specifically need finishing", async () => {
+    mocks.isGbpWriteConfigured.mockResolvedValue(false);
+    const { GbpWriteService } = await import("./GbpWriteService");
+
+    const result = await GbpWriteService.searchCategories({
+      projectId: PROJECT_ID,
+      query: "Pizza",
+      regionCode: "US",
+      languageCode: "en",
+    });
+
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe("not_configured");
+      expect(result.message.toLowerCase()).not.toContain(
+        "finish the cloud console setup",
+      );
+    }
+  });
+});
+
 describe("GbpWriteService.messageForGbpFailure honesty (final wave item 1)", () => {
   beforeEach(() => {
     mocks.isGbpWriteConfigured.mockResolvedValue(true);
