@@ -20,6 +20,7 @@ import {
   RankTrackingHistoryMatrix,
 } from "./RankTrackingHistoryMatrix";
 import { RankTrackingScoreboard } from "./RankTrackingScoreboard";
+import { RankFluctuationCard } from "./RankFluctuationCard";
 import { VisibilityTrendChart } from "./VisibilityTrendChart";
 import { RankTrackingTableToolbar } from "./RankTrackingTableToolbar";
 import {
@@ -258,6 +259,13 @@ export function RankTrackingDomainDetail({
               device={activeDevice}
               projectId={projectId}
               configId={config.id}
+            />
+            <RankFluctuationCard
+              cells={matrixCells ?? []}
+              rows={rows ?? []}
+              serpDepth={config.serpDepth}
+              projectId={projectId}
+              isLoading={matrixLoading}
             />
           </>
         )}
