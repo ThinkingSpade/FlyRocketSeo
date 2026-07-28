@@ -79,8 +79,21 @@ export interface RankFluctuationResult {
     /** Keywords compared (present in both runs) -- the denominator behind
      *  every share below and the basis for the minimum-keywords guard. */
     trackedCount: number;
+    /** In-range moves only (a real position both times, shifted by
+     *  SIGNIFICANT_MOVE_THRESHOLD+) -- boundary crossings are deliberately
+     *  excluded and counted separately below. Lumping them in here would
+     *  claim a specific magnitude ("5+") for a move we can only bound, not
+     *  measure (see enteredCount's doc). */
     upCount: number;
     downCount: number;
+    /** Crossed INTO the tracked depth this check (previous run had no real
+     *  position, latest run does). Always a real, meaningful move -- see the
+     *  module doc -- but never folded into upCount, because we know it
+     *  crossed the boundary, not by how much. */
+    enteredCount: number;
+    /** Crossed OUT of the tracked depth this check -- the down-direction
+     *  mirror of enteredCount, same reasoning. */
+    leftCount: number;
     pattern: BreadthPattern;
   };
 }
@@ -273,10 +286,6 @@ function isSignificant(movement: KeywordMovement): boolean {
   );
 }
 
-function isUpward(movement: KeywordMovement): boolean {
-  return movement.direction === "up" || movement.direction === "entered";
-}
-
 function classifyBreadth(
   upCount: number,
   downCount: number,
@@ -299,23 +308,67 @@ function emptyResult(verdict: Verdict): RankFluctuationResult {
   return {
     verdict,
     movers: [],
-    breadth: { trackedCount: 0, upCount: 0, downCount: 0, pattern: "none" },
+    breadth: {
+      trackedCount: 0,
+      upCount: 0,
+      downCount: 0,
+      enteredCount: 0,
+      leftCount: 0,
+      pattern: "none",
+    },
   };
 }
 
-function broadVerdict(
-  direction: "up" | "down",
-  count: number,
-  trackedCount: number,
-  dateLabel: string,
-  criteria: string,
-): Verdict {
-  const read =
+/** Shared input for broadVerdict/isolatedVerdict -- bundled as one object
+ *  (rather than five positional params) so both the function signatures and
+ *  their call sites in buildBreadthVerdict stay one-liners. */
+interface MovementReadInput {
+  direction: "up" | "down";
+  count: number;
+  trackedCount: number;
+  /** The PREVIOUS run's date, not the latest -- see the doc below on why the
+   *  window is dated from its start (finding 7). */
+  previousDateLabel: string;
+  criteria: string;
+}
+
+/**
+ * The sentence shared by broadVerdict and isolatedVerdict: a count, a
+ * comparison to the rest of the tracked set, dated from when the window
+ * *started* -- never a claim about where the cause lies.
+ *
+ * Two honesty rules baked in here, both regression-tested (see the
+ * "never asserts a cause" describe block in the test file):
+ *
+ * 1. Dated from the PREVIOUS run, not the latest one. Snapshots on Jul 1 and
+ *    Jul 8 describe movement that happened *between* those two checks --
+ *    "since Jul 8" would misdate it as starting when we finished measuring
+ *    it, not when the window began.
+ * 2. "The other N didn't move {direction} by that much" -- not "held
+ *    steady". The keywords excluded from `count` only failed to clear
+ *    SIGNIFICANT_MOVE_THRESHOLD *in this direction*; some may still have
+ *    drifted a few places, or moved the other way. This phrasing is true
+ *    either way, which "steady" is not.
+ *
+ * Deliberately silent on WHY count keywords moved together or alone -- that
+ * a move is broad or isolated is visible from the fraction itself, so the
+ * sentence reports the count and lets the reader draw the inference (see
+ * the module doc).
+ */
+function movementRead(input: MovementReadInput): string {
+  const { direction, count, trackedCount, previousDateLabel, criteria } = input;
+  const rest = trackedCount - count;
+  return (
     `${count} of ${trackedCount} keywords moved ${direction} significantly ` +
-    `(${criteria}) since ${dateLabel} -- movement this broad usually points ` +
-    `to something site-wide rather than any one page.`;
+    `(${criteria}) since the previous check on ${previousDateLabel}; the ` +
+    `other ${rest} didn't move ${direction} by that much.`
+  );
+}
+
+function broadVerdict(input: MovementReadInput): Verdict {
+  const { direction, count, trackedCount, previousDateLabel } = input;
   return {
-    read,
+    read: movementRead(input),
     // A broad decline is the headline risk here; a broad improvement is
     // good news, not something to flag as a problem.
     tone: direction === "down" ? "bad" : "good",
@@ -323,8 +376,8 @@ function broadVerdict(
       direction === "down"
         ? [
             {
-              label: "Review site-wide changes rather than any single page",
-              evidence: `${count} of ${trackedCount} tracked keywords moved down together since ${dateLabel}`,
+              label: "Review the keywords that moved down together",
+              evidence: `${count} of ${trackedCount} tracked keywords moved down together since the previous check on ${previousDateLabel}`,
               weight: 100,
             },
           ]
@@ -332,29 +385,19 @@ function broadVerdict(
   };
 }
 
-function isolatedVerdict(
-  direction: "up" | "down",
-  count: number,
-  trackedCount: number,
-  dateLabel: string,
-  criteria: string,
-): Verdict {
-  const read =
-    `${count} of ${trackedCount} keywords moved ${direction} significantly ` +
-    `(${criteria}) since ${dateLabel}, with the rest holding steady -- a ` +
-    `move this isolated usually traces back to that specific page rather ` +
-    `than anything site-wide.`;
+function isolatedVerdict(input: MovementReadInput): Verdict {
+  const { direction, count, trackedCount } = input;
   return {
-    read,
-    // An isolated decline is worth a page-level look; an isolated gain on
-    // an otherwise-flat set is simply good news for that one keyword.
+    read: movementRead(input),
+    // An isolated decline is worth a look; an isolated gain on an
+    // otherwise-flat set is simply good news for that one keyword.
     tone: direction === "down" ? "mixed" : "good",
     actions:
       direction === "down"
         ? [
             {
-              label: "Check the page behind the drop for a page-level cause",
-              evidence: `${count} of ${trackedCount} tracked keywords moved down; the rest held steady`,
+              label: `Review the ${count === 1 ? "keyword" : "keywords"} that moved down`,
+              evidence: `${count} of ${trackedCount} tracked keywords moved down; the other ${trackedCount - count} didn't move down by that much`,
               weight: 80,
             },
           ]
@@ -365,15 +408,14 @@ function isolatedVerdict(
 function mixedVerdict(
   upCount: number,
   downCount: number,
-  dateLabel: string,
+  previousDateLabel: string,
   criteria: string,
 ): Verdict {
   return {
     read:
       `${upCount} keyword${upCount === 1 ? "" : "s"} moved up and ${downCount} ` +
-      `moved down significantly (${criteria}) since ${dateLabel}, with ` +
-      `neither direction standing out -- this doesn't read as one ` +
-      `site-wide event.`,
+      `moved down significantly (${criteria}) since the previous check on ` +
+      `${previousDateLabel}, with neither direction standing out.`,
     tone: "mixed",
     actions: [],
   };
@@ -381,11 +423,11 @@ function mixedVerdict(
 
 function noneVerdict(
   trackedCount: number,
-  dateLabel: string,
+  previousDateLabel: string,
   criteria: string,
 ): Verdict {
   return {
-    read: `None of the ${trackedCount} tracked keywords moved significantly (${criteria}) since ${dateLabel}.`,
+    read: `None of the ${trackedCount} tracked keywords moved significantly (${criteria}) since the previous check on ${previousDateLabel}.`,
     tone: "good",
     actions: [],
   };
@@ -404,7 +446,9 @@ interface BreadthContext {
   upCount: number;
   downCount: number;
   trackedCount: number;
-  dateLabel: string;
+  /** The PREVIOUS run's date, not the latest -- see movementRead's doc on
+   *  why the window is dated from its start. */
+  previousDateLabel: string;
   criteria: string;
 }
 
@@ -412,26 +456,26 @@ function buildBreadthVerdict(
   pattern: BreadthPattern,
   context: BreadthContext,
 ): Verdict {
-  const { upCount, downCount, trackedCount, dateLabel, criteria } = context;
+  const { upCount, downCount, trackedCount, previousDateLabel, criteria } =
+    context;
+  const shared = { trackedCount, previousDateLabel, criteria };
   switch (pattern) {
     case "none":
-      return noneVerdict(trackedCount, dateLabel, criteria);
+      return noneVerdict(trackedCount, previousDateLabel, criteria);
     case "broad-down":
-      return broadVerdict("down", downCount, trackedCount, dateLabel, criteria);
+      return broadVerdict({ direction: "down", count: downCount, ...shared });
     case "broad-up":
-      return broadVerdict("up", upCount, trackedCount, dateLabel, criteria);
+      return broadVerdict({ direction: "up", count: upCount, ...shared });
     case "isolated-down":
-      return isolatedVerdict(
-        "down",
-        downCount,
-        trackedCount,
-        dateLabel,
-        criteria,
-      );
+      return isolatedVerdict({
+        direction: "down",
+        count: downCount,
+        ...shared,
+      });
     case "isolated-up":
-      return isolatedVerdict("up", upCount, trackedCount, dateLabel, criteria);
+      return isolatedVerdict({ direction: "up", count: upCount, ...shared });
     case "mixed":
-      return mixedVerdict(upCount, downCount, dateLabel, criteria);
+      return mixedVerdict(upCount, downCount, previousDateLabel, criteria);
     default:
       return assertNeverPattern(pattern);
   }
@@ -478,26 +522,79 @@ export function buildRankFluctuationVerdict(
           `site-wide pattern (need at least ${MIN_TRACKED_FOR_BREADTH_CLAIM}).`,
       ),
       movers,
-      breadth: { trackedCount, upCount: 0, downCount: 0, pattern: "none" },
+      breadth: {
+        trackedCount,
+        upCount: 0,
+        downCount: 0,
+        enteredCount: 0,
+        leftCount: 0,
+        pattern: "none",
+      },
     };
   }
 
   const significant = movements.filter(isSignificant);
-  const upCount = significant.filter(isUpward).length;
-  const downCount = significant.length - upCount;
-  const pattern = classifyBreadth(upCount, downCount, trackedCount);
-  const dateLabel = formatCheckedDate(latestRun.checkedAt);
+  // Boundary crossings counted on their own -- see the breadth type's doc on
+  // why they never join upCount/downCount (finding 9: we know they crossed,
+  // not by how much, so lumping them into a "5+" count would misstate them).
+  const countDirection = (direction: MovementDirection) =>
+    significant.filter((movement) => movement.direction === direction).length;
+  const enteredCount = countDirection("entered");
+  const leftCount = countDirection("left");
+  const upCount = countDirection("up");
+  const downCount = countDirection("down");
+  // The verdict prose and the breadth pattern both describe "a real move"
+  // more broadly than the tile counts do -- criteria() already hedges this
+  // ("5+ places, OR in/out of the tracked depth"), so boundary crossings
+  // fold back in here even though they're reported separately above.
+  const totalUpCount = upCount + enteredCount;
+  const totalDownCount = downCount + leftCount;
+  const pattern = classifyBreadth(totalUpCount, totalDownCount, trackedCount);
+  // Dated from the start of the comparison window (the previous run), not
+  // the latest one -- see movementRead's doc (finding 7: "since Jul 8" would
+  // misdate movement that happened before Jul 8 as starting there).
+  const previousDateLabel = formatCheckedDate(previousRun.checkedAt);
   const criteria = significanceCriteria(trackedDepth);
 
   return {
     verdict: buildBreadthVerdict(pattern, {
-      upCount,
-      downCount,
+      upCount: totalUpCount,
+      downCount: totalDownCount,
       trackedCount,
-      dateLabel,
+      previousDateLabel,
       criteria,
     }),
     movers,
-    breadth: { trackedCount, upCount, downCount, pattern },
+    breadth: {
+      trackedCount,
+      upCount,
+      downCount,
+      enteredCount,
+      leftCount,
+      pattern,
+    },
   };
+}
+
+/**
+ * Formats a mover's position change for the "biggest movers" list. Crossing
+ * the tracked-depth boundary reads as "outside the top N" -- matching what
+ * `position: null` actually means (see RankFluctuationSnapshot's doc) --
+ * never "Not ranking", which claims more than a search this shallow can
+ * support: the business could easily still rank, just past the configured
+ * depth. `trackedDepth` must be the same config value passed to
+ * buildRankFluctuationVerdict (10-100, never a hardcoded 20 or 40 -- see the
+ * module doc on why "top 20" isn't safe to assume).
+ */
+export function describeTransition(
+  movement: KeywordMovement,
+  trackedDepth: number,
+): string {
+  const { direction, previousPosition, currentPosition, delta } = movement;
+  const outsideDepth = `Outside top ${trackedDepth}`;
+  if (direction === "entered") return `${outsideDepth} → #${currentPosition}`;
+  if (direction === "left") return `#${previousPosition} → ${outsideDepth}`;
+  if (delta == null) return `#${previousPosition} → #${currentPosition}`;
+  const sign = delta > 0 ? "+" : "";
+  return `#${previousPosition} → #${currentPosition} (${sign}${delta})`;
 }

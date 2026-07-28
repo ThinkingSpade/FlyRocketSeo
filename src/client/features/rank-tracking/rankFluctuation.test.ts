@@ -64,6 +64,8 @@ describe("buildRankFluctuationVerdict", () => {
       trackedCount: 0,
       upCount: 0,
       downCount: 0,
+      enteredCount: 0,
+      leftCount: 0,
       pattern: "none",
     });
   });
@@ -93,6 +95,8 @@ describe("buildRankFluctuationVerdict", () => {
       trackedCount: 12,
       upCount: 0,
       downCount: 0,
+      enteredCount: 0,
+      leftCount: 0,
       pattern: "none",
     });
     expect(result.movers).toHaveLength(12);
@@ -115,8 +119,11 @@ describe("buildRankFluctuationVerdict", () => {
     });
     // A boundary exit always counts toward breadth, regardless of the
     // 5-place threshold -- we don't know the true distance, only that it's
-    // real and it's significant.
-    expect(result.breadth.downCount).toBe(1);
+    // real and it's significant. It's counted as its own leftCount category
+    // rather than folded into downCount (finding 9): we know it crossed the
+    // boundary, not that it moved 5+ specifically.
+    expect(result.breadth.leftCount).toBe(1);
+    expect(result.breadth.downCount).toBe(0);
   });
 
   it("classifies null -> 18 as entering the tracked depth, without inventing a delta", () => {
@@ -131,7 +138,10 @@ describe("buildRankFluctuationVerdict", () => {
       direction: "entered",
       delta: null,
     });
-    expect(result.breadth.upCount).toBe(1);
+    // Counted as its own enteredCount category, not folded into upCount
+    // (finding 9) -- see the mirrored leftCount assertion above.
+    expect(result.breadth.enteredCount).toBe(1);
+    expect(result.breadth.upCount).toBe(0);
   });
 
   it("reports a broad synchronised drop as broad, with exact counts", () => {
@@ -154,12 +164,13 @@ describe("buildRankFluctuationVerdict", () => {
     });
     expect(result.verdict.tone).toBe("bad");
     expect(result.verdict.read).toBe(
-      "23 of 40 keywords moved down significantly (5+ places, or in/out of the top 20 entirely) since Jul 8 -- movement this broad usually points to something site-wide rather than any one page.",
+      "23 of 40 keywords moved down significantly (5+ places, or in/out of the top 20 entirely) since the previous check on Jul 1; the other 17 didn't move down by that much.",
     );
     expect(result.verdict.actions).toEqual([
       {
-        label: "Review site-wide changes rather than any single page",
-        evidence: "23 of 40 tracked keywords moved down together since Jul 8",
+        label: "Review the keywords that moved down together",
+        evidence:
+          "23 of 40 tracked keywords moved down together since the previous check on Jul 1",
         weight: 100,
       },
     ]);
@@ -179,8 +190,16 @@ describe("buildRankFluctuationVerdict", () => {
     });
     expect(result.verdict.tone).toBe("mixed");
     expect(result.verdict.read).toBe(
-      "1 of 40 keywords moved down significantly (5+ places, or in/out of the top 20 entirely) since Jul 8, with the rest holding steady -- a move this isolated usually traces back to that specific page rather than anything site-wide.",
+      "1 of 40 keywords moved down significantly (5+ places, or in/out of the top 20 entirely) since the previous check on Jul 1; the other 39 didn't move down by that much.",
     );
+    expect(result.verdict.actions).toEqual([
+      {
+        label: "Review the keyword that moved down",
+        evidence:
+          "1 of 40 tracked keywords moved down; the other 39 didn't move down by that much",
+        weight: 80,
+      },
+    ]);
   });
 
   it("reports a mixed set with no clear direction", () => {
@@ -207,7 +226,7 @@ describe("buildRankFluctuationVerdict", () => {
     });
     expect(result.verdict.tone).toBe("mixed");
     expect(result.verdict.read).toBe(
-      "8 keywords moved up and 10 moved down significantly (5+ places, or in/out of the top 20 entirely) since Jul 8, with neither direction standing out -- this doesn't read as one site-wide event.",
+      "8 keywords moved up and 10 moved down significantly (5+ places, or in/out of the top 20 entirely) since the previous check on Jul 1, with neither direction standing out.",
     );
   });
 

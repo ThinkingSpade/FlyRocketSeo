@@ -1,5 +1,12 @@
 import { useMemo } from "react";
-import { ArrowDownRight, ArrowUpRight, Loader2, Waves } from "lucide-react";
+import {
+  ArrowDownRight,
+  ArrowUpRight,
+  Loader2,
+  LogIn,
+  LogOut,
+  Waves,
+} from "lucide-react";
 import {
   InsightIcon,
   InsightTile,
@@ -10,6 +17,7 @@ import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
 import {
   buildRankFluctuationVerdict,
+  describeTransition,
   type BreadthPattern,
   type KeywordMovement,
   type RankFluctuationResult,
@@ -118,6 +126,28 @@ export function RankFluctuationCard({
             value={result.breadth.downCount}
             tone={result.breadth.downCount > 0 ? "error" : "neutral"}
           />
+          {/* Boundary crossings get their own tiles rather than folding into
+              the two above (finding 9): we know a keyword crossed in or out
+              of the tracked depth, but not by how much, so counting it under
+              "5+" would claim a magnitude the data doesn't support. Only
+              shown when it actually happened, unlike the always-on pair
+              above, since most checks have none. */}
+          {result.breadth.enteredCount > 0 && (
+            <InsightTile
+              icon={LogIn}
+              label={`Entered top ${serpDepth}`}
+              value={result.breadth.enteredCount}
+              tone="success"
+            />
+          )}
+          {result.breadth.leftCount > 0 && (
+            <InsightTile
+              icon={LogOut}
+              label={`Left top ${serpDepth}`}
+              value={result.breadth.leftCount}
+              tone="error"
+            />
+          )}
         </div>
       )}
 
@@ -135,7 +165,11 @@ export function RankFluctuationCard({
           </h3>
           <ul className="mt-2 divide-y divide-base-300">
             {notableMovers.map((movement) => (
-              <MoverRow key={movement.trackingKeywordId} movement={movement} />
+              <MoverRow
+                key={movement.trackingKeywordId}
+                movement={movement}
+                serpDepth={serpDepth}
+              />
             ))}
           </ul>
         </div>
@@ -144,7 +178,16 @@ export function RankFluctuationCard({
   );
 }
 
-function MoverRow({ movement }: { movement: KeywordMovement }) {
+function MoverRow({
+  movement,
+  serpDepth,
+}: {
+  movement: KeywordMovement;
+  /** Threaded through to describeTransition so a crossed-boundary row reads
+   *  "Outside top {serpDepth}" using the config's real depth, not a
+   *  hardcoded guess (finding 9). */
+  serpDepth: number;
+}) {
   const isUp = movement.direction === "up" || movement.direction === "entered";
   return (
     <li className="flex items-center justify-between gap-2 py-1.5 text-sm">
@@ -156,20 +199,8 @@ function MoverRow({ movement }: { movement: KeywordMovement }) {
         <span className="truncate">{movement.keyword}</span>
       </span>
       <span className="shrink-0 text-xs text-base-content/60 tabular-nums">
-        {describeTransition(movement)}
+        {describeTransition(movement, serpDepth)}
       </span>
     </li>
   );
-}
-
-/** "Not ranking" matches the label this feature already uses for a null
- *  position everywhere else (rankTrackingScorecards.ts's bucket transitions,
- *  RankTrackingScoreboard.tsx) -- no new vocabulary for the same fact. */
-function describeTransition(movement: KeywordMovement): string {
-  const { direction, previousPosition, currentPosition, delta } = movement;
-  if (direction === "entered") return `Not ranking → #${currentPosition}`;
-  if (direction === "left") return `#${previousPosition} → Not ranking`;
-  if (delta == null) return `#${previousPosition} → #${currentPosition}`;
-  const sign = delta > 0 ? "+" : "";
-  return `#${previousPosition} → #${currentPosition} (${sign}${delta})`;
 }
