@@ -45,6 +45,12 @@ function combineCityRegion(
   return city ?? region ?? null;
 }
 
+/** A domain match alone only proves the directory appeared somewhere in
+ *  results, never that this particular result is the business's own listing
+ *  (finding 10, citationModel.ts's isCorroborated) -- an unconfirmed row
+ *  says so plainly instead of linking it as "View listing" like a confirmed
+ *  one. Not dropped either: the directory did appear, which is still real,
+ *  useful information. */
 function CitationFoundList({ found }: { found: CitationMatch[] }) {
   if (found.length === 0) return null;
   return (
@@ -58,9 +64,20 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
             key={match.directory.id}
             className="flex items-center justify-between gap-2 py-1.5 text-sm"
           >
-            <span className="flex items-center gap-1.5">
-              <InsightIcon icon={CircleCheck} tone="success" />
-              {match.directory.name}
+            <span className="flex flex-col gap-0.5">
+              <span className="flex items-center gap-1.5">
+                <InsightIcon
+                  icon={match.confirmed ? CircleCheck : CircleHelp}
+                  tone={match.confirmed ? "success" : "neutral"}
+                />
+                {match.directory.name}
+              </span>
+              {!match.confirmed && (
+                <span className="text-xs text-base-content/50">
+                  Appeared in search -- could not confirm it&rsquo;s your
+                  listing
+                </span>
+              )}
             </span>
             <a
               href={match.url}
@@ -68,7 +85,7 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
               rel="noreferrer"
               className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
-              View listing
+              {match.confirmed ? "View listing" : "Check this result"}
               <ExternalLink className="size-3" />
             </a>
           </li>
@@ -78,10 +95,14 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
   );
 }
 
-/** Each missing row links straight to the directory's own homepage -- not a
- *  claim we know its exact signup flow, just the most honest "go create a
- *  listing there" action available (mirrors "missing ones actionable" from
- *  the brief without pretending to more integration than exists). */
+/**
+ * One search's absence is never proof a listing doesn't exist (finding 11):
+ * creating one that already exists produces a duplicate, which actively
+ * harms local SEO -- the opposite of this feature's purpose. So this never
+ * tells the user to "add" or "create" anything; each row only offers the
+ * directory's own homepage to check by hand, and the copy above says
+ * outright that a listing may already exist.
+ */
 function CitationMissingList({ missing }: { missing: DirectoryEntry[] }) {
   if (missing.length === 0) return null;
   return (
@@ -89,6 +110,11 @@ function CitationMissingList({ missing }: { missing: DirectoryEntry[] }) {
       <h3 className="text-xs font-semibold uppercase tracking-wide text-base-content/50">
         Not found in this search ({missing.length})
       </h3>
+      <p className="mt-0.5 text-xs text-base-content/50">
+        Not evidence these listings don&rsquo;t exist -- only that none came up
+        in this particular search. Worth checking by hand before creating
+        anything new.
+      </p>
       <ul className="mt-1 divide-y divide-base-200">
         {missing.map((directory) => (
           <li
@@ -105,7 +131,7 @@ function CitationMissingList({ missing }: { missing: DirectoryEntry[] }) {
               rel="noreferrer"
               className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
-              Add listing
+              Check manually
               <ExternalLink className="size-3" />
             </a>
           </li>

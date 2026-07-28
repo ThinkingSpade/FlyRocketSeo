@@ -13,12 +13,22 @@ import {
  * which of our known directories (directories.ts) turned up, and produces a
  * verdict that never overclaims what a search can actually prove.
  *
- * THE HONESTY REQUIREMENT this exists to protect: a directory not appearing
- * in these results means "not found in this search", never "the listing
- * does not exist". BrightLocal can say a listing is missing because it owns
- * a crawled index; we only ever have one search's worth of organic results,
- * so every sentence below is written to keep that distinction visible
- * rather than collapsing it into a confident-sounding total.
+ * TWO HONESTY REQUIREMENTS this exists to protect:
+ *
+ * 1. A directory not appearing in these results means "not found in this
+ *    search", never "the listing does not exist". BrightLocal can say a
+ *    listing is missing because it owns a crawled index; we only ever have
+ *    one search's worth of organic results, so every sentence below is
+ *    written to keep that distinction visible rather than collapsing it
+ *    into a confident-sounding total -- and this model never advises
+ *    creating a listing on the strength of one search's absence, since
+ *    creating a duplicate of one that already exists actively harms local
+ *    SEO (see the actions built in buildCitationReport).
+ * 2. A directory's domain appearing in a result proves the DIRECTORY
+ *    appeared, never that the result is this business's own listing -- a
+ *    search or category page on that domain matches just as well as an
+ *    actual listing does (see isCorroborated). CitationMatch.confirmed
+ *    carries that distinction through to callers.
  */
 
 // Not exported: nothing outside this file constructs one of these by name
@@ -45,6 +55,17 @@ export type CitationMatch = {
   directory: DirectoryEntry;
   /** The result URL the directory's domain matched against. */
   url: string;
+  /**
+   * True when a corroborating signal backs up the domain match: the
+   * business name recognizable in the result's title, or a URL shaped like
+   * an individual listing rather than a search/category page (see
+   * isCorroborated). False means only the domain matched -- real evidence
+   * the directory appeared, but not that this particular result is this
+   * business's own listing (finding 10): a directory's own search page
+   * matches the domain just as well as an actual listing does. Callers must
+   * not present an unconfirmed match as "your listing".
+   */
+  confirmed: boolean;
 };
 
 export type CitationReport = {
@@ -67,11 +88,14 @@ export type CitationReport = {
 const MIN_RESULTS_DISAMBIGUATED = 3;
 const MIN_RESULTS_NAME_ONLY = 6;
 
-// The one action this model ever proposes: below the broken-link-recovery
-// tier used elsewhere (backlinks.ts's 100), since creating a fresh listing
-// is real work, not a free reclaim -- but still the clear next step whenever
-// there's a gap.
-const ACTION_WEIGHT_MISSING_DIRECTORIES = 80;
+// The one action this model ever proposes: a prompt to verify by hand, never
+// a directive to create anything (finding 11 -- acting on one search's
+// absence by creating a listing risks a duplicate wherever one already
+// exists, which actively harms local SEO). Weighted below the
+// broken-link-recovery tier used elsewhere (backlinks.ts's 100): still worth
+// following up on, but a manual check is a lighter ask than fixing a
+// confirmed broken link.
+const ACTION_WEIGHT_VERIFY_LISTINGS = 80;
 
 function normalizeDomain(domain: string): string {
   return domain
@@ -80,15 +104,12 @@ function normalizeDomain(domain: string): string {
     .replace(/^www\./, "");
 }
 
-/** True when `resultDomain` is the directory's own domain, a subdomain of
- *  it (e.g. `business.yelp.com`), or one of its confident country-variant
+/** True when `domain` is the directory's own domain, a subdomain of it
+ *  (e.g. `business.yelp.com`), or one of its confident country-variant
  *  aliases (e.g. `yelp.co.uk`) -- see directories.ts for why aliases stay a
  *  short, explicit list rather than a guessed TLD-swap rule. */
-function matchesDirectory(
-  resultDomain: string,
-  directory: DirectoryEntry,
-): boolean {
-  const normalized = normalizeDomain(resultDomain);
+function matchesDirectory(domain: string, directory: DirectoryEntry): boolean {
+  const normalized = normalizeDomain(domain);
   const candidates = [directory.domain, ...(directory.aliases ?? [])];
   return candidates.some((candidate) => {
     const normalizedCandidate = normalizeDomain(candidate);
@@ -99,20 +120,109 @@ function matchesDirectory(
   });
 }
 
+/** The result's domain, preferring the explicit `domain` field but falling
+ *  back to parsing the host out of `url` when it's absent (finding 12): a
+ *  SERP result can carry a real, matchable URL even when the caller didn't
+ *  populate `domain`, and ignoring that URL would silently miss a citation
+ *  we can already prove surfaced. */
+function resultDomain(result: CitationSerpResult): string | null {
+  if (result.domain) return result.domain;
+  if (!result.url) return null;
+  try {
+    return new URL(result.url).hostname;
+  } catch {
+    return null;
+  }
+}
+
+function normalizeForMatch(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+/** True when `name` is recognizable inside `title` -- the clearest signal
+ *  available that a specific result is about THIS business, not just some
+ *  other page on the same domain. Punctuation and case are normalized away
+ *  ("Joe's Pizza" vs "joes pizza") since neither carries meaning here. */
+function nameAppearsInTitle(name: string, title: string | null): boolean {
+  if (!title) return false;
+  const normalizedName = normalizeForMatch(name);
+  return (
+    normalizedName !== "" && normalizeForMatch(title).includes(normalizedName)
+  );
+}
+
+// Path segments that mark a directory's own search or category page rather
+// than an individual listing -- e.g. Yelp's /search. Not an exhaustive list
+// of every directory's URL scheme: it only needs to catch the common cases,
+// since a miss here still leaves the title check as a second chance.
+const SEARCH_PAGE_PATH_SEGMENTS = new Set([
+  "search",
+  "results",
+  "category",
+  "categories",
+  "browse",
+  "explore",
+  "directory",
+]);
+
+/** True when `url`'s last path segment looks like an individual listing's
+ *  own slug rather than a search/category page -- the second corroborating
+ *  signal (see isCorroborated). A bare domain or homepage (no path segments
+ *  at all) doesn't count either: that's the directory itself, not evidence
+ *  of a specific business's page. */
+function looksLikeListingPath(url: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return false;
+  }
+  const segments = parsed.pathname.split("/").filter(Boolean);
+  const lastSegment = segments.at(-1)?.toLowerCase();
+  return lastSegment != null && !SEARCH_PAGE_PATH_SEGMENTS.has(lastSegment);
+}
+
+/**
+ * THE HONESTY REQUIREMENT this exists to protect (finding 10): a domain
+ * match only proves the DIRECTORY appeared somewhere in results, never that
+ * a specific result is this business's own listing -- a directory's search
+ * or category page matches the domain just as well as an actual listing
+ * does (e.g. Yelp's own "Top Pizza Restaurants" search page for "yelp.com").
+ * A match only counts as corroborated once at least one independent signal
+ * backs it up. Neither signal alone is proof -- a listing can have a
+ * generic title, a search page can happen to have a listing-shaped path --
+ * but either is real evidence, and requiring one raises the bar above "the
+ * domain happened to match".
+ */
+function isCorroborated(
+  business: CitationBusiness,
+  result: CitationSerpResult,
+): boolean {
+  if (nameAppearsInTitle(business.name, result.title)) return true;
+  return result.url != null && looksLikeListingPath(result.url);
+}
+
 /** Every known directory that appears among `results`, each with the first
  *  (i.e. highest-ranked) matching URL. A plain nested loop over ~20
  *  directories times a page of results is a few hundred comparisons at
  *  most -- not worth a map-based lookup. */
-function findCitations(results: CitationSerpResult[]): CitationMatch[] {
+function findCitations(
+  business: CitationBusiness,
+  results: CitationSerpResult[],
+): CitationMatch[] {
   const found: CitationMatch[] = [];
   for (const directory of DIRECTORIES) {
     for (const result of results) {
-      if (
-        result.domain &&
-        result.url &&
-        matchesDirectory(result.domain, directory)
-      ) {
-        found.push({ directory, url: result.url });
+      const domain = resultDomain(result);
+      if (domain && result.url && matchesDirectory(domain, directory)) {
+        found.push({
+          directory,
+          url: result.url,
+          confirmed: isCorroborated(business, result),
+        });
         break;
       }
     }
@@ -146,7 +256,7 @@ export function buildCitationReport(input: {
       // A genuine match is still real evidence even in a thin sample --
       // only the *absence* claim ("missing") is unreliable this early, so
       // that's the one withheld below, not both.
-      found: findCitations(results),
+      found: findCitations(business, results),
       missing: [],
       verdict: unknownVerdict(
         `Only ${results.length} organic ${pluralResults(results.length)} came back for ${label} -- too few to judge citation coverage one way or the other.`,
@@ -154,7 +264,7 @@ export function buildCitationReport(input: {
     };
   }
 
-  const found = findCitations(results);
+  const found = findCitations(business, results);
   const foundIds = new Set(found.map((match) => match.directory.id));
   const missing = DIRECTORIES.filter(
     (directory) => !foundIds.has(directory.id),
@@ -168,16 +278,16 @@ export function buildCitationReport(input: {
     tone === "good"
       ? `${label} showed up in search for all ${total} directories on this list. A strong footprint among the majors -- though this list isn't every citation that could exist.`
       : tone === "bad"
-        ? `${label} didn't show up in search for any of the ${total} directories on this list. That doesn't confirm the listings don't exist, only that they didn't surface for this search -- worth checking the biggest ones by hand.`
-        : `${label} showed up in search for ${found.length} of ${total} directories on this list. The other ${missing.length} didn't surface in this search -- that means not found here, not confirmed missing.`;
+        ? `${label} didn't show up in search for any of the ${total} directories on this list -- that's not evidence the listings don't exist, only that none surfaced in this search. A listing may well exist already; worth checking by hand before creating anything new.`
+        : `${label} showed up in search for ${found.length} of ${total} directories on this list. The other ${missing.length} didn't surface in this search -- worth checking manually, since a listing may well exist that just didn't come up here.`;
 
   const actions: Verdict["actions"] =
     missing.length > 0
       ? [
           {
-            label: "Create listings on the directories that didn't surface",
-            evidence: `${missing.length} of ${total} not found in this search`,
-            weight: ACTION_WEIGHT_MISSING_DIRECTORIES,
+            label: "Check by hand before creating any new listing",
+            evidence: `${missing.length} of ${total} directories didn't surface in this search -- not proof they're missing`,
+            weight: ACTION_WEIGHT_VERIFY_LISTINGS,
           },
         ]
       : [];
