@@ -38,6 +38,8 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   GBP_NOT_CONFIGURED: GBP_WRITE_NOT_CONFIGURED_MESSAGE,
   GBP_NOT_CONNECTED:
     "This project isn't connected to a Google Business Profile location yet. Connect one from the Local SEO tab first.",
+  GEO_SEED_DATA_LOST:
+    'The in-progress location data expired or was lost. Click "Seed location data" again to restart from the beginning — locations already written are unaffected.',
 };
 
 export function getStandardErrorMessage(

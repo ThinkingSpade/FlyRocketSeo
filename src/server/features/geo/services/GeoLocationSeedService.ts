@@ -13,48 +13,62 @@
  * DataForSEO's `/v3/keywords_data/google_ads/locations` returns the ENTIRE
  * Google geotarget list in one response (their own docs describe roughly
  * 95k rows across every supported country combined). There IS a
- * `/locations/$country` path variant mentioned in DataForSEO's docs, but no
- * worked example anywhere gives the exact value `$country` expects (ISO
- * code? numeric Google location code? full name?) — building the seed path
- * around an unverified parameter format, with no test key available to
- * confirm it, is a worse risk than the one this comment is about to accept.
- * So this service always fetches the full list, exactly like the script
- * does, and chunks the WRITE side instead: `seedChunk` slices at most
- * `ROWS_PER_CHUNK` already-mapped rows and writes only those before
- * returning, since it's the write side (D1/Postgres statements, each a
- * Worker subrequest) that this codebase has *already* been broken by once —
- * see `siteAuditWorkflowFallback.ts`'s `FALLBACK_BATCH_SIZE = 2` for the
- * exact same class of Cloudflare Free-plan ceiling breaking a bulk
- * DataForSEO-backed job. The Free plan hard-caps every invocation at 50
- * subrequests; `executeInBatches` (src/db/runBatch.ts) already sub-batches
- * at 100 rows per D1/Postgres call, so `ROWS_PER_CHUNK / 100` calls plus one
- * DataForSEO fetch must stay comfortably under that ceiling.
+ * `/locations/$country` path variant mentioned in DataForSEO's docs (the SDK
+ * even types it, `KeywordsDataApi.googleAdsLocationsCountry`), but no worked
+ * example anywhere gives the exact value `$country` expects (ISO code?
+ * numeric Google location code? full name?) — building the seed path around
+ * an unverified parameter format, with no test key available to confirm it,
+ * is a worse risk than the one this comment is about to accept. So this
+ * service always fetches the full list, exactly like the script does.
  *
- * Refetching and re-mapping the full list on every chunk call (rather than
- * fetching once and staging the remainder somewhere) is a deliberate
- * simplicity choice, not an oversight: DataForSEO documents this endpoint as
- * free (see the Settings UI copy this service's own caller shows, and
- * `scripts/verify-geo-support.ts`'s identical note for this endpoint), the
- * response is static reference data that doesn't change between one chunk
- * call and the next, and re-deriving `GeoLocationRow[]` is pure/synchronous
- * with no I/O of its own — so the only added cost per extra chunk is one
- * more free HTTP round trip, in exchange for never needing a staging store
- * (R2/KV) with its own cleanup and drift-from-the-DB failure modes. If a
- * self-hoster's Free-plan CPU ceiling turns out to be too tight even for
- * this (fetch+parse cost is paid on every call, independent of chunk size —
- * see the module doc on `geoLocationSeedMapping.ts`), the two existing
- * escape hatches both already work today: bump `limits.cpu_ms` on a paid
- * Workers plan (wrangler.jsonc already documents this), or run
- * `scripts/seed-geo-locations.ts` locally with a copy of the key.
+ * THIS USED TO ALSO RE-FETCH AND RE-DERIVE THE FULL LIST ON EVERY CHUNK
+ * CALL, and that was a production bug, not a simplicity trade-off. The
+ * reasoning at the time was "re-deriving `GeoLocationRow[]` is
+ * pure/synchronous with no I/O of its own — so the only added cost per extra
+ * chunk is one more free HTTP round trip". That reasoning conflated "free"
+ * (no billing, no extra network wait) with "cheap" (no CPU cost) — parsing
+ * the ~95k-row, multi-megabyte JSON response and re-deriving every row's
+ * country/state/metro code IS synchronous CPU-bound work, and CPU time,
+ * not network wait, is exactly what the Workers Free plan caps at a fixed
+ * **10ms per invocation** (developers.cloudflare.com/workers/platform/limits
+ * — the same ceiling `siteAuditWorkflowFallback.ts`'s
+ * `FALLBACK_BATCH_SIZE = 2` already documents being broken by just a couple
+ * of cheerio-parsed pages). A ~95k-row response is dramatically more parsing
+ * than that, on literally every one of the ~48 chunk calls a full run needs
+ * — so in production this didn't fail occasionally, it failed on the very
+ * first call, every time, with the Worker invocation never completing
+ * normally enough to return a real `GeoLocationSeedChunkResult` or even a
+ * clean thrown error — which is what the client saw as `result` resolving to
+ * `undefined` (see `GeoLocationSeedSection.tsx`'s own header for the client
+ * side of this fix).
+ *
+ * The fix: fetch and derive the full list ONCE per run, then stage it in R2
+ * via `GeoLocationSeedStore` so every later chunk call reads back only its
+ * own ~2,000-row slice — see that module's own header for why the staged
+ * data is newline-delimited JSON read by exact byte range rather than one
+ * blob re-parsed whole (that alone would still risk the same 10ms ceiling),
+ * and why chunks are NOT all written to R2 up front in the same invocation
+ * (that would still risk the Free plan's separate 50-subrequest-per-
+ * invocation ceiling, since R2 operations count against the same limit as
+ * the DataForSEO fetch and the D1 write batches). If even the one remaining
+ * per-run fetch+derive pass turns out to be too tight for a self-hoster's
+ * Free-plan CPU ceiling, the two escape hatches this service always had
+ * still work: bump `limits.cpu_ms` on a paid Workers plan (wrangler.jsonc
+ * already documents this), or run `scripts/seed-geo-locations.ts` locally
+ * with a copy of the key.
  *
  * Idempotent and resumable: `GeoLocationSeedRepository.upsertRows` is an
  * upsert keyed on `code` (the primary key), so replaying the same offset —
  * or restarting an interrupted run from offset 0 — never duplicates a row,
- * only rewrites it with the same freshly-fetched data. Progress is not
- * persisted server-side; the caller (the Settings page) holds the cursor and
- * loops until `done`, the same client-driven shape
- * `AnalyzeProjectCard.tsx` already uses for its own sequence of bounded,
- * independent Worker invocations.
+ * only rewrites it with the same data. `offset === 0` always (re-)stages
+ * fresh data, since that's both the first run and the explicit "re-seed"
+ * action; any other offset reuses whatever this run already staged, falling
+ * back to a fresh re-stage if that's missing or expired (safe: DataForSEO's
+ * list is static reference data, so re-deriving mid-run yields the same
+ * rows). Progress is not persisted server-side beyond the staged run itself;
+ * the caller (the Settings page) holds the cursor and loops until `done`,
+ * the same client-driven shape `AnalyzeProjectCard.tsx` already uses for its
+ * own sequence of bounded, independent Worker invocations.
  */
 import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
@@ -67,19 +81,23 @@ import {
   type GeoLocationRow,
 } from "@/server/features/geo/geoLocationSeedMapping";
 import { GeoLocationSeedRepository } from "@/server/features/geo/repositories/GeoLocationSeedRepository";
+import {
+  GeoLocationSeedStore,
+  type StagedGeoLocationManifest,
+} from "@/server/features/geo/geoLocationSeedStore";
 
 const LOCATIONS_PATH = "/v3/keywords_data/google_ads/locations";
 
-// See this file's own header for the full reasoning. In short: 20 D1/Postgres
-// write batches (100 rows each, via executeInBatches) + 1 DataForSEO fetch =
-// 21 subrequests per invocation, well under the Workers Free plan's
-// 50-subrequest-per-request ceiling
-// (developers.cloudflare.com/workers/platform/limits) — comfortable headroom
-// for retries, while still making meaningful progress (~48 calls to seed the
-// full ~95k-row list, instead of ~190 at a stingier chunk size). The
-// fetch+map cost is paid every call regardless of this number, so a larger
-// chunk is strictly better here up to the subrequest ceiling; this is well
-// under half of it on purpose.
+// See this file's own header for the full reasoning. In short: 20
+// D1/Postgres write batches (100 rows each, via executeInBatches) is 20
+// subrequests either way, plus 1 DataForSEO fetch + 2 R2 puts (23 total) on
+// the call that stages fresh data, or 2 R2 range/manifest reads (22 total)
+// on every other call — both comfortably under the Workers Free plan's
+// 50-subrequest-per-invocation ceiling
+// (developers.cloudflare.com/workers/platform/limits), with headroom for
+// retries, while still making meaningful progress per call (~48 calls to
+// seed the full ~95k-row list, instead of ~190 at a stingier chunk size). A
+// larger chunk size is strictly better here up to that ceiling.
 export const GEO_SEED_ROWS_PER_CHUNK = 2000;
 
 export type GeoLocationSeedChunkResult = {
@@ -152,9 +170,15 @@ async function fetchAndMapAllRows(): Promise<{
 }
 
 /**
- * Fetches the full location list, writes at most `chunkSize` rows starting
- * at `offset`, and reports genuine progress: `totalRows` and `skippedRows`
- * reflect what THIS call actually parsed (stable across calls since the
+ * Fetches + derives the full location list ONCE per run (offset 0, or any
+ * offset whose run hasn't staged anything usable yet — see
+ * `GeoLocationSeedStore.readManifest`) and stages it in R2; every other call
+ * reads its own `chunkSize`-row slice back from that staged copy instead of
+ * repeating the fetch+derive pass. See this file's own header for why
+ * skipping that repeat is the actual fix, not an optimisation on top of one.
+ *
+ * Reports genuine progress either way: `totalRows`/`skippedRows` reflect
+ * what the run's ONE fetch actually parsed (stable across calls since the
  * upstream list is static reference data), `writtenSoFar` is the cursor to
  * pass as `offset` on the next call, and `done` is only true once every row
  * has been written — never a guessed or rounded figure.
@@ -168,16 +192,41 @@ async function seedChunk(
   offset: number,
   chunkSize: number = GEO_SEED_ROWS_PER_CHUNK,
 ): Promise<GeoLocationSeedChunkResult> {
-  const { rows, skipped } = await fetchAndMapAllRows();
-  const { chunk, writtenSoFar, done } = sliceGeoLocationRowsChunk(
-    rows,
-    offset,
-    chunkSize,
-  );
+  const staged =
+    offset === 0 ? null : await GeoLocationSeedStore.readManifest(chunkSize);
+  const { manifest, freshRows } = staged
+    ? { manifest: staged, freshRows: null }
+    : await stageFreshRows(chunkSize);
+
+  // `freshRows` is only set right after this same call staged them — slicing
+  // in memory avoids an entirely avoidable R2 round trip for the chunk this
+  // call already has sitting in a local variable. Every other call reads
+  // back the slice it needs from what an EARLIER call in this run staged.
+  const { chunk, writtenSoFar, done } = freshRows
+    ? sliceGeoLocationRowsChunk(freshRows, offset, chunkSize)
+    : await GeoLocationSeedStore.readStagedChunk(manifest, offset);
 
   await GeoLocationSeedRepository.upsertRows(chunk);
 
-  return { totalRows: rows.length, skippedRows: skipped, writtenSoFar, done };
+  return {
+    totalRows: manifest.totalRows,
+    skippedRows: manifest.skippedRows,
+    writtenSoFar,
+    done,
+  };
+}
+
+async function stageFreshRows(chunkSize: number): Promise<{
+  manifest: StagedGeoLocationManifest;
+  freshRows: GeoLocationRow[];
+}> {
+  const { rows, skipped } = await fetchAndMapAllRows();
+  const manifest = await GeoLocationSeedStore.writeStaged(
+    rows,
+    skipped,
+    chunkSize,
+  );
+  return { manifest, freshRows: rows };
 }
 
 export const GeoLocationSeedService = { seedChunk } as const;
