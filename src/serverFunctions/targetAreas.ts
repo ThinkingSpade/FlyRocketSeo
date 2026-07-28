@@ -3,6 +3,21 @@ import { z } from "zod";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import { TargetAreaService } from "@/server/features/geo/services/TargetAreaService";
 
+/**
+ * Every `requireProjectContext` server function in this codebase (gbp.ts,
+ * onPage.ts, local-seo.ts, projects.ts, ...) declares `projectId` in its own
+ * validator, because `ensureUserMiddleware` (wired globally in start.ts, so
+ * it runs before this file's own `.validator()` narrows anything) resolves
+ * `context.project` by reading `data.projectId` off the RAW client payload —
+ * it does not read `context` at all, since nothing has populated it yet at
+ * that point in the chain. A `requireProjectContext` function with no
+ * `projectId` field anywhere in its validator can never receive one, so
+ * `context.project` stays undefined and `requireProjectContext` unconditionally
+ * throws "Project context missing". Matches `projectScopedSchema` in
+ * onPage.ts/gbp.ts/projects.ts et al. verbatim.
+ */
+const projectScopedSchema = z.object({ projectId: z.string().min(1) });
+
 const targetAreaSchema = z.object({
   kind: z.enum(["metro", "city", "region", "country"]),
   locationCode: z.number().int().positive(),
@@ -12,9 +27,6 @@ const targetAreaSchema = z.object({
 
 /**
  * The confirmed primary area, the pending (unconfirmed) proposal, or null.
- * No validator, matching `getGeoLocationSeedStatus`'s convention in
- * geo.ts — there is no input beyond project scope, which `requireProjectContext`
- * already resolves.
  *
  * Detection (free signals only — see TargetAreaService's own header, and the
  * no-metered-spend grep it documents) runs fresh on every call when nothing
@@ -24,6 +36,7 @@ const targetAreaSchema = z.object({
  */
 export const getTargetArea = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
+  .validator(projectScopedSchema)
   .handler(async ({ context }) => {
     return TargetAreaService.getTargetArea(
       { projectId: context.projectId },
@@ -32,6 +45,7 @@ export const getTargetArea = createServerFn({ method: "POST" })
   });
 
 const confirmTargetAreaSchema = z.object({
+  projectId: z.string().min(1),
   area: targetAreaSchema,
   source: z.enum(["gbp", "gsc"]),
 });
@@ -55,6 +69,7 @@ export const confirmTargetArea = createServerFn({ method: "POST" })
   });
 
 const setTargetAreaSchema = z.object({
+  projectId: z.string().min(1),
   area: targetAreaSchema,
 });
 
@@ -75,9 +90,9 @@ export const setTargetArea = createServerFn({ method: "POST" })
     });
   });
 
-/** No validator — same reasoning as `getTargetArea` above. */
 export const clearTargetArea = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
+  .validator(projectScopedSchema)
   .handler(async ({ context }) => {
     await TargetAreaService.clearTargetArea({ projectId: context.projectId });
   });
