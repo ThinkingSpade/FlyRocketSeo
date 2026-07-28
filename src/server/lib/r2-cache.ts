@@ -81,10 +81,12 @@ export async function setCached<T>(
 /**
  * Stores raw text verbatim -- no JSON.stringify wrapping. Pairs with
  * `getCachedRange` for values too large to safely re-parse as one document on
- * every read (see geoLocationSeedStore.ts, which persists a ~95k-row derived
- * list as newline-delimited JSON so a later reader can fetch one small byte
- * range instead of the whole object). A caller that writes with this must
- * read with `getCachedRange`/a raw read, never `getCached` (which assumes the
+ * every read (see geoLocationSeedStore.ts, which persists a derived location
+ * list -- originally ~95k rows before that seed feature was scoped to one
+ * country, still large enough for the same concern to apply -- as
+ * newline-delimited JSON so a later reader can fetch one small byte range
+ * instead of the whole object). A caller that writes with this must read
+ * with `getCachedRange`/a raw read, never `getCached` (which assumes the
  * stored bytes are exactly one JSON.parse-able document).
  */
 export async function setCachedRawText(

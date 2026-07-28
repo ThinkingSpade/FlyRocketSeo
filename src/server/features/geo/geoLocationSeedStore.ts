@@ -31,6 +31,17 @@
  * grows over time. A fixed, small number of R2 operations per call (one
  * manifest read/write plus one ranged rows read/write) does not scale with
  * chunk count at all.
+ *
+ * This module's design (and the row/chunk/byte figures above) predates
+ * GeoLocationSeedService.ts scoping its fetch to one country instead of
+ * DataForSEO's unscoped ~94,933-row global list -- kept unchanged rather than
+ * removed or shrunk, because every argument above holds at ANY input size
+ * from a couple of chunks upward: ndjson-by-byte-range vs. one re-parsed
+ * blob, and one manifest+range read vs. N up-front R2 puts, are both about
+ * how the cost SCALES with chunk count, not about today's specific row
+ * count. A smaller (but still unverified -- no DataForSEO key was available
+ * to measure the scoped response) staged list makes this module cheaper to
+ * run, never a reason to need it less.
  */
 import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
