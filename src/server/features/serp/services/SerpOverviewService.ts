@@ -34,25 +34,6 @@ const trafficEstimationItemSchema = z
 
 import { serpOverviewSchema } from "@/types/schemas/serp";
 
-// Labs keyword_overview item, read defensively (external data).
-const keywordOverviewItemSchema = z
-  .object({
-    keyword_info: z
-      .object({
-        search_volume: z.number().nullable().optional(),
-        cpc: z.number().nullable().optional(),
-      })
-      .passthrough()
-      .nullable()
-      .optional(),
-    keyword_properties: z
-      .object({ keyword_difficulty: z.number().nullable().optional() })
-      .passthrough()
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
-
 type SerpOverviewResponse = z.infer<typeof serpOverviewSchema>;
 
 async function getSerpOverview(
@@ -129,22 +110,32 @@ async function getSerpOverview(
     }
   }
 
-  // The keyword's own metrics for the stats header. Best-effort — Labs has no
-  // data for many long-tails and that must not sink the SERP view.
+  // The keyword's own metrics for the stats header. Routed through the same
+  // provider-aware helper Keyword Research's saved-list refresh and Rank
+  // Tracking's suggestion step already use (getKeywordDataProvider decides
+  // Labs vs Google Ads from `locationCode` alone), rather than an
+  // unconditional Labs call: a metro `locationCode` (Task 6's geo
+  // activation) now comes back with genuinely local volume/CPC via Google
+  // Ads, honestly with no keyword difficulty (Labs-only) instead of either
+  // erroring on a location Labs never supported or silently mislabeling a
+  // Labs-country-level number as this metro's own. Best-effort — a lookup
+  // failure for either provider must not sink the SERP view.
   let keywordStats: SerpOverviewResponse["keywordStats"] = null;
   try {
-    const overviewItems = await dataforseo.labs.keywordOverview({
+    const { fetchKeywordMetricsForList } =
+      await import("@/server/lib/dataforseo/keyword-metrics");
+    const metrics = await fetchKeywordMetricsForList(dataforseo, {
       keywords: [keyword],
       locationCode,
       languageCode,
+      creditFeature: "keyword_research",
     });
-    const parsed = keywordOverviewItemSchema.safeParse(overviewItems[0] ?? {});
-    if (parsed.success && overviewItems.length > 0) {
+    const metric = metrics[0];
+    if (metric) {
       keywordStats = {
-        searchVolume: parsed.data.keyword_info?.search_volume ?? null,
-        cpc: parsed.data.keyword_info?.cpc ?? null,
-        keywordDifficulty:
-          parsed.data.keyword_properties?.keyword_difficulty ?? null,
+        searchVolume: metric.searchVolume,
+        cpc: metric.cpc,
+        keywordDifficulty: metric.keywordDifficulty,
       };
     }
   } catch (error) {

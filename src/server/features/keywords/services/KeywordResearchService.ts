@@ -9,6 +9,7 @@ import {
   updateSavedKeywordTag,
   updateSavedKeywordTags,
   refreshSavedKeywordMetrics,
+  getKeywordDifficultyOverview,
 } from "@/server/features/keywords/services/research";
 
 export const KeywordResearchService = {
@@ -22,4 +23,5 @@ export const KeywordResearchService = {
   deleteSavedKeywordTag,
   removeSavedKeywords,
   refreshSavedKeywordMetrics,
+  getKeywordDifficultyOverview,
 } as const;

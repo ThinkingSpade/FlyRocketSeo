@@ -54,6 +54,18 @@ import {
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
+import {
+  resolveRunGeo,
+  resolveStoredGeo,
+} from "@/client/features/geo/resolveRunGeo";
+import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
+import {
+  describeGeoRunError,
+  describeGeoUnavailable,
+} from "@/client/features/geo/geoUnavailableMessage";
+import { useKeywordDifficultyOverview } from "@/client/features/keywords/hooks/useKeywordDifficultyOverview";
+import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
+import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -79,6 +91,71 @@ function difficultyTone(value: number | null | undefined): InsightTone {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/** The three geo needs this tab's own numbers can each independently
+ *  answer -- volume/CPC can go genuinely local (Google Ads), difficulty
+ *  stays Labs-only/national regardless (see resolveGeo.ts's NATIONAL_ONLY
+ *  set), and the SERP results themselves have their own provider label.
+ *  Bundled together because every render path below needs all three at
+ *  once, and a bundle can't accidentally mix a captured value for one need
+ *  with a live one for another. */
+type SerpRunGeo = {
+  serp: ResolvedGeo;
+  volume: ResolvedGeo;
+  difficulty: ResolvedGeo;
+};
+
+/**
+ * Captured once at authorize()-time (form submit / "Run again"), never
+ * recomputed from the live scope control afterward -- see resolveRunGeo.ts's
+ * own header for why. This is the function that makes "the label describes
+ * what was actually fetched" true: every render below reads its RETURN
+ * VALUE (stashed in `runGeo` state), not a fresh call against whatever
+ * `targetAreaScope.area` happens to be during that render.
+ */
+function captureSerpRunGeo(
+  area: TargetArea,
+  sessionLocationCode: number,
+): SerpRunGeo {
+  return {
+    serp: resolveRunGeo("serp", area, sessionLocationCode),
+    volume: resolveRunGeo("keyword-volume", area, sessionLocationCode),
+    difficulty: resolveRunGeo("keyword-difficulty", area, sessionLocationCode),
+  };
+}
+
+/** For a restored/auto-restored run that never went through this session's
+ *  own authorize() call -- labels strictly from what that run itself
+ *  stored, never from the live scope control (see resolveStoredGeo.ts's own
+ *  header: re-applying today's scope to yesterday's data is the exact
+ *  stale-label failure this task exists to prevent). */
+function storedSerpRunGeo(
+  locationCode: number,
+  languageCode: string,
+): SerpRunGeo {
+  return {
+    serp: resolveStoredGeo("serp", locationCode, languageCode),
+    volume: resolveStoredGeo("keyword-volume", locationCode, languageCode),
+    difficulty: resolveStoredGeo(
+      "keyword-difficulty",
+      locationCode,
+      languageCode,
+    ),
+  };
+}
+
+/** Task 6 Step 4's "a provider rejects the location" case for this tab's
+ *  main SERP call: when the run that just failed was scoped LOCAL, say so
+ *  specifically instead of showing the tab's bare generic error text. No
+ *  geo captured yet (a query can error before any run ever succeeded) falls
+ *  back to the plain message unchanged. */
+function describeGeoRunErrorForSerp(
+  geo: SerpRunGeo | null,
+  fallbackMessage: string,
+): string {
+  if (!geo) return fallbackMessage;
+  return describeGeoRunError("this SERP", geo.serp, fallbackMessage);
 }
 
 /** The project's own DR, or null when there's no domain or Ahrefs hasn't
@@ -109,6 +186,7 @@ function buildPageSerpVerdict(
   ratings: DomainRatings | null,
   ownDomainRating: number | null,
   projectDomain: string | null,
+  geo: SerpRunGeo,
 ) {
   const competitorResults = result.results.filter(
     (item) => !(item.domain && item.domain === projectDomain),
@@ -122,6 +200,9 @@ function buildPageSerpVerdict(
       .filter((value): value is number => value != null),
     resultCount: competitorResults.length,
     paaQuestions: result.paaQuestions,
+    // Only a genuinely LOCAL SERP names its area -- a national result stays
+    // unqualified, exactly as this verdict read before Task 6.
+    areaLabel: geo.serp.scope === "local" ? geo.serp.label : null,
   });
 }
 
@@ -179,54 +260,202 @@ function AnalyzeButton({
 }
 
 /**
+ * The keyword/location form. Split out from the page's own render function
+ * (like `AnalyzeButton` and `SerpKeywordStatsTiles`) purely to stay inside
+ * this file's `max-lines-per-function` budget -- `onSubmit` carries the
+ * actual submit LOGIC (geo capture, `run.authorize()`, handoff, navigate),
+ * defined once in the parent as `handleAnalyzeSubmit` so this component
+ * stays pure layout.
+ */
+function SerpSearchForm({
+  input,
+  setInput,
+  setInputTouched,
+  locationInput,
+  setLocationInput,
+  setLocationTouched,
+  suggestions,
+  isFetching,
+  onSubmit,
+}: {
+  input: string;
+  setInput: (value: string) => void;
+  setInputTouched: (value: boolean) => void;
+  locationInput: string;
+  setLocationInput: (value: string) => void;
+  setLocationTouched: (value: boolean) => void;
+  suggestions: ReturnType<typeof useProjectSuggestions>;
+  isFetching: boolean;
+  onSubmit: (keyword: string) => void;
+}) {
+  return (
+    <div className="card border border-base-300 bg-base-100">
+      <div className="card-body gap-3 p-4">
+        <form
+          className="flex flex-col gap-3 sm:flex-row sm:items-start"
+          onSubmit={(event) => {
+            event.preventDefault();
+            const next = input.trim();
+            if (!next) return;
+            onSubmit(next);
+          }}
+        >
+          <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
+            <label className="form-control w-full">
+              <span className="label-text pb-1 text-xs font-medium">
+                Keyword
+              </span>
+              <input
+                type="text"
+                className="input input-bordered input-sm w-full"
+                placeholder="office coffee service dallas"
+                value={input}
+                onChange={(event) => {
+                  setInputTouched(true);
+                  setInput(event.target.value);
+                }}
+              />
+            </label>
+            <SuggestionChips
+              suggestions={suggestions}
+              value={input}
+              onSelect={(next) => {
+                setInputTouched(true);
+                setInput(next);
+              }}
+              disabled={isFetching}
+            />
+          </div>
+          <label className="form-control w-full sm:max-w-56">
+            <span className="label-text pb-1 text-xs font-medium">
+              Location
+            </span>
+            <select
+              className="select select-bordered select-sm w-full"
+              value={locationInput}
+              onChange={(event) => {
+                setLocationTouched(true);
+                setLocationInput(event.target.value);
+              }}
+            >
+              {LOCATION_OPTIONS.map((option) => (
+                <option key={option.code} value={option.code}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <AnalyzeButton
+            disabled={!input.trim() || isFetching}
+            isFetching={isFetching}
+          />
+        </form>
+      </div>
+    </div>
+  );
+}
+
+/**
  * The keyword-stats KPI row: volume, difficulty, CPC, and organic result
  * count. Split out (like `AnalyzeButton` and `SerpResultsTable` below) so
  * this page's render function doesn't spend its line budget on four
  * near-identical `InsightTile` calls.
+ *
+ * `geo` is the bundle CAPTURED for this specific run (see
+ * `captureSerpRunGeo`/`storedSerpRunGeo`) -- every label below is derived
+ * from it, never from `useTargetAreaScope`'s live area, which this
+ * component never even receives.
  */
 function SerpKeywordStatsTiles({
+  projectId,
   result,
+  geo,
 }: {
+  projectId: string;
   result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
+  geo: SerpRunGeo;
 }) {
+  const difficultyOverview = useKeywordDifficultyOverview(projectId);
+  const loadedDifficulty = difficultyOverview.byKeyword.get(
+    result.keyword.toLowerCase(),
+  )?.keywordDifficulty;
+  const difficultyValue =
+    loadedDifficulty !== undefined
+      ? loadedDifficulty
+      : (result.keywordStats?.keywordDifficulty ?? null);
+
+  // Volume/CPC came back null-difficulty from Google Ads (a metro's genuine
+  // local scope, see SerpOverviewService's own header) -- Labs, the sole
+  // difficulty source, can still answer at country level. If the main run
+  // was ALREADY Labs (national scope) and still got null, Labs itself has
+  // no data for this term -- a second identical Labs call would just waste
+  // a click, so the affordance only appears when it can plausibly help.
+  const canBackfillDifficulty =
+    geo.volume.provider === "google_ads" && geo.difficulty.provider === "labs";
+  const difficultyUnavailableMessage = describeGeoUnavailable(
+    "Keyword difficulty",
+    geo.difficulty,
+  );
+  const showDifficultyAffordance =
+    difficultyValue == null &&
+    (canBackfillDifficulty || difficultyUnavailableMessage != null);
+
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-      <InsightTile
-        icon={BarChart3}
-        label="Volume"
-        value={formatCount(result.keywordStats?.searchVolume)}
-        tone="primary"
-      />
-      <InsightTile
-        icon={Gauge}
-        label="Difficulty"
-        value={result.keywordStats?.keywordDifficulty ?? "—"}
-        tone={difficultyTone(result.keywordStats?.keywordDifficulty)}
-      />
-      <InsightTile
-        icon={CircleDollarSign}
-        label="CPC"
-        value={
-          result.keywordStats?.cpc != null
-            ? `$${result.keywordStats.cpc.toFixed(2)}`
-            : "—"
-        }
-        tone="info"
-      />
-      <InsightTile
-        icon={ListOrdered}
-        label="Organic results"
-        value={result.totalOrganic}
-        // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
-        // when that's fewer than the total, the table below isn't the whole
-        // picture, which the bare count alone can't tell you. Once nothing
-        // was truncated, this would just repeat the value above it.
-        hint={
-          result.results.length < result.totalOrganic
-            ? `Top ${result.results.length} shown`
-            : undefined
-        }
-      />
+    <div className="flex flex-col gap-2">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <InsightTile
+          icon={BarChart3}
+          label={formatGeoMetricLabel("Volume", geo.volume)}
+          value={formatCount(result.keywordStats?.searchVolume)}
+          tone="primary"
+        />
+        <InsightTile
+          icon={Gauge}
+          label={formatGeoMetricLabel("Difficulty", geo.difficulty)}
+          value={difficultyValue ?? "—"}
+          tone={difficultyTone(difficultyValue)}
+        />
+        <InsightTile
+          icon={CircleDollarSign}
+          label={formatGeoMetricLabel("CPC", geo.volume)}
+          value={
+            result.keywordStats?.cpc != null
+              ? `$${result.keywordStats.cpc.toFixed(2)}`
+              : "—"
+          }
+          tone="info"
+        />
+        <InsightTile
+          icon={ListOrdered}
+          label="Organic results"
+          value={result.totalOrganic}
+          // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
+          // when that's fewer than the total, the table below isn't the whole
+          // picture, which the bare count alone can't tell you. Once nothing
+          // was truncated, this would just repeat the value above it.
+          hint={
+            result.results.length < result.totalOrganic
+              ? `Top ${result.results.length} shown`
+              : undefined
+          }
+        />
+      </div>
+      {showDifficultyAffordance ? (
+        <DifficultyOverviewControl
+          count={1}
+          unavailableMessage={difficultyUnavailableMessage}
+          isLoading={difficultyOverview.isLoading}
+          isError={difficultyOverview.isError}
+          loaded={false}
+          onLoad={() =>
+            difficultyOverview.load({
+              keywords: [result.keyword],
+              locationCode: geo.difficulty.locationCode,
+              languageCode: geo.difficulty.languageCode,
+            })
+          }
+        />
+      ) : null}
     </div>
   );
 }
@@ -308,17 +537,22 @@ export function SerpOverviewPage({
   }, [locationCode, locationTouched, activeLocation]);
 
   // The confirmed target area (or the project's country, before anything is
-  // confirmed) that `ScopeControl` shows in the header -- a SEPARATE concept
-  // from the country-only `locationInput` field above, which stays
-  // untouched here. `targetAreaScope.area` must never be read into `run`'s
-  // key or `serpQuery` below -- wiring it into the actual fetch is Task 6's
-  // job, not this one's (see `useTargetAreaScope`'s own doc comment).
+  // confirmed) that `ScopeControl` shows in the header. Live and reactive --
+  // it must NEVER be read directly into `run`'s key, `serpQuery`, or any
+  // label below. `captureSerpRunGeo` is the only thing allowed to read it,
+  // and only at the exact moment a run is authorized (see `runGeo` below).
   const targetAreaScope = useTargetAreaScope(projectId, activeLocation);
 
   const [runInput, setRunInput] = useState<{
     keyword: string;
     locationCode: number;
+    languageCode: string;
   } | null>(null);
+  // The geo CAPTURED for the run currently in `runInput` -- set in the same
+  // breath as `runInput` itself (submit handler / "Run again" below), never
+  // recomputed later. This is what every label on this page reads; changing
+  // `targetAreaScope` after a run has already fired cannot touch it.
+  const [runGeo, setRunGeo] = useState<SerpRunGeo | null>(null);
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
   );
@@ -334,6 +568,7 @@ export function SerpOverviewPage({
           projectId,
           keyword: runInput?.keyword ?? "",
           locationCode: runInput?.locationCode ?? activeLocation,
+          languageCode: runInput?.languageCode,
         },
       }),
   });
@@ -352,8 +587,25 @@ export function SerpOverviewPage({
   });
   const result = serpQuery.data ?? restored?.result;
   const restoredRun = serpQuery.data == null ? restored : null;
+  // `runGeo` only ever gets set alongside `runInput` (see the submit handler
+  // and "Run again" below), so the two are never out of sync: whenever a
+  // live run is active, `runGeo` describes it; otherwise (a restored run,
+  // gated on `runInput == null` same as `restoredRun` above) this falls back
+  // to reading the RESTORED run's own stored locationCode/languageCode --
+  // never today's live scope control.
+  const effectiveGeo: SerpRunGeo | null =
+    runGeo ??
+    (restoredRun
+      ? storedSerpRunGeo(
+          restoredRun.result.locationCode,
+          restoredRun.result.languageCode,
+        )
+      : null);
   const errorMessage = serpQuery.isError
-    ? getStandardErrorMessage(serpQuery.error)
+    ? describeGeoRunErrorForSerp(
+        effectiveGeo,
+        getStandardErrorMessage(serpQuery.error),
+      )
     : null;
 
   // Ahrefs DR enrichment (free + KV-cached server side) for each result domain.
@@ -369,6 +621,35 @@ export function SerpOverviewPage({
   // Read once and threaded into both the verdict and the results table below,
   // so the two can never disagree about what "our own site" means.
   const ownDomainRating = computeOwnDomainRating(projectDomain, ratings);
+
+  // Captures geo at the exact moment this run is authorized -- never
+  // recomputed later from the live scope control (see resolveRunGeo.ts).
+  // Closes over the CURRENT render's `locationInput`, exactly like every
+  // other read of it in this handler; that's fine, a submit is synchronous.
+  const handleAnalyzeSubmit = (keyword: string) => {
+    const geo = captureSerpRunGeo(targetAreaScope.area, Number(locationInput));
+    setRunGeo(geo);
+    setRunInput({
+      keyword,
+      locationCode: geo.serp.locationCode,
+      languageCode: geo.serp.languageCode,
+    });
+    run.authorize();
+    // The handoff and URL both stay at the plain session country -- other
+    // tabs' own country pickers can't render a metro code, and this is a
+    // hint for THEIR field, not a record of what this run resolved to.
+    writeHandoff(projectId, {
+      kind: "keyword",
+      value: keyword,
+      locationCode: Number(locationInput),
+      source: "SERP Overview",
+      at: Date.now(),
+    });
+    navigate({
+      search: (prev) => ({ ...prev, q: keyword, loc: Number(locationInput) }),
+      replace: false,
+    });
+  };
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
@@ -395,88 +676,17 @@ export function SerpOverviewPage({
 
       <TargetAreaBanner projectId={projectId} />
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
-          <form
-            className="flex flex-col gap-3 sm:flex-row sm:items-start"
-            onSubmit={(event) => {
-              event.preventDefault();
-              const next = input.trim();
-              if (!next) return;
-              setRunInput({
-                keyword: next,
-                locationCode: Number(locationInput),
-              });
-              run.authorize();
-              writeHandoff(projectId, {
-                kind: "keyword",
-                value: next,
-                locationCode: Number(locationInput),
-                source: "SERP Overview",
-                at: Date.now(),
-              });
-              navigate({
-                search: (prev) => ({
-                  ...prev,
-                  q: next,
-                  loc: Number(locationInput),
-                }),
-                replace: false,
-              });
-            }}
-          >
-            <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
-              <label className="form-control w-full">
-                <span className="label-text pb-1 text-xs font-medium">
-                  Keyword
-                </span>
-                <input
-                  type="text"
-                  className="input input-bordered input-sm w-full"
-                  placeholder="office coffee service dallas"
-                  value={input}
-                  onChange={(event) => {
-                    setInputTouched(true);
-                    setInput(event.target.value);
-                  }}
-                />
-              </label>
-              <SuggestionChips
-                suggestions={suggestions}
-                value={input}
-                onSelect={(next) => {
-                  setInputTouched(true);
-                  setInput(next);
-                }}
-                disabled={serpQuery.isFetching}
-              />
-            </div>
-            <label className="form-control w-full sm:max-w-56">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
-              <select
-                className="select select-bordered select-sm w-full"
-                value={locationInput}
-                onChange={(event) => {
-                  setLocationTouched(true);
-                  setLocationInput(event.target.value);
-                }}
-              >
-                {LOCATION_OPTIONS.map((option) => (
-                  <option key={option.code} value={option.code}>
-                    {option.label}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <AnalyzeButton
-              disabled={!input.trim() || serpQuery.isFetching}
-              isFetching={serpQuery.isFetching}
-            />
-          </form>
-        </div>
-      </div>
+      <SerpSearchForm
+        input={input}
+        setInput={setInput}
+        setInputTouched={setInputTouched}
+        locationInput={locationInput}
+        setLocationInput={setLocationInput}
+        setLocationTouched={setLocationTouched}
+        suggestions={suggestions}
+        isFetching={serpQuery.isFetching}
+        onSubmit={handleAnalyzeSubmit}
+      />
 
       {errorMessage ? (
         <div className="alert alert-error text-sm">{errorMessage}</div>
@@ -499,9 +709,18 @@ export function SerpOverviewPage({
           onRunAgain={() => {
             setInput(restoredRun.result.keyword);
             setLocationInput(String(restoredRun.result.locationCode));
+            // A genuine new user-authorized run, so it captures the CURRENT
+            // live scope control -- same as a fresh submit, just seeded from
+            // the restored run's own keyword/location instead of the form.
+            const geo = captureSerpRunGeo(
+              targetAreaScope.area,
+              restoredRun.result.locationCode,
+            );
+            setRunGeo(geo);
             setRunInput({
               keyword: restoredRun.result.keyword,
-              locationCode: restoredRun.result.locationCode,
+              locationCode: geo.serp.locationCode,
+              languageCode: geo.serp.languageCode,
             });
             run.authorize(
               createMeteredRunKey(
@@ -543,9 +762,13 @@ export function SerpOverviewPage({
         </div>
       ) : null}
 
-      {result ? (
+      {result && effectiveGeo ? (
         <>
-          <SerpKeywordStatsTiles result={result} />
+          <SerpKeywordStatsTiles
+            projectId={projectId}
+            result={result}
+            geo={effectiveGeo}
+          />
 
           {result.serpFeatures.length > 0 ? (
             <div className="flex flex-wrap items-center gap-1.5">
@@ -572,6 +795,7 @@ export function SerpOverviewPage({
               ratings,
               ownDomainRating,
               projectDomain,
+              effectiveGeo,
             )}
             projectId={projectId}
             tab="SERP Overview"

@@ -21,7 +21,33 @@ type SerpVerdictInput = {
   resultCount: number;
   /** People-also-ask questions, used to name a nearer target. */
   paaQuestions: string[];
+  /**
+   * Where these ranked results actually came from — e.g. "Dallas-Ft. Worth,
+   * TX" when the SERP call was scoped to a metro (Task 6's geo activation).
+   * Optional (rather than required) so every pre-Task-6 caller/test above
+   * keeps compiling unchanged — omitted or null both mean "no claim," the
+   * same safe default as a plain national result. This only qualifies WHICH
+   * SERP produced the field being judged; domain rating itself is
+   * domain-level, not location-level, so the DR thresholds below are
+   * unaffected either way. Must come from the geo actually CAPTURED for
+   * this run (see resolveRunGeo.ts), never re-derived from a live scope
+   * control the caller might have changed since.
+   */
+  areaLabel?: string | null;
 };
+
+/** Prefixes a verdict sentence with "In <area>, " and lowercases its own
+ *  first letter to stay grammatical — e.g. "The top results..." becomes "In
+ *  Dallas-Ft. Worth, TX, the top results...". No-ops for a national result
+ *  (no `areaLabel`): the unqualified sentence already describes the
+ *  session's whole country, exactly as it did before this field existed. */
+function withAreaPrefix(
+  areaLabel: string | null | undefined,
+  sentence: string,
+): string {
+  if (!areaLabel) return sentence;
+  return `In ${areaLabel}, ${sentence.charAt(0).toLowerCase()}${sentence.slice(1)}`;
+}
 
 /** Median authority of the field is more honest than the mean, which one
  *  Wikipedia result can drag ten points. */
@@ -78,7 +104,10 @@ export function buildSerpVerdict(input: SerpVerdictInput): Verdict {
 
   if (gap <= -CLOSE_CONTEST_DR) {
     return {
-      read: `The top results have a median DR of ${rounded}; your site is DR ${input.ownDomainRating} — ahead of the field on authority. Authority is unlikely to be the blocker here, so effort is better spent on the page itself.`,
+      read: withAreaPrefix(
+        input.areaLabel,
+        `The top results have a median DR of ${rounded}; your site is DR ${input.ownDomainRating} — ahead of the field on authority. Authority is unlikely to be the blocker here, so effort is better spent on the page itself.`,
+      ),
       tone: "good",
       actions: [
         {
@@ -92,7 +121,10 @@ export function buildSerpVerdict(input: SerpVerdictInput): Verdict {
 
   if (gap < CLOSE_CONTEST_DR) {
     return {
-      read: `The top results have a median DR of ${rounded} against your DR ${input.ownDomainRating} — close enough that authority is unlikely to decide this one. Effort is better spent on the page itself.`,
+      read: withAreaPrefix(
+        input.areaLabel,
+        `The top results have a median DR of ${rounded} against your DR ${input.ownDomainRating} — close enough that authority is unlikely to decide this one. Effort is better spent on the page itself.`,
+      ),
       tone: "mixed",
       actions: [
         {
@@ -106,7 +138,10 @@ export function buildSerpVerdict(input: SerpVerdictInput): Verdict {
 
   const nearerTarget = input.paaQuestions[0];
   return {
-    read: `The top results have a median DR of ${rounded}; your site is DR ${input.ownDomainRating}. This keyword is out of reach directly.`,
+    read: withAreaPrefix(
+      input.areaLabel,
+      `The top results have a median DR of ${rounded}; your site is DR ${input.ownDomainRating}. This keyword is out of reach directly.`,
+    ),
     tone: "bad",
     actions: nearerTarget
       ? [

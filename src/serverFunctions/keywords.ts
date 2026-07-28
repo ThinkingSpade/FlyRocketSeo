@@ -10,6 +10,7 @@ import {
   serpAnalysisSchema,
   updateSavedKeywordTagSchema,
   updateSavedKeywordTagsSchema,
+  keywordDifficultyOverviewSchema,
 } from "@/types/schemas/keywords";
 import { KeywordResearchService } from "@/server/features/keywords/services/KeywordResearchService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
@@ -124,6 +125,23 @@ export const getSerpAnalysis = createServerFn({ method: "POST" })
   .validator(serpAnalysisSchema)
   .handler(async ({ data, context }) =>
     KeywordResearchService.getSerpAnalysis(
+      {
+        ...data,
+        projectId: context.projectId,
+      },
+      context,
+    ),
+  );
+
+// Task 6's on-demand "Load difficulty for these N" affordance -- one
+// explicit-click Labs `keyword_overview` call, bounded to whatever page of
+// keywords the caller passes. See difficulty-overview.ts's own header for
+// why this is separate from `researchKeywords` rather than folded into it.
+export const getKeywordDifficultyOverview = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(keywordDifficultyOverviewSchema)
+  .handler(async ({ data, context }) =>
+    KeywordResearchService.getKeywordDifficultyOverview(
       {
         ...data,
         projectId: context.projectId,

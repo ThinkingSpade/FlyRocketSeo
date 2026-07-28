@@ -176,6 +176,43 @@ export const serpAnalysisSchema = z.object({
   languageCode: z.string().min(2).max(8).default("en"),
 });
 
+/**
+ * Task 6's on-demand "Load difficulty for these N" affordance (Keyword
+ * Research, SERP Overview): one explicit-click `keyword_overview` call,
+ * bounded to whatever page of keywords is on screen right now. Both
+ * `locationCode` and `languageCode` are REQUIRED (no default, unlike the
+ * schemas above) -- the caller must pass exactly the country-level pair its
+ * own `resolveGeo("keyword-difficulty", ...)` resolved, not a value this
+ * schema quietly fills in, since a silently-defaulted language could
+ * disagree with the language the rest of that same run actually used.
+ */
+export const keywordDifficultyOverviewSchema = z.object({
+  projectId: z.string().min(1),
+  keywords: z.array(z.string().min(1)).min(1).max(100),
+  locationCode: z.number().int().positive(),
+  languageCode: z.string().min(2).max(8),
+});
+export type KeywordDifficultyOverviewInput = z.infer<
+  typeof keywordDifficultyOverviewSchema
+>;
+
+const keywordIntentValues = [
+  "informational",
+  "commercial",
+  "transactional",
+  "navigational",
+  "unknown",
+] as const;
+
+export const keywordDifficultyOverviewRowSchema = z.object({
+  keyword: z.string(),
+  keywordDifficulty: z.number().nullable(),
+  intent: z.enum(keywordIntentValues).nullable(),
+});
+export type KeywordDifficultyOverviewRow = z.infer<
+  typeof keywordDifficultyOverviewRowSchema
+>;
+
 /* ------------------------------------------------------------------ */
 /*  URL search params schema for /p/$projectId/keywords                */
 /* ------------------------------------------------------------------ */
