@@ -29,6 +29,19 @@ function jsonResponse(body: unknown, status = 200) {
   return Response.json(body, { status });
 }
 
+/** Narrows a mocked fetch call's first argument to the plain string URL
+ *  gbpClient always calls fetch with -- mirrors the narrowing already used
+ *  below for categories.list's URL (a `String(...)`/`as string` here would be
+ *  exactly the unsafe stringification oxlint's no-base-to-string rule
+ *  exists to catch, since fetch's own type is the wider RequestInfo | URL). */
+function requireFetchedUrl(call: unknown[] | undefined): string {
+  const url = call?.[0];
+  if (typeof url !== "string") {
+    throw new Error("expected gbpClient to call fetch with a string URL");
+  }
+  return url;
+}
+
 describe("gbpClient", () => {
   beforeEach(() => {
     mocks.getAccessToken.mockReset();
@@ -151,5 +164,80 @@ describe("gbpClient", () => {
     await expect(
       createGbpClient({ userId: "u1" }).listAccounts(),
     ).rejects.toBeInstanceOf(GbpTokenError);
+  });
+
+  // Finding A4: a network blip minting a token is not evidence the grant was
+  // revoked. Before the fix, ANY exception from getAccessToken -- including
+  // this one -- became a GbpTokenError asserting "revoked or expired".
+  it("does not classify a network blip while minting a token as GbpTokenError", async () => {
+    mocks.getAccessToken.mockRejectedValue(new TypeError("fetch failed"));
+    const { createGbpClient, GbpTokenError } = await import("./gbpClient");
+    const call = createGbpClient({ userId: "u1" }).listAccounts();
+    await expect(call).rejects.not.toBeInstanceOf(GbpTokenError);
+    // The original network TypeError propagates untouched, so a caller's own
+    // classification (GbpConnectionService.classifyGbpError) can read it as
+    // transient instead of a revoked grant.
+    await expect(call).rejects.toBeInstanceOf(TypeError);
+    await expect(call).rejects.toMatchObject({ message: "fetch failed" });
+  });
+
+  describe("pagination (finding A5)", () => {
+    it("follows nextPageToken on listAccounts even when the first page is empty", async () => {
+      mocks.fetch
+        .mockResolvedValueOnce(
+          jsonResponse({ accounts: [], nextPageToken: "page-2" }),
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({
+            accounts: [{ name: "accounts/1", accountName: "Biz" }],
+          }),
+        );
+      const { createGbpClient } = await import("./gbpClient");
+      const accounts = await createGbpClient({ userId: "u1" }).listAccounts();
+
+      expect(accounts).toEqual([{ name: "accounts/1", accountName: "Biz" }]);
+      expect(mocks.fetch).toHaveBeenCalledTimes(2);
+      expect(requireFetchedUrl(mocks.fetch.mock.calls[1])).toContain(
+        "pageToken=page-2",
+      );
+    });
+
+    it("follows nextPageToken on listLocations even when the first page is empty", async () => {
+      mocks.fetch
+        .mockResolvedValueOnce(
+          jsonResponse({ locations: [], nextPageToken: "page-2" }),
+        )
+        .mockResolvedValueOnce(
+          jsonResponse({
+            locations: [{ name: "locations/1", title: "Store" }],
+          }),
+        );
+      const { createGbpClient } = await import("./gbpClient");
+      const locations = await createGbpClient({ userId: "u1" }).listLocations(
+        "accounts/1",
+      );
+
+      expect(locations).toEqual([{ name: "locations/1", title: "Store" }]);
+      expect(mocks.fetch).toHaveBeenCalledTimes(2);
+      expect(requireFetchedUrl(mocks.fetch.mock.calls[1])).toContain(
+        "pageToken=page-2",
+      );
+    });
+
+    it("stops at a page cap instead of looping forever on a pathological response", async () => {
+      mocks.fetch.mockImplementation(() =>
+        Promise.resolve(
+          jsonResponse({ accounts: [], nextPageToken: "always-more" }),
+        ),
+      );
+      const { createGbpClient } = await import("./gbpClient");
+      const accounts = await createGbpClient({ userId: "u1" }).listAccounts();
+
+      expect(accounts).toEqual([]);
+      // Whatever the cap is, it must be finite -- a pathological API that
+      // never stops returning nextPageToken must not hang this call.
+      expect(mocks.fetch.mock.calls.length).toBeGreaterThan(0);
+      expect(mocks.fetch.mock.calls.length).toBeLessThan(1000);
+    });
   });
 });

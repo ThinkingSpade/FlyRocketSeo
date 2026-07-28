@@ -1,0 +1,132 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import type * as GbpClientModule from "@/server/lib/gbpClient";
+
+// Same recipe as gbpClient.test.ts: GbpConnectionService's import graph
+// reaches `cloudflare:workers` (via the db provider) and touches `@/db`
+// directly (userHasGrant/unlinkUserGrant) -- neither exists/is needed for
+// the classification behavior under test, so both are stubbed.
+vi.mock("cloudflare:workers", () => ({ env: {} }));
+vi.mock("@/db", () => {
+  const emptyQuery = {
+    from: () => emptyQuery,
+    where: () => emptyQuery,
+    limit: () => Promise.resolve([]),
+  };
+  return { db: { select: () => emptyQuery, delete: () => emptyQuery } };
+});
+
+const mocks = vi.hoisted(() => ({
+  listAccounts: vi.fn(),
+  listLocations: vi.fn(),
+}));
+
+// Mock only createGbpClient, preserving the real GbpApiError/GbpTokenError
+// classes (and isNetworkTransportError) so classifyGbpError's `instanceof`
+// checks inside GbpConnectionService exercise the genuine classes, not a
+// mocked stand-in.
+vi.mock("@/server/lib/gbpClient", async (importOriginal) => {
+  const actual = await importOriginal<typeof GbpClientModule>();
+  return {
+    ...actual,
+    createGbpClient: () => ({
+      listAccounts: mocks.listAccounts,
+      listLocations: mocks.listLocations,
+    }),
+  };
+});
+
+/**
+ * Finding A4: classifyGbpError (not exported -- exercised through
+ * listAvailableLocationsForUser, its one caller) used to fold every 403 into
+ * "requires_reconnect" and every token-mint exception into a hard "revoked"
+ * claim. These tests pin the corrected, status-semantics-based distinction:
+ * 401 (Unauthenticated) is a real "reconnect" signal, 403 (PermissionDenied)
+ * is a location-permissions problem instead, and a transport-level failure
+ * is transient, not a claim about the grant at all.
+ */
+describe("GbpConnectionService.listAvailableLocationsForUser error classification (finding A4)", () => {
+  beforeEach(() => {
+    mocks.listAccounts.mockReset();
+    mocks.listLocations.mockReset();
+  });
+
+  it("classifies a 401 as requires_reconnect (a genuine credential problem)", async () => {
+    const { GbpApiError } = await import("@/server/lib/gbpClient");
+    mocks.listAccounts.mockRejectedValue(
+      new GbpApiError(401, "unauthenticated"),
+    );
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result).toEqual({
+      locations: [],
+      errorReason: "requires_reconnect",
+    });
+  });
+
+  it("classifies a 403 as access_denied, NOT requires_reconnect (finding A4's exact failing input)", async () => {
+    // The exact failing input from finding A4: a plain 403. Before the fix
+    // this was indistinguishable from an expired/revoked connection, even
+    // though a 403 means the request WAS authenticated -- just not
+    // authorized for this location.
+    const { GbpApiError } = await import("@/server/lib/gbpClient");
+    mocks.listAccounts.mockRejectedValue(
+      new GbpApiError(403, "permission denied"),
+    );
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result).toEqual({ locations: [], errorReason: "access_denied" });
+    expect(result.errorReason).not.toBe("requires_reconnect");
+  });
+
+  it("classifies a 429 and a 5xx as temporary", async () => {
+    const { GbpApiError } = await import("@/server/lib/gbpClient");
+    mocks.listAccounts.mockRejectedValue(new GbpApiError(429, "rate limited"));
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result).toEqual({ locations: [], errorReason: "temporary" });
+  });
+
+  it("classifies a GbpTokenError as requires_reconnect", async () => {
+    const { GbpTokenError } = await import("@/server/lib/gbpClient");
+    mocks.listAccounts.mockRejectedValue(
+      new GbpTokenError("grant revoked or expired"),
+    );
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result).toEqual({
+      locations: [],
+      errorReason: "requires_reconnect",
+    });
+  });
+
+  it("classifies a network transport failure as temporary, not requires_reconnect", async () => {
+    mocks.listAccounts.mockRejectedValue(new TypeError("fetch failed"));
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result).toEqual({ locations: [], errorReason: "temporary" });
+  });
+
+  it("re-throws an error it cannot characterize rather than guessing a reason", async () => {
+    mocks.listAccounts.mockRejectedValue(new Error("something unexpected"));
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    await expect(
+      GbpConnectionService.listAvailableLocationsForUser("u1"),
+    ).rejects.toThrow("something unexpected");
+  });
+});

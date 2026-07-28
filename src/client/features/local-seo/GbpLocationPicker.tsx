@@ -43,7 +43,7 @@ export function GbpLocationPicker({
   secondaryAction,
 }: {
   loading: boolean;
-  errorReason: "requires_reconnect" | "temporary" | null;
+  errorReason: "requires_reconnect" | "access_denied" | "temporary" | null;
   locations: LocationOption[];
   selectedLocationName: string;
   onSelect: (locationName: string) => void;
@@ -74,6 +74,28 @@ export function GbpLocationPicker({
         >
           <InsightIcon icon={MapPin} tone="neutral" />
           Reconnect Google Business Profile
+        </button>
+      </div>
+    );
+  }
+  if (errorReason === "access_denied") {
+    // A 403 means Google authenticated the request but denied it for this
+    // specific location (finding A4) -- distinct from an expired/revoked
+    // connection (401), so this must not say "expired". The account may
+    // simply not manage this listing, or manage a different one.
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-error">
+          This Google account doesn&apos;t have permission to manage this
+          Business Profile location.
+        </p>
+        <button
+          type="button"
+          onClick={onReconnect}
+          className="btn btn-outline btn-sm gap-1.5"
+        >
+          <InsightIcon icon={MapPin} tone="neutral" />
+          Reconnect with a different Google account
         </button>
       </div>
     );

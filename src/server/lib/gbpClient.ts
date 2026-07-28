@@ -78,6 +78,22 @@ type GbpLocationPatch = {
 
 export type GbpCategorySuggestion = { name: string; displayName: string };
 
+/** True for a fetch-level transport failure (DNS, connection refused, a
+ *  dropped connection) -- never a statement about WHY the grant itself is
+ *  unusable. Exported so GbpConnectionService's own classification can reuse
+ *  this exact heuristic (finding A4) rather than keeping a second, drifting
+ *  copy: a network blip talking to Google is not evidence a grant was
+ *  revoked, whether it happens inside getToken below or one of this
+ *  client's own `request()` calls. */
+export function isNetworkTransportError(error: unknown): boolean {
+  return (
+    error instanceof TypeError &&
+    /fetch failed|failed to fetch|networkerror|network request failed|load failed/i.test(
+      error.message,
+    )
+  );
+}
+
 function messageForStatus(status: number, body: string): string {
   if (status === 401 || status === 403) {
     return "Google Business Profile denied access to this location (grant revoked, or missing permission on this listing).";
@@ -89,6 +105,36 @@ function messageForStatus(status: number, body: string): string {
     return "Google Business Profile location not found. It may have been unlinked or deleted on Google's side.";
   }
   return `Google Business Profile API error (${status}): ${body.slice(0, 300)}`;
+}
+
+// A sane ceiling on pages fetched per listAccounts/listLocations call
+// (finding A5): both are paginated Google APIs, and stopping after page one
+// risks reporting "no locations found" when the account/location genuinely
+// exists on a later page. This cap exists only so a pathological response
+// (one that always returns a nextPageToken) can't loop forever -- a real
+// grant is expected to need at most a handful of pages, never anywhere near
+// this many.
+const MAX_PAGES = 20;
+
+/** Follows `nextPageToken` until the API stops returning one or MAX_PAGES is
+ *  hit (finding A5). `fetchPage` is handed the previous page's token (or
+ *  undefined for the first page) and returns that page's items plus the
+ *  next token, if any -- shared by listAccounts and listLocations below so
+ *  the pagination loop itself is written, and tested, exactly once. */
+async function collectAllPages<TItem>(
+  fetchPage: (
+    pageToken: string | undefined,
+  ) => Promise<{ items: TItem[]; nextPageToken?: string }>,
+): Promise<TItem[]> {
+  const results: TItem[] = [];
+  let pageToken: string | undefined;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const { items, nextPageToken } = await fetchPage(pageToken);
+    results.push(...items);
+    if (!nextPageToken) break;
+    pageToken = nextPageToken;
+  }
+  return results;
 }
 
 /** Free-to-call Google Business Profile client -- like GSC, this is first-party
@@ -131,6 +177,12 @@ export function createGbpClient(opts: { userId: string }) {
         },
       });
     } catch (error) {
+      // A network blip talking to Google's token endpoint is not evidence
+      // the grant was revoked (finding A4) -- rethrow it as-is so the
+      // caller's own classification (GbpConnectionService.classifyGbpError)
+      // can read it as transient, the same way it already does for this
+      // client's `request()` fetch calls below.
+      if (isNetworkTransportError(error)) throw error;
       throw new GbpTokenError(
         "Could not mint a Business Profile access token (grant revoked or expired).",
         error,
@@ -170,22 +222,45 @@ export function createGbpClient(opts: { userId: string }) {
   }
 
   return {
-    /** Account Management API `accounts.list` -- the accounts this grant can
-     *  act on. Almost always exactly one for a single-business connector. */
+    /** Account Management API `accounts.list` -- every account this grant
+     *  can act on, following pagination to the end (finding A5). Almost
+     *  always exactly one page for a single-business connector, but an empty
+     *  first page with a `nextPageToken` is a real shape Google can return,
+     *  not proof there are no accounts. */
     async listAccounts(): Promise<GbpAccount[]> {
-      const data = await request<{ accounts?: GbpAccount[] }>(
-        `${ACCOUNT_MANAGEMENT_BASE}/accounts`,
-      );
-      return data.accounts ?? [];
+      return collectAllPages(async (pageToken) => {
+        const params = pageToken
+          ? `?${new URLSearchParams({ pageToken }).toString()}`
+          : "";
+        const data = await request<{
+          accounts?: GbpAccount[];
+          nextPageToken?: string;
+        }>(`${ACCOUNT_MANAGEMENT_BASE}/accounts${params}`);
+        return {
+          items: data.accounts ?? [],
+          nextPageToken: data.nextPageToken,
+        };
+      });
     },
 
     /** Business Information API `accounts.locations.list`, restricted to the
-     *  two fields the location picker needs. */
+     *  two fields the location picker needs, following pagination to the end
+     *  (finding A5) -- same reasoning as listAccounts above. */
     async listLocations(accountName: string): Promise<GbpLocationSummary[]> {
-      const data = await request<{ locations?: GbpLocationSummary[] }>(
-        `${BUSINESS_INFORMATION_BASE}/${accountName}/locations?readMask=name,title`,
-      );
-      return data.locations ?? [];
+      return collectAllPages(async (pageToken) => {
+        const params = new URLSearchParams({ readMask: "name,title" });
+        if (pageToken) params.set("pageToken", pageToken);
+        const data = await request<{
+          locations?: GbpLocationSummary[];
+          nextPageToken?: string;
+        }>(
+          `${BUSINESS_INFORMATION_BASE}/${accountName}/locations?${params.toString()}`,
+        );
+        return {
+          items: data.locations ?? [],
+          nextPageToken: data.nextPageToken,
+        };
+      });
     },
 
     /** My Business v4 `accounts.locations.localPosts.create` -- still the

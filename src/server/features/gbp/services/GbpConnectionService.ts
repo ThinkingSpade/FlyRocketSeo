@@ -6,6 +6,7 @@ import {
   createGbpClient,
   GbpApiError,
   GbpTokenError,
+  isNetworkTransportError,
 } from "@/server/lib/gbpClient";
 import {
   GbpConnectionRepository,
@@ -44,7 +45,17 @@ type GbpLocationOption = {
   accountDisplayName: string;
 };
 
-type GbpLocationsErrorReason = "requires_reconnect" | "temporary";
+// "access_denied" is deliberately its own reason, not folded into
+// "requires_reconnect" (finding A4): a 403 means the request was
+// authenticated but not authorized for this specific location -- a
+// PERMISSIONS problem, not necessarily an expired or revoked token (which
+// Google reports as 401). Conflating the two told a user whose grant was
+// perfectly healthy to "reconnect", the wrong remedy for "this account
+// doesn't manage this listing".
+type GbpLocationsErrorReason =
+  | "requires_reconnect"
+  | "access_denied"
+  | "temporary";
 
 async function getConnection(projectId: string): Promise<GbpConnection | null> {
   return GbpConnectionRepository.getByProjectId(projectId);
@@ -68,23 +79,29 @@ async function userHasGrant(userId: string): Promise<boolean> {
   return rows.length > 0;
 }
 
+/**
+ * Distinguishes what this can actually establish from the response's own
+ * status semantics (finding A4), rather than collapsing every 4xx into
+ * "your connection expired":
+ *  - 401 (Unauthenticated) IS specifically about the credential itself --
+ *    missing, invalid, or expired -- so "reconnect" is the honest remedy.
+ *  - 403 (PermissionDenied) means the request WAS authenticated but isn't
+ *    authorized for this location -- a permissions problem on that
+ *    location, not evidence the connection itself is dead.
+ *  - 429/5xx and a transport-level failure are retryable, not anything the
+ *    user needs to act on.
+ *  - Anything else this can't characterize returns null, which propagates
+ *    the raw error rather than naming a cause that isn't established.
+ */
 function classifyGbpError(error: unknown): GbpLocationsErrorReason | null {
   if (error instanceof GbpTokenError) return "requires_reconnect";
   if (error instanceof GbpApiError) {
-    if (error.status === 401 || error.status === 403) {
-      return "requires_reconnect";
-    }
+    if (error.status === 401) return "requires_reconnect";
+    if (error.status === 403) return "access_denied";
     if (error.status === 429 || error.status >= 500) return "temporary";
     return null;
   }
-  if (
-    error instanceof TypeError &&
-    /fetch failed|failed to fetch|networkerror|network request failed|load failed/i.test(
-      error.message,
-    )
-  ) {
-    return "temporary";
-  }
+  if (isNetworkTransportError(error)) return "temporary";
   return null;
 }
 
