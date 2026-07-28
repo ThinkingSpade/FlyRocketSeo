@@ -91,6 +91,47 @@ const DFW_AREA: TargetArea = {
   parentCountryCode: 2840,
 };
 
+// Two real, distinctly-stated Springfields (same codes geoLocationOptions.
+// test.ts already pins as real production data) -- an ambiguous-city-name
+// fixture pair, neither rolling up into a metro, so a resolved area is
+// "city" kind directly rather than needing a second geoGetByCode hop.
+const SPRINGFIELD_IL_ROW = {
+  code: 1_017_962,
+  name: "Springfield,Illinois,United States",
+  type: "City",
+  stateCode: "IL",
+  countryCode: 2840,
+  parentMetroCode: null,
+};
+const SPRINGFIELD_MO_ROW = {
+  code: 1_017_961,
+  name: "Springfield,Missouri,United States",
+  type: "City",
+  stateCode: "MO",
+  countryCode: 2840,
+  parentMetroCode: null,
+};
+const SPRINGFIELD_IL_AREA: TargetArea = {
+  kind: "city",
+  locationCode: 1_017_962,
+  label: "Springfield, Illinois",
+  parentCountryCode: 2840,
+};
+
+// A real "Dallas" City row -- distinct from DFW_METRO_ROW above (that one is
+// the DMA, "Dallas-Ft. Worth, TX,Texas,United States"; this is the bare city
+// itself) -- for proving a bare prefix hit off GeoLocationRepository.search's
+// own LIKE query ("Dall" matching "Dallas...") is never accepted as if it
+// were an exact name match.
+const DALLAS_CITY_ROW = {
+  code: 900202,
+  name: "Dallas,Texas,United States",
+  type: "City",
+  stateCode: "TX",
+  countryCode: 2840,
+  parentMetroCode: 200623,
+};
+
 function resetAllMocks() {
   mocks.listByProject.mockReset();
   mocks.setPrimary.mockReset();
@@ -251,6 +292,109 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
     );
 
     expect(result).toBeNull();
+  });
+});
+
+describe("TargetAreaService resolves ambiguous city names honestly", () => {
+  beforeEach(resetAllMocks);
+
+  it("an ambiguous city name with no region resolves to null, not the biggest city", async () => {
+    mocks.listByProject.mockResolvedValue([]);
+    // No GBP profile at all -- the ONLY source of a "Springfield" candidate
+    // here is Search Console local-landing-page evidence, which (per
+    // collectGscSignal's own explicit `null` region argument) never carries
+    // state text -- exactly the caller this ambiguity scenario is about.
+    mocks.getCachedBusinessContext.mockResolvedValue(null);
+    mocks.getPerformance.mockResolvedValue({
+      rows: [
+        {
+          keys: [
+            "coffee shop",
+            "https://example.com/service-areas/springfield",
+          ],
+          clicks: 10,
+          impressions: 100,
+          position: 5,
+        },
+      ],
+    });
+    // Both real Springfields match the "springfield" name exactly -- ambiguous
+    // with nothing to break the tie.
+    mocks.geoSearch.mockResolvedValue([SPRINGFIELD_IL_ROW, SPRINGFIELD_MO_ROW]);
+
+    const { TargetAreaService } = await import("./TargetAreaService");
+    const result = await TargetAreaService.getTargetArea(
+      { projectId: "p1" },
+      billingCustomer,
+    );
+
+    expect(result).toBeNull();
+    expect(mocks.geoGetByCode).not.toHaveBeenCalled();
+    expect(mocks.setPrimary).not.toHaveBeenCalled();
+  });
+
+  it("the same ambiguous name WITH a region resolves to that state's own row", async () => {
+    mocks.listByProject.mockResolvedValue([]);
+    mocks.getCachedBusinessContext.mockResolvedValue({
+      keyword: "Acme Coffee",
+      profile: {
+        city: "Springfield",
+        region: "Illinois",
+        latitude: null,
+        longitude: null,
+      },
+    });
+    mocks.geoSearch.mockResolvedValue([SPRINGFIELD_IL_ROW, SPRINGFIELD_MO_ROW]);
+    mocks.getPerformance.mockRejectedValue(
+      new mocks.GscNotConnectedError("p1"),
+    );
+
+    const { TargetAreaService } = await import("./TargetAreaService");
+    const result = await TargetAreaService.getTargetArea(
+      { projectId: "p1" },
+      billingCustomer,
+    );
+
+    expect(result).toMatchObject({
+      confirmed: false,
+      proposal: { multi: false, area: SPRINGFIELD_IL_AREA, source: "gbp" },
+    });
+    // Neither Springfield rolls up into a metro (parentMetroCode: null) --
+    // the region filter alone must have picked the Illinois row.
+    expect(mocks.geoGetByCode).not.toHaveBeenCalled();
+  });
+
+  it("a bare prefix hit off the LIKE search is never accepted as an exact match", async () => {
+    mocks.listByProject.mockResolvedValue([]);
+    mocks.getCachedBusinessContext.mockResolvedValue({
+      keyword: "Acme Coffee",
+      profile: {
+        // "Dall" is a real prefix of "Dallas" -- GeoLocationRepository.
+        // search's own LIKE query would return the row below for this, same
+        // as it must for the picker's own "dal" -> Dallas-before-Dalton
+        // behaviour. Proves that behaviour is never reused as "this IS
+        // Dallas" for detection.
+        city: "Dall",
+        region: null,
+        latitude: null,
+        longitude: null,
+      },
+    });
+    mocks.geoSearch.mockResolvedValue([DALLAS_CITY_ROW]);
+    mocks.getPerformance.mockRejectedValue(
+      new mocks.GscNotConnectedError("p1"),
+    );
+
+    const { TargetAreaService } = await import("./TargetAreaService");
+    const result = await TargetAreaService.getTargetArea(
+      { projectId: "p1" },
+      billingCustomer,
+    );
+
+    expect(result).toBeNull();
+    // The metro hop (DALLAS_CITY_ROW.parentMetroCode -> DFW) must never even
+    // be attempted off a row that was never accepted as a match.
+    expect(mocks.geoGetByCode).not.toHaveBeenCalled();
   });
 });
 

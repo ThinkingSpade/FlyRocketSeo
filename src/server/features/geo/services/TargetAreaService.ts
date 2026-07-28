@@ -92,28 +92,110 @@ function toTargetArea(row: TargetAreaRow): TargetArea {
 }
 
 /**
+ * Case/whitespace-insensitive comparison key for a raw name segment (a
+ * seeded row's own city/state text, or a caller-supplied place name/region).
+ */
+function normalizePlaceName(value: string): string {
+  return value.trim().toLowerCase();
+}
+
+/**
+ * The "place" segment of a seeded row's own `name` hierarchy (DataForSEO's
+ * format, e.g. "Plano,Texas,United States") -- always the first comma
+ * segment for a City row (verified 3-segment shape: place, state, country --
+ * see `toGeoDisplayName`'s own header for the same convention; a DMA row's
+ * extra embedded ", <ST>" segment never applies here since this is only ever
+ * called on `type === "City"` rows).
+ */
+function cityRowPlace(name: string): string {
+  return name.split(",")[0]?.trim() ?? "";
+}
+
+/**
+ * The "state" segment of a seeded City row's own `name` -- the second of its
+ * verified 3 segments. Returns null for a shorter-than-expected name (should
+ * never happen for a real seeded City row) rather than throwing: detection
+ * degrading to "no state known" beats a crash over malformed data.
+ */
+function cityRowState(name: string): string | null {
+  const segments = name.split(",").map((segment) => segment.trim());
+  return segments.length >= 3 ? (segments[1] ?? null) : null;
+}
+
+/**
+ * True when `row` names the same state as `region` -- checked against both
+ * the row's own state-name segment (e.g. "Texas") and its `stateCode` (e.g.
+ * "TX"), since GBP's `region` field and a seeded row's own `stateCode`
+ * column don't share one format, and this codebase has no free, server-safe
+ * state-name<->abbreviation table to normalise between them (`usStates.ts`
+ * is client-only, see its own header) -- checking both of the row's own
+ * representations against whatever format the evidence turns out to be in
+ * costs nothing and avoids inventing one.
+ */
+function rowMatchesRegion(
+  row: { name: string; stateCode: string | null },
+  region: string,
+): boolean {
+  const normalizedRegion = normalizePlaceName(region);
+  const stateSegment = cityRowState(row.name);
+  if (stateSegment && normalizePlaceName(stateSegment) === normalizedRegion) {
+    return true;
+  }
+  return (
+    row.stateCode !== null &&
+    normalizePlaceName(row.stateCode) === normalizedRegion
+  );
+}
+
+/** The one row in `rows`, or null when there are zero OR more than one --
+ *  ambiguity is never broken by picking whichever sorts first. */
+function resolveUnambiguousMatch<T>(rows: readonly T[]): T | null {
+  return rows.length === 1 ? (rows[0] ?? null) : null;
+}
+
+/**
  * Resolves a free-text place name (a GBP city, or a name extracted from a
  * local landing page's URL) to a seeded `geo_locations` row -- and, when
  * that row sits inside a DMA, hops to the metro itself via
  * `parentMetroCode`, since the business address is the SIGNAL but the metro
  * is the useful UNIT for keyword/SERP targeting (the activation plan's own
  * worked example: a Plano, TX business proposes "Dallas-Ft. Worth, TX", not
- * the narrower city). Returns null, never a fabricated code, whenever the
- * name matches no seeded City row. Picks the top (highest-population --
- * `GeoLocationRepository.search`'s own ordering) match rather than trying to
- * disambiguate same-named cities by state text: this produces a PROPOSAL the
- * user confirms or corrects, not a final answer, so a good guess is enough.
+ * the narrower city).
+ *
+ * Requires an EXACT match on the row's own city-name segment -- never a bare
+ * prefix hit off `GeoLocationRepository.search`'s own LIKE query (that same
+ * search also has to answer "dal" with "Dallas" for the picker; resolving a
+ * detection candidate is a different, stricter question: IS this literal
+ * name seeded, not "what starts with it"). When `region` is available (GBP
+ * supplies one; a place name scraped from a landing-page URL never does --
+ * see this function's own callers), an exact city match must ALSO name that
+ * same state (`rowMatchesRegion`). Any remaining ambiguity -- several exact
+ * matches, no region to break the tie -- resolves to `null` rather than the
+ * biggest city: the confirmation banner attributes a proposal to its
+ * specific source ("from your Google Business Profile"), so silently
+ * substituting a same-named city in the wrong state would show the user a
+ * market their own evidence never actually named.
  */
 async function resolveAreaForPlaceName(
   placeName: string,
+  region: string | null,
 ): Promise<TargetArea | null> {
   const results = await GeoLocationRepository.search({
     query: placeName,
     countryCode: US_COUNTRY_CODE,
     limit: GEO_LOOKUP_LIMIT,
   });
-  const [best] = results.filter((row) => row.type === "City");
-  if (!best) return null; // No seeded row -- never invent one.
+  const normalizedPlaceName = normalizePlaceName(placeName);
+  const exactMatches = results.filter(
+    (row) =>
+      row.type === "City" &&
+      normalizePlaceName(cityRowPlace(row.name)) === normalizedPlaceName,
+  );
+  const candidates = region
+    ? exactMatches.filter((row) => rowMatchesRegion(row, region))
+    : exactMatches;
+  const best = resolveUnambiguousMatch(candidates);
+  if (!best) return null; // No seeded row, or still ambiguous -- never a guess.
 
   if (best.parentMetroCode !== null) {
     const metro = await GeoLocationRepository.getByCode(best.parentMetroCode);
@@ -157,7 +239,7 @@ async function collectGbpSignal(
   );
   const city = cached?.profile.city ?? null;
   const region = cached?.profile.region ?? null;
-  const area = city ? await resolveAreaForPlaceName(city) : null;
+  const area = city ? await resolveAreaForPlaceName(city, region) : null;
   return { area, city, region };
 }
 
@@ -207,7 +289,11 @@ async function collectGscSignal(
   for (const page of localPages) {
     const placeName = landingTopic(page.page);
     if (!placeName) continue;
-    const area = await resolveAreaForPlaceName(placeName);
+    // A URL slug carries no state text at all (unlike GBP's own city+region
+    // pair above) -- explicitly null, not an omitted argument standing in
+    // for one, so this caller can never be confused for "region unknown
+    // because it wasn't checked yet".
+    const area = await resolveAreaForPlaceName(placeName, null);
     if (area) areas.push(area);
   }
   return areas; // detectTargetArea de-dupes by locationCode itself.
