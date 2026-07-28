@@ -30,6 +30,10 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -176,6 +180,13 @@ export function TrendsPage({
   // so deriving this from `query` alone left the tab telling the user to
   // "enter keywords" while a suggestion sat prefilled in the box.
   const enteredKeywords = parseKeywords(input);
+  // Unlike SERP Overview/Content Optimizer/Topic Clusters, this tab has no
+  // country field of its own today -- getKeywordTrends takes no
+  // locationCode at all (see its own call below). `market.locationCode` is
+  // only the header ScopeControl's own fallback, never read into the
+  // metered query.
+  const market = useProjectMarket(projectId);
+  const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
   const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, parseKeywords(input)),
@@ -258,17 +269,25 @@ export function TrendsPage({
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Activity className="size-5" />
-          Keyword Trends
-        </h1>
-        <p className="text-sm text-base-content/60">
-          Compare Google Trends interest over time for up to{" "}
-          {MAX_TRENDS_KEYWORDS} keywords — spot seasonality and momentum before
-          committing to a topic.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <Activity className="size-5" />
+            Keyword Trends
+          </h1>
+          <p className="text-sm text-base-content/60">
+            Compare Google Trends interest over time for up to{" "}
+            {MAX_TRENDS_KEYWORDS} keywords — spot seasonality and momentum
+            before committing to a topic.
+          </p>
+        </div>
+        <ScopeControl
+          area={targetAreaScope.area}
+          onChange={targetAreaScope.onChange}
+        />
       </div>
+
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
