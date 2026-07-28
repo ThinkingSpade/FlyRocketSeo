@@ -200,7 +200,28 @@ type TrendsVerdictInput = {
    *  non-nullable numbers can't represent "this month never had data",
    *  which the real computation genuinely produces. */
   seriesByKeyword: Record<string, Array<number | null>>;
+  /**
+   * The metro this interest series was actually scoped to (Task 6), when
+   * the run resolved to a LOCAL geo -- omitted/null for a worldwide result
+   * (Keyword Trends' own national-equivalent default, since
+   * getKeywordTrends omits `locationCode` entirely rather than scoping to
+   * the session's country -- see TrendsPage.tsx's own comment on that).
+   * Optional so every pre-Task-6 caller/test keeps compiling unchanged.
+   */
+  areaLabel?: string | null;
 };
+
+/** Prefixes a verdict sentence with "In <area>, " -- mirrors serp.ts's own
+ *  `withAreaPrefix` (kept as a separate small copy rather than a shared
+ *  import, matching this file's own `formatCount` already being a separate
+ *  copy from serp.ts's). No-ops for a worldwide result. */
+function withAreaPrefix(
+  areaLabel: string | null | undefined,
+  sentence: string,
+): string {
+  if (!areaLabel) return sentence;
+  return `In ${areaLabel}, ${sentence.charAt(0).toLowerCase()}${sentence.slice(1)}`;
+}
 
 const MONTH_NAMES = [
   "January",
@@ -302,7 +323,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
 
   if (strongest.spread < FLAT_SEASONALITY_SPREAD) {
     return {
-      read: `Interest in "${strongest.keyword}" stays fairly flat across the year (peak in ${peakName} vs low in ${lowName}, only a ${strongest.spread}-point gap on the 0-100 scale) -- not a strong enough swing to plan a publish date around.`,
+      read: withAreaPrefix(
+        input.areaLabel,
+        `Interest in "${strongest.keyword}" stays fairly flat across the year (peak in ${peakName} vs low in ${lowName}, only a ${strongest.spread}-point gap on the 0-100 scale) -- not a strong enough swing to plan a publish date around.`,
+      ),
       tone: "bad",
       actions: [],
     };
@@ -310,7 +334,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
 
   if (strongest.spread < MEANINGFUL_SEASONALITY_SPREAD) {
     return {
-      read: `"${strongest.keyword}" shows a modest seasonal swing: interest peaks in ${peakName} and dips in ${lowName}, a ${strongest.spread}-point gap -- present, but not pronounced enough to commit a publish date to.`,
+      read: withAreaPrefix(
+        input.areaLabel,
+        `"${strongest.keyword}" shows a modest seasonal swing: interest peaks in ${peakName} and dips in ${lowName}, a ${strongest.spread}-point gap -- present, but not pronounced enough to commit a publish date to.`,
+      ),
       tone: "mixed",
       actions: [
         {
@@ -325,7 +352,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
   const publishMonth =
     MONTH_NAMES[(strongest.peakMonth - LEAD_TIME_MONTHS + 12) % 12];
   return {
-    read: `"${strongest.keyword}" peaks in ${peakName} (interest ${strongest.peakValue} vs a low of ${strongest.lowValue} in ${lowName}) -- a real seasonal swing worth timing content around.`,
+    read: withAreaPrefix(
+      input.areaLabel,
+      `"${strongest.keyword}" peaks in ${peakName} (interest ${strongest.peakValue} vs a low of ${strongest.lowValue} in ${lowName}) -- a real seasonal swing worth timing content around.`,
+    ),
     tone: "good",
     actions: [
       {
