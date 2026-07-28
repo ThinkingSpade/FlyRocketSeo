@@ -6,19 +6,21 @@
  * the reviews payload already fetched alongside it), so running this audit
  * adds no new metered call.
  *
- * The rule that matters most: a `null` field means the data source didn't
- * return it, not that the business left it blank. Confusing the two would
- * have this confidently tell someone to "add a description" they already
- * wrote. So an absent field is `status: "unknown"` and is excluded from the
- * score's denominator entirely -- only checks we can actually read count
- * toward it, and if fewer than half of them are readable the score is
+ * The rule that matters most, and applies uniformly to every check below: a
+ * `null` field means the data source didn't return it, not that the
+ * business left it blank. Confusing the two would have this confidently
+ * tell someone to add a phone number, upload a logo, set a category, or
+ * write a description they already have. So a `null` field is always
+ * `status: "unknown"` with `fix: null`, and unknown checks are excluded from
+ * the score's denominator entirely -- only checks we can actually read
+ * count toward it, and if fewer than half of them are readable the score is
  * `null` rather than a precise-looking number resting on too little data.
  *
- * Category, phone, logo, and main image don't get the unknown treatment,
- * though: Google requires a category and Search/Maps surface phone and
- * photos directly from what's on the listing, so on a `found: true` profile
- * their absence is itself the finding, not a gap in what DataForSEO
- * returned the way an optional free-text field like description can be.
+ * A field the data source *did* return, but as a genuinely empty string or
+ * array, is a different situation entirely: that's the business's own
+ * answer, not a gap in what we could see, so reporting it (no category set,
+ * an empty description, zero additional categories) is this audit doing
+ * its job, not overclaiming.
  */
 
 export type GbpCheckStatus = "pass" | "warn" | "fail" | "unknown";
@@ -51,7 +53,11 @@ export type GbpAudit = {
 export type GbpAuditInput = {
   found: boolean;
   category: string | null;
-  additionalCategories: string[];
+  /** `null` when DataForSEO didn't return this field at all (see
+   *  LocalSeoService's `mapBusinessProfile`), distinct from `[]` (returned,
+   *  and the business genuinely has none) -- buildCategoryCheck relies on
+   *  telling the two apart. */
+  additionalCategories: string[] | null;
   description: string | null;
   logo: string | null;
   mainImage: string | null;
@@ -170,15 +176,27 @@ function buildClaimedCheck(isClaimed: boolean | null): GbpCheck {
 
 function buildCategoryCheck(
   category: string | null,
-  additionalCategories: string[],
+  additionalCategories: string[] | null,
 ): GbpCheck {
   const categoryCheck = checkKind("category", "Categories", WEIGHT_CATEGORY);
-  const primary = category?.trim();
-  if (!primary) {
+  if (category == null) {
+    return categoryCheck(
+      "unknown",
+      "No category data is available for this profile.",
+    );
+  }
+  const primary = category.trim();
+  if (primary === "") {
     return categoryCheck(
       "fail",
       "No primary category is set on this profile.",
       "Set a primary category that matches the main service this business provides.",
+    );
+  }
+  if (additionalCategories == null) {
+    return categoryCheck(
+      "unknown",
+      `Primary category "${primary}" is set, but additional-category data is not available for this profile.`,
     );
   }
   if (additionalCategories.length === 0) {
@@ -230,7 +248,10 @@ function buildDescriptionCheck(description: string | null): GbpCheck {
 
 function buildLogoCheck(logo: string | null): GbpCheck {
   const logoCheck = checkKind("logo", "Logo", WEIGHT_LOGO);
-  if (logo != null && logo.trim() !== "") {
+  if (logo == null) {
+    return logoCheck("unknown", "No logo data is available for this profile.");
+  }
+  if (logo.trim() !== "") {
     return logoCheck("pass", "A logo is set on this profile.");
   }
   return logoCheck(
@@ -246,7 +267,13 @@ function buildMainImageCheck(mainImage: string | null): GbpCheck {
     "Main photo",
     WEIGHT_MAIN_IMAGE,
   );
-  if (mainImage != null && mainImage.trim() !== "") {
+  if (mainImage == null) {
+    return mainImageCheck(
+      "unknown",
+      "No main photo data is available for this profile.",
+    );
+  }
+  if (mainImage.trim() !== "") {
     return mainImageCheck("pass", "A main photo is set on this profile.");
   }
   return mainImageCheck(
@@ -258,10 +285,17 @@ function buildMainImageCheck(mainImage: string | null): GbpCheck {
 
 function buildPhoneCheck(phone: string | null): GbpCheck {
   const phoneCheck = checkKind("phone", "Phone number", WEIGHT_PHONE);
-  if (phone != null && phone.trim() !== "") {
+  if (phone == null) {
+    return phoneCheck(
+      "unknown",
+      "No phone number data is available for this profile.",
+    );
+  }
+  const trimmed = phone.trim();
+  if (trimmed !== "") {
     return phoneCheck(
       "pass",
-      `Phone number ${phone} is listed on this profile.`,
+      `Phone number ${trimmed} is listed on this profile.`,
     );
   }
   return phoneCheck(
@@ -298,15 +332,24 @@ function buildWebsiteCheck(
   if (url == null) {
     return websiteCheck(
       "unknown",
-      "No website URL is available for this profile.",
+      "No website data is available for this profile.",
     );
   }
 
-  const urlHost = extractHost(url);
+  const trimmedUrl = url.trim();
+  if (trimmedUrl === "") {
+    return websiteCheck(
+      "fail",
+      "No website is listed on this profile.",
+      "Add the business's website to the profile so customers can reach it directly from Search and Maps.",
+    );
+  }
+
+  const urlHost = extractHost(trimmedUrl);
   if (urlHost == null) {
     return websiteCheck(
       "unknown",
-      `The website URL "${url}" could not be read as a host to compare against this project's domain.`,
+      `The website URL "${trimmedUrl}" could not be read as a host to compare against this project's domain.`,
     );
   }
   if (domain == null) {
@@ -480,4 +523,25 @@ export function buildGbpAudit(input: GbpAuditInput): GbpAudit {
   ].toSorted((a, b) => b.weight - a.weight);
 
   return { score: computeScore(checks), checks };
+}
+
+/**
+ * Assembles buildGbpAudit's input from a fetched profile, the project's own
+ * domain, and whatever reviews have loaded so far. `projectDomain` is a
+ * separate parameter rather than a field this reads off `profile` on
+ * purpose: the website check (buildWebsiteCheck) exists to compare the
+ * profile's listed website against the *project's* domain, and a profile
+ * always carries its own domain too (`BusinessProfile.domain`, the host its
+ * own listed website resolves to). Reading that field here instead would
+ * compare the listing to itself and always "pass" -- exactly the bug this
+ * factory exists to make impossible to reintroduce at a call site, by never
+ * giving callers a `domain` field on `profile` to reach for in the first
+ * place (see the `Omit` below).
+ */
+export function toGbpAuditInput(
+  profile: Omit<GbpAuditInput, "domain" | "reviews">,
+  projectDomain: string | null,
+  reviews: GbpAuditInput["reviews"],
+): GbpAuditInput {
+  return { ...profile, domain: projectDomain, reviews };
 }

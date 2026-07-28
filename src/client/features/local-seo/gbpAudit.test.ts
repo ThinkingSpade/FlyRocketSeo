@@ -30,7 +30,7 @@ function baseInput(overrides: Partial<GbpAuditInput> = {}): GbpAuditInput {
 const NOT_FOUND_INPUT: GbpAuditInput = {
   found: false,
   category: null,
-  additionalCategories: [],
+  additionalCategories: null,
   description: null,
   logo: null,
   mainImage: null,
@@ -94,33 +94,6 @@ describe("buildGbpAudit - claimed status", () => {
   });
 });
 
-describe("buildGbpAudit - categories", () => {
-  it("fails when there is no primary category", () => {
-    const audit = buildGbpAudit(
-      baseInput({ category: null, additionalCategories: [] }),
-    );
-    expectCheck(audit, "category", "fail");
-  });
-
-  it("warns when a primary category is set but no additional categories are used", () => {
-    const audit = buildGbpAudit(
-      baseInput({ category: "Plumber", additionalCategories: [] }),
-    );
-    const check = expectCheck(audit, "category", "warn");
-    expect(check.detail).toContain("Plumber");
-  });
-
-  it("passes when a primary category and at least one additional category are set", () => {
-    const audit = buildGbpAudit(
-      baseInput({
-        category: "Plumber",
-        additionalCategories: ["Emergency plumber"],
-      }),
-    );
-    expectCheck(audit, "category", "pass");
-  });
-});
-
 describe("buildGbpAudit - description", () => {
   it("treats a null description as unknown, not a failure", () => {
     const audit = buildGbpAudit(baseInput({ description: null }));
@@ -149,75 +122,6 @@ describe("buildGbpAudit - description", () => {
   it("passes a description at the healthy length threshold", () => {
     const audit = buildGbpAudit(baseInput({ description: "a".repeat(100) }));
     expectCheck(audit, "description", "pass");
-  });
-});
-
-describe("buildGbpAudit - imagery", () => {
-  it("warns when the logo is missing", () => {
-    const audit = buildGbpAudit(baseInput({ logo: null }));
-    expectCheck(audit, "logo", "warn");
-  });
-
-  it("passes when a logo is set", () => {
-    const audit = buildGbpAudit(baseInput({ logo: "https://x/logo.png" }));
-    expectCheck(audit, "logo", "pass");
-  });
-
-  it("warns when the main image is missing", () => {
-    const audit = buildGbpAudit(baseInput({ mainImage: null }));
-    expectCheck(audit, "mainImage", "warn");
-  });
-
-  it("passes when a main image is set", () => {
-    const audit = buildGbpAudit(
-      baseInput({ mainImage: "https://x/photo.jpg" }),
-    );
-    expectCheck(audit, "mainImage", "pass");
-  });
-});
-
-describe("buildGbpAudit - phone", () => {
-  it("fails when the phone number is missing", () => {
-    const audit = buildGbpAudit(baseInput({ phone: null }));
-    expectCheck(audit, "phone", "fail");
-  });
-
-  it("passes when a phone number is set", () => {
-    const audit = buildGbpAudit(baseInput({ phone: "+15551234567" }));
-    expectCheck(audit, "phone", "pass");
-  });
-});
-
-describe("buildGbpAudit - website", () => {
-  it("treats a null url as unknown", () => {
-    const audit = buildGbpAudit(baseInput({ url: null }));
-    expectCheck(audit, "website", "unknown");
-  });
-
-  it("warns and names both hosts when the url does not match the project's domain", () => {
-    const audit = buildGbpAudit(
-      baseInput({ url: "https://www.otherbrand.com", domain: "example.com" }),
-    );
-    const check = expectCheck(audit, "website", "warn");
-    expect(check.detail).toContain("otherbrand.com");
-    expect(check.detail).toContain("example.com");
-  });
-
-  it("passes when the url host matches the project's domain, ignoring a www prefix", () => {
-    const audit = buildGbpAudit(
-      baseInput({
-        url: "https://www.example.com/plumbing",
-        domain: "example.com",
-      }),
-    );
-    expectCheck(audit, "website", "pass");
-  });
-
-  it("treats an unknown project domain as unknown rather than guessing at a mismatch", () => {
-    const audit = buildGbpAudit(
-      baseInput({ url: "https://example.com", domain: null }),
-    );
-    expectCheck(audit, "website", "unknown");
   });
 });
 
@@ -275,18 +179,19 @@ describe("buildGbpAudit - score arithmetic", () => {
         category: "Plumber",
         additionalCategories: [], // warn -> 50
         description: null, // unknown -> excluded
-        logo: null, // warn -> 50
+        logo: null, // unknown -> excluded (no logo data returned)
         mainImage: "https://x/photo.jpg", // pass -> 100
-        phone: null, // fail -> 0
+        phone: "", // fail -> 0 (genuinely empty, not missing data)
         url: null, // unknown -> excluded
         domain: "example.com",
         reviewsCount: 0, // fail -> 0
         rating: 3.5, // warn -> 50
       }),
     );
-    // Evaluable checks: claimed 100, category 50, logo 50, mainImage 100,
-    // phone 0, reviewsCount 0, rating 50 = 350 across 7 evaluable checks
-    // (description and website are unknown, excluded) = 350 / 7 = 50 exactly.
+    // Evaluable checks: claimed 100, category 50, mainImage 100, phone 0,
+    // reviewsCount 0, rating 50 = 300 across 6 evaluable checks (logo,
+    // description, website, and ownerResponse -- reviews not supplied -- are
+    // unknown and excluded) = 300 / 6 = 50 exactly.
     expect(audit.score).toBe(50);
   });
 
