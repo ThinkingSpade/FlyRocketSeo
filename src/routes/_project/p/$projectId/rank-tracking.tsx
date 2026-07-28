@@ -16,9 +16,16 @@ function RankTrackingLayout() {
   // rather than in either child -- is what keeps it to ONE control for the
   // whole tab. A per-domain config's OWN location (set in
   // RankTrackingConfigModal, shown in RankTrackingDomainDetail) is a
-  // separate, already-existing concept and stays untouched: this control
-  // only shows/changes the project's confirmed target area, never rewrites
-  // an existing tracked config's stored locationCode.
+  // separate, already-existing concept: this control never rewrites an
+  // EXISTING tracked config's stored locationCode (an existing US tracker
+  // must keep saying US), and never fires a metered rank check by itself --
+  // changing it is a free D1 write, same as every other tab's ScopeControl.
+  // It genuinely affects something, though: rank-tracking/index.tsx reads
+  // this same confirmed area independently (Outlet has no react-router-style
+  // context for live state) and hands it to RankTrackingConfigModal as a
+  // brand-NEW config's own starting pick -- see rankTrackingConfigArea.ts's
+  // own header for why a metro/city default needed that modal's picker
+  // upgraded from a country-only LocationSelect to GeoLocationSelect.
   const market = useProjectMarket(projectId);
   const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
 
