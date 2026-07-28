@@ -61,6 +61,11 @@ export type GbpAuditInput = {
   rating: number | null;
   reviewsCount: number | null;
   isClaimed: boolean | null;
+  /** Owner replies per review, from the same reviews payload the Local SEO
+   *  tab already fetches (`ReviewRow.ownerAnswer`) -- optional because a
+   *  caller may not have loaded reviews yet, which is distinct from having
+   *  loaded zero of them. */
+  reviews?: Array<{ ownerAnswer: string | null }>;
 };
 
 // ---- Thresholds -------------------------------------------------------
@@ -89,6 +94,10 @@ const MIN_HEALTHY_REVIEWS_COUNT = 10;
  *  they stop considering a result, regardless of how many reviews back it. */
 const MIN_HEALTHY_RATING = 4.0;
 
+/** Below this owner-reply rate, there is a real and growing gap against the
+ *  reply-to-everything best practice -- not zero, but not the norm either. */
+const MIN_HEALTHY_RESPONSE_RATE = 0.8;
+
 // ---- Ranking weights ----------------------------------------------------
 // Fixed per check so the list orders the same regardless of which way any
 // individual check comes out -- the size of the gap a dimension represents
@@ -109,6 +118,10 @@ const WEIGHT_REVIEWS_COUNT = 75;
  *  business influences only indirectly (by earning more reviews), not by
  *  editing a field. */
 const WEIGHT_RATING = 65;
+/** Below rating: responsiveness matters, but it is a reaction to the
+ *  reviews a business already has, not a driver of new ones the way
+ *  category or review count are. */
+const WEIGHT_OWNER_RESPONSE = 60;
 const WEIGHT_DESCRIPTION = 55;
 const WEIGHT_WEBSITE = 45;
 const WEIGHT_LOGO = 35;
@@ -122,191 +135,140 @@ const PASS_POINTS = 100;
 const WARN_POINTS = 50;
 const FAIL_POINTS = 0;
 
-/** Object form (not positional params) so each check-builder's call site
- *  reads like the record it produces, and so this stays under the lint
- *  budget's 5-parameter cap without dropping any field. */
-function check(fields: {
-  key: string;
-  label: string;
-  weight: number;
-  status: GbpCheckStatus;
-  detail: string;
-  fix?: string | null;
-}): GbpCheck {
-  return {
-    key: fields.key,
-    label: fields.label,
-    status: fields.status,
-    detail: fields.detail,
-    fix: fields.fix ?? null,
-    weight: fields.weight,
-  };
+/** Binds a check's key/label/weight once so every branch of a multi-way
+ *  check states only what actually varies: status, detail, and (for warn
+ *  or fail) fix. Without this, each branch below would repeat the same
+ *  key/label/weight triple. */
+function checkKind(key: string, label: string, weight: number) {
+  return (
+    status: GbpCheckStatus,
+    detail: string,
+    fix: string | null = null,
+  ): GbpCheck => ({ key, label, status, detail, fix, weight });
 }
 
 function buildClaimedCheck(isClaimed: boolean | null): GbpCheck {
+  const claimed = checkKind("claimed", "Profile claimed", WEIGHT_CLAIMED);
   if (isClaimed == null) {
-    return check({
-      key: "claimed",
-      label: "Profile claimed",
-      weight: WEIGHT_CLAIMED,
-      status: "unknown",
-      detail:
-        "Whether this profile has been claimed is not returned by the data source.",
-    });
+    return claimed(
+      "unknown",
+      "Whether this profile has been claimed is not returned by the data source.",
+    );
   }
   if (!isClaimed) {
-    return check({
-      key: "claimed",
-      label: "Profile claimed",
-      weight: WEIGHT_CLAIMED,
-      status: "fail",
-      detail:
-        "This Business Profile has not been claimed or verified by its owner.",
-      fix: "Claim and verify this listing in Google Business Profile Manager -- every other fix here depends on owning the listing first.",
-    });
+    return claimed(
+      "fail",
+      "This Business Profile has not been claimed or verified by its owner.",
+      "Claim and verify this listing in Google Business Profile Manager -- every other fix here depends on owning the listing first.",
+    );
   }
-  return check({
-    key: "claimed",
-    label: "Profile claimed",
-    weight: WEIGHT_CLAIMED,
-    status: "pass",
-    detail: "This Business Profile is claimed and verified by its owner.",
-  });
+  return claimed(
+    "pass",
+    "This Business Profile is claimed and verified by its owner.",
+  );
 }
 
 function buildCategoryCheck(
   category: string | null,
   additionalCategories: string[],
 ): GbpCheck {
+  const categoryCheck = checkKind("category", "Categories", WEIGHT_CATEGORY);
   const primary = category?.trim();
   if (!primary) {
-    return check({
-      key: "category",
-      label: "Categories",
-      weight: WEIGHT_CATEGORY,
-      status: "fail",
-      detail: "No primary category is set on this profile.",
-      fix: "Set a primary category that matches the main service this business provides.",
-    });
+    return categoryCheck(
+      "fail",
+      "No primary category is set on this profile.",
+      "Set a primary category that matches the main service this business provides.",
+    );
   }
   if (additionalCategories.length === 0) {
-    return check({
-      key: "category",
-      label: "Categories",
-      weight: WEIGHT_CATEGORY,
-      status: "warn",
-      detail: `Only the primary category ("${primary}") is set; no additional categories are used.`,
-      fix: `Add additional categories -- Google allows up to ${MAX_ADDITIONAL_CATEGORIES}, and every unused slot is reach left on the table.`,
-    });
+    return categoryCheck(
+      "warn",
+      `Only the primary category ("${primary}") is set; no additional categories are used.`,
+      `Add additional categories -- Google allows up to ${MAX_ADDITIONAL_CATEGORIES}, and every unused slot is reach left on the table.`,
+    );
   }
   const count = additionalCategories.length;
-  return check({
-    key: "category",
-    label: "Categories",
-    weight: WEIGHT_CATEGORY,
-    status: "pass",
-    detail: `Primary category "${primary}" plus ${count} additional categor${count === 1 ? "y" : "ies"} are set.`,
-  });
+  return categoryCheck(
+    "pass",
+    `Primary category "${primary}" plus ${count} additional categor${count === 1 ? "y" : "ies"} are set.`,
+  );
 }
 
 function buildDescriptionCheck(description: string | null): GbpCheck {
+  const descriptionCheck = checkKind(
+    "description",
+    "Description",
+    WEIGHT_DESCRIPTION,
+  );
   if (description == null) {
-    return check({
-      key: "description",
-      label: "Description",
-      weight: WEIGHT_DESCRIPTION,
-      status: "unknown",
-      detail: "No description data is available for this profile.",
-    });
+    return descriptionCheck(
+      "unknown",
+      "No description data is available for this profile.",
+    );
   }
   const trimmed = description.trim();
   if (trimmed === "") {
-    return check({
-      key: "description",
-      label: "Description",
-      weight: WEIGHT_DESCRIPTION,
-      status: "fail",
-      detail: "This profile has no business description.",
-      fix: "Write a description covering what the business does, where, and what sets it apart.",
-    });
+    return descriptionCheck(
+      "fail",
+      "This profile has no business description.",
+      "Write a description covering what the business does, where, and what sets it apart.",
+    );
   }
   if (trimmed.length < MIN_HEALTHY_DESCRIPTION_LENGTH) {
-    return check({
-      key: "description",
-      label: "Description",
-      weight: WEIGHT_DESCRIPTION,
-      status: "warn",
-      detail: `The description is only ${trimmed.length} characters, thin enough to be worth expanding.`,
-      fix: "Expand the description with specifics: services offered, service area, and what sets the business apart.",
-    });
+    return descriptionCheck(
+      "warn",
+      `The description is only ${trimmed.length} characters, thin enough to be worth expanding.`,
+      "Expand the description with specifics: services offered, service area, and what sets the business apart.",
+    );
   }
-  return check({
-    key: "description",
-    label: "Description",
-    weight: WEIGHT_DESCRIPTION,
-    status: "pass",
-    detail: `The description runs ${trimmed.length} characters, a healthy length.`,
-  });
+  return descriptionCheck(
+    "pass",
+    `The description runs ${trimmed.length} characters, a healthy length.`,
+  );
 }
 
 function buildLogoCheck(logo: string | null): GbpCheck {
+  const logoCheck = checkKind("logo", "Logo", WEIGHT_LOGO);
   if (logo != null && logo.trim() !== "") {
-    return check({
-      key: "logo",
-      label: "Logo",
-      weight: WEIGHT_LOGO,
-      status: "pass",
-      detail: "A logo is set on this profile.",
-    });
+    return logoCheck("pass", "A logo is set on this profile.");
   }
-  return check({
-    key: "logo",
-    label: "Logo",
-    weight: WEIGHT_LOGO,
-    status: "warn",
-    detail: "No logo is set on this profile.",
-    fix: "Upload a logo so the profile matches the business's branding on Search and Maps.",
-  });
+  return logoCheck(
+    "warn",
+    "No logo is set on this profile.",
+    "Upload a logo so the profile matches the business's branding on Search and Maps.",
+  );
 }
 
 function buildMainImageCheck(mainImage: string | null): GbpCheck {
+  const mainImageCheck = checkKind(
+    "mainImage",
+    "Main photo",
+    WEIGHT_MAIN_IMAGE,
+  );
   if (mainImage != null && mainImage.trim() !== "") {
-    return check({
-      key: "mainImage",
-      label: "Main photo",
-      weight: WEIGHT_MAIN_IMAGE,
-      status: "pass",
-      detail: "A main photo is set on this profile.",
-    });
+    return mainImageCheck("pass", "A main photo is set on this profile.");
   }
-  return check({
-    key: "mainImage",
-    label: "Main photo",
-    weight: WEIGHT_MAIN_IMAGE,
-    status: "warn",
-    detail: "No main photo is set on this profile.",
-    fix: "Add a primary photo -- profiles with photos get substantially more customer engagement.",
-  });
+  return mainImageCheck(
+    "warn",
+    "No main photo is set on this profile.",
+    "Add a primary photo -- profiles with photos get substantially more customer engagement.",
+  );
 }
 
 function buildPhoneCheck(phone: string | null): GbpCheck {
+  const phoneCheck = checkKind("phone", "Phone number", WEIGHT_PHONE);
   if (phone != null && phone.trim() !== "") {
-    return check({
-      key: "phone",
-      label: "Phone number",
-      weight: WEIGHT_PHONE,
-      status: "pass",
-      detail: `Phone number ${phone} is listed on this profile.`,
-    });
+    return phoneCheck(
+      "pass",
+      `Phone number ${phone} is listed on this profile.`,
+    );
   }
-  return check({
-    key: "phone",
-    label: "Phone number",
-    weight: WEIGHT_PHONE,
-    status: "fail",
-    detail: "No phone number is listed on this profile.",
-    fix: "Add a phone number so customers can reach the business directly from Search and Maps.",
-  });
+  return phoneCheck(
+    "fail",
+    "No phone number is listed on this profile.",
+    "Add a phone number so customers can reach the business directly from Search and Maps.",
+  );
 }
 
 /** Reads a URL's hostname, tolerating a bare domain with no scheme (Google
@@ -332,126 +294,144 @@ function buildWebsiteCheck(
   url: string | null,
   domain: string | null,
 ): GbpCheck {
+  const websiteCheck = checkKind("website", "Website", WEIGHT_WEBSITE);
   if (url == null) {
-    return check({
-      key: "website",
-      label: "Website",
-      weight: WEIGHT_WEBSITE,
-      status: "unknown",
-      detail: "No website URL is available for this profile.",
-    });
+    return websiteCheck(
+      "unknown",
+      "No website URL is available for this profile.",
+    );
   }
 
   const urlHost = extractHost(url);
   if (urlHost == null) {
-    return check({
-      key: "website",
-      label: "Website",
-      weight: WEIGHT_WEBSITE,
-      status: "unknown",
-      detail: `The website URL "${url}" could not be read as a host to compare against this project's domain.`,
-    });
+    return websiteCheck(
+      "unknown",
+      `The website URL "${url}" could not be read as a host to compare against this project's domain.`,
+    );
   }
   if (domain == null) {
-    return check({
-      key: "website",
-      label: "Website",
-      weight: WEIGHT_WEBSITE,
-      status: "unknown",
-      detail:
-        "A website is listed, but this project's own domain is not known, so there is nothing to compare it against.",
-    });
+    return websiteCheck(
+      "unknown",
+      "A website is listed, but this project's own domain is not known, so there is nothing to compare it against.",
+    );
   }
 
   const listedHost = stripWww(urlHost);
   const projectHost = stripWww(domain.toLowerCase());
 
   if (listedHost !== projectHost) {
-    return check({
-      key: "website",
-      label: "Website",
-      weight: WEIGHT_WEBSITE,
-      status: "warn",
-      detail: `The profile lists ${listedHost}, but this project's domain is ${projectHost}.`,
-      fix: `Update the website link on the profile to ${projectHost}, or confirm ${listedHost} is intentional (e.g. a booking or landing page).`,
-    });
+    return websiteCheck(
+      "warn",
+      `The profile lists ${listedHost}, but this project's domain is ${projectHost}.`,
+      `Update the website link on the profile to ${projectHost}, or confirm ${listedHost} is intentional (e.g. a booking or landing page).`,
+    );
   }
 
-  return check({
-    key: "website",
-    label: "Website",
-    weight: WEIGHT_WEBSITE,
-    status: "pass",
-    detail: `The profile's website (${listedHost}) matches this project's domain.`,
-  });
+  return websiteCheck(
+    "pass",
+    `The profile's website (${listedHost}) matches this project's domain.`,
+  );
 }
 
 function buildReviewsCountCheck(reviewsCount: number | null): GbpCheck {
+  const reviewsCountCheck = checkKind(
+    "reviewsCount",
+    "Review count",
+    WEIGHT_REVIEWS_COUNT,
+  );
   if (reviewsCount == null) {
-    return check({
-      key: "reviewsCount",
-      label: "Review count",
-      weight: WEIGHT_REVIEWS_COUNT,
-      status: "unknown",
-      detail: "Review count is not available for this profile.",
-    });
+    return reviewsCountCheck(
+      "unknown",
+      "Review count is not available for this profile.",
+    );
   }
   if (reviewsCount === 0) {
-    return check({
-      key: "reviewsCount",
-      label: "Review count",
-      weight: WEIGHT_REVIEWS_COUNT,
-      status: "fail",
-      detail: "This profile has 0 reviews.",
-      fix: "Ask recent customers for a Google review -- review count and recency are a major local-ranking signal.",
-    });
+    return reviewsCountCheck(
+      "fail",
+      "This profile has 0 reviews.",
+      "Ask recent customers for a Google review -- review count and recency are a major local-ranking signal.",
+    );
   }
   if (reviewsCount < MIN_HEALTHY_REVIEWS_COUNT) {
-    return check({
-      key: "reviewsCount",
-      label: "Review count",
-      weight: WEIGHT_REVIEWS_COUNT,
-      status: "warn",
-      detail: `Only ${reviewsCount} review${reviewsCount === 1 ? "" : "s"} on this profile, a thin base for trust or ranking.`,
-      fix: "Keep asking customers for reviews -- more (and more recent) reviews build both trust and ranking signal.",
-    });
+    return reviewsCountCheck(
+      "warn",
+      `Only ${reviewsCount} review${reviewsCount === 1 ? "" : "s"} on this profile, a thin base for trust or ranking.`,
+      "Keep asking customers for reviews -- more (and more recent) reviews build both trust and ranking signal.",
+    );
   }
-  return check({
-    key: "reviewsCount",
-    label: "Review count",
-    weight: WEIGHT_REVIEWS_COUNT,
-    status: "pass",
-    detail: `${reviewsCount} reviews, a healthy base.`,
-  });
+  return reviewsCountCheck("pass", `${reviewsCount} reviews, a healthy base.`);
 }
 
 function buildRatingCheck(rating: number | null): GbpCheck {
+  const ratingCheck = checkKind("rating", "Rating", WEIGHT_RATING);
   if (rating == null) {
-    return check({
-      key: "rating",
-      label: "Rating",
-      weight: WEIGHT_RATING,
-      status: "unknown",
-      detail: "Rating is not available for this profile.",
-    });
+    return ratingCheck("unknown", "Rating is not available for this profile.");
   }
   if (rating < MIN_HEALTHY_RATING) {
-    return check({
-      key: "rating",
-      label: "Rating",
-      weight: WEIGHT_RATING,
-      status: "warn",
-      detail: `The average rating is ${rating}, below the ${MIN_HEALTHY_RATING}-star level most consumers filter for.`,
-      fix: "Ask satisfied customers for reviews to lift the average, and follow up on recent negative reviews.",
-    });
+    return ratingCheck(
+      "warn",
+      `The average rating is ${rating}, below the ${MIN_HEALTHY_RATING}-star level most consumers filter for.`,
+      "Ask satisfied customers for reviews to lift the average, and follow up on recent negative reviews.",
+    );
   }
-  return check({
-    key: "rating",
-    label: "Rating",
-    weight: WEIGHT_RATING,
-    status: "pass",
-    detail: `The average rating is ${rating}, a healthy level.`,
-  });
+  return ratingCheck(
+    "pass",
+    `The average rating is ${rating}, a healthy level.`,
+  );
+}
+
+/** True when a review carries a real, non-blank owner reply. Mirrors
+ *  reviewAnalytics.ts's `hasReply` (not imported from it: that module is a
+ *  sibling concern -- review-set analytics for the tab's charts -- and this
+ *  one-line rule is cheaper to duplicate than to couple the two modules
+ *  over). */
+function hasOwnerReply(review: { ownerAnswer: string | null }): boolean {
+  return (review.ownerAnswer ?? "").trim() !== "";
+}
+
+function buildOwnerResponseCheck(
+  reviews: Array<{ ownerAnswer: string | null }> | undefined,
+): GbpCheck {
+  const ownerResponseCheck = checkKind(
+    "ownerResponse",
+    "Owner responses",
+    WEIGHT_OWNER_RESPONSE,
+  );
+  if (reviews == null) {
+    return ownerResponseCheck(
+      "unknown",
+      "Review data has not been loaded, so the owner response rate is not known.",
+    );
+  }
+  if (reviews.length === 0) {
+    return ownerResponseCheck(
+      "unknown",
+      "This profile has no reviews yet, so there is nothing to respond to.",
+    );
+  }
+
+  const answered = reviews.filter(hasOwnerReply).length;
+  const rate = answered / reviews.length;
+  const pct = Math.round(rate * 100);
+
+  if (answered === 0) {
+    return ownerResponseCheck(
+      "fail",
+      `0 of ${reviews.length} reviews have an owner reply.`,
+      "Reply to every review, starting with the most recent -- responsiveness is a visible trust signal to prospective customers.",
+    );
+  }
+  if (rate < MIN_HEALTHY_RESPONSE_RATE) {
+    return ownerResponseCheck(
+      "warn",
+      `${pct}% of ${reviews.length} reviews have an owner reply, a thin response rate.`,
+      "Reply to more reviews -- responsiveness is a trust signal both customers and Google notice.",
+    );
+  }
+  return ownerResponseCheck(
+    "pass",
+    `${pct}% of ${reviews.length} reviews have an owner reply.`,
+  );
 }
 
 /** Below half the checks evaluable, a score would look precise while
@@ -474,14 +454,14 @@ export function buildGbpAudit(input: GbpAuditInput): GbpAudit {
     return {
       score: null,
       checks: [
-        check({
-          key: "profile",
-          label: "Business profile",
-          weight: WEIGHT_CLAIMED,
-          status: "unknown",
-          detail:
-            "No Google Business Profile was found, so there is nothing here to audit.",
-        }),
+        checkKind(
+          "profile",
+          "Business profile",
+          WEIGHT_CLAIMED,
+        )(
+          "unknown",
+          "No Google Business Profile was found, so there is nothing here to audit.",
+        ),
       ],
     };
   }
@@ -496,6 +476,7 @@ export function buildGbpAudit(input: GbpAuditInput): GbpAudit {
     buildWebsiteCheck(input.url, input.domain),
     buildReviewsCountCheck(input.reviewsCount),
     buildRatingCheck(input.rating),
+    buildOwnerResponseCheck(input.reviews),
   ].toSorted((a, b) => b.weight - a.weight);
 
   return { score: computeScore(checks), checks };

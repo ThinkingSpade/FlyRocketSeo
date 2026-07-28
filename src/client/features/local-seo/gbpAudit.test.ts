@@ -1,5 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { buildGbpAudit, type GbpAudit, type GbpAuditInput } from "./gbpAudit";
+import {
+  buildGbpAudit,
+  type GbpAudit,
+  type GbpAuditInput,
+  type GbpCheck,
+  type GbpCheckStatus,
+} from "./gbpAudit";
 
 /** A fully-healthy profile: every check below should evaluate to "pass".
  *  Individual tests override only the field(s) they're exercising. */
@@ -36,12 +42,25 @@ const NOT_FOUND_INPUT: GbpAuditInput = {
   isClaimed: null,
 };
 
-function findCheck(audit: GbpAudit, key: string) {
+function findCheck(audit: GbpAudit, key: string): GbpCheck {
   const check = audit.checks.find((c) => c.key === key);
-  if (!check)
+  if (!check) {
     throw new Error(
       `no check with key "${key}" in ${audit.checks.map((c) => c.key).join(", ")}`,
     );
+  }
+  return check;
+}
+
+/** Looks up a check by key and asserts its status, returning the check so
+ *  callers can chain further assertions (detail, fix) when they need them. */
+function expectCheck(
+  audit: GbpAudit,
+  key: string,
+  status: GbpCheckStatus,
+): GbpCheck {
+  const check = findCheck(audit, key);
+  expect(check.status).toBe(status);
   return check;
 }
 
@@ -58,22 +77,20 @@ describe("buildGbpAudit - no profile found", () => {
 describe("buildGbpAudit - claimed status", () => {
   it("fails an unclaimed profile with the highest weight of any check", () => {
     const audit = buildGbpAudit(baseInput({ isClaimed: false }));
-    const claimed = findCheck(audit, "claimed");
-    expect(claimed.status).toBe("fail");
+    const claimed = expectCheck(audit, "claimed", "fail");
     const maxWeight = Math.max(...audit.checks.map((c) => c.weight));
     expect(claimed.weight).toBe(maxWeight);
   });
 
   it("treats isClaimed: null as unknown rather than a failure", () => {
     const audit = buildGbpAudit(baseInput({ isClaimed: null }));
-    const claimed = findCheck(audit, "claimed");
-    expect(claimed.status).toBe("unknown");
+    const claimed = expectCheck(audit, "claimed", "unknown");
     expect(claimed.fix).toBeNull();
   });
 
   it("passes a claimed profile", () => {
     const audit = buildGbpAudit(baseInput({ isClaimed: true }));
-    expect(findCheck(audit, "claimed").status).toBe("pass");
+    expectCheck(audit, "claimed", "pass");
   });
 });
 
@@ -82,15 +99,14 @@ describe("buildGbpAudit - categories", () => {
     const audit = buildGbpAudit(
       baseInput({ category: null, additionalCategories: [] }),
     );
-    expect(findCheck(audit, "category").status).toBe("fail");
+    expectCheck(audit, "category", "fail");
   });
 
   it("warns when a primary category is set but no additional categories are used", () => {
     const audit = buildGbpAudit(
       baseInput({ category: "Plumber", additionalCategories: [] }),
     );
-    const check = findCheck(audit, "category");
-    expect(check.status).toBe("warn");
+    const check = expectCheck(audit, "category", "warn");
     expect(check.detail).toContain("Plumber");
   });
 
@@ -101,21 +117,20 @@ describe("buildGbpAudit - categories", () => {
         additionalCategories: ["Emergency plumber"],
       }),
     );
-    expect(findCheck(audit, "category").status).toBe("pass");
+    expectCheck(audit, "category", "pass");
   });
 });
 
 describe("buildGbpAudit - description", () => {
   it("treats a null description as unknown, not a failure", () => {
     const audit = buildGbpAudit(baseInput({ description: null }));
-    const check = findCheck(audit, "description");
-    expect(check.status).toBe("unknown");
+    const check = expectCheck(audit, "description", "unknown");
     expect(check.fix).toBeNull();
   });
 
   it("fails a genuinely empty description, distinct from an unknown one", () => {
     const audit = buildGbpAudit(baseInput({ description: "" }));
-    expect(findCheck(audit, "description").status).toBe("fail");
+    expectCheck(audit, "description", "fail");
   });
 
   it("does not conflate a null description with an empty one", () => {
@@ -128,63 +143,62 @@ describe("buildGbpAudit - description", () => {
 
   it("warns on a description just under the healthy length", () => {
     const audit = buildGbpAudit(baseInput({ description: "a".repeat(99) }));
-    expect(findCheck(audit, "description").status).toBe("warn");
+    expectCheck(audit, "description", "warn");
   });
 
   it("passes a description at the healthy length threshold", () => {
     const audit = buildGbpAudit(baseInput({ description: "a".repeat(100) }));
-    expect(findCheck(audit, "description").status).toBe("pass");
+    expectCheck(audit, "description", "pass");
   });
 });
 
 describe("buildGbpAudit - imagery", () => {
   it("warns when the logo is missing", () => {
     const audit = buildGbpAudit(baseInput({ logo: null }));
-    expect(findCheck(audit, "logo").status).toBe("warn");
+    expectCheck(audit, "logo", "warn");
   });
 
   it("passes when a logo is set", () => {
     const audit = buildGbpAudit(baseInput({ logo: "https://x/logo.png" }));
-    expect(findCheck(audit, "logo").status).toBe("pass");
+    expectCheck(audit, "logo", "pass");
   });
 
   it("warns when the main image is missing", () => {
     const audit = buildGbpAudit(baseInput({ mainImage: null }));
-    expect(findCheck(audit, "mainImage").status).toBe("warn");
+    expectCheck(audit, "mainImage", "warn");
   });
 
   it("passes when a main image is set", () => {
     const audit = buildGbpAudit(
       baseInput({ mainImage: "https://x/photo.jpg" }),
     );
-    expect(findCheck(audit, "mainImage").status).toBe("pass");
+    expectCheck(audit, "mainImage", "pass");
   });
 });
 
 describe("buildGbpAudit - phone", () => {
   it("fails when the phone number is missing", () => {
     const audit = buildGbpAudit(baseInput({ phone: null }));
-    expect(findCheck(audit, "phone").status).toBe("fail");
+    expectCheck(audit, "phone", "fail");
   });
 
   it("passes when a phone number is set", () => {
     const audit = buildGbpAudit(baseInput({ phone: "+15551234567" }));
-    expect(findCheck(audit, "phone").status).toBe("pass");
+    expectCheck(audit, "phone", "pass");
   });
 });
 
 describe("buildGbpAudit - website", () => {
   it("treats a null url as unknown", () => {
     const audit = buildGbpAudit(baseInput({ url: null }));
-    expect(findCheck(audit, "website").status).toBe("unknown");
+    expectCheck(audit, "website", "unknown");
   });
 
   it("warns and names both hosts when the url does not match the project's domain", () => {
     const audit = buildGbpAudit(
       baseInput({ url: "https://www.otherbrand.com", domain: "example.com" }),
     );
-    const check = findCheck(audit, "website");
-    expect(check.status).toBe("warn");
+    const check = expectCheck(audit, "website", "warn");
     expect(check.detail).toContain("otherbrand.com");
     expect(check.detail).toContain("example.com");
   });
@@ -196,57 +210,55 @@ describe("buildGbpAudit - website", () => {
         domain: "example.com",
       }),
     );
-    expect(findCheck(audit, "website").status).toBe("pass");
+    expectCheck(audit, "website", "pass");
   });
 
   it("treats an unknown project domain as unknown rather than guessing at a mismatch", () => {
     const audit = buildGbpAudit(
       baseInput({ url: "https://example.com", domain: null }),
     );
-    expect(findCheck(audit, "website").status).toBe("unknown");
+    expectCheck(audit, "website", "unknown");
   });
 });
 
 describe("buildGbpAudit - review count", () => {
   it("fails at zero reviews", () => {
     const audit = buildGbpAudit(baseInput({ reviewsCount: 0 }));
-    const check = findCheck(audit, "reviewsCount");
-    expect(check.status).toBe("fail");
+    const check = expectCheck(audit, "reviewsCount", "fail");
     expect(check.detail).toContain("0");
   });
 
   it("warns on a low review count", () => {
     const audit = buildGbpAudit(baseInput({ reviewsCount: 3 }));
-    const check = findCheck(audit, "reviewsCount");
-    expect(check.status).toBe("warn");
+    const check = expectCheck(audit, "reviewsCount", "warn");
     expect(check.detail).toContain("3");
   });
 
   it("passes a healthy review count", () => {
     const audit = buildGbpAudit(baseInput({ reviewsCount: 40 }));
-    expect(findCheck(audit, "reviewsCount").status).toBe("pass");
+    expectCheck(audit, "reviewsCount", "pass");
   });
 
   it("treats a null review count as unknown", () => {
     const audit = buildGbpAudit(baseInput({ reviewsCount: null }));
-    expect(findCheck(audit, "reviewsCount").status).toBe("unknown");
+    expectCheck(audit, "reviewsCount", "unknown");
   });
 });
 
 describe("buildGbpAudit - rating", () => {
   it("warns below the healthy rating threshold", () => {
     const audit = buildGbpAudit(baseInput({ rating: 3.5 }));
-    expect(findCheck(audit, "rating").status).toBe("warn");
+    expectCheck(audit, "rating", "warn");
   });
 
   it("passes at the healthy rating threshold", () => {
     const audit = buildGbpAudit(baseInput({ rating: 4.0 }));
-    expect(findCheck(audit, "rating").status).toBe("pass");
+    expectCheck(audit, "rating", "pass");
   });
 
   it("treats a null rating as unknown", () => {
     const audit = buildGbpAudit(baseInput({ rating: null }));
-    expect(findCheck(audit, "rating").status).toBe("unknown");
+    expectCheck(audit, "rating", "unknown");
   });
 });
 
@@ -291,16 +303,76 @@ describe("buildGbpAudit - score arithmetic", () => {
 describe("buildGbpAudit - check ordering", () => {
   it("returns checks sorted by weight descending", () => {
     const audit = buildGbpAudit(baseInput());
+    // ownerResponse sits between rating and description -- its weight (60)
+    // was chosen to land there, see WEIGHT_OWNER_RESPONSE's comment.
     expect(audit.checks.map((c) => c.key)).toEqual([
       "claimed",
       "category",
       "phone",
       "reviewsCount",
       "rating",
+      "ownerResponse",
       "description",
       "website",
       "logo",
       "mainImage",
     ]);
+  });
+});
+
+/** Builds a reviews array with `repliedCount` replied reviews (always the
+ *  first N) out of `total`, so callers can hit an exact response rate. */
+function reviewsWithReplies(
+  total: number,
+  repliedCount: number,
+): Array<{ ownerAnswer: string | null }> {
+  return Array.from({ length: total }, (_, i) => ({
+    ownerAnswer: i < repliedCount ? "Thanks for the feedback!" : null,
+  }));
+}
+
+describe("buildGbpAudit - owner response rate", () => {
+  it("treats a missing reviews array as unknown, not zero responses", () => {
+    const audit = buildGbpAudit(baseInput());
+    const check = expectCheck(audit, "ownerResponse", "unknown");
+    expect(check.fix).toBeNull();
+  });
+
+  it("treats an empty reviews array as unknown, not a failure", () => {
+    const audit = buildGbpAudit(baseInput({ reviews: [] }));
+    expectCheck(audit, "ownerResponse", "unknown");
+  });
+
+  it("fails at a 0% response rate and names the review count", () => {
+    const audit = buildGbpAudit(
+      baseInput({ reviews: reviewsWithReplies(3, 0) }),
+    );
+    const check = expectCheck(audit, "ownerResponse", "fail");
+    expect(check.detail).toContain("0");
+    expect(check.detail).toContain("3");
+  });
+
+  it("warns at a low response rate with the exact percentage", () => {
+    const audit = buildGbpAudit(
+      baseInput({ reviews: reviewsWithReplies(7, 1) }),
+    );
+    // 1 of 7 replied = 14.2857...% -> rounds to 14%.
+    const check = expectCheck(audit, "ownerResponse", "warn");
+    expect(check.detail).toContain("14%");
+  });
+
+  it("passes at a high response rate", () => {
+    const audit = buildGbpAudit(
+      baseInput({ reviews: reviewsWithReplies(10, 9) }),
+    );
+    // 9 of 10 replied = 90%, at/above the healthy response-rate threshold.
+    const check = expectCheck(audit, "ownerResponse", "pass");
+    expect(check.detail).toContain("90%");
+  });
+
+  it("does not drag the score down when reviews are not supplied", () => {
+    const audit = buildGbpAudit(baseInput());
+    expectCheck(audit, "ownerResponse", "unknown");
+    expect(audit.score).toBe(100);
   });
 });
