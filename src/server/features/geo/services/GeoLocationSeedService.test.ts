@@ -1,9 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GeoLocationRow } from "@/server/features/geo/geoLocationSeedMapping";
+import type {
+  StagedGeoLocationChunk,
+  StagedGeoLocationManifest,
+} from "@/server/features/geo/geoLocationSeedStore";
 
 const mocks = vi.hoisted(() => ({
   dataforseoGetJson: vi.fn<(path: string) => Promise<unknown>>(),
   upsertRows: vi.fn<(rows: GeoLocationRow[]) => Promise<void>>(),
+  readManifest:
+    vi.fn<(chunkSize: number) => Promise<StagedGeoLocationManifest | null>>(),
+  writeStaged:
+    vi.fn<
+      (
+        rows: readonly GeoLocationRow[],
+        skippedRows: number,
+        chunkSize: number,
+      ) => Promise<StagedGeoLocationManifest>
+    >(),
+  readStagedChunk:
+    vi.fn<
+      (
+        manifest: StagedGeoLocationManifest,
+        offset: number,
+      ) => Promise<StagedGeoLocationChunk>
+    >(),
 }));
 
 vi.mock("@/server/lib/dataforseo/core", () => ({
@@ -12,6 +33,20 @@ vi.mock("@/server/lib/dataforseo/core", () => ({
 
 vi.mock("@/server/features/geo/repositories/GeoLocationSeedRepository", () => ({
   GeoLocationSeedRepository: { upsertRows: mocks.upsertRows },
+}));
+
+// GeoLocationSeedService no longer talks to R2 directly -- it delegates
+// staging to GeoLocationSeedStore, so THIS file only needs to verify the
+// orchestration decision (stage fresh vs. reuse what's staged), not R2/ndjson
+// mechanics. Those live in geoLocationSeedStore.test.ts, mocked the same way
+// dataforseoGetJson and the repository already are here: mock the direct
+// dependency, not something two levels down.
+vi.mock("@/server/features/geo/geoLocationSeedStore", () => ({
+  GeoLocationSeedStore: {
+    readManifest: mocks.readManifest,
+    writeStaged: mocks.writeStaged,
+    readStagedChunk: mocks.readStagedChunk,
+  },
 }));
 
 // A dynamic import inside the service, but mocked the same way as a static
@@ -89,6 +124,25 @@ describe("GeoLocationSeedService.seedChunk", () => {
     mocks.dataforseoGetJson.mockReset();
     mocks.upsertRows.mockReset();
     mocks.upsertRows.mockResolvedValue(undefined);
+
+    // Default: nothing staged yet, so every test that doesn't say otherwise
+    // exercises the exact same "fetch, derive, slice in memory" path the
+    // service always used to take unconditionally -- this is what keeps the
+    // pre-existing tests below valid unchanged.
+    mocks.readManifest.mockReset().mockResolvedValue(null);
+    mocks.writeStaged.mockReset().mockImplementation(
+      async (
+        rows: readonly GeoLocationRow[],
+        skippedRows: number,
+        chunkSize: number,
+      ): Promise<StagedGeoLocationManifest> => ({
+        totalRows: rows.length,
+        skippedRows,
+        chunkSize,
+        chunkByteOffsets: [],
+      }),
+    );
+    mocks.readStagedChunk.mockReset();
   });
 
   it("writes the first chunkSize rows and reports more remaining", async () => {
@@ -173,5 +227,83 @@ describe("GeoLocationSeedService.seedChunk", () => {
       done: true,
     });
     expect(mocks.upsertRows).toHaveBeenCalledWith([]);
+  });
+
+  // --- Regression coverage for the production bug: every chunk call used to
+  // re-fetch and re-derive the full list, which is what actually blew the
+  // Workers Free plan's CPU ceiling. These tests pin the fix: a run's
+  // fetch+derive pass happens at most once. ---
+
+  it("does not re-fetch or re-derive when a later call in the same run finds staged data", async () => {
+    mocks.dataforseoGetJson.mockResolvedValue(locationsEnvelope());
+    const { GeoLocationSeedService } = await import("./GeoLocationSeedService");
+
+    await GeoLocationSeedService.seedChunk(0, 3);
+    expect(mocks.dataforseoGetJson).toHaveBeenCalledTimes(1);
+    expect(mocks.writeStaged).toHaveBeenCalledTimes(1);
+
+    // From here on, behave as though offset 0's call really did persist this
+    // run's data in R2, so the next call finds it instead of nothing.
+    mocks.readManifest.mockResolvedValue({
+      totalRows: 5,
+      skippedRows: 1,
+      chunkSize: 3,
+      chunkByteOffsets: [],
+    });
+    mocks.readStagedChunk.mockResolvedValue({
+      chunk: [],
+      writtenSoFar: 5,
+      done: true,
+    });
+
+    const second = await GeoLocationSeedService.seedChunk(3, 3);
+
+    // The whole point of the fix: still only the one fetch, total, for the
+    // entire run.
+    expect(mocks.dataforseoGetJson).toHaveBeenCalledTimes(1);
+    expect(mocks.writeStaged).toHaveBeenCalledTimes(1);
+    expect(mocks.readStagedChunk).toHaveBeenCalledTimes(1);
+    expect(second).toEqual({
+      totalRows: 5,
+      skippedRows: 1,
+      writtenSoFar: 5,
+      done: true,
+    });
+  });
+
+  it("always re-stages fresh data on offset 0, even when a manifest is already staged (re-seed)", async () => {
+    mocks.dataforseoGetJson.mockResolvedValue(locationsEnvelope());
+    mocks.readManifest.mockResolvedValue({
+      totalRows: 5,
+      skippedRows: 1,
+      chunkSize: 3,
+      chunkByteOffsets: [],
+    });
+    const { GeoLocationSeedService } = await import("./GeoLocationSeedService");
+
+    await GeoLocationSeedService.seedChunk(0, 3);
+
+    // offset 0 means "(re-)seed from scratch" -- it must not even check
+    // whether something is already staged before overwriting it.
+    expect(mocks.readManifest).not.toHaveBeenCalled();
+    expect(mocks.dataforseoGetJson).toHaveBeenCalledTimes(1);
+    expect(mocks.writeStaged).toHaveBeenCalledTimes(1);
+  });
+
+  it("re-derives (self-heals) when resuming a run whose staged data is missing or expired", async () => {
+    mocks.dataforseoGetJson.mockResolvedValue(locationsEnvelope());
+    mocks.readManifest.mockResolvedValue(null); // nothing usable staged
+    const { GeoLocationSeedService } = await import("./GeoLocationSeedService");
+
+    const result = await GeoLocationSeedService.seedChunk(3, 3);
+
+    expect(mocks.dataforseoGetJson).toHaveBeenCalledTimes(1);
+    expect(mocks.readStagedChunk).not.toHaveBeenCalled();
+    expect(result).toEqual({
+      totalRows: 5,
+      skippedRows: 1,
+      writtenSoFar: 5,
+      done: true,
+    });
   });
 });
