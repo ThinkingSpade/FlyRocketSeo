@@ -136,7 +136,10 @@ export type GbpPostValidationError =
   | "cta_url_required"
   | "cta_url_not_allowed_for_call";
 
-export type GbpPostValidationInput = {
+// Not exported: every caller (GbpWriteService.schedulePost,
+// GbpPostComposer.tsx) passes an inline object and relies on this
+// function's parameter typing rather than importing the shape by name.
+type GbpPostValidationInput = {
   content: string;
   /** ISO 8601 instant the post should go out at. */
   scheduledAt: string;

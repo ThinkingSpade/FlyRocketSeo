@@ -270,8 +270,11 @@ export async function createSelfHostedGbpAuthorizationUrl(input: {
 }) {
   const config = await getGbpOAuthClientConfig();
   if (!config || !(await isGbpWriteConfigured())) {
+    // GBP_NOT_CONFIGURED, not AUTH_CONFIG_MISSING -- the latter's standard
+    // message talks about Cloudflare Access, which would be actively
+    // misleading here (see src/client/lib/error-messages.ts).
     throw new AppError(
-      "AUTH_CONFIG_MISSING",
+      "GBP_NOT_CONFIGURED",
       "Business Profile writing is not configured. Set GBP_GOOGLE_CLIENT_ID, GBP_GOOGLE_CLIENT_SECRET, and BETTER_AUTH_SECRET.",
     );
   }

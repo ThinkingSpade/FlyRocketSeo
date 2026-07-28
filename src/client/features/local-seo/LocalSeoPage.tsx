@@ -24,6 +24,7 @@ import {
 } from "@/client/features/local-seo/LocalProjectContext";
 import { buildGbpAudit } from "./gbpAudit";
 import { GbpAuditCard } from "./GbpAuditCard";
+import { GbpWriteSection } from "./GbpWriteSection";
 import { LocalReviewsSection } from "./LocalReviewsSection";
 import { CitationTrackerSection } from "@/client/features/citations/CitationTrackerSection";
 
@@ -218,7 +219,10 @@ export function LocalSeoPage({
         ) : (
           <>
             <ProfileCard profile={profile} />
-            {audit ? <GbpAuditCard audit={audit} /> : null}
+            {audit ? (
+              <GbpAuditCard audit={audit} projectId={projectId} />
+            ) : null}
+            <GbpWriteSection projectId={projectId} />
             {profileKeyword ? (
               <LocalReviewsSection
                 // Remounts on a new business so a stale taskId/reviews list

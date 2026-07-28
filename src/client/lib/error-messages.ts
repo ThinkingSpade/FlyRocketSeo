@@ -30,6 +30,10 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
   CONFLICT: "This request conflicts with existing data.",
   INTERNAL_ERROR:
     "An unexpected error occurred. Please check server logs and try again.",
+  GBP_NOT_CONFIGURED:
+    "Google Business Profile writing isn't configured for this deployment yet. Ask your operator to finish the Cloud Console setup and Google's verification review.",
+  GBP_NOT_CONNECTED:
+    "This project isn't connected to a Google Business Profile location yet. Connect one from the Local SEO tab first.",
 };
 
 export function getStandardErrorMessage(

@@ -13,6 +13,7 @@ import {
   scoreBasisHint,
   scoreTone,
 } from "./gbpAuditDisplay";
+import { GbpListingFixButton } from "./GbpListingFixButton";
 
 // Same icon for every status regardless of severity (warn and fail share
 // TriangleAlert) -- mirrors NextStepsCard's TONE_ICON exactly, so severity
@@ -41,7 +42,17 @@ function scoreUnknownHint(checks: GbpCheck[]): string {
  * actually been looked up, this component only decides how to show the
  * result once it has.
  */
-export function GbpAuditCard({ audit }: { audit: GbpAudit }) {
+export function GbpAuditCard({
+  audit,
+  projectId,
+}: {
+  audit: GbpAudit;
+  /** Optional so existing callers (and any future read-only use of this
+   *  card) keep working unchanged -- the "Fix on Google" affordance only
+   *  renders when a caller opts in by passing it, and even then only for
+   *  checks GBP writing can actually fix (see GbpListingFixButton). */
+  projectId?: string;
+}) {
   // buildGbpAudit always returns at least one check, even for `found:
   // false` (a single explanatory one) -- this only guards against a future
   // caller mistake ever rendering a bare, checkless shell.
@@ -81,7 +92,7 @@ export function GbpAuditCard({ audit }: { audit: GbpAudit }) {
 
         <ul className="divide-y divide-base-300">
           {orderedChecks.map((check) => (
-            <GbpCheckRow key={check.key} check={check} />
+            <GbpCheckRow key={check.key} check={check} projectId={projectId} />
           ))}
         </ul>
       </div>
@@ -89,7 +100,13 @@ export function GbpAuditCard({ audit }: { audit: GbpAudit }) {
   );
 }
 
-function GbpCheckRow({ check }: { check: GbpCheck }) {
+function GbpCheckRow({
+  check,
+  projectId,
+}: {
+  check: GbpCheck;
+  projectId?: string;
+}) {
   const isUnknown = check.status === "unknown";
   return (
     <li
@@ -112,6 +129,13 @@ function GbpCheckRow({ check }: { check: GbpCheck }) {
             <ArrowRight className="mt-0.5 size-3 shrink-0 text-base-content/45" />
             <span>{check.fix}</span>
           </p>
+        ) : null}
+        {projectId && (check.status === "warn" || check.status === "fail") ? (
+          <GbpListingFixButton
+            projectId={projectId}
+            checkKey={check.key}
+            status={check.status}
+          />
         ) : null}
       </div>
     </li>
