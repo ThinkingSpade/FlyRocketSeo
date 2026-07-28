@@ -79,6 +79,51 @@ export async function setCached<T>(
 }
 
 /**
+ * Stores raw text verbatim -- no JSON.stringify wrapping. Pairs with
+ * `getCachedRange` for values too large to safely re-parse as one document on
+ * every read (see geoLocationSeedStore.ts, which persists a ~95k-row derived
+ * list as newline-delimited JSON so a later reader can fetch one small byte
+ * range instead of the whole object). A caller that writes with this must
+ * read with `getCachedRange`/a raw read, never `getCached` (which assumes the
+ * stored bytes are exactly one JSON.parse-able document).
+ */
+export async function setCachedRawText(
+  key: string,
+  text: string,
+  ttlSeconds: number,
+): Promise<void> {
+  await env.R2.put(`${CACHE_PREFIX}${key}`, text, {
+    httpMetadata: { contentType: "application/x-ndjson" },
+    customMetadata: {
+      expiresAt: new Date(Date.now() + ttlSeconds * 1000).toISOString(),
+    },
+  });
+}
+
+/**
+ * Reads exactly one byte range of a cached value's raw text -- the object
+ * itself is never fully read or parsed, only the requested slice. Companion
+ * to `setCachedRawText`. Returns null on a missing key, an out-of-bounds
+ * range, or any other read failure; callers decide what "not there" means
+ * (not staged yet vs. unexpectedly lost).
+ */
+export async function getCachedRange(
+  key: string,
+  offset: number,
+  length: number,
+): Promise<string | null> {
+  if (length <= 0) return "";
+  try {
+    const obj = await env.R2.get(`${CACHE_PREFIX}${key}`, {
+      range: { offset, length },
+    });
+    return obj ? await obj.text() : null;
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Compute a deterministic SHA-256 digest for cache keys.
  */
 async function sha256Hex(input: string): Promise<string> {

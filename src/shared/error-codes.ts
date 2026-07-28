@@ -26,6 +26,15 @@ const ERROR_CODES = [
   // Cloudflare Access text or NOT_FOUND's generic one.
   "GBP_NOT_CONFIGURED",
   "GBP_NOT_CONNECTED",
+  // The geo location seed job stages its one-time derived row list in R2
+  // across the ~48 chunk calls a full run needs (see
+  // geoLocationSeedStore.ts). This fires only if that staged data goes
+  // missing between two chunk calls in the same run (TTL expiry after a long
+  // pause, or an R2 read failure) -- a distinct, rare condition from any
+  // other UPSTREAM/INTERNAL failure, and one with its own safe recovery
+  // (restart the run) worth stating plainly rather than folding into a
+  // generic "something went wrong".
+  "GEO_SEED_DATA_LOST",
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES);

@@ -21,5 +21,9 @@ describe("shouldCaptureAppErrorCode", () => {
     // the billing codes reportable, don't suppress them.
     expect(shouldCaptureAppErrorCode("BACKLINKS_BILLING_ISSUE")).toBe(true);
     expect(shouldCaptureAppErrorCode("AI_SEARCH_BILLING_ISSUE")).toBe(true);
+    // Staged geo-seed data going missing mid-run is a genuine anomaly worth
+    // knowing about operationally (e.g. a TTL that's too short in practice),
+    // not an expected per-user state — keep it reportable too.
+    expect(shouldCaptureAppErrorCode("GEO_SEED_DATA_LOST")).toBe(true);
   });
 });
