@@ -312,8 +312,9 @@ export function describeNoGeoMatches(query: string): string {
   const trimmed = query.trim();
   return (
     `No states or countries match “${trimmed}”. Metro and city results ` +
-    "depend on this deployment's location data being seeded (see " +
-    "scripts/seed-geo-locations.ts) — if you expected a metro or city " +
-    "here, that's the most likely reason."
+    "depend on this deployment's location data being seeded — from " +
+    "Settings ('Location data'), or via scripts/seed-geo-locations.ts for " +
+    "a local key — if you expected a metro or city here, that's the most " +
+    "likely reason."
   );
 }
