@@ -49,11 +49,15 @@ function parseCtaType(value: string): GbpCallToActionType | "" {
 /**
  * Compose-and-schedule form for a Google Business Profile post. Nothing here
  * touches Google directly -- scheduleGbpPost only inserts a `scheduled` row
- * (see GbpWriteService.schedulePost). The confirm step still applies (follows
- * AnalyzeProjectCard's explicit-confirm pattern) because once scheduled, the
- * post WILL publish automatically the next time someone runs "Publish due
- * posts" with no further per-post confirmation -- so this is the one and only
- * human checkpoint before that eventually-automatic Google-side write.
+ * (see GbpWriteService.schedulePost). There is NO background trigger that
+ * publishes it later (see GbpWriteService.publishDuePosts's own doc comment)
+ * -- a post only ever reaches Google when a human clicks "Publish due posts
+ * now" or a post's own "Publish now" (GbpScheduledPostsList.tsx), and that
+ * click gets its own confirm step. The confirm here is still worth keeping
+ * (follows AnalyzeProjectCard's explicit-confirm pattern) because it's the
+ * one checkpoint before content/timing is locked into the queue -- but its
+ * copy must say plainly that queuing is all this does, or a user reads
+ * "publish automatically" and reasonably believes the post already went out.
  */
 export function GbpPostComposer({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
@@ -207,12 +211,13 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
             <p className="flex items-start gap-2 text-sm">
               <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
               <span>
-                This will publish automatically to your live Google Business
-                Profile at{" "}
+                This queues the post for{" "}
                 {scheduledAtIso
                   ? new Date(scheduledAtIso).toLocaleString()
                   : "the chosen time"}
-                , with no further confirmation. Continue?
+                . Nothing publishes on its own -- it stays queued until someone
+                clicks &quot;Publish due posts now&quot; (or this post&apos;s
+                &quot;Publish now&quot;) after that time. Continue?
               </span>
             </p>
             <div className="flex gap-2">
