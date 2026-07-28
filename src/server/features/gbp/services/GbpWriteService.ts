@@ -208,10 +208,20 @@ async function publishPost(input: {
 
   const claimed = await GbpScheduledPostRepository.claimForPublishing(post.id);
   if (!claimed) {
+    // A null claim only proves the compare-and-swap didn't win -- NOT that
+    // publishing is in progress (finding A7). Between the read above and
+    // this claim attempt, the row could have been deleted, or already moved
+    // to published/failed by a concurrent request. Re-read it and report
+    // what's actually there instead of asserting one specific cause.
+    const current = await GbpScheduledPostRepository.getById(post.id);
     return {
       ok: false,
       reason: "blocked",
-      message: "This post is already being published.",
+      message:
+        current == null
+          ? "This post no longer exists -- it may have been deleted."
+          : (describePublishBlockReason(current.status) ??
+            "This post could not be claimed for publishing -- another request may have just claimed it. Try again."),
     };
   }
 
