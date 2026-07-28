@@ -23,6 +23,7 @@ import {
 import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
 import type { TargetArea } from "@/shared/geo/types";
 import { resolveInitialConfigArea } from "./rankTrackingConfigArea";
+import { useConfigAreaLookup } from "./useConfigAreaLookup";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
 
 type Props = {
@@ -105,6 +106,18 @@ export function RankTrackingConfigModal({
       existingLocationCode: existingConfig?.locationCode ?? null,
       defaultArea: defaultArea ?? null,
     }),
+  );
+  // True once the user picks a location themselves -- stops the async
+  // by-code resolution below from clobbering that choice if it lands after
+  // the user has already moved on.
+  const [areaTouched, setAreaTouched] = useState(false);
+  // Resolves an EXISTING config's stored non-country locationCode (the bare
+  // "Location #<code>" gap) via the free geo_locations by-code read, once it
+  // comes back -- see useConfigAreaLookup.ts's own doc comment.
+  useConfigAreaLookup(
+    existingConfig?.locationCode ?? null,
+    areaTouched,
+    setArea,
   );
   // Derived from the AREA's own parent country, not its (possibly
   // sub-country) locationCode directly -- getLanguageCode/getLanguageOptions
@@ -261,6 +274,7 @@ export function RankTrackingConfigModal({
           <GeoLocationSelect
             value={area}
             onChange={(nextArea) => {
+              setAreaTouched(true);
               setArea(nextArea);
               setLanguageCode(getLanguageCode(nextArea.parentCountryCode));
             }}
