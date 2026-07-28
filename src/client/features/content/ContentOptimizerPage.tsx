@@ -624,7 +624,12 @@ function ContentOptimizerHeading({ scope }: { scope: TargetAreaScope }) {
           searchers ask.
         </p>
       </div>
-      <ScopeControl area={scope.area} onChange={scope.onChange} />
+      <ScopeControl
+        area={scope.area}
+        onChange={scope.onChange}
+        hasConfirmedArea={scope.hasConfirmedArea}
+        onClear={scope.onClear}
+      />
     </div>
   );
 }

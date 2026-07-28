@@ -35,6 +35,8 @@ function RankTrackingLayout() {
           <ScopeControl
             area={targetAreaScope.area}
             onChange={targetAreaScope.onChange}
+            hasConfirmedArea={targetAreaScope.hasConfirmedArea}
+            onClear={targetAreaScope.onClear}
           />
         </div>
 

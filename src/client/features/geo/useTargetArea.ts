@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 import {
+  clearTargetArea,
   confirmTargetArea,
   getTargetArea,
   setTargetArea,
@@ -91,6 +92,29 @@ export function useSetTargetArea(
   return useMutation({
     mutationFn: (area: TargetArea) =>
       setTargetArea({ data: { projectId, area } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: targetAreaQueryKey(projectId),
+      });
+    },
+  });
+}
+
+/**
+ * Reverts to "nothing confirmed" -- the only way back to that state once an
+ * area has been accepted or manually set, since every other write
+ * (`confirmTargetArea`/`setTargetArea`) only ever replaces one confirmed
+ * area with another. `ScopeControl`'s own "Clear" affordance is the sole
+ * caller: it only appears once something is actually confirmed (see that
+ * component's own `hasConfirmedArea` gate), never for the plain country
+ * fallback, where there is nothing to clear.
+ */
+export function useClearTargetArea(
+  projectId: string,
+): UseMutationResult<void, Error, void> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => clearTargetArea({ data: { projectId } }),
     onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: targetAreaQueryKey(projectId),

@@ -1,7 +1,11 @@
 import { useEffect, useState } from "react";
 import type { TargetArea } from "@/shared/geo/types";
-import { resolveActiveScopeArea } from "@/client/features/geo/resolveScopeArea";
 import {
+  resolveActiveScopeArea,
+  resolveDefaultScopeArea,
+} from "@/client/features/geo/resolveScopeArea";
+import {
+  useClearTargetArea,
   useSetTargetArea,
   useTargetArea,
 } from "@/client/features/geo/useTargetArea";
@@ -10,6 +14,14 @@ export type TargetAreaScope = {
   /** Never null -- see `resolveActiveScopeArea`'s own doc comment. */
   area: TargetArea;
   onChange: (area: TargetArea) => void;
+  /** Whether there is an actual confirmed (or just-picked, optimistically)
+   *  target area to revert. False for the plain country fallback, where
+   *  there is nothing to clear -- gates `ScopeControl`'s "Clear" link. */
+  hasConfirmedArea: boolean;
+  /** Reverts to the country fallback and clears the project's confirmed
+   *  target area entirely -- see `useClearTargetArea`'s own doc comment for
+   *  why this is the only way back to "nothing confirmed". */
+  onClear: () => void;
 };
 
 /**
@@ -48,6 +60,7 @@ export function useTargetAreaScope(
     : null;
   const confirmedAreaCode = confirmedArea?.locationCode ?? null;
   const setTargetAreaMutation = useSetTargetArea(projectId);
+  const clearTargetAreaMutation = useClearTargetArea(projectId);
 
   const [area, setArea] = useState<TargetArea>(() =>
     resolveActiveScopeArea(confirmedArea, countryLocationCode),
@@ -79,5 +92,20 @@ export function useTargetAreaScope(
     setTargetAreaMutation.mutate(next);
   };
 
-  return { area, onChange };
+  const onClear = () => {
+    setTouched(true);
+    setArea(resolveDefaultScopeArea(countryLocationCode));
+    clearTargetAreaMutation.mutate();
+  };
+
+  return {
+    area,
+    onChange,
+    // Optimistic (`touched`) as well as server-confirmed: without the
+    // `touched` half, clicking "Clear" itself would make the button vanish
+    // and instantly reappear once the invalidated query refetches, since
+    // `confirmedArea` only updates on that later render.
+    hasConfirmedArea: confirmedArea !== null || touched,
+    onClear,
+  };
 }
