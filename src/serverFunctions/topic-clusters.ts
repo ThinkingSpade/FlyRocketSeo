@@ -43,7 +43,14 @@ export const getTopicClusters = createServerFn({ method: "POST" })
       AnalysisRunService.record({
         projectId: context.projectId,
         feature: RUN_FEATURES.topicClusters,
-        params: { topic, locationCode },
+        params: {
+          topic,
+          locationCode,
+          // Defect 2 fix: captured client-side at authorize()-time, so a
+          // later restore reads this run's OWN caveat state instead of
+          // whatever the header ScopeControl shows today.
+          confirmedAreaLabel: data.confirmedAreaLabel ?? null,
+        },
         cacheKey,
         label: topic,
       });
