@@ -144,6 +144,25 @@ export function buildOpportunities(input: {
     );
 }
 
+/**
+ * Sub-caption for the headline "Opportunities" tile: how many of the total
+ * are the cheapest kind to act on (already ranking, just short of the top
+ * 3) -- the raw count alone says nothing about the effort mix behind it.
+ * Silent when there's nothing to break down (zero opportunities) or when
+ * the breakdown would just repeat the headline number (every opportunity is
+ * already a quick win), mirroring why a GBP score with no unknowns gets no
+ * "10 of 10" hint either.
+ */
+export function quickWinHint(opportunities: Opportunity[]): string | undefined {
+  const total = opportunities.length;
+  if (total === 0) return undefined;
+  const quickWins = opportunities.filter(
+    (item) => item.kind === "quick-win",
+  ).length;
+  if (quickWins === total) return undefined;
+  return `${quickWins} quick win${quickWins === 1 ? "" : "s"}`;
+}
+
 type TechnicalIssueKey = "status" | "title" | "meta" | "h1" | "thin" | "alt";
 
 type TechnicalIssue = {

@@ -11,12 +11,18 @@ function mapProject(project: {
   id: string;
   name: string;
   domain: string | null;
+  locationCode: number;
+  languageCode: string;
   createdAt: string;
 }) {
   return {
     id: project.id,
     name: project.name,
     domain: project.domain,
+    // Set during onboarding. Tabs default their location/language selects to
+    // this instead of hardcoding US/en.
+    locationCode: project.locationCode,
+    languageCode: project.languageCode,
     createdAt: project.createdAt,
   };
 }

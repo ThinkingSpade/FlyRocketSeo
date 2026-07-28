@@ -30,9 +30,13 @@ import {
   SearchTabStrip,
   type SearchTab,
 } from "@/client/features/search-tabs/SearchTabStrip";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import { buildBacklinksVerdict } from "@/client/features/insights/verdicts/backlinks";
 
 type BacklinksBodyProps = {
   projectId: string;
+  meteredAuthorized: boolean;
+  meteredRunNonce: number;
   history: BacklinksSearchHistoryItem[];
   historyLoaded: boolean;
   overviewData: BacklinksOverviewData | undefined;
@@ -67,6 +71,8 @@ type BacklinksBodyProps = {
 
 export function BacklinksBody({
   projectId,
+  meteredAuthorized,
+  meteredRunNonce,
   history,
   historyLoaded,
   overviewData,
@@ -173,6 +179,19 @@ export function BacklinksBody({
           returned, so none of them spends. */}
       <LinkVelocityCard trends={overviewData.newLostTrends} />
       <BacklinksProfileBreakdowns summary={overviewData.summary} />
+      {/* Pure read of data already on the page -- renders for a restored run
+          too, unlike the metered cards below it. */}
+      <NextStepsCard
+        verdict={buildBacklinksVerdict({
+          target: overviewData.displayTarget || searchState.target,
+          backlinks: overviewData.summary.backlinks,
+          referringDomains: overviewData.summary.referringDomains,
+          brokenBacklinks: overviewData.summary.brokenBacklinks,
+          backlinksSpamScore: overviewData.summary.backlinksSpamScore,
+        })}
+        projectId={projectId}
+        tab="Backlinks"
+      />
       {isRestoredRun ? null : <BrokenLinkReclaimCard topPages={topPagesPage} />}
       {/* Both of these fetch on their own — the timeline is a metered history
           call, and the results card drives the paginated sub-tabs. A restored
@@ -181,6 +200,8 @@ export function BacklinksBody({
         <BacklinksTimelineSection
           projectId={projectId}
           target={overviewData.displayTarget || searchState.target}
+          authorized={meteredAuthorized}
+          runNonce={meteredRunNonce}
         />
       )}
       {isRestoredRun ? null : (

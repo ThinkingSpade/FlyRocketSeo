@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { LOCATIONS, getLanguageCode } from "@/client/features/keywords/utils";
@@ -14,6 +13,7 @@ import type {
   ResearchSource,
   ResultLimit,
 } from "@/client/features/keywords/keywordResearchTypes";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type AddSearchFn = (
   keyword: string,
@@ -96,26 +96,14 @@ export function keywordResearchQueryFn(request: KeywordResearchRequest) {
 export function useKeywordResearchData(
   input: KeywordResearchQueryInput,
   addSearch: AddSearchFn,
+  authorizedInput: KeywordResearchQueryInput | null,
+  runNonce: number,
 ) {
-  const {
-    clickstream,
-    keywordInput,
-    locationCode,
-    mode,
-    projectId,
-    resultLimit,
-  } = input;
+  const { projectId } = input;
   const request = useMemo<KeywordResearchRequest | null>(
     () =>
-      buildKeywordResearchRequest({
-        keywordInput,
-        locationCode,
-        mode,
-        projectId,
-        resultLimit,
-        clickstream,
-      }),
-    [clickstream, keywordInput, locationCode, mode, projectId, resultLimit],
+      authorizedInput ? buildKeywordResearchRequest(authorizedInput) : null,
+    [authorizedInput],
   );
   const queryKey = useMemo(
     () => buildKeywordResearchQueryKey(request),
@@ -123,7 +111,9 @@ export function useKeywordResearchData(
   );
   const queryKeyString = JSON.stringify(queryKey);
 
-  const researchQuery = useQuery({
+  const researchQuery = useMeteredQuery({
+    authorized: authorizedInput != null,
+    runNonce,
     queryKey,
     queryFn: () => {
       if (!request) {
@@ -133,11 +123,8 @@ export function useKeywordResearchData(
       return keywordResearchQueryFn(request);
     },
     enabled: request !== null,
-    staleTime: KEYWORD_RESEARCH_STALE_TIME_MS,
     gcTime: KEYWORD_RESEARCH_STALE_TIME_MS,
     retry: false,
-    refetchOnReconnect: false,
-    refetchOnWindowFocus: false,
   });
 
   const handledSuccessKeyRef = useRef<string | null>(null);

@@ -29,6 +29,7 @@ type Props = {
   onSubmit: (event: FormEvent) => void;
   isLoading: boolean;
   validationError: string | null;
+  promptStarters: string[];
 };
 
 function isCountryCode(value: string): value is WebSearchCountryCode {
@@ -49,6 +50,7 @@ export function PromptExplorerForm({
   onSubmit,
   isLoading,
   validationError,
+  promptStarters,
 }: Props) {
   const toggleModel = (model: PromptExplorerModel) => {
     if (form.models.includes(model)) {
@@ -94,6 +96,29 @@ export function PromptExplorerForm({
               {promptCharCount}/{PROMPT_EXPLORER_MAX_PROMPT_LENGTH}
             </span>
           </div>
+          {promptStarters.length > 0 ? (
+            <div>
+              <p className="mb-1.5 text-xs font-medium text-base-content/60">
+                Based on your Search Console topics
+              </p>
+              <div className="flex flex-wrap gap-1.5">
+                {promptStarters.map((starter) => (
+                  <button
+                    key={starter}
+                    type="button"
+                    className="btn btn-ghost btn-xs h-auto min-h-7 rounded-full border border-base-300 px-2.5 py-1 font-normal"
+                    onClick={() => onPromptChange(starter)}
+                  >
+                    {starter}
+                  </button>
+                ))}
+              </div>
+              <p className="mt-1.5 text-xs text-base-content/50">
+                Choosing a starter only fills the prompt. Run when you are
+                ready.
+              </p>
+            </div>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">

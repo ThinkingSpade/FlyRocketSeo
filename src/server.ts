@@ -16,7 +16,6 @@ import {
 } from "@/server/mcp/oauth-provider";
 import { requestWithPublicOrigin } from "@/server/mcp/public-origin";
 import { MCP_ROUTE } from "@/server/mcp/context";
-import { handleSelfHostedFlyRocketSeoMcpRequest } from "@/server/mcp/transport";
 import { withPgClient } from "@/db";
 import {
   AUTUMN_WEBHOOK_PATH,
@@ -161,11 +160,15 @@ function handleFetch(
     (authMode === "cloudflare_access" || authMode === "local_noauth") &&
     pathname === MCP_ROUTE
   ) {
-    return handleSelfHostedFlyRocketSeoMcpRequest(
-      publicRequest,
-      authMode,
-      env,
-      ctx,
+    // Loaded lazily so the MCP transport and @modelcontextprotocol/sdk stay out
+    // of the Worker startup graph — reached only on an actual MCP request.
+    return import("@/server/mcp/transport").then((m) =>
+      m.handleSelfHostedFlyRocketSeoMcpRequest(
+        publicRequest,
+        authMode,
+        env,
+        ctx,
+      ),
     );
   }
 

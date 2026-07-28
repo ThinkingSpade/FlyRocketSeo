@@ -4,7 +4,6 @@ import {
   ChevronDown,
   Download,
   FileDown,
-  Globe,
   LineChart,
   RotateCcw,
   Save,
@@ -23,18 +22,11 @@ import { KeywordGroupsRail } from "./KeywordGroupsRail";
 import { copyKeywordsAsMarkdown } from "@/client/features/keywords/state/keywordsMarkdown";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
-import {
-  AreaTrendChart,
-  OverviewStats,
-  SerpAnalysisCard,
-} from "@/client/features/keywords/components";
-import type { KeywordResearchRow } from "@/types/keywords";
+import { OverviewStats } from "@/client/features/keywords/components";
 import type { KeywordResearchControllerState } from "./types";
-import {
-  DesktopFilterFields,
-  SerpPanelActions,
-} from "./keywordResearchDesktopFilters";
+import { DesktopFilterFields } from "./keywordResearchDesktopFilters";
 import { KeywordResearchDesktopTable } from "./KeywordResearchDesktopTable";
+import { KeywordResearchDesktopSerpPanel } from "./KeywordResearchDesktopSerpPanel";
 import {
   KeywordResearchPagination,
   useKeywordResearchPagination,
@@ -47,57 +39,31 @@ import {
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
 import { getLanguageCode } from "@/client/features/keywords/locations";
 
-const MONTH_SHORT_LABELS = [
-  "Jan",
-  "Feb",
-  "Mar",
-  "Apr",
-  "May",
-  "Jun",
-  "Jul",
-  "Aug",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dec",
-] as const;
-
-function formatTrendRangeLabel(trend: KeywordResearchRow["trend"]): string {
-  if (trend.length === 0) return "Last 12 available months";
-
-  const sorted = trend.toSorted(
-    (a, b) => a.year * 100 + a.month - (b.year * 100 + b.month),
-  );
-  const last12 = sorted.slice(-12);
-  const start = last12[0];
-  const end = last12[last12.length - 1];
-
-  const toLabel = (month: number, year: number) => {
-    const monthLabel = MONTH_SHORT_LABELS[month - 1] ?? `M${month}`;
-    return `${monthLabel} ${year}`;
-  };
-
-  const startLabel = toLabel(start.month, start.year);
-  const endLabel = toLabel(end.month, end.year);
-  return startLabel === endLabel ? startLabel : `${startLabel} - ${endLabel}`;
-}
-
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
 type Props = {
   controller: KeywordResearchControllerState;
+  /** This project's own Ahrefs domain rating, for the per-row "needs DR X+"
+   *  notes in the difficulty column below. */
+  ownDomainRating: number | null;
 };
 
-export function KeywordResearchDesktopResults({ controller }: Props) {
+export function KeywordResearchDesktopResults({
+  controller,
+  ownDomainRating,
+}: Props) {
   return (
     <div className="flex-1 hidden md:flex flex-col xl:flex-row overflow-y-auto xl:overflow-hidden gap-4">
-      <DesktopKeywordPanel controller={controller} />
-      <DesktopSerpPanel controller={controller} />
+      <DesktopKeywordPanel
+        controller={controller}
+        ownDomainRating={ownDomainRating}
+      />
+      <KeywordResearchDesktopSerpPanel controller={controller} />
     </div>
   );
 }
 
-function DesktopKeywordPanel({ controller }: Props) {
+function DesktopKeywordPanel({ controller, ownDomainRating }: Props) {
   const {
     lastResultSource,
     lastUsedFallback,
@@ -133,13 +99,16 @@ function DesktopKeywordPanel({ controller }: Props) {
           groupTerm={controller.groupTerm}
           setGroupTerm={controller.setGroupTerm}
         />
-        <DesktopTableCard controller={controller} />
+        <DesktopTableCard
+          controller={controller}
+          ownDomainRating={ownDomainRating}
+        />
       </div>
     </div>
   );
 }
 
-function DesktopTableCard({ controller }: Props) {
+function DesktopTableCard({ controller, ownDomainRating }: Props) {
   const {
     activeFilterCount,
     filteredRows,
@@ -296,6 +265,7 @@ function DesktopTableCard({ controller }: Props) {
         activeFilterCount={controller.activeFilterCount}
         filteredRows={pageRows}
         overviewKeyword={controller.overviewKeyword}
+        ownDomainRating={ownDomainRating}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
         sortDir={controller.sortDir}
@@ -329,7 +299,11 @@ function DesktopTableCard({ controller }: Props) {
   );
 }
 
-function DesktopFilters({ controller }: Props) {
+function DesktopFilters({
+  controller,
+}: {
+  controller: KeywordResearchControllerState;
+}) {
   const { activeFilterCount, filtersForm } = controller;
 
   return (
@@ -354,64 +328,6 @@ function DesktopFilters({ controller }: Props) {
       </div>
 
       <DesktopFilterFields form={filtersForm} />
-    </div>
-  );
-}
-
-function DesktopSerpPanel({ controller }: Props) {
-  const { projectId } = keywordsRoute.useParams();
-  const { overviewKeyword } = controller;
-  const trendRangeLabel = overviewKeyword
-    ? formatTrendRangeLabel(overviewKeyword.trend)
-    : "Last 12 available months";
-
-  return (
-    <div className="order-1 xl:order-2 flex flex-col min-w-0 gap-2 xl:basis-2/5 xl:overflow-y-auto">
-      {overviewKeyword && overviewKeyword.trend.length > 0 ? (
-        <div className="shrink-0 overflow-hidden border border-base-300 rounded-xl bg-base-100 px-4 py-3">
-          <h4 className="text-sm font-semibold mb-1">
-            Search Trends{" "}
-            <span className="font-normal text-base-content/50">
-              {trendRangeLabel}
-            </span>
-          </h4>
-          <AreaTrendChart trend={overviewKeyword.trend} />
-        </div>
-      ) : null}
-
-      <div className="flex flex-col overflow-hidden border border-base-300 rounded-xl bg-base-100">
-        <div className="shrink-0 px-4 py-3 border-b border-base-300">
-          <div className="flex items-center justify-between gap-2">
-            <h3 className="text-sm font-semibold flex items-center gap-1.5">
-              <Globe className="size-3.5" />
-              SERP Analysis
-              {controller.activeSerpKeyword ? (
-                <span className="font-normal text-base-content/50 truncate">
-                  : {controller.activeSerpKeyword}
-                </span>
-              ) : null}
-            </h3>
-            {controller.activeSerpKeyword ? (
-              <SerpPanelActions
-                projectId={projectId}
-                keyword={controller.activeSerpKeyword}
-              />
-            ) : null}
-          </div>
-        </div>
-        <div className="p-4">
-          <SerpAnalysisCard
-            items={controller.serpResults}
-            keyword={controller.activeSerpKeyword}
-            loading={controller.serpLoading}
-            error={controller.serpError}
-            onRetry={() => void controller.serpQuery.refetch()}
-            page={controller.serpPage}
-            pageSize={controller.SERP_PAGE_SIZE}
-            onPageChange={controller.setSerpPage}
-          />
-        </div>
-      </div>
     </div>
   );
 }

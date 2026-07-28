@@ -1,4 +1,3 @@
-import { useQuery } from "@tanstack/react-query";
 import { CalendarRange } from "lucide-react";
 import {
   Bar,
@@ -11,8 +10,10 @@ import {
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import { getBacklinksTimeline } from "@/serverFunctions/backlinks";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type TimelineRow = {
   label: string;
@@ -47,15 +48,20 @@ function monthLabel(date: string): string {
 export function BacklinksTimelineSection({
   projectId,
   target,
+  authorized,
+  runNonce,
 }: {
   projectId: string;
   target: string;
+  authorized: boolean;
+  runNonce: number;
 }) {
-  const timelineQuery = useQuery({
+  const timelineQuery = useMeteredQuery({
+    authorized,
+    runNonce,
     enabled: target.trim() !== "",
     queryKey: ["backlinks-timeline", projectId, target],
     queryFn: () => getBacklinksTimeline({ data: { projectId, target } }),
-    staleTime: 30 * 60_000,
     retry: 1,
   });
 
@@ -71,7 +77,9 @@ export function BacklinksTimelineSection({
     referringDomains: point.referringDomains,
   }));
 
-  if (!timelineQuery.isPending && rows.length < 2) return null;
+  if (!timelineQuery.isPending && !timelineQuery.isError && rows.length < 2) {
+    return null;
+  }
 
   return (
     <section className="rounded-2xl border border-base-300 bg-base-100 p-5">
@@ -87,6 +95,13 @@ export function BacklinksTimelineSection({
         <div className="flex items-center justify-center py-14">
           <span className="loading loading-spinner loading-sm" />
         </div>
+      ) : timelineQuery.isError ? (
+        <InlineQueryError
+          className="mt-3"
+          message="The backlink timeline could not be loaded."
+          retrying={timelineQuery.isFetching}
+          onRetry={() => void timelineQuery.refetch()}
+        />
       ) : (
         <div
           ref={containerRef}

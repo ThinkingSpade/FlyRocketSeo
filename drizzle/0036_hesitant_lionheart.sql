@@ -1,0 +1,1 @@
+ALTER TABLE `gbp_connections` ADD `account_name` text;

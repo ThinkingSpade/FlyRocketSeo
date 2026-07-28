@@ -1,9 +1,6 @@
 import { KeywordResearchRepository } from "@/server/features/keywords/repositories/KeywordResearchRepository";
 import { normalizeIntent } from "@/server/features/keywords/services/research/helpers";
-import {
-  createDataforseoClient,
-  fetchKeywordMetricsForList,
-} from "@/server/lib/dataforseo";
+import { createDataforseoClient } from "@/server/lib/dataforseo";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import type { RefreshSavedKeywordMetricsInput } from "@/types/schemas/keywords";
 
@@ -34,6 +31,9 @@ export async function refreshSavedKeywordMetrics(
     groups.set(key, group);
   }
 
+  // Loaded lazily to keep the DataForSEO SDK out of the Worker startup graph.
+  const { fetchKeywordMetricsForList } =
+    await import("@/server/lib/dataforseo/keyword-metrics");
   for (const groupRows of groups.values()) {
     const { locationCode, languageCode } = groupRows[0].row;
     const metrics = await fetchKeywordMetricsForList(client, {

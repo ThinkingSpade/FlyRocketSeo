@@ -9,6 +9,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { explorePrompt } from "@/serverFunctions/ai-search";
+import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
   HostedPlanGate,
   type HostedPlanGateState,
@@ -25,6 +26,16 @@ import {
   type PromptExplorerModel,
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
+import {
+  createMeteredRunKey,
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
+import { useProject } from "@/client/hooks/useProjectDomain";
+import {
+  buildPromptStarters,
+  domainStem,
+} from "@/client/features/search-performance/projectGscInsights";
 
 type PromptExplorerFormValues = {
   prompt: string;
@@ -58,6 +69,20 @@ const PROMPT_EXPLORER_BULLETS = [
   },
 ];
 
+function promptRunKey(
+  projectId: string,
+  values: PromptExplorerFormValues,
+): string {
+  return createMeteredRunKey(
+    projectId,
+    values.prompt.trim(),
+    values.models.toSorted(),
+    values.webSearch,
+    values.webSearchCountryCode,
+    values.highlightBrand.trim(),
+  );
+}
+
 export function PromptExplorerPage(props: Props) {
   return (
     <HostedPlanGate>
@@ -74,6 +99,25 @@ function PromptExplorerPageInner({
 }: Props & { planGate: HostedPlanGateState }) {
   const [form, setForm] = useState<PromptExplorerFormValues>(urlState);
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [authorizedInput, setAuthorizedInput] =
+    useState<PromptExplorerFormValues | null>(null);
+  const project = useProject(projectId);
+  const defaultBrand =
+    project?.name.trim() && project.name.toLowerCase() !== "default"
+      ? project.name.trim()
+      : (domainStem(project?.domain) ?? "");
+  const brandWasEdited = useRef(Boolean(urlState.highlightBrand));
+  const run = useAuthorizedRun(promptRunKey(projectId, form));
+  const gscQuery = useQuery({
+    queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
+    queryFn: () =>
+      getSearchPerformanceReport({
+        data: { projectId, dateRange: "last_28_days" },
+      }),
+    staleTime: 5 * 60_000,
+  });
+  const promptStarters =
+    gscQuery.data?.connected === true ? buildPromptStarters(gscQuery.data) : [];
 
   const {
     history,
@@ -82,36 +126,39 @@ function PromptExplorerPageInner({
     removeHistoryItem,
   } = usePromptExplorerSearchHistory(projectId);
 
-  const trimmedPrompt = urlState.prompt.trim();
+  const trimmedPrompt = authorizedInput?.prompt.trim() ?? "";
   const hasActivePrompt = trimmedPrompt.length > 0;
 
-  const exploreQuery = useQuery({
+  const exploreQuery = useMeteredQuery({
+    authorized: run.authorized,
+    runNonce: run.runNonce,
     queryKey: [
       "prompt-explorer",
       projectId,
       trimmedPrompt,
-      urlState.models.toSorted().join(","),
-      urlState.webSearch,
-      urlState.webSearchCountryCode,
-      urlState.highlightBrand.trim(),
+      authorizedInput?.models.toSorted().join(","),
+      authorizedInput?.webSearch,
+      authorizedInput?.webSearchCountryCode,
+      authorizedInput?.highlightBrand.trim(),
     ],
     queryFn: () =>
       explorePrompt({
         data: {
           projectId,
           prompt: trimmedPrompt,
-          models: urlState.models,
-          highlightBrand: urlState.highlightBrand.trim() || undefined,
-          webSearch: urlState.webSearch,
-          webSearchCountryCode: urlState.webSearchCountryCode,
+          models: authorizedInput?.models ?? [],
+          highlightBrand: authorizedInput?.highlightBrand.trim() || undefined,
+          webSearch: authorizedInput?.webSearch ?? false,
+          webSearchCountryCode: authorizedInput?.webSearchCountryCode ?? "US",
         },
       }),
     // Client-side gate is a UX optimization only; the paywall is enforced
     // server-side (explorePrompt → assertPaidPlan) before any DataForSEO spend,
     // so a stale free-plan window here just yields a rejected request, not cost.
     enabled:
-      hasActivePrompt && urlState.models.length > 0 && !planGate.isFreePlan,
-    staleTime: 5 * 60 * 1000,
+      hasActivePrompt &&
+      (authorizedInput?.models.length ?? 0) > 0 &&
+      !planGate.isFreePlan,
     retry: false,
   });
 
@@ -119,9 +166,16 @@ function PromptExplorerPageInner({
   // cmd+click history navigation (in the originating tab nothing changes; in
   // a new tab the form mounts populated from the URL).
   useEffect(() => {
-    setForm(urlState);
+    setForm((current) => ({
+      ...urlState,
+      highlightBrand:
+        urlState.highlightBrand ||
+        (brandWasEdited.current
+          ? current.highlightBrand
+          : defaultBrand || current.highlightBrand),
+    }));
     setValidationError(null);
-  }, [urlState]);
+  }, [defaultBrand, urlState]);
 
   // Persist successful searches to history. Run on isSuccess so failed
   // requests don't pollute recent searches. The dedup ref prevents repeat
@@ -131,28 +185,25 @@ function PromptExplorerPageInner({
     if (!hasActivePrompt || !exploreQuery.isSuccess) return;
     const key = [
       trimmedPrompt,
-      urlState.highlightBrand.trim(),
-      urlState.models.toSorted().join(","),
-      urlState.webSearch,
-      urlState.webSearchCountryCode,
+      authorizedInput?.highlightBrand.trim(),
+      authorizedInput?.models.toSorted().join(","),
+      authorizedInput?.webSearch,
+      authorizedInput?.webSearchCountryCode,
     ].join("|");
     if (lastAddedKeyRef.current === key) return;
     lastAddedKeyRef.current = key;
     addSearch({
       prompt: trimmedPrompt,
-      highlightBrand: urlState.highlightBrand.trim(),
-      models: urlState.models,
-      webSearch: urlState.webSearch,
-      webSearchCountryCode: urlState.webSearchCountryCode,
+      highlightBrand: authorizedInput?.highlightBrand.trim() ?? "",
+      models: authorizedInput?.models ?? [],
+      webSearch: authorizedInput?.webSearch ?? false,
+      webSearchCountryCode: authorizedInput?.webSearchCountryCode ?? "US",
     });
   }, [
     hasActivePrompt,
     exploreQuery.isSuccess,
     trimmedPrompt,
-    urlState.highlightBrand,
-    urlState.models,
-    urlState.webSearch,
-    urlState.webSearchCountryCode,
+    authorizedInput,
     addSearch,
   ]);
 
@@ -174,18 +225,21 @@ function PromptExplorerPageInner({
       return;
     }
     setValidationError(null);
-    onSubmit({
+    const next = {
       ...form,
       prompt: trimmed,
       highlightBrand: form.highlightBrand.trim(),
-    });
+    };
+    setAuthorizedInput(next);
+    run.authorize(promptRunKey(projectId, next));
+    onSubmit(next);
   };
 
   const errorMessage = exploreQuery.isError
     ? getStandardErrorMessage(exploreQuery.error)
     : null;
   const isLoading = hasActivePrompt && exploreQuery.isPending;
-  const resultData = hasActivePrompt ? exploreQuery.data : undefined;
+  const resultData = authorizedInput ? exploreQuery.data : undefined;
 
   const updateForm = <K extends keyof PromptExplorerFormValues>(
     key: K,
@@ -217,9 +271,10 @@ function PromptExplorerPageInner({
             <PromptExplorerForm
               form={form}
               onPromptChange={(value) => updateForm("prompt", value)}
-              onHighlightBrandChange={(value) =>
-                updateForm("highlightBrand", value)
-              }
+              onHighlightBrandChange={(value) => {
+                brandWasEdited.current = true;
+                updateForm("highlightBrand", value);
+              }}
               onModelsChange={(value) => updateForm("models", value)}
               onWebSearchChange={(value) => updateForm("webSearch", value)}
               onCountryChange={(value) =>
@@ -228,6 +283,7 @@ function PromptExplorerPageInner({
               onSubmit={handleSubmit}
               isLoading={isLoading}
               validationError={validationError}
+              promptStarters={promptStarters}
             />
 
             {errorMessage ? (

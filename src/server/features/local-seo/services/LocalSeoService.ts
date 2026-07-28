@@ -2,21 +2,31 @@ import { z } from "zod";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
-import {
-  fetchGoogleReviewsResult,
-  type GoogleBusinessInfoItem,
-  type GoogleReviewItem,
+import type {
+  GoogleBusinessInfoItem,
+  GoogleReviewItem,
 } from "@/server/lib/dataforseo/business";
 
 /** Business profiles change slowly; refresh twice a day. */
 const LOCAL_SEO_TTL_SECONDS = 12 * 60 * 60;
+const PROJECT_BUSINESS_CONTEXT_TTL_SECONDS = 365 * 24 * 60 * 60;
 
 const businessProfileSchema = z.object({
   found: z.boolean(),
   title: z.string().nullable(),
   category: z.string().nullable(),
-  additionalCategories: z.array(z.string()),
+  // Nullable, not defaulted: DataForSEO omits this field rather than
+  // returning an empty array when it has nothing to say about additional
+  // categories, and collapsing that omission to `[]` here would be
+  // indistinguishable from a business that genuinely has none by the time
+  // gbpAudit.ts sees it -- see buildCategoryCheck's null-vs-empty handling,
+  // which this field exists to feed honestly.
+  additionalCategories: z.array(z.string()).nullable(),
   address: z.string().nullable(),
+  city: z.string().nullable().default(null),
+  region: z.string().nullable().default(null),
+  latitude: z.number().nullable().default(null),
+  longitude: z.number().nullable().default(null),
   phone: z.string().nullable(),
   url: z.string().nullable(),
   domain: z.string().nullable(),
@@ -42,7 +52,12 @@ function readReviewsCount(item: GoogleBusinessInfoItem): number | null {
   return typeof votes === "number" ? votes : null;
 }
 
-function mapBusinessProfile(
+/** Exported (rather than left module-private like the rest of this file's
+ *  helpers) so its null-vs-empty mapping for `additionalCategories` --
+ *  the one place this service turns DataForSEO's own item shape into ours
+ *  -- can be tested directly instead of only through a full, mocked
+ *  `getBusinessProfile` call. */
+export function mapBusinessProfile(
   item: GoogleBusinessInfoItem | null,
   fetchedAt: string,
 ): BusinessProfile {
@@ -51,8 +66,12 @@ function mapBusinessProfile(
       found: false,
       title: null,
       category: null,
-      additionalCategories: [],
+      additionalCategories: null,
       address: null,
+      city: null,
+      region: null,
+      latitude: null,
+      longitude: null,
       phone: null,
       url: null,
       domain: null,
@@ -71,8 +90,16 @@ function mapBusinessProfile(
     found: true,
     title: item.title ?? null,
     category: item.category ?? null,
-    additionalCategories: item.additional_categories ?? [],
+    // `?? null`, not `?? []`: DataForSEO not returning this field at all
+    // (`undefined`) means we can't see it, which is a different fact from
+    // DataForSEO returning it as an empty array (the business genuinely has
+    // no additional categories). Only the latter is a real finding.
+    additionalCategories: item.additional_categories ?? null,
     address: item.address ?? null,
+    city: item.address_info?.city ?? null,
+    region: item.address_info?.region ?? null,
+    latitude: item.latitude ?? null,
+    longitude: item.longitude ?? null,
     phone: item.phone ?? null,
     url: item.url ?? null,
     domain: item.domain ?? null,
@@ -86,6 +113,48 @@ function mapBusinessProfile(
     placeId: item.place_id ?? null,
     fetchedAt,
   };
+}
+
+const cachedBusinessContextSchema = z.object({
+  keyword: z.string(),
+  profile: businessProfileSchema,
+});
+
+async function projectBusinessContextKey(input: {
+  organizationId: string;
+  projectId: string;
+}) {
+  return buildCacheKey("local-seo:project-business-context", input);
+}
+
+async function cacheProjectBusinessContext(
+  input: { projectId: string; keyword: string },
+  profile: BusinessProfile,
+  billingCustomer: BillingCustomerContext,
+) {
+  const cacheKey = await projectBusinessContextKey({
+    organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+  });
+  await setCached(
+    cacheKey,
+    { keyword: input.keyword, profile },
+    PROJECT_BUSINESS_CONTEXT_TTL_SECONDS,
+  );
+}
+
+async function getCachedBusinessContext(
+  projectId: string,
+  billingCustomer: BillingCustomerContext,
+) {
+  const cacheKey = await projectBusinessContextKey({
+    organizationId: billingCustomer.organizationId,
+    projectId,
+  });
+  const cached = cachedBusinessContextSchema.safeParse(
+    await getCached(cacheKey),
+  );
+  return cached.success ? cached.data : null;
 }
 
 async function getBusinessProfile(
@@ -109,6 +178,13 @@ async function getBusinessProfile(
 
   const cached = businessProfileSchema.safeParse(await getCached(cacheKey));
   if (cached.success && cached.data.found) {
+    void cacheProjectBusinessContext(
+      { projectId: input.projectId, keyword },
+      cached.data,
+      billingCustomer,
+    ).catch((error) => {
+      console.error("local-seo.project-context.cache-write failed:", error);
+    });
     return cached.data;
   }
 
@@ -121,7 +197,14 @@ async function getBusinessProfile(
 
   const profile = mapBusinessProfile(item, new Date().toISOString());
   if (profile.found) {
-    void setCached(cacheKey, profile, LOCAL_SEO_TTL_SECONDS).catch((error) => {
+    void Promise.all([
+      setCached(cacheKey, profile, LOCAL_SEO_TTL_SECONDS),
+      cacheProjectBusinessContext(
+        { projectId: input.projectId, keyword },
+        profile,
+        billingCustomer,
+      ),
+    ]).catch((error) => {
       console.error("local-seo.business-profile.cache-write failed:", error);
     });
   }
@@ -184,7 +267,10 @@ function mapReviewItem(item: GoogleReviewItem): ReviewRow {
 
 async function getReviewsResult(taskId: string): Promise<ReviewsOutcome> {
   // Collection is free and unmetered; completed payloads are served straight
-  // from DataForSEO, which retains finished tasks for collection.
+  // from DataForSEO, which retains finished tasks for collection. Loaded lazily
+  // to keep the DataForSEO SDK out of the Worker startup graph.
+  const { fetchGoogleReviewsResult } =
+    await import("@/server/lib/dataforseo/business");
   const outcome = await fetchGoogleReviewsResult(taskId);
   if (outcome.status !== "completed") return outcome;
   return {
@@ -199,6 +285,7 @@ async function getReviewsResult(taskId: string): Promise<ReviewsOutcome> {
 
 export const LocalSeoService = {
   getBusinessProfile,
+  getCachedBusinessContext,
   startReviewsFetch,
   getReviewsResult,
 } as const;

@@ -31,6 +31,14 @@ type StrikingDistanceRow = {
   position: number;
 };
 
+type QueryPageRow = {
+  query: string;
+  page: string;
+  clicks: number;
+  impressions: number;
+  position: number;
+};
+
 // "Striking distance" = already ranking, not yet in the top spots: the queries
 // where a content improvement most plausibly moves real traffic.
 const STRIKING_DISTANCE_MIN_POSITION = 5;
@@ -100,6 +108,26 @@ export function buildQueryTotals(
     .map(([query, totals]) => ({ query, ...totals }))
     .toSorted((a, b) => b.clicks - a.clicks || b.impressions - a.impressions)
     .slice(0, QUERY_TOTALS_ROW_LIMIT);
+}
+
+/** Preserve the already-fetched query×page relationship for zero-cost
+ * project coverage overlays in other tabs. */
+export function toQueryPageRows(rows: GscSearchAnalyticsRow[]): QueryPageRow[] {
+  return rows.flatMap((row) => {
+    const query = row.keys?.[0];
+    const page = row.keys?.[1];
+    return query && page
+      ? [
+          {
+            query,
+            page,
+            clicks: row.clicks,
+            impressions: row.impressions,
+            position: row.position,
+          },
+        ]
+      : [];
+  });
 }
 
 /** Flatten single-dimension rows (query or page) into a keyed table row. */

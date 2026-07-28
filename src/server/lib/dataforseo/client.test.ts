@@ -132,6 +132,13 @@ vi.mock("@/server/lib/dataforseo/ai", () => ({
 vi.mock("@/server/lib/dataforseo/ai-keyword-data", () => ({
   fetchAiKeywordVolume: vi.fn(),
 }));
+// Mocked like the other leaves so the client's lazy import() of fetchers.ts
+// resolves entirely to mocks — without this, the real google-ads module (and
+// the 1.6 MB SDK it pulls) loads at call time and the test flakes under load.
+vi.mock("@/server/lib/dataforseo/google-ads", () => ({
+  fetchAdsKeywordIdeas: vi.fn(),
+  fetchAdsSearchVolume: vi.fn(),
+}));
 vi.mock("@/server/lib/dataforseo/content-analysis", () => ({
   fetchBrandMentions: vi.fn(),
   fetchBrandMentionsSummary: vi.fn(),

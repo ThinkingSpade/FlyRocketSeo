@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import {
   Award,
   FileSearch,
@@ -25,11 +24,22 @@ import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
 } from "@/shared/keyword-locations";
+import {
+  createMeteredRunKey,
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
 
 type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
+
+function normalizePageUrlInput(value: string): string {
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
 
 const PAGE_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -68,17 +78,32 @@ export function PageExplorerPage({
   const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
   const [input, setInput] = useState(url);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
-  const targetUrl = url.trim();
+  const [runInput, setRunInput] = useState<{
+    url: string;
+    locationCode: number;
+  } | null>(null);
+  const run = useAuthorizedRun(
+    createMeteredRunKey(
+      projectId,
+      normalizePageUrlInput(input),
+      Number(locationInput),
+    ),
+  );
   const projectDomain = useProjectDomain(projectId);
 
-  const pageQuery = useQuery({
-    enabled: targetUrl.length > 0,
-    queryKey: ["page-explorer", projectId, targetUrl, activeLocation],
+  const pageQuery = useMeteredQuery({
+    authorized: run.authorized,
+    runNonce: run.runNonce,
+    enabled: runInput != null,
+    queryKey: ["page-explorer", projectId, runInput],
     queryFn: () =>
       getPageExplorer({
-        data: { projectId, url: targetUrl, locationCode: activeLocation },
+        data: {
+          projectId,
+          url: runInput?.url ?? "",
+          locationCode: runInput?.locationCode ?? activeLocation,
+        },
       }),
-    staleTime: 30 * 60_000,
   });
   // Restoring the project's last page lookup is free: it reads a stored row
   // plus the R2 object that run already paid for, never a metered fetch. The
@@ -89,7 +114,7 @@ export function PageExplorerPage({
     projectId,
     feature: RUN_FEATURES.pageExplorer,
     schema: pageExplorerSchema,
-    enabled: targetUrl === "",
+    enabled: runInput == null,
     runId: selectedRunId,
   });
   const result = pageQuery.data ?? restored?.result;
@@ -100,12 +125,15 @@ export function PageExplorerPage({
 
   // On-page snapshot: same analysis (and server cache) the Content Optimizer
   // uses for competitor pages — title, length, and the heading outline.
-  const snapshotQuery = useQuery({
-    enabled: targetUrl.length > 0,
-    queryKey: ["content-competitor", projectId, targetUrl],
+  const snapshotQuery = useMeteredQuery({
+    authorized: run.authorized,
+    runNonce: run.runNonce,
+    enabled: runInput != null,
+    queryKey: ["content-competitor", projectId, runInput?.url],
     queryFn: () =>
-      analyzeContentCompetitor({ data: { projectId, url: targetUrl } }),
-    staleTime: 60 * 60_000,
+      analyzeContentCompetitor({
+        data: { projectId, url: runInput?.url ?? "" },
+      }),
     retry: 1,
   });
   const snapshot = snapshotQuery.data ?? null;
@@ -129,11 +157,13 @@ export function PageExplorerPage({
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
             onSubmit={(event) => {
               event.preventDefault();
-              const next = input.trim();
-              if (!next) return;
-              const normalized = /^https?:\/\//i.test(next)
-                ? next
-                : `https://${next}`;
+              const normalized = normalizePageUrlInput(input);
+              if (!normalized) return;
+              setRunInput({
+                url: normalized,
+                locationCode: Number(locationInput),
+              });
+              run.authorize();
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -197,11 +227,23 @@ export function PageExplorerPage({
         feature={RUN_FEATURES.pageExplorer}
         selectedRunId={selectedRunId}
         onSelectRun={setSelectedRunId}
-        idle={targetUrl === ""}
+        idle={runInput == null}
         restoredRun={restoredRun}
         onRunAgain={() => {
           if (!restoredRun) return;
           setInput(restoredRun.result.url);
+          setLocationInput(String(restoredRun.result.locationCode));
+          setRunInput({
+            url: restoredRun.result.url,
+            locationCode: restoredRun.result.locationCode,
+          });
+          run.authorize(
+            createMeteredRunKey(
+              projectId,
+              restoredRun.result.url,
+              restoredRun.result.locationCode,
+            ),
+          );
           navigate({
             search: (prev) => ({
               ...prev,
@@ -213,7 +255,7 @@ export function PageExplorerPage({
         }}
       />
 
-      {!targetUrl && !restoredRun ? (
+      {runInput == null && !restoredRun ? (
         <>
           <AnalyzeDomainPrompt
             domain={projectDomain}
@@ -224,6 +266,10 @@ export function PageExplorerPage({
               if (!projectDomain) return;
               const homepage = `https://${projectDomain.replace(/^https?:\/\//, "")}/`;
               setInput(homepage);
+              setRunInput({ url: homepage, locationCode: activeLocation });
+              run.authorize(
+                createMeteredRunKey(projectId, homepage, activeLocation),
+              );
               navigate({
                 search: (prev) => ({
                   ...prev,
@@ -247,7 +293,7 @@ export function PageExplorerPage({
         </>
       ) : null}
 
-      {targetUrl && pageQuery.isLoading ? (
+      {runInput != null && pageQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
           <span className="loading loading-spinner loading-md" />
         </div>

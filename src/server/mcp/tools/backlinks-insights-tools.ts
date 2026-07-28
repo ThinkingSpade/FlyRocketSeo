@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
-import { normalizeBacklinksTarget } from "@/server/lib/dataforseo/backlinks";
+import { normalizeBacklinksTarget } from "@/server/lib/dataforseoBacklinksTarget";
 import {
   CompetitorsService,
   type LinkGapRow,

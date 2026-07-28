@@ -1,6 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { getCompetitorsList } from "@/serverFunctions/competitors";
+import {
+  createMeteredRunKey,
+  useAuthorizedRun,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 
 function formatCount(value: number | null): string {
   if (value == null) return "—";
@@ -16,13 +21,16 @@ export function DomainCompetitorsCard({
   projectId: string;
   domain: string;
 }) {
-  const competitorsQuery = useQuery({
+  const run = useAuthorizedRun(
+    createMeteredRunKey(projectId, domain.trim(), 1),
+  );
+  const competitorsQuery = useMeteredQuery({
+    authorized: run.authorized,
+    runNonce: run.runNonce,
     queryKey: ["domain-competitors-inline", projectId, domain],
     queryFn: () => getCompetitorsList({ data: { projectId, target: domain } }),
-    staleTime: 30 * 60_000,
   });
   const rows = (competitorsQuery.data?.rows ?? []).slice(0, 5);
-  if (!competitorsQuery.isLoading && rows.length === 0) return null;
 
   return (
     <div className="card border border-base-300 bg-base-100">
@@ -39,11 +47,25 @@ export function DomainCompetitorsCard({
             Full analysis
           </Link>
         </div>
-        {competitorsQuery.isLoading ? (
+        {!run.authorized ? (
+          <button
+            type="button"
+            className="btn btn-primary btn-sm self-start"
+            onClick={() => run.authorize()}
+          >
+            Load competitors
+          </button>
+        ) : competitorsQuery.isLoading ? (
           <div className="flex justify-center py-4">
             <span className="loading loading-dots loading-sm" />
           </div>
-        ) : (
+        ) : competitorsQuery.isError ? (
+          <InlineQueryError
+            message="Competitors could not be loaded."
+            retrying={competitorsQuery.isFetching}
+            onRetry={() => void competitorsQuery.refetch()}
+          />
+        ) : rows.length > 0 ? (
           <div className="overflow-x-auto">
             <table className="table table-sm">
               <thead>
@@ -76,6 +98,10 @@ export function DomainCompetitorsCard({
               </tbody>
             </table>
           </div>
+        ) : (
+          <p className="py-4 text-sm text-base-content/50">
+            No organic competitors found.
+          </p>
         )}
       </div>
     </div>

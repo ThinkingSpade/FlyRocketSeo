@@ -1,9 +1,6 @@
 import type { WorkflowStep } from "cloudflare:workers";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
-import {
-  fetchRankCheckTaskResult,
-  MAX_TASKS_PER_POST,
-} from "@/server/lib/dataforseo";
+import { MAX_TASKS_PER_POST } from "@/server/lib/dataforseo";
 import type {
   createDataforseoClient,
   PostedRankCheckTask,
@@ -198,6 +195,9 @@ async function collectQueuedRound(
   const stillPending: PostedRankCheckTask[] = [];
   const failed: PostedRankCheckTask[] = [];
 
+  // Loaded lazily to keep the DataForSEO SDK out of the Worker startup graph.
+  const { fetchRankCheckTaskResult } =
+    await import("@/server/lib/dataforseo/serp");
   for (let i = 0; i < tasks.length; i += TASK_GET_CONCURRENCY) {
     const chunk = tasks.slice(i, i + TASK_GET_CONCURRENCY);
     const settled = await Promise.allSettled(

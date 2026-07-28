@@ -6,12 +6,10 @@ import {
   AuthPageShell,
   authRedirectSearchSchema,
 } from "@/client/features/auth/AuthPage";
+import { useEmailVerificationBypassed } from "@/client/features/auth/useEmailVerificationBypassed";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { authClient, useSession } from "@/lib/auth-client";
-import {
-  isEmailVerificationBypassed,
-  isHostedClientAuthMode,
-} from "@/lib/auth-mode";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
 
@@ -23,6 +21,9 @@ const verifyEmailSearchSchema = authRedirectSearchSchema.extend({
   error: z.string().optional(),
   email: z.string().optional(),
 });
+
+const resendFailureMessage =
+  "We couldn't send the verification email. Please try again or contact support if the problem continues.";
 
 export const Route = createFileRoute("/verify-email")({
   validateSearch: verifyEmailSearchSchema,
@@ -102,7 +103,7 @@ function VerifyEmailPage() {
   const redirectTo = normalizeAuthRedirect(search.redirect);
   const isHostedMode = isHostedClientAuthMode();
   const { data: session, isPending } = useSession();
-  const bypassEmailVerification = isEmailVerificationBypassed();
+  const runtimeConfig = useEmailVerificationBypassed();
   const errorMessage = getVerificationErrorMessage(search.error);
   const verificationIssueType = search.error
     ? verificationIssueSchema.parse(search.error)
@@ -110,14 +111,20 @@ function VerifyEmailPage() {
   const email = search.email ?? session?.user?.email;
   const isVerified = !!session?.user?.emailVerified;
   const [isResending, setIsResending] = useState(false);
+  const [resendError, setResendError] = useState<string | null>(null);
   // Verified (or bypass) users are sent on to the app by the effect below; until
   // that lands we show the redirecting state instead of the resend prompt.
   const isRedirecting =
-    isVerified || (bypassEmailVerification && Boolean(session?.user?.id));
+    isVerified ||
+    (runtimeConfig.isResolved &&
+      runtimeConfig.isBypassed &&
+      Boolean(session?.user?.id));
+  const isRuntimeConfigPending =
+    isHostedMode && !isVerified && !runtimeConfig.isResolved;
   const pageCopy = getVerifyEmailPageCopy({
     isHostedMode,
     errorMessage,
-    isPending,
+    isPending: isPending || isRuntimeConfigPending,
     isRedirecting,
     email,
   });
@@ -125,7 +132,8 @@ function VerifyEmailPage() {
   useEffect(() => {
     if (
       isPending ||
-      (!isVerified && !(bypassEmailVerification && session?.user?.id))
+      (!isVerified && !runtimeConfig.isResolved) ||
+      (!isVerified && !(runtimeConfig.isBypassed && session?.user?.id))
     ) {
       return;
     }
@@ -143,10 +151,11 @@ function VerifyEmailPage() {
     // "action is not a function" errors).
     window.location.replace(redirectTo);
   }, [
-    bypassEmailVerification,
     isPending,
     isVerified,
     redirectTo,
+    runtimeConfig.isBypassed,
+    runtimeConfig.isResolved,
     session?.user?.id,
   ]);
 
@@ -162,6 +171,7 @@ function VerifyEmailPage() {
 
   async function handleResend() {
     if (!email) return;
+    setResendError(null);
     setIsResending(true);
     try {
       const callbackURL = new URL("/verify-email", window.location.origin);
@@ -172,15 +182,15 @@ function VerifyEmailPage() {
         callbackURL: callbackURL.toString(),
       });
       if (result.error) {
-        toast.error(result.error.message || "We couldn't send another email.");
+        setResendError(resendFailureMessage);
+        toast.error(resendFailureMessage);
         return;
       }
       captureClientEvent("auth:verification_resend");
       toast.success("A new email is on the way.");
     } catch {
-      toast.error(
-        "We couldn't send another email right now. Please try again.",
-      );
+      setResendError(resendFailureMessage);
+      toast.error(resendFailureMessage);
     } finally {
       setIsResending(false);
     }
@@ -216,19 +226,26 @@ function VerifyEmailPage() {
               Back to sign in
             </Link>
           </div>
-        ) : isPending || isRedirecting ? (
+        ) : isPending || isRuntimeConfigPending || isRedirecting ? (
           <div className="flex justify-center py-4">
             <span className="loading loading-spinner loading-md" />
           </div>
         ) : email ? (
-          <button
-            type="button"
-            className="btn btn-soft w-full"
-            onClick={() => void handleResend()}
-            disabled={isResending}
-          >
-            {isResending ? "Sending email..." : "Resend email"}
-          </button>
+          <div className="space-y-3">
+            {resendError ? (
+              <div className="alert alert-error" role="alert">
+                <span>{resendError}</span>
+              </div>
+            ) : null}
+            <button
+              type="button"
+              className="btn btn-soft w-full"
+              onClick={() => void handleResend()}
+              disabled={isResending}
+            >
+              {isResending ? "Sending email..." : "Resend email"}
+            </button>
+          </div>
         ) : null}
       </AuthPageCard>
     </AuthPageShell>

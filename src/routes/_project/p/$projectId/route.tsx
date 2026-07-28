@@ -8,6 +8,7 @@ import { useQuery } from "@tanstack/react-query";
 import { useEffect } from "react";
 import { setLastProjectId } from "@/client/lib/active-project";
 import { useHostedAuthRouteGuard } from "@/client/features/auth/useHostedAuthRouteGuard";
+import { LoadingShell } from "@/client/components/LoadingShell";
 import { FreePlanBanner } from "@/client/features/billing/FreePlanBanner";
 import { useOnboardingRedirect } from "@/client/features/onboarding/useOnboardingRedirect";
 import { getErrorCode } from "@/client/lib/error-messages";
@@ -76,8 +77,10 @@ function ProjectLayout() {
     setLastProjectId(projectId);
   }, [projectId, isSettingsPage]);
 
+  // Hold the loading animation while the session resolves rather than blanking
+  // the page on a cold Worker isolate.
   if (!authGate.canRenderAuthenticatedContent) {
-    return null;
+    return <LoadingShell />;
   }
 
   return (

@@ -6,6 +6,16 @@ import {
   startReviewsRequestSchema,
 } from "@/types/schemas/local-seo";
 import { LocalSeoService } from "@/server/features/local-seo/services/LocalSeoService";
+import { z } from "zod";
+
+const projectScopedSchema = z.object({ projectId: z.string().uuid() });
+
+export const getCachedBusinessContext = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(projectScopedSchema)
+  .handler(async ({ context }) => {
+    return LocalSeoService.getCachedBusinessContext(context.projectId, context);
+  });
 
 export const getBusinessProfile = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)

@@ -8,6 +8,7 @@ import {
   restoreProject,
   updateProject,
 } from "@/server/features/projects/services/projects";
+import { getPortfolio } from "@/server/features/projects/services/portfolio";
 
 export const ProjectService = {
   listProjects,
@@ -18,4 +19,5 @@ export const ProjectService = {
   restoreProject,
   listArchivedProjects,
   getProjectForOrganization,
+  getPortfolio,
 } as const;

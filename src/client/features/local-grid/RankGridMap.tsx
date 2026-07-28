@@ -70,7 +70,7 @@ export function RankGridMap({
   cellStates,
   onPickCenter,
 }: {
-  center: GridPoint;
+  center: GridPoint | null;
   radiusMiles: number;
   points: GridPoint[];
   cellStates: Map<string, CellState>;
@@ -93,10 +93,13 @@ export function RankGridMap({
       if (disposed || !containerRef.current || mapRef.current) return;
 
       const map = L.map(containerRef.current, {
-        center: [center.lat, center.lng],
-        zoom: zoomForRadius(radiusMiles),
         scrollWheelZoom: true,
       });
+      if (center) {
+        map.setView([center.lat, center.lng], zoomForRadius(radiusMiles));
+      } else {
+        map.setView([20, 0], 2);
+      }
       L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
         maxZoom: 19,
         attribution:
@@ -143,6 +146,7 @@ export function RankGridMap({
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    if (!center) return;
     if (points.length === 0) {
       map.setView([center.lat, center.lng], zoomForRadius(radiusMiles));
     } else if (!map.getBounds().contains([center.lat, center.lng])) {
@@ -150,7 +154,7 @@ export function RankGridMap({
     }
     // Only center/radius changes should retrigger this.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [center.lat, center.lng, radiusMiles]);
+  }, [center?.lat, center?.lng, radiusMiles]);
 
   const stateSignature = JSON.stringify([
     points,
@@ -168,15 +172,17 @@ export function RankGridMap({
     layer.clearLayers();
 
     // Center pin (the "business location" the grid is anchored on).
-    L.marker([center.lat, center.lng], {
-      icon: L.divIcon({
-        className: "",
-        html: '<div style="width:16px;height:16px;border-radius:9999px;background:#4934c7;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);"></div>',
-        iconSize: [16, 16],
-        iconAnchor: [8, 8],
-      }),
-      interactive: false,
-    }).addTo(layer);
+    if (center) {
+      L.marker([center.lat, center.lng], {
+        icon: L.divIcon({
+          className: "",
+          html: '<div style="width:16px;height:16px;border-radius:9999px;background:#4934c7;border:3px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.5);"></div>',
+          iconSize: [16, 16],
+          iconAnchor: [8, 8],
+        }),
+        interactive: false,
+      }).addTo(layer);
+    }
 
     for (const point of points) {
       const key = `${point.lat}|${point.lng}`;
@@ -194,7 +200,7 @@ export function RankGridMap({
     }
     // stateSignature covers points + per-cell status; leaflet handles renders.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [stateSignature, center.lat, center.lng]);
+  }, [stateSignature, center?.lat, center?.lng]);
 
   return (
     <div

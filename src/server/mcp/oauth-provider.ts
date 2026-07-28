@@ -19,7 +19,6 @@ import {
 } from "@/server/mcp/context";
 import { normalizeClientRegistrationRequest } from "@/server/mcp/oauth-registration";
 import { getPublicOrigin } from "@/server/mcp/public-origin";
-import { handleAuthenticatedFlyRocketSeoMcpRequest } from "@/server/mcp/transport";
 import { resolveHostedContext } from "@/middleware/ensure-user/hosted";
 
 const OAUTH_AUTHORIZE_PATH = "/api/auth/oauth2/authorize";
@@ -389,6 +388,11 @@ function createDefaultHandler(
 
 const mcpApiHandler: ExportedHandlerWithFetch<FlyRocketSeoOAuthEnv> = {
   async fetch(request, env, ctx) {
+    // Loaded lazily so the MCP transport and the @modelcontextprotocol/sdk it
+    // pulls stay out of the Worker startup graph — this handler only runs for
+    // actual MCP requests.
+    const { handleAuthenticatedFlyRocketSeoMcpRequest } =
+      await import("@/server/mcp/transport");
     return handleAuthenticatedFlyRocketSeoMcpRequest(
       request,
       (ctx as OAuthExecutionContext).props,

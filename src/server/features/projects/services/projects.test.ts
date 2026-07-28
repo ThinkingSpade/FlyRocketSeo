@@ -30,10 +30,37 @@ const namedProject = {
   createdAt: "2026-05-20 12:00:00",
 };
 
+// locationCode 2826 is the United Kingdom — deliberately not the 2840 (US)
+// column default, so a passing assertion proves the value came from the row
+// rather than from a fallback.
+const ukProject = {
+  id: "p_1",
+  name: "Acme UK",
+  domain: "acme.co.uk",
+  locationCode: 2826,
+  languageCode: "en",
+  createdAt: "2026-05-21 12:00:00",
+};
+
 describe("project service", () => {
   beforeEach(() => {
     vi.resetModules();
     for (const mock of Object.values(mocks)) mock.mockReset();
+  });
+
+  describe("listProjects", () => {
+    it("exposes the project's configured market", async () => {
+      mocks.listProjects.mockResolvedValue([ukProject]);
+      const { listProjects } = await import("./projects");
+
+      await expect(listProjects("org_1")).resolves.toEqual([
+        expect.objectContaining({
+          id: "p_1",
+          locationCode: 2826,
+          languageCode: "en",
+        }),
+      ]);
+    });
   });
 
   describe("listProjectsEnsuringOne", () => {

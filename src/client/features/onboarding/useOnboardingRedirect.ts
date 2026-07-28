@@ -1,19 +1,19 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
+import { useEmailVerificationBypassed } from "@/client/features/auth/useEmailVerificationBypassed";
 import { onboardingAnswersQueryOptions } from "@/client/features/onboarding/onboardingModel";
 import { useSession } from "@/lib/auth-client";
-import {
-  isEmailVerificationBypassed,
-  isHostedClientAuthMode,
-} from "@/lib/auth-mode";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
 
 export function useOnboardingRedirect() {
   const navigate = useNavigate();
   const { data: session } = useSession();
   const isHostedMode = isHostedClientAuthMode();
+  const runtimeConfig = useEmailVerificationBypassed();
   const isEmailVerified =
-    session?.user?.emailVerified === true || isEmailVerificationBypassed();
+    session?.user?.emailVerified === true ||
+    (runtimeConfig.isResolved && runtimeConfig.isBypassed);
   const onboardingQuery = useQuery({
     ...onboardingAnswersQueryOptions(),
     enabled: isHostedMode && Boolean(session?.user?.id) && isEmailVerified,

@@ -1,0 +1,12 @@
+# Check every text file out with LF, on every platform.
+#
+# Without this, git converts to CRLF in the working copy on Windows while
+# storing LF, and `prettier --check` reads the working copy — so `ci:check`
+# passes in CI and fails locally, on whichever files git happened to touch
+# last. A rebase or branch checkout is enough to trip it on files that have
+# no content change at all.
+* text=auto eol=lf
+
+# Generated location tables: large, machine-written, and not worth diffing.
+src/shared/us-cities.generated.ts linguist-generated=true
+src/shared/us-states.generated.ts linguist-generated=true

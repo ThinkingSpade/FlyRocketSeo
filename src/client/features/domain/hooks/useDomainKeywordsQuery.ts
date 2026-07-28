@@ -1,5 +1,4 @@
 import { useEffect, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { getDomainKeywordsPage } from "@/serverFunctions/domain";
 import { debugDomain } from "@/client/features/domain/domainDebug";
 import type {
@@ -7,6 +6,7 @@ import type {
   DomainSortMode,
   SortOrder,
 } from "@/client/features/domain/types";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type DomainKeywordsQueryInput = {
   projectId: string;
@@ -20,6 +20,8 @@ type DomainKeywordsQueryInput = {
   sortOrder: SortOrder;
   appliedFilters: DomainFilterValues;
   enabled: boolean;
+  authorized: boolean;
+  runNonce: number;
 };
 
 function toNumberOrUndefined(value: string): number | undefined {
@@ -88,7 +90,9 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
     });
   }, [input.domain, input.enabled, queryKey]);
 
-  const query = useQuery({
+  const query = useMeteredQuery({
+    authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: input.enabled && Boolean(input.domain),
     queryKey,
     queryFn: () =>
@@ -106,7 +110,6 @@ export function useDomainKeywordsQuery(input: DomainKeywordsQueryInput) {
           filters: filtersPayload,
         },
       }),
-    staleTime: 60_000,
   });
   useEffect(() => {
     debugDomain("useDomainKeywordsQuery:state", {

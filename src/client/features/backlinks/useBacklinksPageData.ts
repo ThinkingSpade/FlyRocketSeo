@@ -1,5 +1,4 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import type {
   BacklinksPageProps,
   BacklinksSearchState,
@@ -31,11 +30,73 @@ import {
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import { getPersistedBacklinksSearchScope } from "./backlinksSearchScope";
+import {
+  createMeteredRunKey,
+  useMeteredQuery,
+} from "@/client/lib/useMeteredQuery";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
+import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import { useHandoff } from "@/client/features/insights/handoffStore";
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+/**
+ * The `extract` this tab hands to `useLastRunInput`: pulls the analyzed
+ * target off the stored backlinks-overview result, which nests it under
+ * `overview` (matching `backlinksOverviewCacheSchema`, not the result shape
+ * itself). A shape that has drifted (or isn't this feature's result at all)
+ * returns null rather than throwing — the tab simply has no last-run value to
+ * offer, same contract as the hook itself.
+ */
+function extractStoredTarget(result: unknown): string | null {
+  if (!isRecord(result)) return null;
+  if (!isRecord(result.overview)) return null;
+  return typeof result.overview.target === "string"
+    ? result.overview.target
+    : null;
+}
+
+/**
+ * The URL param wins, then a domain carried from another tab, then what this
+ * tab last ran, then the project's own domain (the same fallback
+ * `AnalyzeDomainPrompt` already offers as an explicit click). There's no
+ * domain-shaped suggestion source, so this kind always passes an empty
+ * suggestions list. Lives alongside the rest of this page's supporting hooks
+ * rather than in `BacklinksPage` itself to keep that component under this
+ * file's line-count limit.
+ */
+export function useBacklinksTargetPrefill(
+  projectId: string,
+  target: string,
+  projectDomain: string | null,
+): string {
+  const handoff = useHandoff(projectId);
+  // BacklinksPage already imports RUN_FEATURES for its RecentRunsList; reuse
+  // the same feature key so both read one cache entry.
+  const lastRun = useLastRunInput(
+    projectId,
+    RUN_FEATURES.backlinks,
+    extractStoredTarget,
+  );
+  return resolvePrefill({
+    kind: "domain",
+    searchParam: target,
+    handoff,
+    lastRun,
+    suggestions: [],
+    projectDefault: projectDomain,
+  }).value;
+}
 
 type UseBacklinksPageDataArgs = {
   projectId: string;
   searchState: BacklinksSearchState;
   filters: BacklinksFiltersState;
+  authorized: boolean;
+  runNonce: number;
 };
 
 // Five-minute client staleness on top of the server's 6h R2 cache, so window
@@ -72,10 +133,40 @@ function toSort<T extends string>(
   return { field, order: orderParam ?? "desc" };
 }
 
+export function buildBacklinksAuthorizationKey(
+  projectId: string,
+  searchState: BacklinksSearchState,
+  filters: BacklinksFiltersState,
+): string {
+  const activeFilters =
+    searchState.tab === "backlinks"
+      ? toBacklinksFiltersPayload(filters.backlinks.values)
+      : searchState.tab === "domains"
+        ? toReferringDomainsFiltersPayload(filters.domains.values)
+        : searchState.tab === "pages"
+          ? toTopPagesFiltersPayload(filters.pages.values)
+          : toAnchorsFiltersPayload(filters.anchors.values);
+
+  return createMeteredRunKey(
+    projectId,
+    searchState.target,
+    searchState.scope,
+    searchState.tab,
+    searchState.page,
+    searchState.pageSize,
+    searchState.sort,
+    searchState.order,
+    searchState.view,
+    activeFilters,
+  );
+}
+
 export function useBacklinksPageData({
   projectId,
   searchState,
   filters,
+  authorized,
+  runNonce,
 }: UseBacklinksPageDataArgs) {
   const searchCardInitialValues = useMemo(
     () => ({
@@ -91,10 +182,12 @@ export function useBacklinksPageData({
   const baseQueryKeyParts = [projectId, scope, target] as const;
   const pageInputBase = { projectId, target, scope, page, pageSize };
 
-  const overviewQuery = useQuery({
+  const overviewQuery = useMeteredQuery({
+    authorized,
+    runNonce,
     queryKey: ["backlinksOverview", ...baseQueryKeyParts],
     enabled: targetReady,
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () => getBacklinksOverview({ data: { projectId, target, scope } }),
   });
 
@@ -108,7 +201,9 @@ export function useBacklinksPageData({
     () => toBacklinksFiltersPayload(filters.backlinks.values),
     [filters.backlinks.values],
   );
-  const rowsQuery = useQuery({
+  const rowsQuery = useMeteredQuery({
+    authorized,
+    runNonce,
     queryKey: [
       "backlinksRows",
       ...baseQueryKeyParts,
@@ -120,7 +215,7 @@ export function useBacklinksPageData({
       rowsMode,
     ],
     enabled: targetReady && tab === "backlinks",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksRows({
         data: {
@@ -143,7 +238,9 @@ export function useBacklinksPageData({
     () => toReferringDomainsFiltersPayload(filters.domains.values),
     [filters.domains.values],
   );
-  const referringDomainsQuery = useQuery({
+  const referringDomainsQuery = useMeteredQuery({
+    authorized,
+    runNonce,
     queryKey: [
       "backlinksReferringDomains",
       ...baseQueryKeyParts,
@@ -154,7 +251,7 @@ export function useBacklinksPageData({
       domainsFilters,
     ],
     enabled: targetReady && tab === "domains",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksReferringDomains({
         data: {
@@ -176,7 +273,9 @@ export function useBacklinksPageData({
     () => toTopPagesFiltersPayload(filters.pages.values),
     [filters.pages.values],
   );
-  const topPagesQuery = useQuery({
+  const topPagesQuery = useMeteredQuery({
+    authorized,
+    runNonce,
     queryKey: [
       "backlinksTopPages",
       ...baseQueryKeyParts,
@@ -187,7 +286,7 @@ export function useBacklinksPageData({
       pagesFilters,
     ],
     enabled: targetReady && tab === "pages",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksTopPages({
         data: {
@@ -209,7 +308,9 @@ export function useBacklinksPageData({
     () => toAnchorsFiltersPayload(filters.anchors.values),
     [filters.anchors.values],
   );
-  const anchorsQuery = useQuery({
+  const anchorsQuery = useMeteredQuery({
+    authorized,
+    runNonce,
     queryKey: [
       "backlinksAnchors",
       ...baseQueryKeyParts,
@@ -220,7 +321,7 @@ export function useBacklinksPageData({
       anchorsFilters,
     ],
     enabled: targetReady && tab === "anchors",
-    staleTime: BACKLINKS_QUERY_STALE_TIME_MS,
+    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksAnchors({
         data: {

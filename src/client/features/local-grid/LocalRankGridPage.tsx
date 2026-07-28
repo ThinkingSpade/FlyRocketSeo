@@ -1,5 +1,6 @@
-import { useMemo, useState } from "react";
-import { useQueries } from "@tanstack/react-query";
+/* eslint-disable max-lines-per-function -- Grid authorization and cell rendering must share one in-memory scan state. */
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import {
   Grid3x3,
   Hash,
@@ -12,8 +13,10 @@ import {
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
   geocodeLocation,
+  getCachedLocalGridCells,
   getLocalGridCell,
 } from "@/serverFunctions/local-grid";
+import { getCachedBusinessContext } from "@/serverFunctions/local-seo";
 import {
   buildGrid,
   roundCoord,
@@ -26,6 +29,12 @@ import {
 import { computeGridShareOfVoice } from "@/client/features/local-grid/gridShareOfVoice";
 import { GridShareOfVoiceCards } from "@/client/features/local-grid/GridShareOfVoiceCards";
 import type { AnalyzePreviewItem } from "@/client/components/AnalyzeDomainPrompt";
+import { useSeedSuggestions } from "@/client/features/dashboard/SeedKeywordField";
+import {
+  createMeteredRunKey,
+  useAuthorizedRun,
+  withMeteredRunNonce,
+} from "@/client/lib/useMeteredQuery";
 
 const GRID_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -55,7 +64,6 @@ type LocalGridNavigate = (args: {
   replace: boolean;
 }) => void;
 
-const DEFAULT_CENTER: GridPoint = { lat: 32.7767, lng: -96.797 };
 const RADIUS_OPTIONS = [1, 2, 5, 10] as const;
 const GRID_OPTIONS = [3, 5, 7] as const;
 
@@ -79,17 +87,33 @@ export function LocalRankGridPage({
   // Committed scan parameters live in the URL; everything the user is still
   // fiddling with (keyword text, a clicked map point, a typed zip) stays local
   // until "Scan grid" — so exploring the map never spends a check.
-  const committedCenter = useMemo<GridPoint>(
-    () => ({
-      lat: lat ?? DEFAULT_CENTER.lat,
-      lng: lng ?? DEFAULT_CENTER.lng,
-    }),
-    [lat, lng],
+  const cachedBusinessQuery = useQuery({
+    queryKey: ["cached-business-context", projectId],
+    queryFn: () => getCachedBusinessContext({ data: { projectId } }),
+    staleTime: 5 * 60_000,
+  });
+  const cachedBusiness = cachedBusinessQuery.data;
+  const profileLat = cachedBusiness?.profile.latitude;
+  const profileLng = cachedBusiness?.profile.longitude;
+  const committedCenter = useMemo<GridPoint | null>(
+    () =>
+      lat != null && lng != null
+        ? { lat, lng }
+        : profileLat != null && profileLng != null
+          ? { lat: profileLat, lng: profileLng }
+          : null,
+    [lat, lng, profileLat, profileLng],
   );
   const activeRadius = radius ?? 5;
   const activeGrid = gridSize ?? 5;
-  const keyword = query.trim().toLowerCase();
-
+  const [activeScan, setActiveScan] = useState<{
+    keyword: string;
+    center: GridPoint;
+    radius: number;
+    gridSize: number;
+  } | null>(null);
+  const suggestions = useSeedSuggestions(projectId);
+  const prefilledKeyword = query.trim().toLowerCase();
   const [input, setInput] = useState(query);
   const [locationInput, setLocationInput] = useState("");
   const [radiusInput, setRadiusInput] = useState(String(activeRadius));
@@ -98,33 +122,94 @@ export function LocalRankGridPage({
   const [pendingLabel, setPendingLabel] = useState<string | null>(null);
   const [isLocating, setIsLocating] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
+  const hasPrefilledKeyword = useRef(Boolean(query.trim()));
+  useEffect(() => {
+    if (hasPrefilledKeyword.current || !suggestions[0]) return;
+    hasPrefilledKeyword.current = true;
+    setInput(suggestions[0].keyword);
+  }, [suggestions]);
 
-  const mapCenter = pendingCenter ?? committedCenter;
-
-  const points = useMemo(
-    () => (keyword ? buildGrid(committedCenter, activeRadius, activeGrid) : []),
-    [keyword, committedCenter, activeRadius, activeGrid],
+  const mapCenter = pendingCenter ?? activeScan?.center ?? committedCenter;
+  const currentRunKey = createMeteredRunKey(
+    projectId,
+    input.trim().toLowerCase(),
+    mapCenter,
+    Number(radiusInput),
+    Number(gridInput),
   );
+  const run = useAuthorizedRun(currentRunKey);
+
+  const activePoints = useMemo(
+    () =>
+      activeScan
+        ? buildGrid(activeScan.center, activeScan.radius, activeScan.gridSize)
+        : [],
+    [activeScan],
+  );
+  const restorePoints = useMemo(
+    () =>
+      prefilledKeyword && committedCenter
+        ? buildGrid(committedCenter, activeRadius, activeGrid)
+        : [],
+    [activeGrid, activeRadius, committedCenter, prefilledKeyword],
+  );
+  const cachedCellsQuery = useQuery({
+    queryKey: [
+      "local-grid-cached-cells",
+      projectId,
+      prefilledKeyword,
+      restorePoints,
+    ],
+    queryFn: () =>
+      getCachedLocalGridCells({
+        data: { projectId, keyword: prefilledKeyword, points: restorePoints },
+      }),
+    enabled: activeScan == null && restorePoints.length > 0,
+    staleTime: 60_000,
+  });
+  const restoredCells = activeScan == null ? (cachedCellsQuery.data ?? []) : [];
+  const points =
+    activeScan != null
+      ? activePoints
+      : restoredCells.map((cell) => ({ lat: cell.lat, lng: cell.lng }));
+  const keyword =
+    activeScan?.keyword ?? (restoredCells.length > 0 ? prefilledKeyword : "");
 
   const cellQueries = useQueries({
-    queries: points.map((point) => ({
-      queryKey: ["local-grid-cell", projectId, keyword, point.lat, point.lng],
+    queries: activePoints.map((point) => ({
       queryFn: async () =>
         getLocalGridCell({
           data: { projectId, keyword, lat: point.lat, lng: point.lng },
         }),
-      staleTime: 60 * 60_000,
+      queryKey: withMeteredRunNonce(
+        ["local-grid-cell", projectId, keyword, point.lat, point.lng],
+        run.runNonce,
+      ),
+      enabled: activeScan != null && run.authorized,
+      staleTime: Infinity,
+      gcTime: 60 * 60_000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+      refetchOnMount: false,
       retry: 1,
     })),
   });
   const cellStates = new Map<string, CellState>();
-  points.forEach((point, index) => {
+  activePoints.forEach((point, index) => {
     const cellQuery = cellQueries[index];
     cellStates.set(`${point.lat}|${point.lng}`, {
       position: cellQuery?.data?.position ?? null,
       topCompetitors: cellQuery?.data?.topCompetitors ?? [],
       isLoading: cellQuery?.isLoading ?? false,
       isError: cellQuery?.isError ?? false,
+    });
+  });
+  restoredCells.forEach((cell) => {
+    cellStates.set(`${cell.lat}|${cell.lng}`, {
+      position: cell.position,
+      topCompetitors: cell.topCompetitors,
+      isLoading: false,
+      isError: false,
     });
   });
 
@@ -166,15 +251,42 @@ export function LocalRankGridPage({
         setIsLocating(false);
       }
     }
+    if (!center) {
+      setLocationError(
+        "Set a business location by entering a city, zip code, or address, or click the map.",
+      );
+      return;
+    }
 
+    const nextRadius = Number(radiusInput);
+    const nextGridSize = Number(gridInput);
+    const roundedCenter = {
+      lat: roundCoord(center.lat),
+      lng: roundCoord(center.lng),
+    };
+    setActiveScan({
+      keyword: nextKeyword,
+      center: roundedCenter,
+      radius: nextRadius,
+      gridSize: nextGridSize,
+    });
+    run.authorize(
+      createMeteredRunKey(
+        projectId,
+        nextKeyword,
+        roundedCenter,
+        nextRadius,
+        nextGridSize,
+      ),
+    );
     navigate({
       search: (prev) => ({
         ...prev,
         q: nextKeyword,
-        lat: roundCoord(center.lat),
-        lng: roundCoord(center.lng),
-        r: Number(radiusInput),
-        g: Number(gridInput),
+        lat: roundedCenter.lat,
+        lng: roundedCenter.lng,
+        r: nextRadius,
+        g: nextGridSize,
       }),
       replace: false,
     });
@@ -274,6 +386,11 @@ export function LocalRankGridPage({
             <p className="text-xs text-error">{locationError}</p>
           ) : (
             <p className="text-xs text-base-content/50">
+              {cachedBusiness?.profile.address && !lat && !lng
+                ? `Centered on cached profile: ${cachedBusiness.profile.address}. `
+                : !mapCenter
+                  ? "Set a location before scanning. "
+                  : ""}
               {gridCount} checks per scan (~${(gridCount * 0.002).toFixed(2)}),
               cached for a day. Clicking the map moves the center — nothing is
               checked until you scan.
@@ -285,7 +402,7 @@ export function LocalRankGridPage({
       <div className="relative">
         <RankGridMap
           center={mapCenter}
-          radiusMiles={activeRadius}
+          radiusMiles={activeScan?.radius ?? activeRadius}
           points={points}
           cellStates={cellStates}
           onPickCenter={(point) => {
@@ -338,7 +455,9 @@ export function LocalRankGridPage({
         {!keyword ? (
           <div className="pointer-events-none absolute inset-0 z-[1000] flex items-center justify-center">
             <div className="rounded-lg border border-base-300 bg-base-100/95 px-4 py-2 text-sm shadow">
-              Enter a keyword and scan to fill the grid
+              {mapCenter
+                ? "Review the project keyword and scan to fill the grid"
+                : "Set a location to center this project's rank grid"}
             </div>
           </div>
         ) : null}

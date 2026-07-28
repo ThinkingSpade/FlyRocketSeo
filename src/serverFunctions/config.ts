@@ -2,7 +2,21 @@ import { env } from "cloudflare:workers";
 import { createServerFn } from "@tanstack/react-start";
 import { requireAuthenticatedContext } from "@/serverFunctions/middleware";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
-import { fetchDataforseoBalance } from "@/server/lib/dataforseo/account";
+import { isGbpWriteConfigured } from "@/server/features/gbp/oauth-config";
+
+export const getClientRuntimeConfig = createServerFn({ method: "GET" }).handler(
+  async () => ({
+    emailVerificationBypassed: env.BYPASS_EMAIL_VERIFICATION === "true",
+    // Gates the insights "Explain this" button. Without a key the button is
+    // hidden rather than shown-and-broken (see ExplainService).
+    aiExplainAvailable: Boolean(env.OPENROUTER_API_KEY?.trim()),
+    // Gates GBP writing (scheduled posts + listing updates) on the Local SEO
+    // tab. Without GBP_GOOGLE_CLIENT_ID/SECRET the connect affordance shows
+    // what connecting would enable instead of a button that cannot work --
+    // same pattern as aiExplainAvailable above (see GbpWriteService).
+    gbpWriteAvailable: await isGbpWriteConfigured(),
+  }),
+);
 
 export const getSeoApiKeyStatus = createServerFn({ method: "GET" })
   .middleware(requireAuthenticatedContext)
@@ -34,6 +48,9 @@ export const getDataforseoAccountStatus = createServerFn({ method: "GET" })
     }
 
     try {
+      // Loaded lazily to keep the DataForSEO SDK out of the Worker startup graph.
+      const { fetchDataforseoBalance } =
+        await import("@/server/lib/dataforseo/account");
       const balance = await fetchDataforseoBalance();
       return { supported: true as const, configured: true as const, balance };
     } catch {

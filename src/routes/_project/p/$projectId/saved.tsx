@@ -22,8 +22,7 @@ import {
 } from "@/client/features/saved-keywords/SavedKeywordsModals";
 import { SavedKeywordsPagination } from "@/client/features/saved-keywords/SavedKeywordsPagination";
 import { SavedKeywordsPortfolio } from "@/client/features/saved-keywords/SavedKeywordsPortfolio";
-import { SavedKeywordsStatus } from "@/client/features/saved-keywords/SavedKeywordsStatus";
-import { SavedKeywordsTable } from "@/client/features/saved-keywords/SavedKeywordsTable";
+import { SavedKeywordsQueryContent } from "@/client/features/saved-keywords/SavedKeywordsQueryContent";
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
 import {
   DEFAULT_LOCATION_CODE,
@@ -31,6 +30,7 @@ import {
 } from "@/client/features/keywords/locations";
 import { compileSavedKeywordsFilters } from "@/client/features/saved-keywords/savedKeywordsFilterTypes";
 import {
+  getSavedKeywordsTrackLocation,
   toSavedKeywordSort,
   type SAVED_KEYWORD_PAGE_SIZES,
 } from "@/client/features/saved-keywords/savedKeywordsUtils";
@@ -116,11 +116,17 @@ function SavedKeywordsPage() {
     [appliedFilters, order, page, pageSize, projectId, selectedTagIds, sort],
   );
 
-  const { data, isLoading, isFetching } = useQuery({
+  const savedKeywordsQuery = useQuery({
     queryKey: ["savedKeywords", projectId, queryInput],
     queryFn: () => getSavedKeywords({ data: queryInput }),
     placeholderData: keepPreviousData,
   });
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isError: savedKeywordsFailed,
+  } = savedKeywordsQuery;
 
   const savedKeywords = data?.rows ?? [];
   const availableTags = data?.tags ?? [];
@@ -145,21 +151,10 @@ function SavedKeywordsPage() {
   // Rank tracking pins one location per domain, so derive a single location for
   // the selection: the most common one among selected rows (ties break to the
   // first encountered), and flag when the selection spans several.
-  const trackLocation = useMemo(() => {
-    const counts = new Map<number, number>();
-    for (const row of selectedRows) {
-      counts.set(row.locationCode, (counts.get(row.locationCode) ?? 0) + 1);
-    }
-    let bestCode = DEFAULT_LOCATION_CODE;
-    let bestCount = -1;
-    for (const [code, occurrences] of counts) {
-      if (occurrences > bestCount) {
-        bestCount = occurrences;
-        bestCode = code;
-      }
-    }
-    return { locationCode: bestCode, mixed: counts.size > 1 };
-  }, [selectedRows]);
+  const trackLocation = useMemo(
+    () => getSavedKeywordsTrackLocation(selectedRows, DEFAULT_LOCATION_CODE),
+    [selectedRows],
+  );
 
   useEffect(() => {
     setRowSelection({});
@@ -314,18 +309,21 @@ function SavedKeywordsPage() {
             {removeError ? (
               <RemoveSavedKeywordsError message={removeError} />
             ) : null}
-            <SavedKeywordsStatus
+            <SavedKeywordsQueryContent
+              failed={savedKeywordsFailed}
+              fetching={isFetching}
+              loading={isLoading}
               totalCount={totalCount}
-              isFetching={isFetching && !isLoading}
-            />
-            <SavedKeywordsTable
-              rows={savedKeywords}
-              rowSelection={rowSelection}
-              sorting={sorting}
-              isLoading={isLoading}
-              hasActiveFilters={hasActiveFilters}
-              onRowSelectionChange={setRowSelection}
-              onSortingChange={handleSortingChange}
+              onRetry={() => void savedKeywordsQuery.refetch()}
+              tableProps={{
+                rows: savedKeywords,
+                rowSelection,
+                sorting,
+                isLoading,
+                hasActiveFilters,
+                onRowSelectionChange: setRowSelection,
+                onSortingChange: handleSortingChange,
+              }}
             />
           </div>
 

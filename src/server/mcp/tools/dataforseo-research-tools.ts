@@ -2,7 +2,6 @@
 import { z } from "zod";
 import {
   createDataforseoClient,
-  fetchKeywordMetricsForList,
   type KeywordMetricRow,
 } from "@/server/lib/dataforseo";
 import { buildProjectMeta } from "@/server/mcp/context";
@@ -833,6 +832,9 @@ export const getKeywordMetricsTool = {
     const client = createDataforseoClient(context.billing);
     const locationCode = args.locationCode ?? DEFAULT_LOCATION_CODE;
     const languageCode = args.languageCode ?? DEFAULT_LANGUAGE_CODE;
+    // Loaded lazily to keep the DataForSEO SDK out of the Worker startup graph.
+    const { fetchKeywordMetricsForList } =
+      await import("@/server/lib/dataforseo/keyword-metrics");
     const metrics = await fetchKeywordMetricsForList(client, {
       keywords: args.keywords,
       locationCode,

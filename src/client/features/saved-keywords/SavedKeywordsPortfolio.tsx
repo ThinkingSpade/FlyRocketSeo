@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, Bookmark, Gauge, Target } from "lucide-react";
 import { InsightTile, type InsightTone } from "@/client/components/InsightTile";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { exportSavedKeywords } from "@/serverFunctions/keywords";
 import type { ExportSavedKeywordsInput } from "@/types/schemas/keywords";
 import type { AppliedSavedKeywordsFilters } from "./savedKeywordsFilterTypes";
@@ -62,6 +63,15 @@ export function SavedKeywordsPortfolio({
   });
 
   const rows = portfolioQuery.data?.rows;
+  if (portfolioQuery.isError) {
+    return (
+      <InlineQueryError
+        message="Portfolio totals could not be loaded."
+        retrying={portfolioQuery.isFetching}
+        onRetry={() => void portfolioQuery.refetch()}
+      />
+    );
+  }
   if (!rows || rows.length === 0) return null;
   const portfolio = computeSavedPortfolio(rows);
   const mixTotal = portfolio.intentMix.reduce((sum, m) => sum + m.count, 0);

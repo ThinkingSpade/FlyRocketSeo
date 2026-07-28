@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
+import { buildContentVerdict } from "@/client/features/insights/verdicts/content";
 import { computeOutlineThemes, isThemeCovered } from "./outlineGap";
 
 const STOPWORDS = new Set([
@@ -47,10 +49,20 @@ function isQuestionCovered(draft: string, question: string): boolean {
  *  recurring sections competitors write. Runs entirely client-side — nothing
  *  is stored or sent anywhere. */
 export function DraftGrader({
+  projectId,
+  keyword,
+  targetWordCount,
   terms,
   questions,
   outlines = [],
 }: {
+  projectId: string;
+  /** The brief's target keyword, for the verdict's read. */
+  keyword: string;
+  /** Median word count across analyzed top-ranking pages (the same value
+   *  BriefTargets shows), null until competitor outlines have been
+   *  analyzed. */
+  targetWordCount: number | null;
   terms: Array<{ keyword: string }>;
   questions: string[];
   /** Each competitor's H2 outline, for the outline-coverage check. */
@@ -88,6 +100,24 @@ export function DraftGrader({
       : null;
   const wordCount = hasDraft ? significantWords(normalized).length : 0;
 
+  // Computed once here (not inside the map callbacks below) so the verdict
+  // and the coverage lists underneath it read the exact same coverage.
+  const missingSubtopics = themeHits
+    .filter((hit) => !hit.covered)
+    .map((hit) => hit.theme.label);
+  const unansweredQuestions = questionHits
+    .filter((hit) => !hit.covered)
+    .map((hit) => hit.question);
+  const verdict = buildContentVerdict({
+    keyword,
+    targetWordCount,
+    currentWordCount: hasDraft ? wordCount : null,
+    missingSubtopics,
+    totalSubtopics: outlineThemes.length,
+    unansweredQuestions,
+    totalQuestions: questions.length,
+  });
+
   return (
     <div className="card border border-base-300 bg-base-100">
       <div className="card-body gap-2 p-4">
@@ -117,6 +147,16 @@ export function DraftGrader({
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
         />
+        {/* Nothing defensible to say before a draft exists -- this is that
+            state's empty state, so the card waits for hasDraft rather than
+            rendering an "unknown" tone by default. */}
+        {hasDraft ? (
+          <NextStepsCard
+            verdict={verdict}
+            projectId={projectId}
+            tab="Content Optimizer"
+          />
+        ) : null}
         {hasDraft ? (
           <>
             <div className="flex flex-wrap gap-1.5">

@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { getDomainOverview } from "@/serverFunctions/domain";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 
 type Input = {
   projectId: string;
@@ -7,12 +7,16 @@ type Input = {
   includeSubdomains: boolean;
   locationCode: number;
   languageCode: string;
+  authorized: boolean;
+  runNonce: number;
 };
 
 export function useDomainOverviewQuery(input: Input) {
   const trimmedDomain = input.domain.trim();
 
-  return useQuery({
+  return useMeteredQuery({
+    authorized: input.authorized,
+    runNonce: input.runNonce,
     enabled: trimmedDomain !== "",
     queryKey: [
       "domain-overview",
@@ -32,6 +36,5 @@ export function useDomainOverviewQuery(input: Input) {
           languageCode: input.languageCode,
         },
       }),
-    staleTime: 5 * 60_000,
   });
 }

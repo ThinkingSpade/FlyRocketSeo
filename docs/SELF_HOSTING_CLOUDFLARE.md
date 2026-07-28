@@ -36,6 +36,27 @@ In the Cloudflare dashboard:
    - `TEAM_DOMAIN` (domain from `JWKS_URL`, for example `https://your-team.cloudflareaccess.com`)
    - `DATAFORSEO_API_KEY`
 
+### Hosted auth email with Loops
+
+Hosted email/password authentication sends transactional email through Loops.
+Configure these Worker variables:
+
+- `LOOPS_API_KEY`
+- `LOOPS_TRANSACTIONAL_VERIFY_EMAIL_ID`
+- `LOOPS_TRANSACTIONAL_RESET_PASSWORD_ID`
+- `LOOPS_TRANSACTIONAL_INVITE_ID` (optional; invite email silently no-ops when
+  this or `LOOPS_API_KEY` is missing)
+
+Each Loops transactional template must define these data variables exactly:
+
+- Verification: `appName`, `confirmationUrl`
+- Password reset: `appName`, `resetUrl`
+- Invite: `appName`, `inviteUrl`, `invitedByName`
+
+Publish each template in Loops and verify the sending domain before testing
+delivery. Setting `BYPASS_EMAIL_VERIFICATION=true` disables email verification
+entirely.
+
 ### 3) Optional: add an R2 lifecycle rule
 
 DataForSEO API responses are cached in R2 under the `dataforseo-cache/` prefix. This step is optional, but recommended to automatically clean up expired cache objects:

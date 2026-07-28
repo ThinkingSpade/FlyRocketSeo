@@ -11,13 +11,16 @@ import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoResto
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { writeHandoff } from "@/client/features/insights/handoffStore";
 import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
 import {
+  buildBacklinksAuthorizationKey,
   navigateToBacklinksSearch,
   useBacklinksPageData,
+  useBacklinksTargetPrefill,
 } from "./useBacklinksPageData";
 import { useBacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import { useBacklinksFilters } from "./useBacklinksFilters";
@@ -31,6 +34,7 @@ import {
   BACKLINKS_DEFAULT_SORT,
   DEFAULT_BACKLINKS_PAGE_SIZE,
 } from "@/types/schemas/backlinks";
+import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 
 const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -61,6 +65,13 @@ export function BacklinksPage({
   navigate,
 }: BacklinksPageProps) {
   const filters = useBacklinksFilters();
+  const currentSearchKey = buildBacklinksAuthorizationKey(
+    projectId,
+    searchState,
+    filters,
+  );
+  const run = useAuthorizedRun(currentSearchKey);
+  const searchAuthorized = run.authorized;
 
   // Sort lives in the URL so sort changes and the page reset commit in one
   // navigation (no transient fetch of the old page with the new sort).
@@ -148,6 +159,8 @@ export function BacklinksPage({
     projectId,
     searchState,
     filters,
+    authorized: searchAuthorized,
+    runNonce: run.runNonce,
   });
 
   // With no target in the URL every query above stays disabled, so the tab
@@ -235,15 +248,57 @@ export function BacklinksPage({
     [],
   );
   const projectDomain = useProjectDomain(projectId);
-  // Shared by the search form and the "analyze my domain" prompt so both
-  // paths open a tab, navigate, and record history identically.
+  const targetPrefill = useBacklinksTargetPrefill(
+    projectId,
+    searchState.target,
+    projectDomain,
+  );
+  // Shared by the search form, "Run again", and the "analyze my domain"
+  // prompt so all three open a tab, navigate, and record history identically.
   const runBacklinksSearch = useCallback(
     (values: Pick<BacklinksSearchState, "target" | "scope">) => {
+      // Every trigger below is "a backlinks run just happened for this
+      // target" -- a fresh search, a repeat via "Run again", or the analyze
+      // prompt -- which is exactly what the next tab opened should inherit.
+      writeHandoff(projectId, {
+        kind: "domain",
+        value: values.target,
+        source: "Backlinks",
+        at: Date.now(),
+      });
+      if (
+        values.target === searchState.target &&
+        values.scope === searchState.scope
+      ) {
+        run.authorize();
+        return;
+      }
+      const nextSearchState: BacklinksSearchState = {
+        ...searchState,
+        target: values.target,
+        scope: values.scope,
+        tab: "backlinks",
+        page: 1,
+        sort: undefined,
+        order: undefined,
+      };
+      run.authorize(
+        buildBacklinksAuthorizationKey(projectId, nextSearchState, filters),
+      );
       searchTabs.openTab(toBacklinksTabInput(values));
       navigateToBacklinksSearch(navigate, values);
       addSearch({ target: values.target, scope: values.scope });
     },
-    [addSearch, navigate, searchTabs, toBacklinksTabInput],
+    [
+      addSearch,
+      filters,
+      navigate,
+      projectId,
+      run,
+      searchState,
+      searchTabs,
+      toBacklinksTabInput,
+    ],
   );
   return (
     <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
@@ -264,6 +319,7 @@ export function BacklinksPage({
           }
           tabLimit={searchTabs.limit}
           onSubmit={runBacklinksSearch}
+          prefillTarget={targetPrefill}
         />
 
         {searchState.target.trim() === "" ? (
@@ -307,11 +363,13 @@ export function BacklinksPage({
 
         <BacklinksBody
           projectId={projectId}
+          meteredAuthorized={searchAuthorized}
+          meteredRunNonce={run.runNonce}
           history={history}
           historyLoaded={historyLoaded}
           overviewData={overviewData}
           overviewError={overviewErrorMessage}
-          overviewLoading={overviewQuery.isLoading}
+          overviewLoading={searchAuthorized && overviewQuery.isLoading}
           backlinksRowsPage={rowsQuery.data}
           referringDomainsPage={referringDomainsQuery.data}
           topPagesPage={topPagesQuery.data}
@@ -321,12 +379,12 @@ export function BacklinksPage({
           sorting={sorting}
           domainExpansion={domainExpansion}
           tabErrorMessage={activeTabErrorMessage}
-          tabLoading={activeTabQuery.isLoading}
+          tabLoading={searchAuthorized && activeTabQuery.isLoading}
           tabFetching={activeTabQuery.isFetching}
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
           onRemoveHistoryItem={removeHistoryItem}
-          onRetryOverview={() => void overviewQuery.refetch()}
+          onRetryOverview={() => run.authorize()}
           onSortingChange={handleSortingChange}
           onTabChange={handleResultTabChange}
           onViewChange={handleViewChange}

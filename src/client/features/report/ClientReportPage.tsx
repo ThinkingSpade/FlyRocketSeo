@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "@tanstack/react-router";
 import { ReportToolbar } from "@/client/features/report/ReportToolbar";
 import { ReportCover } from "@/client/features/report/ReportChrome";
 import { ReportPages } from "@/client/features/report/ReportPages";
@@ -80,6 +81,79 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
           localStorage.setItem(AGENCY_KEY, value);
         }}
       />
+
+      {data.domainSnapshotMissing ||
+      data.backlinksSnapshotMissing ||
+      data.keywordDetailsMissing ||
+      data.backlinkDetailsMissing ? (
+        <div className="report-no-print mb-4 rounded-lg border border-base-300 bg-base-100 p-4">
+          <p className="text-sm font-medium">
+            No data yet — refresh missing report sections
+          </p>
+          <p className="mt-1 text-xs text-base-content/60">
+            Saved overview snapshots are free to reuse. Detail sections are
+            metered and only load after the paid-request buttons below.
+          </p>
+          {data.keywordDetailsError ? (
+            <div className="mt-3 alert alert-error text-sm">
+              {data.keywordDetailsError}
+            </div>
+          ) : null}
+          {data.backlinkDetailsError ? (
+            <div className="mt-3 alert alert-error text-sm">
+              {data.backlinkDetailsError}
+            </div>
+          ) : null}
+          <div className="mt-3 flex flex-wrap gap-2">
+            {data.domainSnapshotMissing ? (
+              <Link
+                to="/p/$projectId/domain"
+                params={{ projectId }}
+                search={{ domain: data.domain ?? undefined }}
+                className="btn btn-sm"
+              >
+                Refresh domain overview
+              </Link>
+            ) : null}
+            {data.backlinksSnapshotMissing ? (
+              <Link
+                to="/p/$projectId/backlinks"
+                params={{ projectId }}
+                search={{ target: data.domain ?? undefined }}
+                className="btn btn-sm"
+              >
+                Refresh backlinks
+              </Link>
+            ) : null}
+            {data.keywordDetailsMissing ? (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={data.keywordDetailsLoading}
+                onClick={() => data.refreshKeywordDetails()}
+              >
+                {data.keywordDetailsLoading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : null}
+                Load keyword details · 1 paid request
+              </button>
+            ) : null}
+            {data.backlinkDetailsMissing ? (
+              <button
+                type="button"
+                className="btn btn-sm"
+                disabled={data.backlinkDetailsLoading}
+                onClick={() => data.refreshBacklinkDetails()}
+              >
+                {data.backlinkDetailsLoading ? (
+                  <span className="loading loading-spinner loading-xs" />
+                ) : null}
+                Load backlink details · 2 paid requests
+              </button>
+            ) : null}
+          </div>
+        </div>
+      ) : null}
 
       <div id="client-report" className="space-y-8">
         <ReportCover

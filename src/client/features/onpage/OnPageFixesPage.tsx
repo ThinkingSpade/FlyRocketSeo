@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Loader2, RefreshCw, Wand2 } from "lucide-react";
 import { toast } from "sonner";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   aiRewritableIds,
@@ -24,6 +26,8 @@ import {
   rewriteOnPageFixes,
   setOnPageFixStatus,
 } from "@/serverFunctions/onPage";
+import { getAuditHistory } from "@/serverFunctions/audit";
+import { getGscConnection } from "@/serverFunctions/gsc";
 
 type StatusValue = "all" | OnPageStatus;
 
@@ -41,6 +45,20 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
   const rows: FixRow[] = useMemo(
     () => fixesQuery.data?.rows ?? [],
     [fixesQuery.data],
+  );
+  const needsEmptyStateContext = fixesQuery.isSuccess && rows.length === 0;
+  const auditHistoryQuery = useQuery({
+    enabled: needsEmptyStateContext,
+    queryKey: ["auditHistory", projectId],
+    queryFn: () => getAuditHistory({ data: { projectId } }),
+  });
+  const gscConnectionQuery = useQuery({
+    enabled: needsEmptyStateContext,
+    queryKey: ["gscConnection", projectId],
+    queryFn: () => getGscConnection({ data: { projectId } }),
+  });
+  const hasCompletedAudit = auditHistoryQuery.data?.some(
+    (audit) => audit.status === "completed",
   );
 
   const invalidate = () =>
@@ -107,6 +125,20 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
     );
   }
 
+  if (fixesQuery.isError) {
+    return (
+      <div className="px-4 py-4 md:px-6 md:py-6">
+        <div className="mx-auto max-w-5xl">
+          <InlineQueryError
+            message="On-page fixes could not be loaded. This is not a clean bill of health."
+            retrying={fixesQuery.isFetching}
+            onRetry={() => void fixesQuery.refetch()}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="px-4 py-4 pb-24 md:px-6 md:py-6">
       <div className="mx-auto max-w-5xl space-y-4">
@@ -136,28 +168,74 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                 AI rewrite ({rewritableCount})
               </button>
             ) : null}
-            <button
-              type="button"
-              className="btn btn-primary btn-sm gap-1.5"
-              disabled={generateMutation.isPending}
-              onClick={() => generateMutation.mutate()}
-            >
-              {generateMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <RefreshCw className="size-4" />
-              )}
-              {rows.length === 0 ? "Generate fixes" : "Re-scan"}
-            </button>
+            {rows.length > 0 ? (
+              <button
+                type="button"
+                className="btn btn-primary btn-sm gap-1.5"
+                disabled={generateMutation.isPending}
+                onClick={() => generateMutation.mutate()}
+              >
+                {generateMutation.isPending ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-4" />
+                )}
+                Re-scan
+              </button>
+            ) : null}
           </div>
         </div>
 
-        {rows.length === 0 ? (
+        {rows.length === 0 &&
+        (auditHistoryQuery.isPending || gscConnectionQuery.isPending) ? (
+          <div className="flex items-center justify-center gap-2 p-8 text-sm text-base-content/60">
+            <Loader2 className="size-4 animate-spin" /> Checking available audit
+            data…
+          </div>
+        ) : rows.length === 0 &&
+          (auditHistoryQuery.isError || gscConnectionQuery.isError) ? (
+          <InlineQueryError
+            message="The audit and Search Console prerequisites could not be checked."
+            retrying={
+              auditHistoryQuery.isFetching || gscConnectionQuery.isFetching
+            }
+            onRetry={() => {
+              void auditHistoryQuery.refetch();
+              void gscConnectionQuery.refetch();
+            }}
+          />
+        ) : rows.length === 0 && !hasCompletedAudit ? (
+          <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
+            <p className="text-sm font-medium">Run a site audit first</p>
+            <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/60">
+              On-page fixes are generated from the project&apos;s latest
+              completed crawl. Search Console is optional and makes the
+              suggestions more relevant to queries you already rank for.
+            </p>
+            <Link
+              to="/p/$projectId/audit"
+              params={{ projectId }}
+              className="btn btn-primary btn-sm mt-4"
+            >
+              Open Site Audit
+            </Link>
+          </div>
+        ) : rows.length === 0 && generateMutation.data?.added === 0 ? (
+          <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
+            <p className="text-sm font-medium">No fixes found</p>
+            <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/60">
+              The latest audit was analyzed successfully and did not produce any
+              title, meta, heading, or alt-text fixes.
+            </p>
+          </div>
+        ) : rows.length === 0 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
             <p className="text-sm text-base-content/70">
-              No fixes yet. Generation reads your latest site audit and Search
-              Console data — both free — and suggests specific rewrites. Run a
-              site audit first if you haven&apos;t.
+              Your audit is ready. Generate fixes from its stored crawl data
+              {gscConnectionQuery.data?.connected
+                ? " and connected Search Console queries"
+                : ". Connect Search Console for query-informed suggestions"}
+              . This analysis is free.
             </p>
             <button
               type="button"

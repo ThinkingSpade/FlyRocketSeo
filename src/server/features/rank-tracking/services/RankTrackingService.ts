@@ -1,9 +1,6 @@
 import { env } from "cloudflare:workers";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
-import {
-  createDataforseoClient,
-  fetchKeywordMetricsForList,
-} from "@/server/lib/dataforseo";
+import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { AppError } from "@/server/lib/errors";
 import type {
@@ -276,6 +273,9 @@ async function refreshKeywordMetrics(
   if (keywords.length === 0) return { updated: 0 };
 
   const client = createDataforseoClient(billingCustomer);
+  // Loaded lazily to keep the DataForSEO SDK out of the Worker startup graph.
+  const { fetchKeywordMetricsForList } =
+    await import("@/server/lib/dataforseo/keyword-metrics");
   const metrics = await fetchKeywordMetricsForList(client, {
     keywords: keywords.map((kw) => kw.keyword),
     locationCode: config.locationCode,
