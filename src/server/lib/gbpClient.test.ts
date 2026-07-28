@@ -298,9 +298,12 @@ describe("gbpClient", () => {
           }),
         );
       const { createGbpClient } = await import("./gbpClient");
-      const accounts = await createGbpClient({ userId: "u1" }).listAccounts();
+      const result = await createGbpClient({ userId: "u1" }).listAccounts();
 
-      expect(accounts).toEqual([{ name: "accounts/1", accountName: "Biz" }]);
+      expect(result).toEqual({
+        accounts: [{ name: "accounts/1", accountName: "Biz" }],
+        truncated: false,
+      });
       expect(mocks.fetch).toHaveBeenCalledTimes(2);
       expect(requireFetchedUrl(mocks.fetch.mock.calls[1])).toContain(
         "pageToken=page-2",
@@ -318,31 +321,51 @@ describe("gbpClient", () => {
           }),
         );
       const { createGbpClient } = await import("./gbpClient");
-      const locations = await createGbpClient({ userId: "u1" }).listLocations(
+      const result = await createGbpClient({ userId: "u1" }).listLocations(
         "accounts/1",
       );
 
-      expect(locations).toEqual([{ name: "locations/1", title: "Store" }]);
+      expect(result).toEqual({
+        locations: [{ name: "locations/1", title: "Store" }],
+        truncated: false,
+      });
       expect(mocks.fetch).toHaveBeenCalledTimes(2);
       expect(requireFetchedUrl(mocks.fetch.mock.calls[1])).toContain(
         "pageToken=page-2",
       );
     });
 
-    it("stops at a page cap instead of looping forever on a pathological response", async () => {
+    it("stops at a page cap instead of looping forever on a pathological response, and says so (final wave item 2)", async () => {
       mocks.fetch.mockImplementation(() =>
         Promise.resolve(
           jsonResponse({ accounts: [], nextPageToken: "always-more" }),
         ),
       );
       const { createGbpClient } = await import("./gbpClient");
-      const accounts = await createGbpClient({ userId: "u1" }).listAccounts();
+      const result = await createGbpClient({ userId: "u1" }).listAccounts();
 
-      expect(accounts).toEqual([]);
+      expect(result.accounts).toEqual([]);
+      // The exact failing input from finding A5's residual: every page came
+      // back empty AND the cap was hit with a token still outstanding, so
+      // this is a genuine partial -- not proof no accounts exist. Before
+      // this fix there was no way for a caller to tell the two apart.
+      expect(result.truncated).toBe(true);
       // Whatever the cap is, it must be finite -- a pathological API that
       // never stops returning nextPageToken must not hang this call.
       expect(mocks.fetch.mock.calls.length).toBeGreaterThan(0);
       expect(mocks.fetch.mock.calls.length).toBeLessThan(1000);
+    });
+
+    it("is not truncated when the last page fetched simply has no more items to return", async () => {
+      mocks.fetch.mockResolvedValue(
+        jsonResponse({
+          accounts: [{ name: "accounts/1", accountName: "Biz" }],
+        }),
+      );
+      const { createGbpClient } = await import("./gbpClient");
+      const result = await createGbpClient({ userId: "u1" }).listAccounts();
+
+      expect(result.truncated).toBe(false);
     });
   });
 });

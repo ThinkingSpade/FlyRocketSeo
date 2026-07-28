@@ -115,6 +115,7 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
               locationsQuery.data?.errorReason ??
               (locationsQuery.isError ? "temporary" : null)
             }
+            incomplete={locationsQuery.data?.incomplete ?? false}
             locations={locationsQuery.data?.locations ?? []}
             selectedLocationName={selectedLocationName}
             onSelect={setSelectedLocationName}

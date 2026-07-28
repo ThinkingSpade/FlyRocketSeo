@@ -33,6 +33,7 @@ type SecondaryAction = {
 export function GbpLocationPicker({
   loading,
   errorReason,
+  incomplete,
   locations,
   selectedLocationName,
   onSelect,
@@ -44,6 +45,12 @@ export function GbpLocationPicker({
 }: {
   loading: boolean;
   errorReason: "requires_reconnect" | "access_denied" | "temporary" | null;
+  // True when gbpClient's pagination hit its page cap with a token still
+  // outstanding (final wave item 2, the A5 residual) -- `locations` is then
+  // a genuine partial, not a complete enumeration of this Google account's
+  // Business Profile locations. Independent of `errorReason`: this is a
+  // partial SUCCESS, not a failure.
+  incomplete: boolean;
   locations: LocationOption[];
   selectedLocationName: string;
   onSelect: (locationName: string) => void;
@@ -126,15 +133,26 @@ export function GbpLocationPicker({
     );
   }
   if (locations.length === 0) {
+    // A truncated enumeration (final wave item 2) is a partial result, not
+    // proof this account has no locations -- an empty `locations` array
+    // means something different in each case, so this must not collapse to
+    // one "none found" sentence regardless of which happened.
     return (
       <p className="text-sm text-base-content/60">
-        No Google Business Profile locations were found on this Google account.
-        Make sure you signed in with the account that manages this listing.
+        {incomplete
+          ? "Listing your Business Profile accounts/locations hit a limit before finding any -- that's incomplete, not proof this Google account has none. Try again in a moment."
+          : "No Google Business Profile locations were found on this Google account. Make sure you signed in with the account that manages this listing."}
       </p>
     );
   }
   return (
     <div className="space-y-4">
+      {incomplete ? (
+        <p className="text-xs text-warning">
+          This list may be incomplete -- listing hit a limit partway through.
+          Try again in a moment if you don&apos;t see the location you expect.
+        </p>
+      ) : null}
       <label className="block">
         <span className="mb-1.5 block text-sm font-medium text-base-content/80">
           Location

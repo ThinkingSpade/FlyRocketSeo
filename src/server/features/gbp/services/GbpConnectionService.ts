@@ -109,18 +109,27 @@ function classifyGbpError(error: unknown): GbpLocationsErrorReason | null {
  *  location-picker UI. Almost always a single account with one or a
  *  handful of locations, so a nested list-then-list-locations pair of calls
  *  (rather than a paginated combined endpoint -- Google doesn't offer one)
- *  stays cheap in practice. */
+ *  stays cheap in practice. `incomplete: true` (final wave item 2) means
+ *  the page cap was hit -- on EITHER the accounts.list call or any one
+ *  account's locations.list call -- with a token still outstanding, so
+ *  `locations` is a genuine partial. Before this, a truncated empty result
+ *  was indistinguishable from "this grant genuinely has none", and the
+ *  picker asserted the latter. */
 async function listAvailableLocationsForUser(userId: string): Promise<{
   locations: GbpLocationOption[];
   errorReason: GbpLocationsErrorReason | null;
+  incomplete: boolean;
 }> {
   try {
     const client = createGbpClient({ userId });
-    const accounts = await client.listAccounts();
+    const { accounts, truncated: accountsTruncated } =
+      await client.listAccounts();
     const locations: GbpLocationOption[] = [];
+    let locationsTruncated = false;
     for (const acc of accounts) {
       const accountLocations = await client.listLocations(acc.name);
-      for (const location of accountLocations) {
+      if (accountLocations.truncated) locationsTruncated = true;
+      for (const location of accountLocations.locations) {
         locations.push({
           name: location.name,
           title: location.title,
@@ -129,11 +138,17 @@ async function listAvailableLocationsForUser(userId: string): Promise<{
         });
       }
     }
-    return { locations, errorReason: null };
+    return {
+      locations,
+      errorReason: null,
+      incomplete: accountsTruncated || locationsTruncated,
+    };
   } catch (error) {
     const errorReason = classifyGbpError(error);
     if (!errorReason) throw error;
-    return { locations: [], errorReason };
+    // A decisive error, not a silent truncation -- nothing here was cut
+    // short, so `incomplete` doesn't apply.
+    return { locations: [], errorReason, incomplete: false };
   }
 }
 

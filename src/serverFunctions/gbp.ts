@@ -101,6 +101,10 @@ export const listGbpLocations = createServerFn({ method: "POST" })
     ]);
     return {
       errorReason: result.errorReason,
+      // Final wave item 2: the page cap may have been hit with more still
+      // outstanding -- forwarded so the picker can say enumeration was
+      // incomplete instead of asserting none exist.
+      incomplete: result.incomplete,
       locations: result.locations.map((location) => ({
         ...location,
         isSelected: location.name === connection?.locationName,

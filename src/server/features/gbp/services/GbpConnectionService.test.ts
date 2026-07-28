@@ -63,6 +63,7 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     expect(result).toEqual({
       locations: [],
       errorReason: "requires_reconnect",
+      incomplete: false,
     });
   });
 
@@ -80,7 +81,11 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
 
-    expect(result).toEqual({ locations: [], errorReason: "access_denied" });
+    expect(result).toEqual({
+      locations: [],
+      errorReason: "access_denied",
+      incomplete: false,
+    });
     expect(result.errorReason).not.toBe("requires_reconnect");
   });
 
@@ -92,7 +97,11 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
 
-    expect(result).toEqual({ locations: [], errorReason: "temporary" });
+    expect(result).toEqual({
+      locations: [],
+      errorReason: "temporary",
+      incomplete: false,
+    });
   });
 
   it("classifies a GbpTokenError as requires_reconnect", async () => {
@@ -108,6 +117,7 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     expect(result).toEqual({
       locations: [],
       errorReason: "requires_reconnect",
+      incomplete: false,
     });
   });
 
@@ -118,7 +128,11 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
 
-    expect(result).toEqual({ locations: [], errorReason: "temporary" });
+    expect(result).toEqual({
+      locations: [],
+      errorReason: "temporary",
+      incomplete: false,
+    });
   });
 
   it("re-throws an error it cannot characterize rather than guessing a reason", async () => {
@@ -128,5 +142,79 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     await expect(
       GbpConnectionService.listAvailableLocationsForUser("u1"),
     ).rejects.toThrow("something unexpected");
+  });
+});
+
+/**
+ * Final wave item 2 (the A5 residual): gbpClient's listAccounts/listLocations
+ * now report whether pagination was cut off by the page cap with a token
+ * still outstanding. This describe pins that listAvailableLocationsForUser
+ * carries that fact through as `incomplete`, ORing it across every
+ * accounts.list/locations.list call it makes -- a truncation on EITHER call
+ * makes the combined `locations` list a partial, not a complete enumeration.
+ */
+describe("GbpConnectionService.listAvailableLocationsForUser pagination (final wave item 2)", () => {
+  beforeEach(() => {
+    mocks.listAccounts.mockReset();
+    mocks.listLocations.mockReset();
+  });
+
+  it("reports incomplete when listAccounts itself hit the pagination cap", async () => {
+    mocks.listAccounts.mockResolvedValue({ accounts: [], truncated: true });
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    // The exact failing shape finding A5's residual describes: every page
+    // came back empty, so without `incomplete` a caller reads this
+    // identically to "this account genuinely has none".
+    expect(result).toEqual({
+      locations: [],
+      errorReason: null,
+      incomplete: true,
+    });
+  });
+
+  it("reports incomplete when listLocations hits the cap for one account, even though listAccounts itself completed", async () => {
+    mocks.listAccounts.mockResolvedValue({
+      accounts: [{ name: "accounts/1", accountName: "Biz" }],
+      truncated: false,
+    });
+    mocks.listLocations.mockResolvedValue({ locations: [], truncated: true });
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result.incomplete).toBe(true);
+  });
+
+  it("is not incomplete when every page fetch ran to completion", async () => {
+    mocks.listAccounts.mockResolvedValue({
+      accounts: [{ name: "accounts/1", accountName: "Biz" }],
+      truncated: false,
+    });
+    mocks.listLocations.mockResolvedValue({
+      locations: [{ name: "locations/1", title: "Store" }],
+      truncated: false,
+    });
+    const { GbpConnectionService } = await import("./GbpConnectionService");
+
+    const result =
+      await GbpConnectionService.listAvailableLocationsForUser("u1");
+
+    expect(result).toEqual({
+      locations: [
+        {
+          name: "locations/1",
+          title: "Store",
+          accountName: "accounts/1",
+          accountDisplayName: "Biz",
+        },
+      ],
+      errorReason: null,
+      incomplete: false,
+    });
   });
 });

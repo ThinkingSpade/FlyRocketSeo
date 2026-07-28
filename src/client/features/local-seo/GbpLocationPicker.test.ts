@@ -12,6 +12,7 @@ function renderError(
     createElement(GbpLocationPicker, {
       loading: false,
       errorReason,
+      incomplete: false,
       locations: [],
       selectedLocationName: "",
       onSelect: vi.fn(),
@@ -19,6 +20,26 @@ function renderError(
       saving: false,
       onReconnect: vi.fn(),
       onRetry: vi.fn(),
+    }),
+  );
+}
+
+function renderPicker(
+  overrides: Partial<Parameters<typeof GbpLocationPicker>[0]> = {},
+) {
+  return renderToStaticMarkup(
+    createElement(GbpLocationPicker, {
+      loading: false,
+      errorReason: null,
+      incomplete: false,
+      locations: [],
+      selectedLocationName: "",
+      onSelect: vi.fn(),
+      onSave: vi.fn(),
+      saving: false,
+      onReconnect: vi.fn(),
+      onRetry: vi.fn(),
+      ...overrides,
     }),
   );
 }
@@ -61,5 +82,41 @@ describe("GbpLocationPicker error states (finding A4)", () => {
     );
     expect(markup).not.toContain("Connection expired");
     expect(markup.toLowerCase()).not.toContain("permission");
+  });
+});
+
+/**
+ * Final wave item 2 (the A5 residual): the page cap can be hit with a token
+ * still outstanding, so an empty `locations` array is sometimes a genuine
+ * partial, not proof this Google account has none. `incomplete` carries
+ * that fact from gbpClient's pagination all the way to this component.
+ */
+describe("GbpLocationPicker pagination incompleteness (final wave item 2)", () => {
+  it("does not claim none were found when the list is empty because enumeration was cut short", () => {
+    const markup = renderPicker({ locations: [], incomplete: true });
+    expect(markup).not.toContain(
+      "No Google Business Profile locations were found",
+    );
+  });
+
+  it("still says none were found when the list is genuinely empty and complete", () => {
+    const markup = renderPicker({ locations: [], incomplete: false });
+    expect(markup).toContain("No Google Business Profile locations were found");
+  });
+
+  it("notes the list may be incomplete even when some locations were found", () => {
+    const markup = renderPicker({
+      locations: [
+        {
+          name: "locations/1",
+          title: "Store",
+          accountName: "accounts/1",
+          accountDisplayName: "Biz",
+          isSelected: false,
+        },
+      ],
+      incomplete: true,
+    });
+    expect(markup.toLowerCase()).toContain("incomplete");
   });
 });

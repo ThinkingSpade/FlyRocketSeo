@@ -178,6 +178,18 @@ function messageForStatus(
 // this many.
 const MAX_PAGES = 20;
 
+type PagedResult<TItem> = {
+  items: TItem[];
+  /** True when MAX_PAGES was reached and the LAST page fetched still
+   *  returned a nextPageToken (final wave item 2, the A5 residual): more
+   *  pages exist that were never fetched, so `items` is a genuine partial,
+   *  not the full list. Before this, a truncated empty (or short) result was
+   *  indistinguishable from "there really are none" -- callers must say
+   *  enumeration was incomplete instead of asserting an absence this never
+   *  established. */
+  truncated: boolean;
+};
+
 /** Follows `nextPageToken` until the API stops returning one or MAX_PAGES is
  *  hit (finding A5). `fetchPage` is handed the previous page's token (or
  *  undefined for the first page) and returns that page's items plus the
@@ -187,16 +199,16 @@ async function collectAllPages<TItem>(
   fetchPage: (
     pageToken: string | undefined,
   ) => Promise<{ items: TItem[]; nextPageToken?: string }>,
-): Promise<TItem[]> {
+): Promise<PagedResult<TItem>> {
   const results: TItem[] = [];
   let pageToken: string | undefined;
   for (let page = 0; page < MAX_PAGES; page++) {
     const { items, nextPageToken } = await fetchPage(pageToken);
     results.push(...items);
-    if (!nextPageToken) break;
+    if (!nextPageToken) return { items: results, truncated: false };
     pageToken = nextPageToken;
   }
-  return results;
+  return { items: results, truncated: true };
 }
 
 /** Free-to-call Google Business Profile client -- like GSC, this is first-party
@@ -300,9 +312,14 @@ export function createGbpClient(opts: { userId: string }) {
      *  can act on, following pagination to the end (finding A5). Almost
      *  always exactly one page for a single-business connector, but an empty
      *  first page with a `nextPageToken` is a real shape Google can return,
-     *  not proof there are no accounts. */
-    async listAccounts(): Promise<GbpAccount[]> {
-      return collectAllPages(async (pageToken) => {
+     *  not proof there are no accounts. `truncated: true` (final wave item
+     *  2) means the cap was hit with a token still outstanding -- `accounts`
+     *  is then a partial list, not proof this grant has none. */
+    async listAccounts(): Promise<{
+      accounts: GbpAccount[];
+      truncated: boolean;
+    }> {
+      const { items, truncated } = await collectAllPages(async (pageToken) => {
         const params = pageToken
           ? `?${new URLSearchParams({ pageToken }).toString()}`
           : "";
@@ -315,13 +332,18 @@ export function createGbpClient(opts: { userId: string }) {
           nextPageToken: data.nextPageToken,
         };
       });
+      return { accounts: items, truncated };
     },
 
     /** Business Information API `accounts.locations.list`, restricted to the
      *  two fields the location picker needs, following pagination to the end
-     *  (finding A5) -- same reasoning as listAccounts above. */
-    async listLocations(accountName: string): Promise<GbpLocationSummary[]> {
-      return collectAllPages(async (pageToken) => {
+     *  (finding A5) -- same reasoning as listAccounts above, including
+     *  `truncated` (final wave item 2). */
+    async listLocations(accountName: string): Promise<{
+      locations: GbpLocationSummary[];
+      truncated: boolean;
+    }> {
+      const { items, truncated } = await collectAllPages(async (pageToken) => {
         const params = new URLSearchParams({ readMask: "name,title" });
         if (pageToken) params.set("pageToken", pageToken);
         const data = await request<{
@@ -336,6 +358,7 @@ export function createGbpClient(opts: { userId: string }) {
           nextPageToken: data.nextPageToken,
         };
       });
+      return { locations: items, truncated };
     },
 
     /** My Business v4 `accounts.locations.localPosts.create` -- still the
