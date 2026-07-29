@@ -268,7 +268,7 @@ async function collectGscSignal(
   const { startDate, endDate } = resolveDateRange({});
   let queryPages: ReturnType<typeof toQueryPageRows>;
   try {
-    const result = await GscService.getPerformance({
+    const result = await GscService.getAnalyticsPerformance({
       projectId,
       startDate,
       endDate,

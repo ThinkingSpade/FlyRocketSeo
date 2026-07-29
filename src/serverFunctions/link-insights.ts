@@ -47,7 +47,7 @@ export const getLinkInsights = createServerFn({ method: "POST" })
     });
 
     try {
-      const result = await GscService.getPerformance({
+      const result = await GscService.getAnalyticsPerformance({
         projectId: context.projectId,
         startDate,
         endDate,

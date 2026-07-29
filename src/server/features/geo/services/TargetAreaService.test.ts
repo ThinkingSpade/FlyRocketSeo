@@ -23,7 +23,7 @@ const mocks = vi.hoisted(() => {
     geoSearch: vi.fn(),
     geoGetByCode: vi.fn(),
     getCachedBusinessContext: vi.fn(),
-    getPerformance: vi.fn(),
+    getAnalyticsPerformance: vi.fn(),
     GscNotConnectedError,
   };
 });
@@ -54,7 +54,7 @@ vi.mock("@/server/features/local-seo/services/LocalSeoService", () => ({
 }));
 
 vi.mock("@/server/features/gsc/services/GscService", () => ({
-  GscService: { getPerformance: mocks.getPerformance },
+  GscService: { getAnalyticsPerformance: mocks.getAnalyticsPerformance },
   GscNotConnectedError: mocks.GscNotConnectedError,
   isExpectedGrantFailure: () => false,
 }));
@@ -143,7 +143,7 @@ function resetAllMocks() {
   mocks.geoSearch.mockReset();
   mocks.geoGetByCode.mockReset();
   mocks.getCachedBusinessContext.mockReset();
-  mocks.getPerformance.mockReset();
+  mocks.getAnalyticsPerformance.mockReset();
 }
 
 /** Common "GBP names Plano, no GSC connection" setup shared by several
@@ -160,7 +160,9 @@ function mockGbpNamesPlanoNoGsc() {
   });
   mocks.geoSearch.mockResolvedValue([PLANO_CITY_ROW]);
   mocks.geoGetByCode.mockResolvedValue(DFW_METRO_ROW);
-  mocks.getPerformance.mockRejectedValue(new mocks.GscNotConnectedError("p1"));
+  mocks.getAnalyticsPerformance.mockRejectedValue(
+    new mocks.GscNotConnectedError("p1"),
+  );
 }
 
 describe("TargetAreaService.getTargetArea never auto-confirms", () => {
@@ -223,7 +225,7 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
     });
     // Already confirmed -- detection must not even run, free or not.
     expect(mocks.getCachedBusinessContext).not.toHaveBeenCalled();
-    expect(mocks.getPerformance).not.toHaveBeenCalled();
+    expect(mocks.getAnalyticsPerformance).not.toHaveBeenCalled();
   });
 
   it("ignores a non-primary or unconfirmed row and still proposes fresh from free signals", async () => {
@@ -255,7 +257,7 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
   it("returns null when neither signal resolves anything -- never a fabricated proposal", async () => {
     mocks.listByProject.mockResolvedValue([]);
     mocks.getCachedBusinessContext.mockResolvedValue(null);
-    mocks.getPerformance.mockRejectedValue(
+    mocks.getAnalyticsPerformance.mockRejectedValue(
       new mocks.GscNotConnectedError("p1"),
     );
 
@@ -280,7 +282,7 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
       },
     });
     mocks.geoSearch.mockResolvedValue([]); // no seeded match
-    mocks.getPerformance.mockRejectedValue(
+    mocks.getAnalyticsPerformance.mockRejectedValue(
       new mocks.GscNotConnectedError("p1"),
     );
 
@@ -303,7 +305,7 @@ describe("TargetAreaService resolves ambiguous city names honestly", () => {
     // collectGscSignal's own explicit `null` region argument) never carries
     // state text -- exactly the caller this ambiguity scenario is about.
     mocks.getCachedBusinessContext.mockResolvedValue(null);
-    mocks.getPerformance.mockResolvedValue({
+    mocks.getAnalyticsPerformance.mockResolvedValue({
       rows: [
         {
           keys: [
@@ -342,7 +344,7 @@ describe("TargetAreaService resolves ambiguous city names honestly", () => {
       },
     });
     mocks.geoSearch.mockResolvedValue([SPRINGFIELD_IL_ROW, SPRINGFIELD_MO_ROW]);
-    mocks.getPerformance.mockRejectedValue(
+    mocks.getAnalyticsPerformance.mockRejectedValue(
       new mocks.GscNotConnectedError("p1"),
     );
 
@@ -377,7 +379,7 @@ describe("TargetAreaService resolves ambiguous city names honestly", () => {
       },
     });
     mocks.geoSearch.mockResolvedValue([DALLAS_CITY_ROW]);
-    mocks.getPerformance.mockRejectedValue(
+    mocks.getAnalyticsPerformance.mockRejectedValue(
       new mocks.GscNotConnectedError("p1"),
     );
 

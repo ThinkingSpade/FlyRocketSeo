@@ -1,7 +1,16 @@
-import type {
-  GscSearchAnalyticsRequest,
-  GscSearchAnalyticsRow,
-} from "@/server/lib/gscClient";
+import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
+
+/**
+ * Anything that can be asked for a window of rows.
+ *
+ * Deliberately structural so this works at both layers: the low-level
+ * `GscSearchAnalyticsRequest` and the service-level `GscPerformanceInput` both
+ * satisfy it, and neither has to know about the other.
+ */
+type PaginableRequest = {
+  rowLimit?: number;
+  startRow?: number;
+};
 
 /**
  * GSC's documented maximum rows per `searchanalytics.query` request.
@@ -21,14 +30,14 @@ const GSC_MAX_ROWS_PER_REQUEST = 25_000;
  * descending and documents that it returns top rows rather than every matching
  * row, so any UI claiming "none found" MUST branch on this flag.
  */
-export type GscRowResult = {
+type GscRowResult = {
   rows: GscSearchAnalyticsRow[];
   rowsExamined: number;
   truncated: boolean;
 };
 
-type QueryFn = (
-  request: GscSearchAnalyticsRequest,
+type QueryFn<T extends PaginableRequest> = (
+  request: T,
 ) => Promise<GscSearchAnalyticsRow[]>;
 
 /**
@@ -55,9 +64,12 @@ type QueryFn = (
  *   skipped. That is a provider property, not something this loop can fix —
  *   which is a further reason to prefer one large request over many small ones.
  */
-export async function fetchAllRows(
-  query: QueryFn,
-  request: Omit<GscSearchAnalyticsRequest, "startRow">,
+export async function fetchAllRows<T extends PaginableRequest>(
+  query: QueryFn<T>,
+  // Takes T rather than Omit<T, "startRow"> so the generic infers from a plain
+  // object literal at the call site. Any `startRow` passed in is overwritten:
+  // this function owns the offset.
+  request: T,
   ceiling: number,
 ): Promise<GscRowResult> {
   const pageSize = Math.min(
@@ -75,7 +87,7 @@ export async function fetchAllRows(
       ...request,
       rowLimit: wanted,
       ...(collected.length > 0 ? { startRow: collected.length } : {}),
-    });
+    } as T);
 
     collected.push(...page);
 

@@ -40,15 +40,28 @@ import { SEARCH_PERFORMANCE_RANGES } from "@/types/schemas/search-performance";
  * low limit does not merely shorten the list -- it biases it, because this
  * feature ranks by impressions. A high-impression, zero-click query is exactly
  * the opportunity worth surfacing and exactly the row a clicks-ordered cut
- * drops first. 5,000 covers any site this product realistically serves while
- * staying well short of response sizes that would strain a Worker; when it is
- * still not enough, `currentTruncated` says so rather than pretending.
+ * drops first. When the limit is still not enough, `currentTruncated` says so
+ * rather than pretending.
+ *
+ * 2,500 is a MEASURED Worker CPU budget, not a guess, and not the same thing as
+ * GSC_ANALYTICS_ROW_CEILING. This handler parses THREE payloads per request
+ * (current queries, previous queries, query x page attribution), so it cannot
+ * spend the whole per-invocation ceiling on one of them:
+ *
+ *   rowLimit x3 payloads    size   parse + momentum
+ *      1000                0.3 MB       1.49 ms
+ *      2500                0.8 MB       3.65 ms   <- here
+ *      5000                1.7 MB       7.71 ms   too tight
+ *
+ * Measured on a dev machine, so a lower bound on isolate cost, and excluding
+ * routing, auth, D1 and serialization. Workers Free allows 10 ms per
+ * invocation. Raising this needs a fresh measurement, not optimism.
  *
  * The query x page pull has much higher cardinality over the same query set,
  * so its shortfall is handled separately: a missing page row is never treated
  * as proof that no page ranks (see `page`'s own comment).
  */
-const QUERY_ROW_LIMIT = 5000;
+const QUERY_ROW_LIMIT = 2500;
 
 const inputSchema = z.object({
   projectId: z.string().min(1),
@@ -168,14 +181,14 @@ export const getQueryMomentum = createServerFn({ method: "POST" })
     let current, previous, currentPages;
     try {
       [current, previous, currentPages] = await Promise.all([
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate,
           endDate,
           dimensions: ["query"],
           rowLimit: QUERY_ROW_LIMIT,
         }),
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate: prev.startDate,
           endDate: prev.endDate,
@@ -183,7 +196,7 @@ export const getQueryMomentum = createServerFn({ method: "POST" })
           rowLimit: QUERY_ROW_LIMIT,
         }),
         // Page attribution only. Never compared across periods.
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate,
           endDate,
@@ -234,7 +247,12 @@ export const getQueryMomentum = createServerFn({ method: "POST" })
       // Reaching the limit means the response MAY have been clipped, not that
       // it was -- a property with exactly this many queries trips it too. The
       // UI wording hedges accordingly.
-      currentTruncated: current.rows.length >= QUERY_ROW_LIMIT,
-      previousTruncated: previous.rows.length >= QUERY_ROW_LIMIT,
+      // Compare against the limit the request ACTUALLY applied, not the one we
+      // asked for. Those diverged silently until now -- the ceiling clamped
+      // every call to 1000 while these lines tested against 5000, so both flags
+      // were permanently false and the UI reported completeness it never had.
+      currentTruncated: current.rows.length >= (current.request.rowLimit ?? 0),
+      previousTruncated:
+        previous.rows.length >= (previous.request.rowLimit ?? 0),
     };
   });

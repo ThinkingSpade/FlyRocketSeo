@@ -4,9 +4,11 @@ import {
   toGscUnavailable,
 } from "@/server/features/gsc/services/GscService";
 import {
+  GSC_ANALYTICS_ROW_CEILING,
   resolveDateRange,
   type GscPerformanceFilter,
 } from "@/server/features/gsc/searchAnalytics";
+import { fetchAllRows } from "@/server/features/gsc/fetchAllRows";
 import {
   buildCtrOpportunityRows,
   buildQueryTotals,
@@ -28,12 +30,13 @@ const STRIKING_DISTANCE_FETCH_LIMIT = 1000;
 // dimensions:["date"] returns one row per day; the longest range is ~92 days.
 const DAILY_ROW_LIMIT = 200;
 const COUNTRY_ROW_LIMIT = 25;
-// Export pulls one page and stops. 1000 is NOT a GSC limit — GSC allows 25000
-// per request plus `startRow` pagination — it is the cap this path inherited
-// from the MCP tool ceiling. Anything past row 1000 is currently missing from
-// the file without telling the user, since GSC orders rows by clicks desc.
-// TODO(task-7): paginate via fetchAllRows and surface the applied limit.
-const EXPORT_ROW_LIMIT = 1000;
+// Rows per export request. GSC allows 25000 per call, but the binding limit is
+// Worker CPU: parsing a 25000-row payload alone costs ~9ms of a 10ms budget.
+const EXPORT_PAGE_SIZE = 1000;
+// Total rows an export will examine. Beyond this the file is truncated and says
+// so, rather than claiming to be the full dataset — GSC orders rows by clicks
+// descending, so a silent cut drops the least-clicked rows without a trace.
+const EXPORT_ROW_CEILING = GSC_ANALYTICS_ROW_CEILING;
 
 /** Build GSC filter groups shared by every call. Device applies everywhere;
  *  country applies everywhere except the country breakdown itself (so the
@@ -74,7 +77,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
 
     try {
       const [current, previous, queryPages, countries] = await Promise.all([
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate,
           endDate,
@@ -82,7 +85,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
           filters,
           rowLimit: DAILY_ROW_LIMIT,
         }),
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate: prev.startDate,
           endDate: prev.endDate,
@@ -90,7 +93,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
           filters,
           rowLimit: DAILY_ROW_LIMIT,
         }),
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate,
           endDate,
@@ -98,7 +101,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
           filters,
           rowLimit: STRIKING_DISTANCE_FETCH_LIMIT,
         }),
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate,
           endDate,
@@ -148,7 +151,7 @@ export const getSearchPerformanceTable = createServerFn({ method: "POST" })
     const offset = (data.page - 1) * data.pageSize;
 
     try {
-      const result = await GscService.getPerformance({
+      const result = await GscService.getAnalyticsPerformance({
         projectId: context.projectId,
         startDate,
         endDate,
@@ -180,8 +183,14 @@ export const getSearchPerformanceTable = createServerFn({ method: "POST" })
   });
 
 /**
- * The full queries/pages dataset for CSV/Sheets export (capped at
- * EXPORT_ROW_LIMIT), rather than only the visible page.
+ * The queries/pages dataset for CSV/Sheets export, rather than only the visible
+ * page.
+ *
+ * Paginates to EXPORT_ROW_CEILING and reports whether it got everything. It used
+ * to take one 1000-row page and describe the result as the full dataset, which
+ * silently dropped the least-clicked rows: GSC orders by clicks descending, so
+ * the rows a user is most likely to be hunting for in a spreadsheet are exactly
+ * the ones that went missing.
  */
 export const exportSearchPerformanceTable = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
@@ -192,18 +201,25 @@ export const exportSearchPerformanceTable = createServerFn({ method: "POST" })
     });
     const { filters } = buildGscFilters(data);
 
-    const result = await GscService.getPerformance({
-      projectId: context.projectId,
-      startDate,
-      endDate,
-      dimensions: [data.dimension],
-      filters,
-      rowLimit: EXPORT_ROW_LIMIT,
-    });
+    const pull = await fetchAllRows(
+      (request) =>
+        GscService.getAnalyticsPerformance(request).then((r) => r.rows),
+      {
+        projectId: context.projectId,
+        startDate,
+        endDate,
+        dimensions: [data.dimension],
+        filters,
+        rowLimit: EXPORT_PAGE_SIZE,
+      },
+      EXPORT_ROW_CEILING,
+    );
 
     return {
       dimension: data.dimension,
-      rows: toDimensionRows(result.rows),
+      rows: toDimensionRows(pull.rows),
+      rowsExamined: pull.rowsExamined,
+      truncated: pull.truncated,
     };
   });
 
@@ -242,7 +258,7 @@ export const getContentPerformance = createServerFn({ method: "POST" })
 
     try {
       const [current, previous] = await Promise.all([
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate,
           endDate,
@@ -250,7 +266,7 @@ export const getContentPerformance = createServerFn({ method: "POST" })
           filters,
           rowLimit: CONTENT_PAGE_ROW_LIMIT,
         }),
-        GscService.getPerformance({
+        GscService.getAnalyticsPerformance({
           projectId,
           startDate: prev.startDate,
           endDate: prev.endDate,

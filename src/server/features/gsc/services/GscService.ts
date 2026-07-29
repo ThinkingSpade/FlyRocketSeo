@@ -16,6 +16,8 @@ import {
 } from "@/server/lib/gscClient";
 import {
   buildSearchAnalyticsRequest,
+  GSC_ANALYTICS_ROW_CEILING,
+  GSC_MCP_ROW_CEILING,
   type GscPerformanceInput,
 } from "@/server/features/gsc/searchAnalytics";
 import {
@@ -282,9 +284,15 @@ async function disconnect(input: {
   }
 }
 
-/** Pass-through of GSC `searchAnalytics.query` for a project's connected property. */
+/** Pass-through of GSC `searchAnalytics.query` for a project's connected property.
+ *
+ *  Defaults to the MCP row ceiling. That default is deliberately the SMALL one:
+ *  a caller that forgets to pick a ceiling gets a conservative pull rather than
+ *  silently flooding the MCP agent's context window. Analytics callers use
+ *  `getAnalyticsPerformance` instead. */
 async function getPerformance(
   input: GscPerformanceInput,
+  ceiling: number = GSC_MCP_ROW_CEILING,
 ): Promise<GscPerformanceResult> {
   const connection = await GscConnectionRepository.getByProjectId(
     input.projectId,
@@ -292,7 +300,7 @@ async function getPerformance(
   if (!connection) {
     throw new GscNotConnectedError(input.projectId);
   }
-  const request = buildSearchAnalyticsRequest(input);
+  const request = buildSearchAnalyticsRequest(input, new Date(), ceiling);
   const client = createGscClient({ userId: connection.connectedByUserId });
   const rows = await client.querySearchAnalytics(connection.siteUrl, request);
   return {
@@ -301,6 +309,22 @@ async function getPerformance(
     request,
     rows,
   };
+}
+
+/** Performance pull for the analytics UI, which has no context-window limit.
+ *
+ *  Exists as a separate name rather than an argument so that a call site which
+ *  was never migrated is visible in a grep instead of silently clamped. Before
+ *  this existed, every app path inherited the 1000-row MCP ceiling: callers
+ *  requested 5000 rows, received 1000, and then tested `rows.length >= 5000` to
+ *  decide whether the pull had been truncated -- a test that could never pass.
+ *
+ *  `request.rowLimit` on the result reports the limit actually applied, which is
+ *  what truncation checks must compare against. */
+async function getAnalyticsPerformance(
+  input: GscPerformanceInput,
+): Promise<GscPerformanceResult> {
+  return getPerformance(input, GSC_ANALYTICS_ROW_CEILING);
 }
 
 type GscUrlInspection = {
@@ -363,5 +387,6 @@ export const GscService = {
   setSite,
   disconnect,
   getPerformance,
+  getAnalyticsPerformance,
   inspectUrls,
 };
