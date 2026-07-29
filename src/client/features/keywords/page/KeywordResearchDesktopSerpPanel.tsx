@@ -105,6 +105,16 @@ export function KeywordResearchDesktopSerpPanel({
             page={controller.serpPage}
             pageSize={controller.SERP_PAGE_SIZE}
             onPageChange={controller.setSerpPage}
+            // The row the table already highlights. Selecting a keyword for
+            // the OVERVIEW panel is free and automatic; fetching its SERP is
+            // neither, which is why the two are separate and this needs its
+            // own explicit control rather than following the highlight.
+            analyzeKeyword={overviewKeyword?.keyword ?? null}
+            onAnalyze={() => {
+              if (!overviewKeyword) return;
+              controller.setSerpKeyword(overviewKeyword.keyword);
+              controller.setSerpPage(0);
+            }}
           />
         </div>
       </div>

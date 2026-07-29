@@ -457,6 +457,10 @@ export function useKeywordResearchController(
     toggleAllRows: handleToggleAllRows,
     toggleRowSelection,
     toggleSort,
+    // Exposed so the SERP panel's own "Analyze this SERP" control can start a
+    // run. Selecting a keyword for the free OVERVIEW panel and fetching its
+    // (metered) SERP are separate acts; only the second goes through here.
+    setSerpKeyword,
     SERP_PAGE_SIZE,
   };
 }
