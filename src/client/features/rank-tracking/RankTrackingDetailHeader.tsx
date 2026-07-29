@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { Monitor, Plus, Settings, Smartphone } from "lucide-react";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { devicesLabel, scheduleLabel } from "@/shared/rank-tracking";
@@ -6,10 +5,7 @@ import type {
   ComparePeriod,
   RankTrackingConfig,
 } from "@/types/schemas/rank-tracking";
-import type { TargetArea } from "@/shared/geo/types";
-import { resolveStoredConfigArea } from "./rankTrackingConfigArea";
-import { useConfigAreaLookup } from "./useConfigAreaLookup";
-import { resolveRankTrackingLocationLabel } from "./rankTrackingLocationLabel";
+import { useRankTrackingLocationLabel } from "./useRankTrackingLocationLabel";
 
 const COMPARE_PERIODS: ReadonlySet<string> = new Set([
   "1d",
@@ -46,19 +42,8 @@ export function RankTrackingDetailHeader({
 }) {
   // Resolves config.locationCode to a real display name -- see
   // rankTrackingLocationLabel.ts's own doc comment for why a bare "US"
-  // fallback stopped being safe once configs could be metros. areaTouched is
-  // always false: this header only ever displays the config's location, it
-  // never edits it, so there is no in-progress user pick a late-arriving
-  // lookup could clobber (contrast RankTrackingConfigModal.tsx's own use of
-  // this same hook, which does have one).
-  const [resolvedArea, setResolvedArea] = useState<TargetArea>(() =>
-    resolveStoredConfigArea(config.locationCode),
-  );
-  useConfigAreaLookup(config.locationCode, false, setResolvedArea);
-  const locationLabel = resolveRankTrackingLocationLabel(
-    config.locationCode,
-    resolvedArea,
-  );
+  // fallback stopped being safe once configs could be metros.
+  const locationLabel = useRankTrackingLocationLabel(config.locationCode);
 
   return (
     <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 px-4 pt-4 pb-3">

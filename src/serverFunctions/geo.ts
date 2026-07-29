@@ -51,6 +51,30 @@ export const getGeoLocationByCode = createServerFn({ method: "POST" })
   });
 
 /**
+ * The batch form of the read above, for a screen that must label MANY stored
+ * location codes at once -- RankTrackingDomainList, whose unpaginated list can
+ * hold up to MAX_CONFIGS_PER_PROJECT (500) rows. Resolving those through
+ * getGeoLocationByCode would mean one POST per distinct local code per list
+ * render; this is one. Same "reads only, reads D1 only" guarantee, same
+ * authenticated-not-project-scoped gate (shared reference data).
+ *
+ * The 500 cap is what bounds `codes` -- it is the most distinct codes a single
+ * project's list can ask about -- and duplicates are the caller's to collapse.
+ * A code with no row is simply missing from the response rather than returned
+ * as null, so callers key by `code` and render a miss as "unrecognised".
+ */
+const getGeoLocationsByCodesSchema = z.object({
+  codes: z.array(z.number().int().positive()).max(500),
+});
+
+export const getGeoLocationsByCodes = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .validator(getGeoLocationsByCodesSchema)
+  .handler(async ({ data }) => {
+    return GeoLocationRepository.getByCodes(data.codes);
+  });
+
+/**
  * How many rows `geo_locations` currently holds — the read the Settings
  * page's "Seed location data" section shows before an operator triggers
  * anything, so a previous partial run is visible rather than guessed at.

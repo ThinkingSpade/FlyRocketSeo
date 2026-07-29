@@ -7,8 +7,8 @@ import { buildCsv, downloadCsv } from "@/client/lib/csv";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { getRankKeywordHistory } from "@/serverFunctions/rank-tracking";
 import type { RankKeywordHistoryPoint } from "@/serverFunctions/rank-tracking";
-import { LOCATIONS } from "@/client/features/keywords/locations";
 import { csvChange, DeviceRankCell } from "./RankTrackingTableParts";
+import { useRankTrackingLocationLabel } from "./useRankTrackingLocationLabel";
 import {
   RankTrendChart,
   TrendRangeToggle,
@@ -46,6 +46,7 @@ export function KeywordTrendModal({
   onClose: () => void;
 }) {
   const [sinceDays, setSinceDays] = useState(730);
+  const locationLabel = useRankTrackingLocationLabel(locationCode);
 
   const { data: history, isLoading } = useQuery({
     queryKey: [
@@ -145,8 +146,7 @@ export function KeywordTrendModal({
             {target.keyword}
           </h3>
           <p className="text-xs text-base-content/60">
-            {domain} &middot; {LOCATIONS[locationCode] ?? "US"} &middot;
-            Position over time
+            {domain} &middot; {locationLabel} &middot; Position over time
           </p>
         </div>
         <TrendRangeToggle value={sinceDays} onChange={setSinceDays} />

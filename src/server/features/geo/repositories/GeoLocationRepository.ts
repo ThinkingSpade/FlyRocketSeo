@@ -10,7 +10,7 @@
  * — the grep that proves this boundary greps for their names, and a match
  * inside a comment describing the rule would be a confusing false positive.)
  */
-import { and, count as countFn, eq } from "drizzle-orm";
+import { and, count as countFn, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
 import { geoLocations } from "@/db/schema";
 import { buildNamePrefixWhere } from "./likePattern";
@@ -115,4 +115,56 @@ async function getByCode(
   return rows[0] ?? null;
 }
 
-export const GeoLocationRepository = { search, count, getByCode } as const;
+/**
+ * The same read as `getByCode`, for many codes at once. Exists because
+ * `RankTrackingDomainList` labels EVERY row from its own stored
+ * `locationCode`, and a project may hold up to `MAX_CONFIGS_PER_PROJECT`
+ * (500) configs in one unpaginated list -- resolving those one-at-a-time
+ * would fan out to one server-function POST per distinct local code on a
+ * single list render. Callers pass only the codes that actually need a
+ * lookup (a plain `LOCATION_OPTIONS` country code is already named without
+ * touching D1), so the common all-country project still issues nothing.
+ *
+ * Rows come back in whatever order SQLite returns them and codes with no row
+ * are simply absent -- callers must key by `code` rather than by position,
+ * and treat "absent" exactly as `getByCode`'s null means (unrecognised,
+ * never a guess). Still reads only, and reads D1 only.
+ *
+ * Chunked at `QUERY_CHUNK_SIZE` for the same reason
+ * `SavedKeywordTagsRepository` already chunks its own `inArray` reads: each
+ * code is a bound parameter, and D1 caps the number of them per statement, so
+ * a single 500-code `IN (...)` would throw rather than return a short answer.
+ * The cap is on the STATEMENT, not the request, so chunking is what makes the
+ * 500-config ceiling actually reachable here.
+ */
+const QUERY_CHUNK_SIZE = 80;
+
+async function getByCodes(
+  codes: readonly number[],
+): Promise<GeoLocationSearchResult[]> {
+  if (codes.length === 0) return [];
+  const rows: GeoLocationSearchResult[] = [];
+  for (let i = 0; i < codes.length; i += QUERY_CHUNK_SIZE) {
+    const chunk = codes.slice(i, i + QUERY_CHUNK_SIZE);
+    const chunkRows = await db
+      .select({
+        code: geoLocations.code,
+        name: geoLocations.name,
+        type: geoLocations.type,
+        stateCode: geoLocations.stateCode,
+        countryCode: geoLocations.countryCode,
+        parentMetroCode: geoLocations.parentMetroCode,
+      })
+      .from(geoLocations)
+      .where(inArray(geoLocations.code, [...chunk]));
+    rows.push(...chunkRows);
+  }
+  return rows;
+}
+
+export const GeoLocationRepository = {
+  search,
+  count,
+  getByCode,
+  getByCodes,
+} as const;
