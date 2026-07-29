@@ -112,7 +112,18 @@ export function buildBacklinksRowsApiFilters(
   if (filters.linkType) {
     conditions.push(["dofollow", "=", filters.linkType === "dofollow"]);
   }
-  if (filters.hideLost) {
+  // "New" and "Lost" are the two feeds Ahrefs splits into their own tabs;
+  // here they narrow the existing list, which keeps one code path for sorting,
+  // paging and export. Asking for lost links overrides "hide lost" rather than
+  // contradicting it into an empty result.
+  if (filters.status) {
+    conditions.push([
+      filters.status === "new" ? "is_new" : "is_lost",
+      "=",
+      true,
+    ]);
+  }
+  if (filters.hideLost && filters.status !== "lost") {
     conditions.push(["is_lost", "=", false]);
   }
   if (filters.hideBroken) {

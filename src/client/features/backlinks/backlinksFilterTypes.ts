@@ -15,6 +15,8 @@ export type BacklinksTabFilterValues = {
   minSpamScore: string;
   maxSpamScore: string;
   linkType: string;
+  /** "" | "new" | "lost" — narrows to links won or lost recently. */
+  status: string;
   hideLost: string;
   hideBroken: string;
 };
@@ -64,6 +66,7 @@ export const EMPTY_BACKLINKS_FILTERS: BacklinksTabFilterValues = {
   minSpamScore: "",
   maxSpamScore: "",
   linkType: "",
+  status: "",
   hideLost: "",
   hideBroken: "",
 };
@@ -113,6 +116,7 @@ export const BACKLINKS_FILTER_FIELDS = [
   "minSpamScore",
   "maxSpamScore",
   "linkType",
+  "status",
   "hideLost",
   "hideBroken",
 ] as const satisfies ReadonlyArray<keyof BacklinksTabFilterValues>;
@@ -192,6 +196,10 @@ export function toBacklinksFiltersPayload(
     linkType:
       values.linkType === "dofollow" || values.linkType === "nofollow"
         ? values.linkType
+        : undefined,
+    status:
+      values.status === "new" || values.status === "lost"
+        ? values.status
         : undefined,
     hideLost: values.hideLost === "true" ? true : undefined,
     hideBroken: values.hideBroken === "true" ? true : undefined,

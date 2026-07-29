@@ -119,7 +119,6 @@ export const competingDomainsResultSchema = z.object({
 export type CompetingDomainsResult = z.infer<
   typeof competingDomainsResultSchema
 >;
-type CompetingDomainRow = z.infer<typeof competingDomainRowSchema>;
 
 /* ------------------------------------------------------------------ */
 /*  Referring networks                                                 */
