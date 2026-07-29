@@ -1,4 +1,8 @@
 import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
+import {
+  attributePagesToQueries,
+  representativePageForQuery,
+} from "@/server/features/gsc/gscAggregation";
 
 /**
  * Pure shaping helpers for the Search Performance page. Kept separate from the
@@ -106,40 +110,40 @@ export function toDimensionRows(
 /** Reduce `["query","page"]` rows to one striking-distance row per query.
  *
  *  GSC returns a row per page that ranks for a query, so a query fans out across
- *  every page it appears on. A query only belongs in "striking distance" when
- *  the site's BEST-ranking page for it sits in the 5..20 band — if any page
- *  already ranks above position 5, the site effectively ranks near the top and
- *  improving a secondary page won't move traffic. So we collapse each query to
- *  its top page (lowest average position; ties broken by impressions) and keep
- *  it only when that top page is in band. Result is sorted by impressions. */
+ *  every page it appears on, and we have to pick one page to represent it.
+ *
+ *  That page is the one carrying the impressions, NOT the one with the lowest
+ *  average position. This used to take the minimum position, which meant a page
+ *  with a single impression at position 1.0 beat a page with a thousand
+ *  impressions at position 8.0 — so the query was judged already-ranking and
+ *  dropped from striking distance, hiding the real opportunity on the page that
+ *  actually gets seen. Google defines no metric equal to MIN(page average
+ *  position): position is averaged over impressions per row, so a minimum across
+ *  separately averaged rows reconstructs nothing.
+ *
+ *  Queries no single page owns are kept, represented by their leading page. Result
+ *  is sorted by impressions. */
 export function buildStrikingDistanceRows(
   rows: GscSearchAnalyticsRow[],
   limit: number = STRIKING_DISTANCE_ROW_LIMIT,
 ): StrikingDistanceRow[] {
-  const topPageByQuery = new Map<string, StrikingDistanceRow>();
-  for (const row of rows) {
-    const query = row.keys?.[0];
-    const page = row.keys?.[1];
-    if (!query || !page) continue;
+  const attribution = attributePagesToQueries(rows);
+  const representative: StrikingDistanceRow[] = [];
 
-    const current = topPageByQuery.get(query);
-    const isBetter =
-      !current ||
-      row.position < current.position ||
-      (row.position === current.position &&
-        row.impressions > current.impressions);
-    if (!isBetter) continue;
-
-    topPageByQuery.set(query, {
+  for (const [query, pages] of attribution) {
+    const { page, position } = representativePageForQuery(pages);
+    const leader = pages.find((candidate) => candidate.page === page);
+    if (!leader) continue;
+    representative.push({
       query,
       page,
-      clicks: row.clicks,
-      impressions: row.impressions,
-      position: row.position,
+      clicks: leader.clicks,
+      impressions: leader.impressions,
+      position,
     });
   }
 
-  return Array.from(topPageByQuery.values())
+  return representative
     .filter(
       (row) =>
         row.position >= STRIKING_DISTANCE_MIN_POSITION &&

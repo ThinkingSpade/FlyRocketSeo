@@ -113,7 +113,7 @@ describe("buildStrikingDistanceRows", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("collapses a query to its best-ranking page when that page is in band", () => {
+  it("collapses a query to the page carrying its impressions", () => {
     const rows = buildStrikingDistanceRows([
       pageRow("kw", "https://x.com/a", 14, 100),
       pageRow("kw", "https://x.com/b", 8, 500),
@@ -121,6 +121,38 @@ describe("buildStrikingDistanceRows", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].page).toBe("https://x.com/b");
     expect(rows[0].position).toBe(8);
+  });
+
+  it("does not let a one-impression page hide the opportunity on the page that gets seen", () => {
+    // The distinguishing case for impression-weighted representation, which the
+    // other cases in this suite cannot detect because their position-leader and
+    // impression-leader happen to be the same page.
+    //
+    // /fluke averages position 2.0 off a single impression; /real averages 8.0
+    // off a thousand. Taking MIN(position) judged the site already-ranking and
+    // dropped the query entirely, hiding a genuine striking-distance
+    // opportunity on the only page anyone actually sees.
+    const rows = buildStrikingDistanceRows([
+      pageRow("kw", "https://x.com/fluke", 2, 1),
+      pageRow("kw", "https://x.com/real", 8, 1000),
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].page).toBe("https://x.com/real");
+    expect(rows[0].position).toBe(8);
+    expect(rows[0].impressions).toBe(1000);
+  });
+
+  it("still drops a query the leading page already ranks near the top for", () => {
+    // Ownership decides which page represents the query; the band filter then
+    // applies to THAT page. A query whose traffic-carrying page ranks #2 is not
+    // a striking-distance opportunity.
+    const rows = buildStrikingDistanceRows([
+      pageRow("kw", "https://x.com/home", 2, 900),
+      pageRow("kw", "https://x.com/secondary", 8, 10),
+    ]);
+
+    expect(rows).toHaveLength(0);
   });
 });
 
