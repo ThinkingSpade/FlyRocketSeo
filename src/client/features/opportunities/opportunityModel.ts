@@ -87,6 +87,37 @@ export function buildOpportunities(input: {
   ctrOpportunities: CtrOpportunityRow[];
   cannibalization: CannibalizationRow[];
 }): Opportunity[] {
+  // Keyed by query+page because the three sources overlap: one row at position
+  // 8 with high impressions and no clicks legitimately appears in striking
+  // distance AND ctr opportunities. Those are two descriptions of the same
+  // impressions reaching the top three, not two independent gains, so emitting
+  // both and summing them inflated the headline "clicks at stake".
+  const byTarget = new Map<string, Opportunity>();
+
+  function merge(candidate: Opportunity): void {
+    const key = keyOf(candidate.query, candidate.page);
+    const existing = byTarget.get(key);
+    if (!existing) {
+      byTarget.set(key, candidate);
+      return;
+    }
+    // Take the larger scenario, never the sum: moving the row into the top
+    // three already subsumes part or all of the title-rewrite gain. The kind
+    // follows the larger estimate so the headline action is the bigger win, and
+    // both signals stay named in the detail so the merge is not silent.
+    const leading =
+      candidate.clicksAtStake > existing.clicksAtStake ? candidate : existing;
+    const trailing = leading === candidate ? existing : candidate;
+    byTarget.set(key, {
+      ...leading,
+      clicksAtStake: leading.clicksAtStake,
+      detail:
+        leading.detail && trailing.detail
+          ? `${leading.detail}. Also ${lowerFirst(trailing.detail)}`
+          : (leading.detail ?? trailing.detail),
+    });
+  }
+
   const opportunities: Opportunity[] = [];
 
   for (const row of input.strikingDistance) {
@@ -134,7 +165,9 @@ export function buildOpportunities(input: {
     });
   }
 
-  return opportunities
+  for (const candidate of opportunities) merge(candidate);
+
+  return Array.from(byTarget.values())
     .filter(
       (item) => item.clicksAtStake >= 1 && item.impressions >= MIN_IMPRESSIONS,
     )
@@ -142,6 +175,17 @@ export function buildOpportunities(input: {
       (a, b) =>
         b.clicksAtStake - a.clicksAtStake || b.impressions - a.impressions,
     );
+}
+
+/** Lowercase the first character so a merged detail reads as one sentence. */
+function lowerFirst(text: string): string {
+  return text.charAt(0).toLowerCase() + text.slice(1);
+}
+
+/** Identity of a thing worth fixing. Two signals about the same query on the
+ *  same page are one opportunity, not two. */
+function keyOf(query: string, page: string): string {
+  return `${query}\n${page}`;
 }
 
 /**

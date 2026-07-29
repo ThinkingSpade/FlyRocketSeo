@@ -121,6 +121,69 @@ describe("buildOpportunities", () => {
   });
 });
 
+describe("buildOpportunities overlap", () => {
+  // A row at position 8 with high impressions and no clicks legitimately
+  // appears in BOTH striking distance and CTR opportunities. Both describe the
+  // same impressions reaching the top three, so adding their estimates
+  // overstates the headline "clicks at stake if all are fixed".
+  const shared = {
+    query: "widgets",
+    page: "https://x.com/widgets",
+    impressions: 1000,
+    position: 8,
+  };
+
+  it("emits one opportunity per query and page, not one per signal", () => {
+    const opportunities = buildOpportunities({
+      strikingDistance: [shared],
+      ctrOpportunities: [{ ...shared, missedClicks: 30 }],
+      cannibalization: [],
+    });
+
+    const forRow = opportunities.filter(
+      (item) => item.query === "widgets" && item.page === shared.page,
+    );
+    expect(forRow).toHaveLength(1);
+  });
+
+  it("takes the larger overlapping estimate rather than their sum", () => {
+    const quickWin = quickWinClicks(1000, 8);
+    const ctrGap = 30;
+
+    const [merged] = buildOpportunities({
+      strikingDistance: [shared],
+      ctrOpportunities: [{ ...shared, missedClicks: ctrGap }],
+      cannibalization: [],
+    });
+
+    expect(merged.clicksAtStake).toBe(Math.max(quickWin, ctrGap));
+    expect(merged.clicksAtStake).toBeLessThan(quickWin + ctrGap);
+  });
+
+  it("mentions both signals so the merge is not silent", () => {
+    const [merged] = buildOpportunities({
+      strikingDistance: [shared],
+      ctrOpportunities: [{ ...shared, missedClicks: 30 }],
+      cannibalization: [],
+    });
+
+    expect(merged.detail).toMatch(/top 3/i);
+    expect(merged.detail).toMatch(/under-clicked/i);
+  });
+
+  it("keeps separate rows for the same query on different pages", () => {
+    const opportunities = buildOpportunities({
+      strikingDistance: [shared],
+      ctrOpportunities: [
+        { ...shared, page: "https://x.com/other", missedClicks: 40 },
+      ],
+      cannibalization: [],
+    });
+
+    expect(opportunities).toHaveLength(2);
+  });
+});
+
 describe("quickWinHint", () => {
   it("returns undefined for an empty list -- nothing to break down", () => {
     expect(quickWinHint([])).toBeUndefined();
