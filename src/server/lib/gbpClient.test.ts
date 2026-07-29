@@ -1,5 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import type { createGbpClient } from "./gbpClient";
+import {
+  GbpApiError,
+  GbpTokenError,
+  createGbpClient,
+  createGbpClient as buildClient,
+} from "./gbpClient";
 
 const mocks = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
@@ -54,7 +59,6 @@ type GbpClient = ReturnType<typeof createGbpClient>;
 async function rejectedGbpCallError(
   run: (client: GbpClient) => Promise<unknown>,
 ): Promise<Error> {
-  const { createGbpClient: buildClient } = await import("./gbpClient");
   try {
     await run(buildClient({ userId: "u1" }));
   } catch (error) {
@@ -85,7 +89,6 @@ describe("gbpClient", () => {
     mocks.fetch.mockResolvedValue(
       jsonResponse({ name: "accounts/123/locations/987/localPosts/1" }),
     );
-    const { createGbpClient } = await import("./gbpClient");
     const client = createGbpClient({ userId: "u1" });
 
     const result = await client.createLocalPost(
@@ -106,7 +109,6 @@ describe("gbpClient", () => {
 
   it("sends the post body with the required languageCode/topicType defaults", async () => {
     mocks.fetch.mockResolvedValue(jsonResponse({ name: "post-1" }));
-    const { createGbpClient } = await import("./gbpClient");
     await createGbpClient({ userId: "u1" }).createLocalPost(
       { accountName: "accounts/123", locationName: "locations/987" },
       {
@@ -142,7 +144,6 @@ describe("gbpClient", () => {
         ],
       }),
     );
-    const { createGbpClient } = await import("./gbpClient");
     const categories = await createGbpClient({ userId: "u1" }).searchCategories(
       {
         query: "Pizza",
@@ -173,7 +174,6 @@ describe("gbpClient", () => {
 
   it("maps a non-2xx status to a GbpApiError carrying that status", async () => {
     mocks.fetch.mockResolvedValue(jsonResponse({ error: "nope" }, 404));
-    const { createGbpClient, GbpApiError } = await import("./gbpClient");
     await expect(
       createGbpClient({ userId: "u1" }).listAccounts(),
     ).rejects.toBeInstanceOf(GbpApiError);
@@ -184,7 +184,6 @@ describe("gbpClient", () => {
 
   it("throws GbpTokenError when no access token can be minted", async () => {
     mocks.getAccessToken.mockRejectedValue(new Error("revoked"));
-    const { createGbpClient, GbpTokenError } = await import("./gbpClient");
     await expect(
       createGbpClient({ userId: "u1" }).listAccounts(),
     ).rejects.toBeInstanceOf(GbpTokenError);
@@ -195,7 +194,6 @@ describe("gbpClient", () => {
   // this one -- became a GbpTokenError asserting "revoked or expired".
   it("does not classify a network blip while minting a token as GbpTokenError", async () => {
     mocks.getAccessToken.mockRejectedValue(new TypeError("fetch failed"));
-    const { createGbpClient, GbpTokenError } = await import("./gbpClient");
     const call = createGbpClient({ userId: "u1" }).listAccounts();
     await expect(call).rejects.not.toBeInstanceOf(GbpTokenError);
     // The original network TypeError propagates untouched, so a caller's own
@@ -297,7 +295,6 @@ describe("gbpClient", () => {
             accounts: [{ name: "accounts/1", accountName: "Biz" }],
           }),
         );
-      const { createGbpClient } = await import("./gbpClient");
       const result = await createGbpClient({ userId: "u1" }).listAccounts();
 
       expect(result).toEqual({
@@ -320,7 +317,6 @@ describe("gbpClient", () => {
             locations: [{ name: "locations/1", title: "Store" }],
           }),
         );
-      const { createGbpClient } = await import("./gbpClient");
       const result = await createGbpClient({ userId: "u1" }).listLocations(
         "accounts/1",
       );
@@ -341,7 +337,6 @@ describe("gbpClient", () => {
           jsonResponse({ accounts: [], nextPageToken: "always-more" }),
         ),
       );
-      const { createGbpClient } = await import("./gbpClient");
       const result = await createGbpClient({ userId: "u1" }).listAccounts();
 
       expect(result.accounts).toEqual([]);
@@ -362,7 +357,6 @@ describe("gbpClient", () => {
           accounts: [{ name: "accounts/1", accountName: "Biz" }],
         }),
       );
-      const { createGbpClient } = await import("./gbpClient");
       const result = await createGbpClient({ userId: "u1" }).listAccounts();
 
       expect(result.truncated).toBe(false);

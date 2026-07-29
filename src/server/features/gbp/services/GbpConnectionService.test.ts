@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type * as GbpClientModule from "@/server/lib/gbpClient";
+import { GbpApiError, GbpTokenError } from "@/server/lib/gbpClient";
+import { GbpConnectionService } from "./GbpConnectionService";
 
 // Same recipe as gbpClient.test.ts: GbpConnectionService's import graph
 // reaches `cloudflare:workers` (via the db provider) and touches `@/db`
@@ -51,11 +53,9 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
   });
 
   it("classifies a 401 as requires_reconnect (a genuine credential problem)", async () => {
-    const { GbpApiError } = await import("@/server/lib/gbpClient");
     mocks.listAccounts.mockRejectedValue(
       new GbpApiError(401, "unauthenticated"),
     );
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -72,11 +72,9 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
     // this was indistinguishable from an expired/revoked connection, even
     // though a 403 means the request WAS authenticated -- just not
     // authorized for this location.
-    const { GbpApiError } = await import("@/server/lib/gbpClient");
     mocks.listAccounts.mockRejectedValue(
       new GbpApiError(403, "permission denied"),
     );
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -90,9 +88,7 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
   });
 
   it("classifies a 429 and a 5xx as temporary", async () => {
-    const { GbpApiError } = await import("@/server/lib/gbpClient");
     mocks.listAccounts.mockRejectedValue(new GbpApiError(429, "rate limited"));
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -105,11 +101,9 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
   });
 
   it("classifies a GbpTokenError as requires_reconnect", async () => {
-    const { GbpTokenError } = await import("@/server/lib/gbpClient");
     mocks.listAccounts.mockRejectedValue(
       new GbpTokenError("grant revoked or expired"),
     );
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -123,7 +117,6 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
 
   it("classifies a network transport failure as temporary, not requires_reconnect", async () => {
     mocks.listAccounts.mockRejectedValue(new TypeError("fetch failed"));
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -137,7 +130,6 @@ describe("GbpConnectionService.listAvailableLocationsForUser error classificatio
 
   it("re-throws an error it cannot characterize rather than guessing a reason", async () => {
     mocks.listAccounts.mockRejectedValue(new Error("something unexpected"));
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     await expect(
       GbpConnectionService.listAvailableLocationsForUser("u1"),
@@ -161,7 +153,6 @@ describe("GbpConnectionService.listAvailableLocationsForUser pagination (final w
 
   it("reports incomplete when listAccounts itself hit the pagination cap", async () => {
     mocks.listAccounts.mockResolvedValue({ accounts: [], truncated: true });
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -182,7 +173,6 @@ describe("GbpConnectionService.listAvailableLocationsForUser pagination (final w
       truncated: false,
     });
     mocks.listLocations.mockResolvedValue({ locations: [], truncated: true });
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");
@@ -199,7 +189,6 @@ describe("GbpConnectionService.listAvailableLocationsForUser pagination (final w
       locations: [{ name: "locations/1", title: "Store" }],
       truncated: false,
     });
-    const { GbpConnectionService } = await import("./GbpConnectionService");
 
     const result =
       await GbpConnectionService.listAvailableLocationsForUser("u1");

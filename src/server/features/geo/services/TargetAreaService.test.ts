@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { TargetArea } from "@/shared/geo/types";
+import { TargetAreaService } from "./TargetAreaService";
 
 // Defensive, matching this codebase's established convention for testing a
 // service whose import graph could otherwise reach a Worker-only `env` read
@@ -166,7 +167,6 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
     mocks.listByProject.mockResolvedValue([]);
     mockGbpNamesPlanoNoGsc();
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -182,7 +182,6 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
     mocks.listByProject.mockResolvedValue([]);
     mockGbpNamesPlanoNoGsc();
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     await TargetAreaService.getTargetArea({ projectId: "p1" }, billingCustomer);
     await TargetAreaService.getTargetArea({ projectId: "p1" }, billingCustomer);
     await TargetAreaService.getTargetArea({ projectId: "p1" }, billingCustomer);
@@ -208,7 +207,6 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
       },
     ]);
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -242,7 +240,6 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
     ]);
     mockGbpNamesPlanoNoGsc();
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -259,7 +256,6 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
       new mocks.GscNotConnectedError("p1"),
     );
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -285,7 +281,6 @@ describe("TargetAreaService.getTargetArea never auto-confirms", () => {
       new mocks.GscNotConnectedError("p1"),
     );
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -322,7 +317,6 @@ describe("TargetAreaService resolves ambiguous city names honestly", () => {
     // with nothing to break the tie.
     mocks.geoSearch.mockResolvedValue([SPRINGFIELD_IL_ROW, SPRINGFIELD_MO_ROW]);
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -349,7 +343,6 @@ describe("TargetAreaService resolves ambiguous city names honestly", () => {
       new mocks.GscNotConnectedError("p1"),
     );
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -385,7 +378,6 @@ describe("TargetAreaService resolves ambiguous city names honestly", () => {
       new mocks.GscNotConnectedError("p1"),
     );
 
-    const { TargetAreaService } = await import("./TargetAreaService");
     const result = await TargetAreaService.getTargetArea(
       { projectId: "p1" },
       billingCustomer,
@@ -402,7 +394,6 @@ describe("TargetAreaService confirm/set are the only writers", () => {
   beforeEach(resetAllMocks);
 
   it("confirmTargetArea writes the proposal's own area and source", async () => {
-    const { TargetAreaService } = await import("./TargetAreaService");
     await TargetAreaService.confirmTargetArea({
       projectId: "p1",
       area: DFW_AREA,
@@ -421,7 +412,6 @@ describe("TargetAreaService confirm/set are the only writers", () => {
   });
 
   it("setTargetArea always writes source manual, regardless of the caller", async () => {
-    const { TargetAreaService } = await import("./TargetAreaService");
     await TargetAreaService.setTargetArea({ projectId: "p1", area: DFW_AREA });
 
     expect(mocks.setPrimary).toHaveBeenCalledWith(
@@ -430,7 +420,6 @@ describe("TargetAreaService confirm/set are the only writers", () => {
   });
 
   it("clearTargetArea deletes every row for the project", async () => {
-    const { TargetAreaService } = await import("./TargetAreaService");
     await TargetAreaService.clearTargetArea({ projectId: "p1" });
 
     expect(mocks.clearByProject).toHaveBeenCalledWith("p1");

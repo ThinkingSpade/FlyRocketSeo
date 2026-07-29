@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GscApiError, GscTokenError, createGscClient } from "./gscClient";
 
 const mocks = vi.hoisted(() => ({
   getAccessToken: vi.fn(),
@@ -45,7 +46,6 @@ describe("gscClient", () => {
         siteEntry: [{ siteUrl: "https://x/", permissionLevel: "siteOwner" }],
       }),
     );
-    const { createGscClient } = await import("./gscClient");
     const sites = await createGscClient({ userId: "u1" }).listSites();
 
     expect(sites).toHaveLength(1);
@@ -56,7 +56,6 @@ describe("gscClient", () => {
 
   it("encodes the siteUrl in the searchAnalytics path (both property forms)", async () => {
     mocks.fetch.mockImplementation(async () => jsonResponse({ rows: [] }));
-    const { createGscClient } = await import("./gscClient");
     const client = createGscClient({ userId: "u1" });
 
     await client.querySearchAnalytics("sc-domain:example.com", {
@@ -84,7 +83,6 @@ describe("gscClient", () => {
         },
       }),
     );
-    const { createGscClient } = await import("./gscClient");
     const result = await createGscClient({ userId: "u1" }).inspectUrl(
       "sc-domain:example.com",
       "https://example.com/post",
@@ -112,7 +110,6 @@ describe("gscClient", () => {
     mocks.fetch.mockImplementation(async () =>
       jsonResponse({ error: "forbidden" }, 403),
     );
-    const { createGscClient, GscApiError } = await import("./gscClient");
     await expect(
       createGscClient({ userId: "u1" }).listSites(),
     ).rejects.toMatchObject({ status: 403 });
@@ -123,7 +120,6 @@ describe("gscClient", () => {
 
   it("maps 429 to a rate-limit GscApiError", async () => {
     mocks.fetch.mockResolvedValue(jsonResponse({ error: "slow down" }, 429));
-    const { createGscClient } = await import("./gscClient");
     await expect(
       createGscClient({ userId: "u1" }).listSites(),
     ).rejects.toMatchObject({ status: 429 });
@@ -131,7 +127,6 @@ describe("gscClient", () => {
 
   it("throws GscTokenError when no access token can be minted", async () => {
     mocks.getAccessToken.mockRejectedValue(new Error("revoked"));
-    const { createGscClient, GscTokenError } = await import("./gscClient");
     await expect(
       createGscClient({ userId: "u1" }).listSites(),
     ).rejects.toBeInstanceOf(GscTokenError);

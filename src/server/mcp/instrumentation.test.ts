@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import type { ToolExtra } from "@/server/mcp/context";
 import { AppError } from "@/server/lib/errors";
+import { instrumentMcpToolHandler } from "./instrumentation";
 
 const mocks = vi.hoisted(() => ({
   captureServerError: vi.fn(),
@@ -36,7 +37,6 @@ describe("instrumentMcpToolHandler", () => {
   });
 
   it("passes a valid result through without reporting", async () => {
-    const { instrumentMcpToolHandler } = await import("./instrumentation");
     const wrapped = instrumentMcpToolHandler("demo", outputSchema, async () =>
       okResult({ items: [{ domain: "example.com" }] }),
     );
@@ -50,7 +50,6 @@ describe("instrumentMcpToolHandler", () => {
   });
 
   it("reports an output schema mismatch the SDK would silently reject", async () => {
-    const { instrumentMcpToolHandler } = await import("./instrumentation");
     const wrapped = instrumentMcpToolHandler("demo", outputSchema, async () =>
       okResult({ items: "not-an-array" }),
     );
@@ -65,7 +64,6 @@ describe("instrumentMcpToolHandler", () => {
   });
 
   it("reports and rethrows a reportable handler error", async () => {
-    const { instrumentMcpToolHandler } = await import("./instrumentation");
     const boom = new Error("upstream exploded");
     const wrapped = instrumentMcpToolHandler("demo", outputSchema, async () => {
       throw boom;
@@ -77,7 +75,6 @@ describe("instrumentMcpToolHandler", () => {
   });
 
   it("rethrows expected errors without reporting them", async () => {
-    const { instrumentMcpToolHandler } = await import("./instrumentation");
     const wrapped = instrumentMcpToolHandler("demo", outputSchema, async () => {
       throw new AppError("NOT_FOUND");
     });

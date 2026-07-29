@@ -6,6 +6,16 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import type { ToolExtra } from "@/server/mcp/context";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MCP_AUTH_CONTEXT_PROP } from "@/server/mcp/context";
+import * as backlinksInsightsTools from "./backlinks-insights-tools";
+import * as brandMonitoringTools from "./brand-monitoring-tools";
+import * as competitorResearchTools from "./competitor-research-tools";
+import * as dataforseoResearchTools from "./dataforseo-research-tools";
+import * as trendsTools from "./trends-tools";
+import { getDomainTechnologiesTool } from "./domain-analytics-tools";
+import { getBacklinksProfileTool } from "./get-backlinks-profile";
+import { getBusinessReviewsTool } from "./local-seo-tools";
+import { auditPageTool } from "./onpage-tools";
+import { AppError } from "@/server/lib/errors";
 
 const mocks = vi.hoisted(() => ({
   getProjectForOrganization: vi.fn(),
@@ -116,8 +126,9 @@ describe("DataForSEO research tool output schemas", () => {
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
-      const tools = await import("./dataforseo-research-tools");
-      const tool = Object.values(tools).find((t) => t.name === toolName);
+      const tool = Object.values(dataforseoResearchTools).find(
+        (t) => t.name === toolName,
+      );
       if (!tool) throw new Error(`tool ${toolName} not found`);
 
       const schema = normalizeObjectSchema(tool.config.outputSchema);
@@ -148,8 +159,9 @@ describe("DataForSEO research tool output schemas", () => {
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
-      const tools = await import("./competitor-research-tools");
-      const tool = Object.values(tools).find((t) => t.name === toolName);
+      const tool = Object.values(competitorResearchTools).find(
+        (t) => t.name === toolName,
+      );
       if (!tool) throw new Error(`tool ${toolName} not found`);
 
       const schema = normalizeObjectSchema(tool.config.outputSchema);
@@ -174,8 +186,9 @@ describe("DataForSEO research tool output schemas", () => {
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
-      const tools = await import("./backlinks-insights-tools");
-      const tool = Object.values(tools).find((t) => t.name === toolName);
+      const tool = Object.values(backlinksInsightsTools).find(
+        (t) => t.name === toolName,
+      );
       if (!tool) throw new Error(`tool ${toolName} not found`);
 
       const schema = normalizeObjectSchema(tool.config.outputSchema);
@@ -198,8 +211,7 @@ describe("DataForSEO research tool output schemas", () => {
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
-      const tools = await import("./trends-tools");
-      const tool = Object.values(tools).find((t) => t.name === toolName);
+      const tool = Object.values(trendsTools).find((t) => t.name === toolName);
       if (!tool) throw new Error(`tool ${toolName} not found`);
 
       const schema = normalizeObjectSchema(tool.config.outputSchema);
@@ -220,8 +232,9 @@ describe("DataForSEO research tool output schemas", () => {
   ])(
     "%s accepts typed (non-plain-object) provider rows",
     async (toolName, field) => {
-      const tools = await import("./brand-monitoring-tools");
-      const tool = Object.values(tools).find((t) => t.name === toolName);
+      const tool = Object.values(brandMonitoringTools).find(
+        (t) => t.name === toolName,
+      );
       if (!tool) throw new Error(`tool ${toolName} not found`);
 
       const schema = normalizeObjectSchema(tool.config.outputSchema);
@@ -237,7 +250,6 @@ describe("DataForSEO research tool output schemas", () => {
   );
 
   it("audit_page accepts a typed provider page object", async () => {
-    const { auditPageTool } = await import("./onpage-tools");
     const schema = normalizeObjectSchema(auditPageTool.config.outputSchema);
     if (!schema) throw new Error("output schema did not normalize");
 
@@ -250,8 +262,6 @@ describe("DataForSEO research tool output schemas", () => {
   });
 
   it("get_domain_technologies accepts a typed provider result object", async () => {
-    const { getDomainTechnologiesTool } =
-      await import("./domain-analytics-tools");
     const schema = normalizeObjectSchema(
       getDomainTechnologiesTool.config.outputSchema,
     );
@@ -265,7 +275,6 @@ describe("DataForSEO research tool output schemas", () => {
   });
 
   it("get_business_reviews accepts typed provider review rows", async () => {
-    const { getBusinessReviewsTool } = await import("./local-seo-tools");
     const schema = normalizeObjectSchema(
       getBusinessReviewsTool.config.outputSchema,
     );
@@ -283,7 +292,6 @@ describe("DataForSEO research tool output schemas", () => {
   });
 
   it("get_backlinks_profile accepts a paginated backlinks profile payload", async () => {
-    const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
     const schema = normalizeObjectSchema(
       getBacklinksProfileTool.config.outputSchema,
     );
@@ -305,7 +313,6 @@ describe("DataForSEO research tool output schemas", () => {
 describe("get_backlinks_profile MCP tool", () => {
   it("returns paginated backlink rows and honors filters, sorting, and mode", async () => {
     mocks.profileBacklinksPage.mockResolvedValue(backlinkPage);
-    const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
 
     const result = await getBacklinksProfileTool.handler(
       {
@@ -363,7 +370,6 @@ describe("get_backlinks_profile MCP tool", () => {
       page: 2,
     };
     mocks.profileBacklinksPage.mockResolvedValue(finalPage);
-    const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
 
     const result = await getBacklinksProfileTool.handler(
       {
@@ -390,13 +396,11 @@ describe("get_backlinks_profile MCP tool", () => {
   });
 
   it("preserves Backlinks API access and credit errors", async () => {
-    const { AppError } = await import("@/server/lib/errors");
     const error = new AppError(
       "BACKLINKS_BILLING_ISSUE",
       "The connected DataForSEO account has a billing or balance issue",
     );
     mocks.profileBacklinksPage.mockRejectedValue(error);
-    const { getBacklinksProfileTool } = await import("./get-backlinks-profile");
 
     await expect(
       getBacklinksProfileTool.handler(

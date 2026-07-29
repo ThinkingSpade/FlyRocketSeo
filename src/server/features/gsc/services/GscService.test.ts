@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { GscService } from "./GscService";
 
 const mocks = vi.hoisted(() => {
   class GscApiError extends Error {
@@ -65,7 +66,6 @@ describe("GscService.setSite", () => {
       { siteUrl: "https://x/", permissionLevel: "siteOwner" },
     ]);
     mocks.upsert.mockResolvedValue({ siteUrl: "https://x/" });
-    const { GscService } = await import("./GscService");
 
     await GscService.setSite({ ...baseInput, siteUrl: "https://x/" });
 
@@ -83,7 +83,6 @@ describe("GscService.setSite", () => {
     mocks.listSites.mockResolvedValue([
       { siteUrl: "https://x/", permissionLevel: "siteUnverifiedUser" },
     ]);
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.setSite({ ...baseInput, siteUrl: "https://x/" }),
@@ -95,7 +94,6 @@ describe("GscService.setSite", () => {
     mocks.listSites.mockResolvedValue([
       { siteUrl: "https://x/", permissionLevel: "siteOwner" },
     ]);
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.setSite({ ...baseInput, siteUrl: "https://not-mine/" }),
@@ -119,7 +117,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
     mocks.listSites.mockResolvedValue([
       { siteUrl: "https://x/", permissionLevel: "siteOwner" },
     ]);
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
@@ -135,7 +132,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
     mocks.listSites.mockRejectedValue(
       new mocks.GscTokenError("secret-access-token"),
     );
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
@@ -165,7 +161,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
       mocks.listSites.mockRejectedValue(
         new mocks.GscApiError(403, "Search Console denied access", body),
       );
-      const { GscService } = await import("./GscService");
 
       await expect(
         GscService.listSitesForUserWithGrantStatus("u1"),
@@ -187,7 +182,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
       mocks.listSites.mockRejectedValue(
         new mocks.GscApiError(403, "Search Console denied access", body),
       );
-      const { GscService } = await import("./GscService");
 
       await expect(
         GscService.listSitesForUserWithGrantStatus("u1"),
@@ -211,7 +205,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
     mocks.listSites.mockRejectedValue(
       new mocks.GscApiError(403, "secret-token", body),
     );
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
@@ -234,7 +227,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
     mocks.listSites.mockRejectedValue(
       new mocks.GscApiError(401, "unauthenticated"),
     );
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
@@ -252,7 +244,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
       mocks.listSites.mockRejectedValue(
         new mocks.GscApiError(status, "temporary failure"),
       );
-      const { GscService } = await import("./GscService");
 
       await expect(
         GscService.listSitesForUserWithGrantStatus("u1"),
@@ -271,7 +262,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
 
   it("reports a network failure as temporary", async () => {
     mocks.listSites.mockRejectedValue(new TypeError("fetch failed"));
-    const { GscService } = await import("./GscService");
 
     await expect(
       GscService.listSitesForUserWithGrantStatus("u1"),
@@ -292,7 +282,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
       "client.listSites is not a function",
     );
     mocks.listSites.mockRejectedValue(programmingError);
-    const { GscService } = await import("./GscService");
 
     await expect(GscService.listSitesForUserWithGrantStatus("u1")).rejects.toBe(
       programmingError,
@@ -303,7 +292,6 @@ describe("GscService.listSitesForUserWithGrantStatus", () => {
   it("keeps unclassified errors reportable", async () => {
     const unexpected = new Error("unexpected");
     mocks.listSites.mockRejectedValue(unexpected);
-    const { GscService } = await import("./GscService");
 
     await expect(GscService.listSitesForUserWithGrantStatus("u1")).rejects.toBe(
       unexpected,
@@ -323,7 +311,6 @@ describe("GscService.disconnect", () => {
   it("unlinks the connector's grant when they disconnect their last project", async () => {
     mocks.getByProjectId.mockResolvedValue({ connectedByUserId: "u1" });
     mocks.existsForConnector.mockResolvedValue(false);
-    const { GscService } = await import("./GscService");
 
     await GscService.disconnect({ projectId: "p1", userId: "u1" });
 
@@ -335,7 +322,6 @@ describe("GscService.disconnect", () => {
   it("keeps the grant when the connector still has another connected project", async () => {
     mocks.getByProjectId.mockResolvedValue({ connectedByUserId: "u1" });
     mocks.existsForConnector.mockResolvedValue(true);
-    const { GscService } = await import("./GscService");
 
     await GscService.disconnect({ projectId: "p1", userId: "u1" });
 
@@ -344,7 +330,6 @@ describe("GscService.disconnect", () => {
 
   it("never revokes a grant when a different member disconnects the connection", async () => {
     mocks.getByProjectId.mockResolvedValue({ connectedByUserId: "owner" });
-    const { GscService } = await import("./GscService");
 
     await GscService.disconnect({ projectId: "p1", userId: "other-member" });
 
@@ -358,7 +343,6 @@ describe("GscService.disconnect", () => {
     // should still drop the caller's own grant.
     mocks.getByProjectId.mockResolvedValue(null);
     mocks.existsForConnector.mockResolvedValue(false);
-    const { GscService } = await import("./GscService");
 
     await GscService.disconnect({ projectId: "p1", userId: "u1" });
 

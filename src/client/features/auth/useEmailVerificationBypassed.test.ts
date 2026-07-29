@@ -7,13 +7,15 @@ import { describe, expect, it, vi } from "vitest";
 // load; nothing in these tests reads `env`.
 vi.mock("cloudflare:workers", () => ({ env: {} }));
 
-async function resolveGbpCapabilityState(
-  isResolved: boolean,
-  gbpWriteAvailable: boolean,
-): Promise<string> {
-  const module = await import("./useEmailVerificationBypassed");
-  return module.resolveGbpCapabilityState(isResolved, gbpWriteAvailable);
-}
+// Imported statically, NOT lazily inside the tests. vi.mock is hoisted above
+// this import, so the stub above still applies -- but the module graph behind
+// it is large (react-query + react-router + the whole server-function/auth
+// graph), and a deferred `await import()` bills that one-time load to the
+// first test's 5s timeout. Under full-suite parallel load that load measured
+// 6.8s, so the first test timed out while the rest passed in 0ms off the
+// module cache. At module scope the cost lands in collection instead, which
+// is not subject to testTimeout.
+import { resolveGbpCapabilityState } from "./useEmailVerificationBypassed";
 
 /**
  * Final wave item 3 (an A6 residual): GbpConnectionCard used to collapse
@@ -26,23 +28,23 @@ async function resolveGbpCapabilityState(
  * to render the query-hook-heavy card component itself.
  */
 describe("resolveGbpCapabilityState (final wave item 3)", () => {
-  it("is 'checking' while unresolved, even if the (untrusted) prerendered value says available", async () => {
+  it("is 'checking' while unresolved, even if the (untrusted) prerendered value says available", () => {
     // The exact failing input: a hosted build's first mount, before
     // ClientRuntimeConfigBootstrap's forced live refetch completes.
     // gbpWriteAvailable might be a stale prerendered `true`, but this must
     // not be read as confirmed availability OR confirmed unavailability yet.
-    expect(await resolveGbpCapabilityState(false, true)).toBe("checking");
+    expect(resolveGbpCapabilityState(false, true)).toBe("checking");
   });
 
-  it("is 'checking' while unresolved and the prerendered value says unavailable", async () => {
-    expect(await resolveGbpCapabilityState(false, false)).toBe("checking");
+  it("is 'checking' while unresolved and the prerendered value says unavailable", () => {
+    expect(resolveGbpCapabilityState(false, false)).toBe("checking");
   });
 
-  it("is 'unavailable' once resolved and the live config says GBP writing is off", async () => {
-    expect(await resolveGbpCapabilityState(true, false)).toBe("unavailable");
+  it("is 'unavailable' once resolved and the live config says GBP writing is off", () => {
+    expect(resolveGbpCapabilityState(true, false)).toBe("unavailable");
   });
 
-  it("is 'available' once resolved and the live config confirms it", async () => {
-    expect(await resolveGbpCapabilityState(true, true)).toBe("available");
+  it("is 'available' once resolved and the live config confirms it", () => {
+    expect(resolveGbpCapabilityState(true, true)).toBe("available");
   });
 });

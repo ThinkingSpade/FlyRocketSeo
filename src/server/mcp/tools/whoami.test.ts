@@ -1,6 +1,7 @@
 import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MCP_AUTH_CONTEXT_PROP, type ToolExtra } from "@/server/mcp/context";
+import { whoamiTool } from "./whoami";
 
 const mocks = vi.hoisted(() => ({
   autumnCheck: vi.fn(),
@@ -54,7 +55,6 @@ describe("whoamiTool", () => {
 
   it("reports unlimited credits without calling Autumn when billing is disabled", async () => {
     mocks.isBillingEnabled.mockResolvedValue(false);
-    const { whoamiTool } = await import("./whoami");
 
     const result = await whoamiTool.handler({}, toolExtra);
 
@@ -78,7 +78,6 @@ describe("whoamiTool", () => {
     mocks.autumnCheck
       .mockResolvedValueOnce({ balance: { remaining: 12 } })
       .mockResolvedValueOnce({ balance: { remaining: 3 } });
-    const { whoamiTool } = await import("./whoami");
 
     const result = await whoamiTool.handler({}, toolExtra);
 

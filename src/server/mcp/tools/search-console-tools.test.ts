@@ -2,33 +2,46 @@ import type { AuthInfo } from "@modelcontextprotocol/sdk/server/auth/types.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ToolExtra } from "@/server/mcp/context";
 import { MCP_AUTH_CONTEXT_PROP } from "@/server/mcp/context";
+import {
+  getSearchConsolePerformanceTool,
+  inspectUrlsTool,
+} from "./search-console-tools";
 
-const mocks = vi.hoisted(() => ({
-  getProjectForOrganization: vi.fn(),
-  isHostedServerAuthMode: vi.fn(),
-  hasSelfHostedGscConfig: vi.fn(),
-  GscService: {
-    getPerformance: vi.fn(),
-    inspectUrls: vi.fn(),
-  },
-}));
+// The error classes live inside vi.hoisted, not at module scope: the module
+// under test is imported statically above, so the hoisted vi.mock factories
+// below run during that import — before any module-scope `class` has left its
+// temporal dead zone. Declaring them here initializes them first.
+const mocks = vi.hoisted(() => {
+  class GscNotConnectedError extends Error {
+    constructor(public readonly projectId: string) {
+      super("not connected");
+      this.name = "GscNotConnectedError";
+    }
+  }
+  class GscApiError extends Error {
+    constructor(
+      public readonly status: number,
+      message: string,
+    ) {
+      super(message);
+      this.name = "GscApiError";
+    }
+  }
+  class GscTokenError extends Error {}
 
-class GscNotConnectedError extends Error {
-  constructor(public readonly projectId: string) {
-    super("not connected");
-    this.name = "GscNotConnectedError";
-  }
-}
-class GscApiError extends Error {
-  constructor(
-    public readonly status: number,
-    message: string,
-  ) {
-    super(message);
-    this.name = "GscApiError";
-  }
-}
-class GscTokenError extends Error {}
+  return {
+    getProjectForOrganization: vi.fn(),
+    isHostedServerAuthMode: vi.fn(),
+    hasSelfHostedGscConfig: vi.fn(),
+    GscService: {
+      getPerformance: vi.fn(),
+      inspectUrls: vi.fn(),
+    },
+    GscNotConnectedError,
+    GscApiError,
+    GscTokenError,
+  };
+});
 
 vi.mock("cloudflare:workers", () => ({ env: {} }));
 vi.mock("@/server/lib/runtime-env", () => ({
@@ -44,9 +57,12 @@ vi.mock("@/server/features/projects/services/ProjectService", () => ({
 }));
 vi.mock("@/server/features/gsc/services/GscService", () => ({
   GscService: mocks.GscService,
-  GscNotConnectedError,
+  GscNotConnectedError: mocks.GscNotConnectedError,
 }));
-vi.mock("@/server/lib/gscClient", () => ({ GscApiError, GscTokenError }));
+vi.mock("@/server/lib/gscClient", () => ({
+  GscApiError: mocks.GscApiError,
+  GscTokenError: mocks.GscTokenError,
+}));
 
 const authContext = {
   userId: "user_123",
@@ -105,8 +121,6 @@ describe("search console MCP tools", () => {
         },
       ],
     });
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
 
     const result = await getSearchConsolePerformanceTool.handler(
       {
@@ -150,10 +164,8 @@ describe("search console MCP tools", () => {
 
   it("surfaces a not-connected message with a connect URL", async () => {
     mocks.GscService.getPerformance.mockRejectedValue(
-      new GscNotConnectedError("project_1"),
+      new mocks.GscNotConnectedError("project_1"),
     );
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
 
     const result = await getSearchConsolePerformanceTool.handler(
       { projectId: "project_1" },
@@ -173,10 +185,8 @@ describe("search console MCP tools", () => {
 
   it("renders an api_error with a reconnect URL on a GSC API failure", async () => {
     mocks.GscService.getPerformance.mockRejectedValue(
-      new GscApiError(403, "no access"),
+      new mocks.GscApiError(403, "no access"),
     );
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
 
     const result = await getSearchConsolePerformanceTool.handler(
       { projectId: "project_1" },
@@ -194,9 +204,6 @@ describe("search console MCP tools", () => {
   });
 
   it("rejects searchAppearance combined with another dimension", async () => {
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
-
     const result = await getSearchConsolePerformanceTool.handler(
       { projectId: "project_1", dimensions: ["query", "searchAppearance"] },
       toolExtra,
@@ -209,9 +216,6 @@ describe("search console MCP tools", () => {
   });
 
   it("rejects a half-specified explicit date range", async () => {
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
-
     const result = await getSearchConsolePerformanceTool.handler(
       { projectId: "project_1", startDate: "2026-01-01" },
       toolExtra,
@@ -226,8 +230,6 @@ describe("search console MCP tools", () => {
   it("returns a setup message in self-hosted mode without a Google client", async () => {
     mocks.isHostedServerAuthMode.mockResolvedValue(false);
     mocks.hasSelfHostedGscConfig.mockResolvedValue(false);
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
 
     const result = await getSearchConsolePerformanceTool.handler(
       { projectId: "project_1" },
@@ -254,8 +256,6 @@ describe("search console MCP tools", () => {
       },
       rows: [],
     });
-    const { getSearchConsolePerformanceTool } =
-      await import("./search-console-tools");
 
     const result = await getSearchConsolePerformanceTool.handler(
       { projectId: "project_1" },
@@ -286,7 +286,6 @@ describe("search console MCP tools", () => {
         },
       ],
     });
-    const { inspectUrlsTool } = await import("./search-console-tools");
 
     const result = await inspectUrlsTool.handler(
       {
@@ -313,9 +312,8 @@ describe("search console MCP tools", () => {
 
   it("surfaces a not-connected message from inspect_urls", async () => {
     mocks.GscService.inspectUrls.mockRejectedValue(
-      new GscNotConnectedError("project_1"),
+      new mocks.GscNotConnectedError("project_1"),
     );
-    const { inspectUrlsTool } = await import("./search-console-tools");
 
     const result = await inspectUrlsTool.handler(
       { projectId: "project_1", urls: ["https://example.com/a"] },
@@ -331,7 +329,6 @@ describe("search console MCP tools", () => {
   it("returns a setup message for inspect_urls in self-hosted mode without a Google client", async () => {
     mocks.isHostedServerAuthMode.mockResolvedValue(false);
     mocks.hasSelfHostedGscConfig.mockResolvedValue(false);
-    const { inspectUrlsTool } = await import("./search-console-tools");
 
     const result = await inspectUrlsTool.handler(
       { projectId: "project_1", urls: ["https://example.com/a"] },
