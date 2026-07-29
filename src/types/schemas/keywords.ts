@@ -302,6 +302,12 @@ const sourceAttemptSchema = z.object({
   source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
   rowCount: z.number(),
   nonSeedCount: z.number(),
+  /**
+   * Non-seed rows that still share a word with the seed — the number Auto
+   * actually decides on. Optional so runs cached before this field existed
+   * still restore instead of failing validation.
+   */
+  relevantCount: z.number().optional(),
 });
 
 /** A keyword-research result exactly as it is cached. Lives here rather than

@@ -13,6 +13,7 @@ import type { ResearchKeywordsInput } from "@/types/schemas/keywords";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { type EnrichedKeyword, normalizeKeyword } from "./helpers";
 import {
+  RELATED_KEYWORDS_DEPTH,
   fetchGoogleAdsResearchRows,
   fetchResearchRowsBySource,
 } from "./research-data";
@@ -22,7 +23,9 @@ import {
   AUTO_KEYWORD_SOURCES,
   MIN_NON_SEED_FOR_AUTO,
   countNonSeedKeywords,
+  countRelevantKeywords,
   hasSufficientCoverage,
+  selectResearchRows,
   type KeywordMode,
   type KeywordSource,
   type ResearchSource,
@@ -32,6 +35,8 @@ type SourceAttempt = {
   source: ResearchSource;
   rowCount: number;
   nonSeedCount: number;
+  /** Absent on runs stored before this field existed; every new run sets it. */
+  relevantCount?: number;
 };
 
 type ResearchDiagnostics = {
@@ -51,9 +56,9 @@ type CachedResult = ResearchResult;
 
 import { keywordResearchResultSchema as cachedResultSchema } from "@/types/schemas/keywords";
 
-// v3: research volumes are no longer clickstream-refined, and Google-Ads-only
-// locations route to keywords_for_keywords.
-const CACHE_VERSION = 3;
+// v4: Auto tries suggestions before related and related walks one hop, so the
+// same request no longer returns the drifted rows a v3 entry cached.
+const CACHE_VERSION = 4;
 
 async function fetchRowsFromSource(
   source: KeywordSource,
@@ -95,8 +100,11 @@ async function fetchAutoRows(
       billingCustomer,
       creditFeature,
     );
+    // Accumulate every unique row and cap only at the end, relevant-first.
+    // Capping here instead would let a source that returned a full page of
+    // drifted rows spend the whole budget, leaving no room for the on-topic
+    // rows a later source returns — coverage could then never recover.
     for (const row of rows) {
-      if (accumulatedRows.length >= input.resultLimit) break;
       if (seenKeywords.has(row.keyword)) continue;
       seenKeywords.add(row.keyword);
       accumulatedRows.push(row);
@@ -106,6 +114,7 @@ async function fetchAutoRows(
       source,
       rowCount: rows.length,
       nonSeedCount: countNonSeedKeywords(rows, seedKeyword),
+      relevantCount: countRelevantKeywords(rows, seedKeyword),
     });
 
     lastSource = source;
@@ -114,7 +123,11 @@ async function fetchAutoRows(
       hasSufficientCoverage(accumulatedRows, seedKeyword, MIN_NON_SEED_FOR_AUTO)
     ) {
       return {
-        rows: accumulatedRows,
+        rows: selectResearchRows(
+          accumulatedRows,
+          seedKeyword,
+          input.resultLimit,
+        ),
         source,
         usedFallback: source !== AUTO_KEYWORD_SOURCES[0],
         diagnostics: {
@@ -127,7 +140,7 @@ async function fetchAutoRows(
   }
 
   return {
-    rows: accumulatedRows,
+    rows: selectResearchRows(accumulatedRows, seedKeyword, input.resultLimit),
     source: lastSource,
     usedFallback: true,
     diagnostics: {
@@ -167,6 +180,7 @@ async function fetchGoogleAdsRows(
           source: "google_ads",
           rowCount: rows.length,
           nonSeedCount: countNonSeedKeywords(rows, seedKeyword),
+          relevantCount: countRelevantKeywords(rows, seedKeyword),
         },
       ],
     },
@@ -191,6 +205,7 @@ async function fetchManualRows(
     source: mode,
     rowCount: rows.length,
     nonSeedCount: countNonSeedKeywords(rows, seedKeyword),
+    relevantCount: countRelevantKeywords(rows, seedKeyword),
   };
 
   return {
@@ -220,7 +235,7 @@ async function buildResearchCacheKey(
     languageCode: input.languageCode,
     resultLimit: input.resultLimit,
     mode,
-    depth: 3,
+    depth: RELATED_KEYWORDS_DEPTH,
     clickstream: input.clickstream,
   });
 }
