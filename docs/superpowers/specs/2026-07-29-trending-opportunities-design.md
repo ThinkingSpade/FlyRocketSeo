@@ -1,7 +1,48 @@
 # Trending opportunities on the Keyword Trends tab
 
 **Date:** 2026-07-29
-**Status:** Approved design
+**Status:** Implemented (`beb521f`), with the corrections below.
+
+## Corrections made during implementation
+
+A Codex review of this design found twelve issues before any of it shipped.
+The ones that changed the design are recorded here rather than silently fixed,
+because each is a way the feature would have produced a confident wrong number.
+
+1. **Both period fetches must use the same GSC dimension set.** The design
+   proposed `["query"]` for the prior period while current data came from
+   `["query", "page"]`. Google aggregates impressions per dimension set —
+   query-only counts one impression per property appearance, query x page one
+   per URL — so a two-page query would have looked like it doubled with
+   nothing changed. Page attribution now comes from a separate call whose
+   counts never cross a period boundary.
+2. **Position must not be a minimum across pages.** Summing impressions across
+   pages while keeping the best position reports "1,005 impressions at
+   position 2" when 1,000 of them sit at 15. The list now uses GSC's own
+   property-level average position, and names the page by impression _share_.
+3. **Absence from the prior period cannot mean "new".** GSC sorts rows by
+   clicks, does not guarantee every row even below the row limit, and
+   withholds anonymised queries. `emerging` was removed entirely in favour of
+   `no-baseline`, which claims only that no comparison exists.
+4. **Impressions are not demand.** An impression means this property's result
+   was shown, so the number moves when rankings move. Every label says
+   "impressions"; none says "demand" or "interest".
+5. **Falling impressions must not mean "skip".** A ranking or indexing loss
+   looks exactly like falling impressions and is the most valuable case on the
+   page, not the least. It became "find out what changed" — which also
+   resolves a direct contradiction with the Opportunities tab, which calls the
+   same declining position-8 query a quick win.
+6. **Position 21+ means rebuild, not write a new page.** A page of theirs
+   already ranks; a second one invites self-competition.
+7. **Generated seeds were dropped from this list.** They have no impressions,
+   so they cannot be ranked by impressions at stake — the design promised
+   something the data cannot support. The list is GSC-derived only.
+8. **The fit guarantee is conditional.** With no saved profile the classifier
+   returns no verdicts and nothing is filtered. That is stated rather than
+   promised away.
+
+Also corrected: the momentum formula below omitted `x 100`, and the two
+`skip`/`emerging` matrix rows described states rather than actions.
 
 ## Problem
 

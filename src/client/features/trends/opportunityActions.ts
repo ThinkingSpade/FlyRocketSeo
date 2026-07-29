@@ -133,7 +133,9 @@ function reasonFor(input: {
     case "fix":
       return `You average #${rank}, one page-quality step from the top 3, and ${trend}.${fanOut}`;
     case "expand":
-      return `You average #${rank} — that needs real added depth, not a tweak. ${trend}.${fanOut}`;
+      // Parenthesised rather than a second sentence: `trend` is lowercased for
+      // mid-sentence use, so starting a sentence with it reads as a typo.
+      return `You average #${rank} — that needs real added depth, not a tweak (${trend}).${fanOut}`;
     case "rebuild":
       return `You average #${rank}, too far back for a tweak to win. Rebuild the page you already have rather than adding a second one.${fanOut}`;
     case "write-new":
