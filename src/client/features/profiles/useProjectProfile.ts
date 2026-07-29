@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  draftProjectProfile,
+  generateSeedKeywords,
   getProjectProfile,
   saveProjectProfile,
 } from "@/serverFunctions/projectProfile";
@@ -12,6 +14,7 @@ import {
 import {
   EMPTY_PROFILE,
   type ProjectProfile,
+  type ServiceAreaKind,
 } from "@/shared/keyword-fit/profileTypes";
 
 /**
@@ -102,4 +105,34 @@ export function useKeywordFit(
     }
     return map;
   }, [offer, exclusions, keywordKey]);
+}
+
+/**
+ * Drafts the profile from the client's own website.
+ *
+ * Deliberately a mutation rather than a query: it costs a model call and a
+ * crawl, so it must only ever run when someone presses the button. The result
+ * is handed back to the form as an editable draft, never saved directly.
+ */
+export function useDraftProjectProfile(projectId: string) {
+  return useMutation({
+    mutationFn: () => draftProjectProfile({ data: { projectId } }),
+  });
+}
+
+/**
+ * Seed keyword candidates from the profile. Same reasoning as above: one
+ * model call, on a click. The seeds carry no volume until the user runs them
+ * through the metered expansion themselves.
+ */
+export function useGenerateSeedKeywords(projectId: string) {
+  return useMutation({
+    mutationFn: (input: {
+      offer: string;
+      customer: string;
+      exclusions: string;
+      serviceAreaKind: ServiceAreaKind;
+      areaLabel: string | null;
+    }) => generateSeedKeywords({ data: { projectId, ...input } }),
+  });
 }

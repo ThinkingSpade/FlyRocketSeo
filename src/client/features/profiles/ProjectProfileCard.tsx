@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
-import { Briefcase, Check, X } from "lucide-react";
+import { Briefcase, Check, Wand2, X } from "lucide-react";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import {
   SERVICE_AREA_KINDS,
   SERVICE_AREA_LABELS,
@@ -7,7 +9,11 @@ import {
   type ProjectProfile,
 } from "@/shared/keyword-fit/profileTypes";
 import { parseExclusions } from "@/shared/keyword-fit/keywordFit";
-import { useProjectProfile, useSaveProjectProfile } from "./useProjectProfile";
+import {
+  useDraftProjectProfile,
+  useProjectProfile,
+  useSaveProjectProfile,
+} from "./useProjectProfile";
 
 /**
  * The editor for what a project's business actually is.
@@ -29,6 +35,12 @@ We don't repair customer-owned machines`;
 export function ProjectProfileCard({ projectId }: Props) {
   const { profile, isLoading } = useProjectProfile(projectId);
   const save = useSaveProjectProfile(projectId);
+  // Same runtime flag (and same OPENROUTER_API_KEY) that gates the insights
+  // "Explain this" button. Without a key the draft affordance is absent
+  // rather than present-and-broken; every other field here still works, which
+  // is the whole reason the manual form is the foundation.
+  const aiAvailable = useAiExplainAvailable();
+  const drafter = useDraftProjectProfile(projectId);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ProjectProfile>(profile);
 
@@ -83,6 +95,37 @@ export function ProjectProfileCard({ projectId }: Props) {
             <X className="size-3.5" />
           </button>
         </div>
+
+        {aiAvailable ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="btn btn-sm gap-1.5"
+              disabled={drafter.isPending}
+              onClick={() => {
+                drafter.mutate(undefined, {
+                  // Replaces the form, not the saved row -- the user still
+                  // reviews and presses Save, which is what confirms it.
+                  onSuccess: (drafted) =>
+                    setDraft((current) => ({ ...current, ...drafted })),
+                });
+              }}
+            >
+              <Wand2 className="size-3.5 text-base-content/60" />
+              {drafter.isPending
+                ? "Reading the site…"
+                : "Draft this from their site"}
+            </button>
+            <span className="text-sm text-base-content/60">
+              {drafter.isError
+                ? getStandardErrorMessage(
+                    drafter.error,
+                    "Couldn't draft from the site.",
+                  )
+                : "Reads a few pages of their site. You review it before it saves."}
+            </span>
+          </div>
+        ) : null}
 
         <ProfileField
           label="What do they sell?"

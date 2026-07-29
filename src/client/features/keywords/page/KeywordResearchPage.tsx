@@ -310,6 +310,7 @@ export function KeywordResearchPage(input: Props) {
           suggestions={suggestions}
           scope={targetAreaScope}
           projectCountryCode={market.locationCode}
+          projectId={projectId}
         />
 
         <RestoreRail

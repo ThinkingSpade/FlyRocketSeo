@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireProjectContext } from "@/serverFunctions/middleware";
+import { AppError } from "@/server/lib/errors";
+import { ProfileDraftService } from "@/server/features/profiles/services/ProfileDraftService";
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import {
   EMPTY_PROFILE,
@@ -88,4 +90,62 @@ export const saveProjectProfile = createServerFn({ method: "POST" })
     });
     await ProjectProfileRepository.clearVerdicts(context.projectId);
     return { saved: true } as const;
+  });
+
+/**
+ * Drafts a profile from the client's own website.
+ *
+ * Returns the draft for the editor to show; it deliberately does NOT write to
+ * `project_profiles`. A human corrects it and presses Save, which is what
+ * `confirmedAt` records — an AI guess must be fixable once rather than re-made
+ * on every run.
+ *
+ * Search Console queries are not fed in yet. `getSearchPerformanceReport`'s
+ * response shape is being reworked in parallel, and reading it from here would
+ * couple this endpoint to that change for a marginal prompt improvement; the
+ * site's own text is the load-bearing input.
+ */
+export const draftProjectProfile = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(projectScopedSchema)
+  .handler(async ({ context }) => {
+    const domain = context.project.domain;
+    if (!domain) {
+      throw new AppError(
+        "INTERNAL_ERROR",
+        "This project has no domain set, so there's no site to read. Add one in project settings, or fill the fields in yourself.",
+      );
+    }
+    return ProfileDraftService.draftFromSite({ domain, topQueries: [] });
+  });
+
+const generateSeedsSchema = z.object({
+  projectId: z.string().min(1),
+  offer: z.string().max(2000),
+  customer: z.string().max(2000),
+  exclusions: z.string().max(2000),
+  serviceAreaKind: z.enum(SERVICE_AREA_KINDS),
+  /** The tab's active target area label, or null when national/global. */
+  areaLabel: z.string().max(200).nullable(),
+});
+
+/**
+ * Seed keyword candidates the client's own customer would type.
+ *
+ * These carry no volume, difficulty or CPC — they are strings to feed into the
+ * (metered) expansion on an explicit click, which is what keeps this endpoint
+ * free and keeps spending a decision the user makes.
+ */
+export const generateSeedKeywords = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(generateSeedsSchema)
+  .handler(async ({ data }) => {
+    const seeds = await ProfileDraftService.generateSeeds({
+      offer: data.offer,
+      customer: data.customer,
+      exclusions: data.exclusions,
+      serviceAreaKind: data.serviceAreaKind,
+      areaLabel: data.areaLabel,
+    });
+    return { seeds };
   });

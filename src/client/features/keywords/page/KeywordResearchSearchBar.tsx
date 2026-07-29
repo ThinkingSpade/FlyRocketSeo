@@ -10,6 +10,7 @@ import {
 } from "@/client/features/keywords/keywordResearchTypes";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { SeedSuggestionButton } from "@/client/features/profiles/SeedSuggestionButton";
 import type { SeedSuggestion } from "@/client/features/insights/types";
 import { resolveRunGeo } from "@/client/features/geo/resolveRunGeo";
 import { resolveEffectiveScopeArea } from "@/client/features/geo/resolveScopeArea";
@@ -36,6 +37,7 @@ type Props = {
   /** The project's own configured country -- what "Clear" reverts the
    *  country half to, since clearing drops the confirmed area entirely. */
   projectCountryCode: number;
+  projectId: string;
 };
 
 function getTextareaRows(value: string): number {
@@ -49,6 +51,7 @@ export function KeywordResearchSearchBar({
   suggestions,
   scope,
   projectCountryCode,
+  projectId,
 }: Props) {
   const { controlsForm, handleSearchSubmit, isLoading } = controller;
 
@@ -99,6 +102,16 @@ export function KeywordResearchSearchBar({
                     value={field.state.value}
                     onSelect={(next) => field.handleChange(next)}
                     disabled={isLoading}
+                  />
+                  <SeedSuggestionButton
+                    projectId={projectId}
+                    area={scope.area}
+                    disabled={isLoading}
+                    // One per line -- the same shape this textarea already
+                    // accepts for a multi-keyword submit.
+                    onSuggest={(keywords) =>
+                      field.handleChange(keywords.join("\n"))
+                    }
                   />
                 </div>
               );
