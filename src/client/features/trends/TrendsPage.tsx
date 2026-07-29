@@ -32,6 +32,7 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TrendingOpportunitiesCard } from "@/client/features/trends/TrendingOpportunitiesCard";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import {
@@ -380,6 +381,8 @@ export function TrendsPage({
       </div>
 
       <TargetAreaBanner projectId={projectId} />
+
+      <TrendingOpportunitiesCard projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
