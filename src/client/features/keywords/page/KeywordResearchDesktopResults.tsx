@@ -10,6 +10,7 @@ import {
   Sheet,
   SlidersHorizontal,
   Sparkles,
+  UserX,
 } from "lucide-react";
 import {
   downloadKeywordResearchCsv,
@@ -198,6 +199,26 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
         <span className="text-sm text-base-content/60">
           {keywordCountLabel}
         </span>
+        {controller.wrongFitCount > 0 ? (
+          <button
+            type="button"
+            className={`btn btn-ghost btn-sm gap-1.5 ${
+              controller.hideWrongFit ? "btn-active" : ""
+            }`}
+            onClick={() => controller.setHideWrongFit((current) => !current)}
+            title={
+              controller.hideWrongFit
+                ? "Show keywords aimed at a different customer again"
+                : "Hide keywords your business profile says aren't for your customer"
+            }
+          >
+            <UserX className="size-3.5 text-base-content/60" />
+            {controller.hideWrongFit ? "Wrong-fit hidden" : "Hide wrong-fit"}
+            <span className="text-base-content/50 tabular-nums">
+              {controller.wrongFitCount}
+            </span>
+          </button>
+        ) : null}
         {filteredRows.length > 0 ? (
           <span
             className="hidden xl:inline text-sm text-base-content/50 tabular-nums"
@@ -301,6 +322,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
         researchGeo={researchGeo}
+        fit={controller.fit}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
         sortDir={controller.sortDir}

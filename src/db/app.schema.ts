@@ -825,3 +825,111 @@ export const gbpScheduledPosts = sqliteTable(
     ),
   ],
 );
+
+// What the business behind a project actually sells, who buys it, and --
+// load-bearing -- what it does NOT do.
+//
+// Keyword expansion is string similarity: a seed of "dfw vending" returns
+// "vending machines for sale dfw" because the tokens overlap, with no way to
+// know that a vending OPERATOR (who places and services machines in offices)
+// and a machine RESELLER are different businesses chasing different buyers.
+// Nothing else in the schema carries that distinction -- a project is a name,
+// a domain and a market -- so every ranking, filter and suggestion downstream
+// had to treat token overlap as relevance. This table is where the difference
+// is written down once so they don't have to.
+//
+// Geography deliberately lives in `project_target_areas`, NOT here.
+// `serviceAreaKind` records the SHAPE of the service area (does this client
+// sell down the street or worldwide?), which is what decides whether generated
+// seeds should carry geo modifiers at all; the coordinates themselves stay in
+// the one table that already owns them, with its own propose/confirm
+// lifecycle. Two stores for one fact would drift.
+//
+// `confirmedAt` mirrors that same lifecycle: an AI-drafted profile is a
+// PROPOSAL until a human accepts it. Treat a null `confirmedAt` as "not yet
+// true of this client" everywhere except the profile editor itself.
+export const projectProfiles = sqliteTable(
+  "project_profiles",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** What they sell, in their own words. */
+    offer: text("offer").notNull().default(""),
+    /** Who buys it -- the customer the good keywords belong to. */
+    customer: text("customer").notNull().default(""),
+    /**
+     * What this business explicitly does NOT do, in plain language ("we
+     * don't sell machines"). The single highest-value field here: it is the
+     * only input that can demote a keyword the expansion API was RIGHT to
+     * return and the client is still wrong to chase.
+     */
+    exclusions: text("exclusions").notNull().default(""),
+    /** Brand names to treat as branded search. One per line. */
+    brandTerms: text("brand_terms").notNull().default(""),
+    // Drives whether generated seeds carry geo modifiers: a local operator
+    // wants "office coffee service dallas", a global SaaS wants the same
+    // phrase with the city stripped out as noise.
+    serviceAreaKind: text("service_area_kind", {
+      enum: ["local", "regional", "national", "global"],
+    })
+      .notNull()
+      .default("national"),
+    // Which path wrote this row. "ai" rows arrive unconfirmed by definition.
+    source: text("source", { enum: ["ai", "manual"] })
+      .notNull()
+      .default("manual"),
+    draftedAt: text("drafted_at"),
+    // NULL = an unconfirmed AI draft. See this table's own header comment.
+    confirmedAt: text("confirmed_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // One profile per project, and every read starts from a projectId -- the
+    // unique index serves both.
+    uniqueIndex("project_profiles_project_idx").on(table.projectId),
+  ],
+);
+
+// One keyword's fit against the profile above, cached so re-opening a run
+// never re-derives (and, once Phase 2 lands, never re-pays for) a verdict.
+//
+// `source` distinguishes the two producers: "rules" is the free
+// exclusion-term matcher, which needs no API key and is what a deployment
+// without OPENROUTER_API_KEY gets; "ai" is the batched semantic pass that
+// supersedes it. A rules verdict is never upgraded in place -- the AI pass
+// overwrites the row, so the newest write wins and `source` says which
+// produced it.
+export const keywordFitVerdicts = sqliteTable(
+  "keyword_fit_verdicts",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    keyword: text("keyword").notNull(),
+    verdict: text("verdict", {
+      enum: ["on-offer", "adjacent", "wrong-customer"],
+    }).notNull(),
+    /** Why, in words a user can read and disagree with. */
+    reason: text("reason").notNull().default(""),
+    source: text("source", { enum: ["rules", "ai"] }).notNull(),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // The only read shape: "every verdict this project already has", then
+    // matched against the current result set in memory.
+    uniqueIndex("keyword_fit_verdicts_project_keyword_idx").on(
+      table.projectId,
+      table.keyword,
+    ),
+  ],
+);

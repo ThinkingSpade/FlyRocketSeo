@@ -273,6 +273,7 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
         filteredRows={mergedRows}
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
+        fit={controller.fit}
         researchGeo={researchGeo}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
@@ -359,42 +360,42 @@ function MobileFilters({
       </div>
 
       <div className="grid grid-cols-2 gap-2">
-        <MobileRangeInput
-          form={filtersForm}
-          name="minVol"
-          placeholder="Min volume"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="maxVol"
-          placeholder="Max volume"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="minCpc"
-          placeholder="Min CPC"
-          step="0.01"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="maxCpc"
-          placeholder="Max CPC"
-          step="0.01"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="minKd"
-          placeholder="Min difficulty"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="maxKd"
-          placeholder="Max difficulty"
-        />
+        {MOBILE_RANGE_FILTERS.map((filter) => (
+          <MobileRangeInput
+            key={filter.name}
+            form={filtersForm}
+            name={filter.name}
+            placeholder={filter.placeholder}
+            step={filter.step}
+          />
+        ))}
       </div>
     </div>
   );
 }
+
+type MobileRangeFilterName =
+  | "minVol"
+  | "maxVol"
+  | "minCpc"
+  | "maxCpc"
+  | "minKd"
+  | "maxKd";
+
+// The six numeric range filters, as data rather than six near-identical JSX
+// blocks -- they differ only in name, placeholder and step.
+const MOBILE_RANGE_FILTERS: ReadonlyArray<{
+  name: MobileRangeFilterName;
+  placeholder: string;
+  step?: string;
+}> = [
+  { name: "minVol", placeholder: "Min volume" },
+  { name: "maxVol", placeholder: "Max volume" },
+  { name: "minCpc", placeholder: "Min CPC", step: "0.01" },
+  { name: "maxCpc", placeholder: "Max CPC", step: "0.01" },
+  { name: "minKd", placeholder: "Min difficulty" },
+  { name: "maxKd", placeholder: "Max difficulty" },
+];
 
 function MobileRangeInput({
   form,
@@ -403,7 +404,7 @@ function MobileRangeInput({
   step,
 }: {
   form: KeywordResearchControllerState["filtersForm"];
-  name: "minVol" | "maxVol" | "minCpc" | "maxCpc" | "minKd" | "maxKd";
+  name: MobileRangeFilterName;
   placeholder: string;
   step?: string;
 }) {

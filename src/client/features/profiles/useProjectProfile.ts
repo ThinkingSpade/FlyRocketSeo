@@ -1,0 +1,105 @@
+import { useMemo } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getProjectProfile,
+  saveProjectProfile,
+} from "@/serverFunctions/projectProfile";
+import {
+  classifyKeyword,
+  hasUsableProfile,
+  type FitResult,
+} from "@/shared/keyword-fit/keywordFit";
+import {
+  EMPTY_PROFILE,
+  type ProjectProfile,
+} from "@/shared/keyword-fit/profileTypes";
+
+/**
+ * The project's business profile, plus the classification it powers.
+ *
+ * Both are free: the profile is one D1 read, and classification is pure
+ * client-side string work (keywordFit.ts) over rows the tab already has. No
+ * path from here reaches a metered provider, which is what lets the results
+ * table label every row the moment it renders instead of behind a button.
+ */
+
+const PROFILE_STALE_MS = 5 * 60_000;
+
+export function projectProfileQueryKey(projectId: string) {
+  return ["projectProfile", projectId] as const;
+}
+
+export function useProjectProfile(projectId: string) {
+  const query = useQuery({
+    queryKey: projectProfileQueryKey(projectId),
+    queryFn: () => getProjectProfile({ data: { projectId } }),
+    staleTime: PROFILE_STALE_MS,
+  });
+
+  return {
+    // A failed or in-flight read degrades to the empty profile rather than an
+    // error: a missing profile should cost you labels, not the tab.
+    profile: query.data ?? EMPTY_PROFILE,
+    isLoading: query.isLoading,
+  };
+}
+
+export function useSaveProjectProfile(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (profile: Omit<ProjectProfile, "source" | "confirmedAt">) =>
+      saveProjectProfile({
+        data: {
+          projectId,
+          offer: profile.offer,
+          customer: profile.customer,
+          exclusions: profile.exclusions,
+          brandTerms: profile.brandTerms,
+          serviceAreaKind: profile.serviceAreaKind,
+        },
+      }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: projectProfileQueryKey(projectId),
+      });
+    },
+  });
+}
+
+/**
+ * Verdicts for the keywords currently on screen, keyed by keyword.
+ *
+ * Returns an EMPTY map when the profile cannot produce a verdict
+ * (`hasUsableProfile`). That is the difference between "we checked and this
+ * is fine" and "we have nothing to check against" — labelling every row
+ * "adjacent" because the user has not filled anything in would be noise
+ * dressed up as analysis, and would make the filter count lie.
+ */
+export function useKeywordFit(
+  profile: ProjectProfile,
+  keywords: readonly string[],
+): ReadonlyMap<string, FitResult> {
+  // Both inputs are serialized to strings BEFORE the memo, and the memo then
+  // reads only those strings -- so its dependency list is honest (no
+  // exhaustive-deps suppression) while still not recomputing on every render,
+  // which depending on the `profile` object or the `keywords` array directly
+  // would cause, since both are new identities each time.
+  //
+  // Newline-joined, never space-joined: keywords contain spaces, so a space
+  // separator could not tell ["a b", "c"] from ["a", "b c"]. Keywords cannot
+  // contain newlines, which is what makes the split below lossless.
+  const offer = profile.offer;
+  const exclusions = profile.exclusions;
+  const keywordKey = keywords.join("\n");
+
+  return useMemo(() => {
+    const fitProfile = { offer, exclusions };
+    if (!hasUsableProfile(fitProfile)) return new Map<string, FitResult>();
+
+    const map = new Map<string, FitResult>();
+    for (const keyword of keywordKey ? keywordKey.split("\n") : []) {
+      map.set(keyword, classifyKeyword(keyword, fitProfile));
+    }
+    return map;
+  }, [offer, exclusions, keywordKey]);
+}

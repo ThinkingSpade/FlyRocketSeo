@@ -12,6 +12,10 @@ import {
   type KeywordControlsValues,
 } from "@/client/features/keywords/hooks/useKeywordControlsForm";
 import { useKeywordFiltering } from "@/client/features/keywords/hooks/useKeywordFiltering";
+import {
+  useKeywordFit,
+  useProjectProfile,
+} from "@/client/features/profiles/useProjectProfile";
 import { useLocalKeywordFilters } from "@/client/features/keywords/hooks/useLocalKeywordFilters";
 import { useKeywordResearchData } from "@/client/features/keywords/hooks/useKeywordResearchData";
 import { useKeywordSelection } from "@/client/features/keywords/hooks/useKeywordSelection";
@@ -301,13 +305,25 @@ export function useKeywordResearchController(
     clearActiveKeywordResult();
   }, [activeSearchKey, clearActiveKeywordResult]);
 
-  const { filteredRows, activeFilterCount } = useKeywordFiltering({
-    rows,
-    filters: filterValues,
-    groupTerm,
-    sortField: input.sortField,
-    sortDir: input.sortDir,
-  });
+  // Fit is derived from this project's business profile -- one free D1 read
+  // plus pure string work over rows already on screen (see useProjectProfile
+  // and keywordFit.ts). No metered provider is reachable from here, which is
+  // what lets every row carry a verdict on render rather than behind a button.
+  const { profile } = useProjectProfile(input.projectId);
+  const keywordsForFit = useMemo(() => rows.map((row) => row.keyword), [rows]);
+  const fit = useKeywordFit(profile, keywordsForFit);
+  const [hideWrongFit, setHideWrongFit] = useState(false);
+
+  const { filteredRows, activeFilterCount, wrongFitCount } =
+    useKeywordFiltering({
+      rows,
+      filters: filterValues,
+      groupTerm,
+      sortField: input.sortField,
+      sortDir: input.sortDir,
+      fit,
+      hideWrongFit,
+    });
 
   // Term groups are cut from the full result set (not the filtered rows), so
   // the rail stays stable while the user slices with it.
@@ -385,6 +401,10 @@ export function useKeywordResearchController(
     activeSerpKeyword,
     confirmSave,
     controlsForm,
+    fit,
+    hideWrongFit,
+    setHideWrongFit,
+    wrongFitCount,
     // The geo CAPTURED for the run whose rows/verdict are on screen right
     // now -- null before the first search AND before any restore. Consumers
     // must read this, not `useTargetAreaScope` live, when labeling

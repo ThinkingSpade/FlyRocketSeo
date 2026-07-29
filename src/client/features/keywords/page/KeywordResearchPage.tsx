@@ -27,6 +27,7 @@ import {
 } from "@/client/hooks/useProjectDomain";
 import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -301,6 +302,8 @@ export function KeywordResearchPage(input: Props) {
         </div>
 
         <TargetAreaBanner projectId={projectId} />
+
+        <ProjectProfileCard projectId={projectId} />
 
         <KeywordResearchSearchBar
           controller={controller}

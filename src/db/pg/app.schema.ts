@@ -764,3 +764,57 @@ export const gbpScheduledPosts = pgTable(
     ),
   ],
 );
+
+// Postgres sibling of `projectProfiles` in ../app.schema.ts -- see that
+// table's own header for why this exists and why geography deliberately stays
+// in `project_target_areas` rather than being duplicated here.
+export const projectProfiles = pgTable(
+  "project_profiles",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    offer: text("offer").notNull().default(""),
+    customer: text("customer").notNull().default(""),
+    exclusions: text("exclusions").notNull().default(""),
+    brandTerms: text("brand_terms").notNull().default(""),
+    serviceAreaKind: text("service_area_kind", {
+      enum: ["local", "regional", "national", "global"],
+    })
+      .notNull()
+      .default("national"),
+    source: text("source", { enum: ["ai", "manual"] })
+      .notNull()
+      .default("manual"),
+    draftedAt: timestampColumn("drafted_at"),
+    confirmedAt: timestampColumn("confirmed_at"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+    updatedAt: timestampColumn("updated_at").notNull().default(isoNow),
+  },
+  (table) => [uniqueIndex("project_profiles_project_idx").on(table.projectId)],
+);
+
+// Postgres sibling of `keywordFitVerdicts` in ../app.schema.ts.
+export const keywordFitVerdicts = pgTable(
+  "keyword_fit_verdicts",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    keyword: text("keyword").notNull(),
+    verdict: text("verdict", {
+      enum: ["on-offer", "adjacent", "wrong-customer"],
+    }).notNull(),
+    reason: text("reason").notNull().default(""),
+    source: text("source", { enum: ["rules", "ai"] }).notNull(),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("keyword_fit_verdicts_project_keyword_idx").on(
+      table.projectId,
+      table.keyword,
+    ),
+  ],
+);
