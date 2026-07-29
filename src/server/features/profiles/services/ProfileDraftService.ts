@@ -42,6 +42,22 @@ const seedsSchema = z.object({
 
 export type ProfileDraft = z.infer<typeof draftSchema>;
 
+/**
+ * Output ceilings for the two calls below.
+ *
+ * Load-bearing, not a tidiness detail. With `maxOutputTokens` unset the
+ * provider reserves the model's FULL context (65,536 tokens for MiniMax M3)
+ * and OpenRouter charges the reservation against the account balance up
+ * front -- so a request whose real answer is a ~300-token JSON object was
+ * rejected outright with a 402 on any balance under about $2. Both answers
+ * here are small and bounded by their own schemas; the headroom above what
+ * the JSON needs is for the reasoning channel (openrouter.ts turns it on so
+ * MiniMax's `<think>` trace doesn't leak into the text we parse), which
+ * counts toward the same budget.
+ */
+const DRAFT_MAX_OUTPUT_TOKENS = 4000;
+const SEED_MAX_OUTPUT_TOKENS = 2000;
+
 async function isDraftingAvailable(): Promise<boolean> {
   return Boolean(await getOptionalEnvValue("OPENROUTER_API_KEY"));
 }
@@ -56,6 +72,29 @@ function requireKey(available: boolean): void {
     "PAYMENT_REQUIRED",
     "Drafting a profile needs an OPENROUTER_API_KEY. Add it to your deployment, or fill the fields in yourself — everything else works without it.",
   );
+}
+
+/**
+ * Turns the one model failure a user can actually act on into words.
+ *
+ * An out-of-credit OpenRouter account returns a 402, which the generic
+ * handler renders as "An unexpected error occurred. Please check server
+ * logs." -- true, useless, and pointing at the wrong person. The remedy is a
+ * link and a top-up, so say that. Everything else is genuinely unexpected and
+ * is left alone to reach the logs unchanged.
+ */
+function rethrowModelError(error: unknown): never {
+  const status =
+    typeof error === "object" && error !== null && "statusCode" in error
+      ? (error as { statusCode?: unknown }).statusCode
+      : undefined;
+  if (status === 402) {
+    throw new AppError(
+      "PAYMENT_REQUIRED",
+      "Your OpenRouter account is out of credits. Add some at https://openrouter.ai/settings/credits, or fill the fields in yourself — nothing else here needs a model.",
+    );
+  }
+  throw error;
 }
 
 /**
@@ -98,13 +137,14 @@ async function draftFromSite(input: {
   const model = await getChatAgentModel();
   const { text } = await generateText({
     model,
+    maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
     system: PROFILE_DRAFT_SYSTEM_PROMPT,
     prompt: buildProfileDraftPrompt({
       domain: input.domain,
       pages,
       topQueries: input.topQueries,
     }),
-  });
+  }).catch(rethrowModelError);
 
   const parsed = draftSchema.safeParse(parseJsonResponse(text));
   if (!parsed.success) {
@@ -140,9 +180,10 @@ async function generateSeeds(input: {
   const model = await getChatAgentModel();
   const { text } = await generateText({
     model,
+    maxOutputTokens: SEED_MAX_OUTPUT_TOKENS,
     system: SEED_SYSTEM_PROMPT,
     prompt: buildSeedPrompt(input),
-  });
+  }).catch(rethrowModelError);
 
   const parsed = seedsSchema.safeParse(parseJsonResponse(text));
   if (!parsed.success) {

@@ -32,6 +32,18 @@ type Props = {
   ownDomainRating: number | null;
 };
 
+/**
+ * Only page one is assessed, however many results came back.
+ *
+ * The SERP endpoint returns up to 100 organic results, and feeding all of
+ * them to either module below produces confident nonsense: "69 of the 84
+ * pages we could rate are within reach" counts positions nobody competes for,
+ * and a shape summary over 100 URLs collapses to "assorted pages" because the
+ * long tail is unclassifiable. Both answers are only meaningful about the
+ * positions actually available, which is page one.
+ */
+const ASSESSED_RESULTS = 10;
+
 export function KeywordActionPlanCard({
   projectId,
   keyword,
@@ -41,7 +53,13 @@ export function KeywordActionPlanCard({
   const { profile } = useProjectProfile(projectId);
   const { ratings, loadRatings } = useAhrefsDomainRatings(projectId);
 
-  const competitorDomains = serpResults.map((item) => item.domain);
+  // Sorted by rank before slicing: the API returns results in rank order
+  // today, but "page one" must not silently become "the first ten the
+  // provider happened to list" if that ever changes.
+  const pageOne = serpResults
+    .toSorted((a, b) => a.rank - b.rank)
+    .slice(0, ASSESSED_RESULTS);
+  const competitorDomains = pageOne.map((item) => item.domain);
   const domainKey = competitorDomains.join(",");
 
   // Free and keyless, the same class of call the page already makes on mount
@@ -59,8 +77,11 @@ export function KeywordActionPlanCard({
       (domain) => ratings?.[domain] ?? null,
     ),
   });
-  const shape = summarizeSerpShape(serpResults.map((item) => item.url));
+  const shape = summarizeSerpShape(pageOne.map((item) => item.url));
   const isLocal = wantsGeoModifiers(profile.serviceAreaKind);
+  // "Mostly assorted pages" is not advice -- it is the classifier admitting it
+  // found no pattern. Saying nothing is more useful than saying that.
+  const hasUsableShape = shape !== null && shape.dominant !== "other";
 
   return (
     <div className="flex flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
@@ -79,7 +100,7 @@ export function KeywordActionPlanCard({
           <p className="text-sm text-base-content/70">{assessment.reason}</p>
         </div>
 
-        {shape ? (
+        {hasUsableShape && shape ? (
           <PlanStep icon={<PenLine className="size-3.5" />}>
             <span className="font-medium">Write the shape that wins.</span>{" "}
             {shape.count} of the {shape.total} results are{" "}
