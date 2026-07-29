@@ -60,11 +60,11 @@ import {
 } from "@/client/features/geo/geoUnavailableMessage";
 import { useKeywordDifficultyOverview } from "@/client/features/keywords/hooks/useKeywordDifficultyOverview";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
+import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
 import {
   buildSerpGeoPayload,
   captureSerpRunGeo,
   describeGeoRunErrorForSerp,
-  formatSerpGeoLabel,
   parseRestoredSerpRunGeo,
   type SerpRunGeo,
 } from "@/client/features/serp/serpRunGeo";
@@ -353,19 +353,19 @@ function SerpKeywordStatsTiles({
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <InsightTile
           icon={BarChart3}
-          label={formatSerpGeoLabel("Volume", geo.volume)}
+          label={formatGeoMetricLabel("Volume", geo.volume)}
           value={formatCount(result.keywordStats?.searchVolume)}
           tone="primary"
         />
         <InsightTile
           icon={Gauge}
-          label={formatSerpGeoLabel("Difficulty", geo.difficulty)}
+          label={formatGeoMetricLabel("Difficulty", geo.difficulty)}
           value={difficultyValue ?? "—"}
           tone={difficultyTone(difficultyValue)}
         />
         <InsightTile
           icon={CircleDollarSign}
-          label={formatSerpGeoLabel("CPC", geo.volume)}
+          label={formatGeoMetricLabel("CPC", geo.volume)}
           value={
             result.keywordStats?.cpc != null
               ? `$${result.keywordStats.cpc.toFixed(2)}`
@@ -375,7 +375,7 @@ function SerpKeywordStatsTiles({
         />
         <InsightTile
           icon={ListOrdered}
-          label={formatSerpGeoLabel("Organic results", geo.serp)}
+          label={formatGeoMetricLabel("Organic results", geo.serp)}
           value={result.totalOrganic}
           // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
           // when that's fewer than the total, the table below isn't the whole
@@ -839,7 +839,7 @@ function SerpResultsTable({
                   className="text-right"
                   title="Estimated monthly clicks for this result: search volume × a standard CTR-by-position curve"
                 >
-                  {formatSerpGeoLabel("Est. clicks", geo.volume)}
+                  {formatGeoMetricLabel("Est. clicks", geo.volume)}
                 </th>
               ) : null}
               <th className="text-right">DR</th>
@@ -847,7 +847,7 @@ function SerpResultsTable({
                 className="text-right"
                 title="Estimated monthly organic traffic for the whole domain"
               >
-                {formatSerpGeoLabel("Domain traffic", geo.domainAnalytics)}
+                {formatGeoMetricLabel("Domain traffic", geo.domainAnalytics)}
               </th>
             </tr>
           </thead>

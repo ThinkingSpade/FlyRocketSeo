@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
 import type { TargetArea } from "@/shared/geo/types";
+import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
 import {
   buildSerpGeoPayload,
   captureSerpRunGeo,
   describeGeoRunErrorForSerp,
-  formatSerpGeoLabel,
   parseRestoredSerpRunGeo,
 } from "./serpRunGeo";
 
@@ -54,17 +54,22 @@ describe("captureSerpRunGeo", () => {
   });
 });
 
-describe("formatSerpGeoLabel", () => {
-  it("qualifies a local-scope label as unconfirmed", () => {
+describe("SERP Overview local-metric labels", () => {
+  // A metro code rests on the exact same trust basis as a country code (see
+  // resolveGeo.ts's own header) -- so this tab must label a local-scope
+  // metric the same plain way every other geo-activated tab does (Keyword
+  // Research's "Volume · DFW", Content Optimizer's "Ranking pages · DFW",
+  // etc.), never a hedged "(unconfirmed)" this tab alone used to append.
+  it("labels a local-scope metric with its plain metro name, no hedge", () => {
     const geo = captureSerpRunGeo(DFW, US);
-    expect(formatSerpGeoLabel("Est. clicks", geo.serp)).toBe(
-      "Est. clicks · Dallas-Fort Worth TX (unconfirmed)",
+    expect(formatGeoMetricLabel("Est. clicks", geo.serp)).toBe(
+      "Est. clicks · Dallas-Fort Worth TX",
     );
   });
 
-  it("leaves a national-scope label unchanged, matching formatGeoMetricLabel", () => {
+  it("leaves a national-scope label unchanged", () => {
     const geo = captureSerpRunGeo(DFW, US);
-    expect(formatSerpGeoLabel("Domain traffic", geo.domainAnalytics)).toBe(
+    expect(formatGeoMetricLabel("Domain traffic", geo.domainAnalytics)).toBe(
       "Domain traffic · US",
     );
   });

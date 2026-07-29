@@ -12,7 +12,6 @@ import {
   resolveStoredGeo,
   toStoredMetricGeo,
 } from "@/client/features/geo/resolveRunGeo";
-import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
 import { describeGeoRunError } from "@/client/features/geo/geoUnavailableMessage";
 import { serpGeoBundleSchema } from "@/types/schemas/serp";
 import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
@@ -131,37 +130,4 @@ export function describeGeoRunErrorForSerp(
 ): string {
   if (!geo) return fallbackMessage;
   return describeGeoRunError("this SERP", geo.serp, fallbackMessage);
-}
-
-/**
- * This tab's own geo-metric label, wrapping the shared `formatGeoMetricLabel`
- * with one addition: a "local" scope is qualified as "(unconfirmed)" rather
- * than asserted outright (Codex finding 7).
- *
- * Why: resolveGeo assigns `scope`/`provider` from the SELECTED area alone,
- * before any provider response has established what was actually accepted.
- * scripts/verify-geo-support.ts's own header spells out the assumption this
- * rests on -- that the SERP/Google Ads endpoints honor a metro/DMA
- * `location_code` -- and that spike has never actually been run against the
- * live API. Worse, even a SUCCESSFUL response can't retroactively prove it:
- * the SDK's own response types (e.g.
- * SerpGoogleOrganicLiveAdvancedResultInfo's `location_code`) document that
- * field as "location code in a POST array" -- an echo of what we sent, not
- * independent confirmation of what was actually used to produce results.
- * Only an outright REJECTION is independently observable (the call throws --
- * see describeGeoRunError above); a silent country-wide fallback that still
- * returns 200 is indistinguishable from a genuine local result in this data.
- *
- * A confident "DFW" label on that unverifiable a number is this project's
- * own worst failure mode (a national number wearing a local label), so this
- * tab hedges every "local" label rather than asserting it. National-scope
- * labels (difficulty, domain analytics, or a local one that fell back)
- * pass through unchanged -- they carry no local claim to overstate.
- */
-export function formatSerpGeoLabel(
-  metricLabel: string,
-  geo: Pick<ResolvedGeo, "scope" | "label" | "locationCode">,
-): string {
-  const base = formatGeoMetricLabel(metricLabel, geo);
-  return geo.scope === "local" ? `${base} (unconfirmed)` : base;
 }
