@@ -10,12 +10,7 @@
  * reported as "mostly X" with a count, never as a fact about every result.
  */
 
-type SerpPageType =
-  | "homepage"
-  | "service"
-  | "article"
-  | "listing"
-  | "other";
+type SerpPageType = "homepage" | "service" | "article" | "listing" | "other";
 
 const SERVICE_SEGMENTS = [
   "service",

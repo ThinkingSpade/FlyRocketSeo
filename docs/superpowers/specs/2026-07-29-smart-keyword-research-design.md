@@ -24,6 +24,13 @@ What the live run proved, and what it broke:
   "69 of the 84 ranking pages we could rate" and "57 of the 100 results are
   assorted pages".
 
+The semantic fit pass landed after that first verification round (`132c839`),
+and the live numbers are the argument for it: the rules flagged 24 of 50
+keywords, the AI pass 39. The 15 it added are exactly the ones a written
+exclusion cannot reach — competitors' brands (`spg vending`, `vending
+nation`), people wanting to start a vending business, job seekers, repair
+searches, and out-of-area intent.
+
 **One finding worth acting on:** scoping a run to the DFW metro returns far
 fewer keyword ideas than the same seed at country scope (2 vs 50 for
 `dfw vending`), because a sub-country area routes the whole run to Google Ads
