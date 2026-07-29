@@ -15,6 +15,12 @@ export type SeedSuggestion = {
   hint: string;
   /** Higher sorts first. Units differ per intent; only order matters. */
   weight: number;
+  /**
+   * Sorts below every non-demoted suggestion regardless of weight. Used for
+   * the site's own brand, which always wins on impressions and is almost never
+   * what you want to analyse — still offered, just never first.
+   */
+  demoted?: boolean;
 };
 
 export type SuggestionIntent =
@@ -83,6 +89,12 @@ export type FreeSignals = {
   strikingDistance: GscStrikingDistance[];
   ctrOpportunities: GscCtrOpportunity[];
   savedKeywords: SavedKeyword[];
+  /**
+   * The project's own brand terms, so a ranking driven by impressions can put
+   * the brand last instead of first. Empty when the project has no domain —
+   * the ranking then behaves exactly as it did before.
+   */
+  brandTerms: string[];
 };
 
 export type VerdictTone = "good" | "mixed" | "bad" | "unknown";

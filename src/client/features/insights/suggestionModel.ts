@@ -1,3 +1,4 @@
+import { isBrandSeed } from "@/client/features/search-performance/brandedSplit";
 import type { FreeSignals, SeedSuggestion, SuggestionIntent } from "./types";
 
 /**
@@ -31,6 +32,9 @@ export function compactNumber(value: number): string {
 }
 
 function byWeightDesc(a: SeedSuggestion, b: SeedSuggestion): number {
+  // Demotion beats weight: a branded query outweighs everything on impressions
+  // and would otherwise always take the top slot.
+  if (Boolean(a.demoted) !== Boolean(b.demoted)) return a.demoted ? 1 : -1;
   return b.weight - a.weight;
 }
 
@@ -71,12 +75,20 @@ function highVolume(signals: FreeSignals): SeedSuggestion[] {
     }));
   if (saved.length > 0) return saved;
 
+  // Impressions alone always float the brand to the top, so branded queries
+  // are demoted rather than dropped — seeding your own name is a valid choice,
+  // just never the default one.
   return signals.queryTotals
     .filter((row) => row.impressions >= MIN_IMPRESSIONS)
     .map((row) => ({
       value: row.query,
       hint: `${compactNumber(row.impressions)} impr · pos ${Math.round(row.position)}`,
       weight: row.impressions,
+      // Set only when true, so a project with no brand terms produces exactly
+      // the suggestion objects it did before.
+      ...(isBrandSeed(row.query, row.position, signals.brandTerms)
+        ? { demoted: true }
+        : {}),
     }));
 }
 

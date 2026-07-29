@@ -4,6 +4,8 @@ import {
   defaultBrandTerms,
   isBrandedQuery,
   parseBrandTerms,
+  looksLikeClippedBrand,
+  isBrandSeed,
 } from "./brandedSplit";
 
 describe("defaultBrandTerms", () => {
@@ -67,5 +69,58 @@ describe("computeBrandedSplit", () => {
       ["a"],
     );
     expect(split.brandedClickShare).toBeNull();
+  });
+});
+
+describe("looksLikeClippedBrand", () => {
+  it("matches the brand with a short tail removed", () => {
+    expect(looksLikeClippedBrand("delio", ["deliotx"])).toBe(true);
+  });
+
+  it("matches inside a longer query", () => {
+    expect(looksLikeClippedBrand("delio coffee", ["deliotx"])).toBe(true);
+  });
+
+  it("rejects a word too short to be a brand", () => {
+    // "shop" is a prefix of "shopify" but nobody searching it means Shopify.
+    expect(looksLikeClippedBrand("shop", ["shopify"])).toBe(false);
+  });
+
+  it("rejects a clip that drops more than a short suffix", () => {
+    expect(looksLikeClippedBrand("carpet", ["carpetworldonline"])).toBe(false);
+  });
+
+  it("rejects a word that merely starts the same way", () => {
+    expect(looksLikeClippedBrand("delicious", ["deliotx"])).toBe(false);
+  });
+
+  it("returns false with no brand terms", () => {
+    expect(looksLikeClippedBrand("delio", [])).toBe(false);
+  });
+});
+
+describe("isBrandSeed", () => {
+  it("treats a containment match as branded at any position", () => {
+    expect(isBrandSeed("deliotx reviews", 40, ["deliotx"])).toBe(true);
+  });
+
+  it("treats a top-ranked clipped brand as branded", () => {
+    expect(isBrandSeed("delio", 1.2, ["deliotx"])).toBe(true);
+  });
+
+  it("does NOT brand a generic head the site ranks poorly for", () => {
+    // The case that makes shape alone unusable: "bakerytx" minus "tx" is the
+    // word bakery, and "bakery near me" is this site's best NON-branded query.
+    // Position is the evidence that separates it from a real clipped brand.
+    expect(isBrandSeed("bakery", 18, ["bakerytx"])).toBe(false);
+  });
+
+  it("brands a generic head the site does rank top for", () => {
+    // Same string, opposite answer — ranking #1 for it means it IS the brand.
+    expect(isBrandSeed("bakery", 1, ["bakerytx"])).toBe(true);
+  });
+
+  it("is inert when the project has no brand terms", () => {
+    expect(isBrandSeed("anything", 1, [])).toBe(false);
   });
 });

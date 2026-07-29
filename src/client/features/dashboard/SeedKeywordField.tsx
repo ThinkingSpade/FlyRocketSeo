@@ -2,6 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import { getSavedKeywords } from "@/serverFunctions/keywords";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import {
+  defaultBrandTerms,
+  isBrandSeed,
+  isBrandedQuery,
+} from "@/client/features/search-performance/brandedSplit";
 
 /**
  * Picks the keyword the keyword-driven analyses run on.
@@ -20,6 +26,16 @@ type SeedSuggestion = {
   keyword: string;
   hint: string;
 };
+
+/** Keeps each side in its incoming order, so the ranking within a side holds. */
+function brandedLast<T extends { branded: boolean }>(
+  rows: T[],
+): Omit<T, "branded">[] {
+  return [
+    ...rows.filter((row) => !row.branded),
+    ...rows.filter((row) => row.branded),
+  ].map(({ branded: _branded, ...rest }) => rest);
+}
 
 function compact(value: number): string {
   if (value >= 1000) return `${(value / 1000).toFixed(1)}k`;
@@ -45,26 +61,39 @@ export function useSeedSuggestions(projectId: string): SeedSuggestion[] {
     staleTime: 5 * 60_000,
   });
 
+  // Free: shares the dashboard's ["projects"] cache entry.
+  const domain = useProjectDomain(projectId);
+  const brandTerms = domain ? defaultBrandTerms(domain) : [];
+
   // Only the connected variant of the report carries rows.
   const gscReport = gscQuery.data;
   const fromGsc = (
     gscReport && "queryTotals" in gscReport ? gscReport.queryTotals : []
   )
     .toSorted((a, b) => b.impressions - a.impressions)
-    .slice(0, 5)
     .map((row) => ({
       keyword: row.query,
       hint: `${compact(row.impressions)} impressions · pos ${row.position.toFixed(1)}`,
+      // On every site the top-impression query is the brand, so ranking by
+      // impressions alone prefilled the analysis with the site's own name.
+      // Branded queries are still offered — last, so choosing one is a
+      // decision rather than an accident.
+      branded: isBrandSeed(row.query, row.position, brandTerms),
     }));
-  if (fromGsc.length > 0) return fromGsc;
+  if (fromGsc.length > 0) return brandedLast(fromGsc).slice(0, 5);
 
-  return (savedQuery.data?.rows ?? []).slice(0, 5).map((row) => ({
+  // Same ordering as the Search Console path. A project with no Search Console
+  // data yet is the one most likely to have saved its own brand as a keyword,
+  // so this fallback is where leading with the brand would hurt most.
+  const fromSaved = (savedQuery.data?.rows ?? []).map((row) => ({
     keyword: row.keyword,
     hint:
       row.searchVolume != null
         ? `${compact(row.searchVolume)}/mo saved`
         : "saved keyword",
+    branded: isBrandedQuery(row.keyword, brandTerms),
   }));
+  return brandedLast(fromSaved).slice(0, 5);
 }
 
 export function SeedKeywordField({

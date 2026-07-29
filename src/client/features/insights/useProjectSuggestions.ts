@@ -3,6 +3,8 @@ import { useQuery } from "@tanstack/react-query";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import { getSavedKeywords } from "@/serverFunctions/keywords";
 import { buildSuggestions } from "./suggestionModel";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { defaultBrandTerms } from "@/client/features/search-performance/brandedSplit";
 import type { FreeSignals, SeedSuggestion, SuggestionIntent } from "./types";
 
 /**
@@ -23,6 +25,7 @@ const EMPTY_SIGNALS: FreeSignals = {
   strikingDistance: [],
   ctrOpportunities: [],
   savedKeywords: [],
+  brandTerms: [],
 };
 
 export function useProjectSuggestions(
@@ -45,8 +48,16 @@ export function useProjectSuggestions(
     staleTime: 5 * 60_000,
   });
 
+  // Free: shares the dashboard's ["projects"] cache entry. Without it the
+  // impression ranking hands back the site's own brand every time.
+  const domain = useProjectDomain(projectId);
+
   const report = gscQuery.data;
   const savedRows = savedQuery.data?.rows;
+  const brandTerms = useMemo(
+    () => (domain ? defaultBrandTerms(domain) : []),
+    [domain],
+  );
 
   const signals = useMemo<FreeSignals>(() => {
     const savedKeywords = (savedRows ?? []).map((row) => ({
@@ -56,7 +67,7 @@ export function useProjectSuggestions(
     // The report is a union; the not-connected variant carries only a reason,
     // so an early return is what narrows it to the variant holding the rows.
     if (!report || !report.connected) {
-      return { ...EMPTY_SIGNALS, savedKeywords };
+      return { ...EMPTY_SIGNALS, savedKeywords, brandTerms };
     }
     return {
       queryTotals: report.queryTotals,
@@ -64,8 +75,9 @@ export function useProjectSuggestions(
       strikingDistance: report.strikingDistance,
       ctrOpportunities: report.ctrOpportunities,
       savedKeywords,
+      brandTerms,
     };
-  }, [report, savedRows]);
+  }, [brandTerms, report, savedRows]);
 
   return useMemo(
     () => buildSuggestions(signals, intent, limit),

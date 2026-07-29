@@ -8,6 +8,7 @@ const EMPTY: FreeSignals = {
   strikingDistance: [],
   ctrOpportunities: [],
   savedKeywords: [],
+  brandTerms: [],
 };
 
 describe("compactNumber", () => {
@@ -392,5 +393,57 @@ describe("buildSuggestions boundaries", () => {
     expect(result1).toEqual(result2);
     const currentOrder = signals.strikingDistance.map((r) => r.query);
     expect(currentOrder).toEqual(originalOrder);
+  });
+});
+
+describe("high-volume brand demotion", () => {
+  // Ranking GSC queries by impressions always surfaces the brand, because on
+  // every site the brand is the top-impression query. That is how keyword
+  // research came to be seeded with "delio".
+  const signals: FreeSignals = {
+    ...EMPTY,
+    brandTerms: ["deliotx"],
+    queryTotals: [
+      { query: "deliotx", clicks: 90, impressions: 5000, position: 1.1 },
+      {
+        query: "office coffee service",
+        clicks: 4,
+        impressions: 300,
+        position: 12,
+      },
+      { query: "delio", clicks: 40, impressions: 2000, position: 1.4 },
+    ],
+  };
+
+  it("puts branded queries last despite them winning on impressions", () => {
+    const suggestions = buildSuggestions(signals, "high-volume");
+    expect(suggestions[0].value).toBe("office coffee service");
+  });
+
+  it("still offers the branded queries rather than dropping them", () => {
+    const values = buildSuggestions(signals, "high-volume").map((s) => s.value);
+    expect(values).toEqual(["office coffee service", "deliotx", "delio"]);
+  });
+
+  it("demotes a clipped brand the site ranks top for", () => {
+    // "delio" does not contain the term "deliotx"; only position corroborates
+    // that it is the brand.
+    const suggestions = buildSuggestions(signals, "high-volume");
+    expect(suggestions.find((s) => s.value === "delio")?.demoted).toBe(true);
+  });
+
+  it("ranks branded queries among themselves by impressions", () => {
+    const branded = buildSuggestions(signals, "high-volume").filter(
+      (s) => s.demoted,
+    );
+    expect(branded.map((s) => s.value)).toEqual(["deliotx", "delio"]);
+  });
+
+  it("changes nothing when the project has no brand terms", () => {
+    const values = buildSuggestions(
+      { ...signals, brandTerms: [] },
+      "high-volume",
+    ).map((s) => s.value);
+    expect(values).toEqual(["deliotx", "delio", "office coffee service"]);
   });
 });
