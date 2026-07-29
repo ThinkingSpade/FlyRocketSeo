@@ -7,6 +7,7 @@ import { SERVICE_AREA_KINDS } from "@/shared/keyword-fit/profileTypes";
 import { applyServiceAreaToSeeds } from "@/shared/keyword-fit/seedGeo";
 import type { ServiceAreaKind } from "@/shared/keyword-fit/profileTypes";
 import { crawlSiteText } from "./siteTextCrawl";
+import { rethrowModelError } from "./modelErrors";
 import {
   PROFILE_DRAFT_SYSTEM_PROMPT,
   SEED_SYSTEM_PROMPT,
@@ -40,7 +41,7 @@ const seedsSchema = z.object({
   seeds: z.array(z.string()).max(40).default([]),
 });
 
-export type ProfileDraft = z.infer<typeof draftSchema>;
+type ProfileDraft = z.infer<typeof draftSchema>;
 
 /**
  * Output ceilings for the two calls below.
@@ -72,29 +73,6 @@ function requireKey(available: boolean): void {
     "PAYMENT_REQUIRED",
     "Drafting a profile needs an OPENROUTER_API_KEY. Add it to your deployment, or fill the fields in yourself — everything else works without it.",
   );
-}
-
-/**
- * Turns the one model failure a user can actually act on into words.
- *
- * An out-of-credit OpenRouter account returns a 402, which the generic
- * handler renders as "An unexpected error occurred. Please check server
- * logs." -- true, useless, and pointing at the wrong person. The remedy is a
- * link and a top-up, so say that. Everything else is genuinely unexpected and
- * is left alone to reach the logs unchanged.
- */
-function rethrowModelError(error: unknown): never {
-  const status =
-    typeof error === "object" && error !== null && "statusCode" in error
-      ? (error as { statusCode?: unknown }).statusCode
-      : undefined;
-  if (status === 402) {
-    throw new AppError(
-      "PAYMENT_REQUIRED",
-      "Your OpenRouter account is out of credits. Add some at https://openrouter.ai/settings/credits, or fill the fields in yourself — nothing else here needs a model.",
-    );
-  }
-  throw error;
 }
 
 /**

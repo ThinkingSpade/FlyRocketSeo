@@ -10,7 +10,7 @@
  * reported as "mostly X" with a count, never as a fact about every result.
  */
 
-export type SerpPageType =
+type SerpPageType =
   | "homepage"
   | "service"
   | "article"
@@ -76,7 +76,7 @@ export function classifySerpPage(url: string): SerpPageType {
   return "other";
 }
 
-export type SerpShape = {
+type SerpShape = {
   dominant: SerpPageType;
   count: number;
   total: number;

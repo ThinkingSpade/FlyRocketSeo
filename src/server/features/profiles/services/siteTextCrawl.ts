@@ -18,7 +18,7 @@ const FETCH_TIMEOUT_MS = 8000;
 const MAX_HTML_BYTES = 400_000;
 const MAX_TEXT_CHARS = 4000;
 
-export type CrawledPage = { url: string; title: string; text: string };
+type CrawledPage = { url: string; title: string; text: string };
 
 /** Strips chrome that carries no information about the business. */
 function extractVisibleText($: cheerio.CheerioAPI): string {

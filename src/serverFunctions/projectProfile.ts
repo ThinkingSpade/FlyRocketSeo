@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import { AppError } from "@/server/lib/errors";
 import { ProfileDraftService } from "@/server/features/profiles/services/ProfileDraftService";
+import { KeywordFitService } from "@/server/features/profiles/services/KeywordFitService";
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import {
   EMPTY_PROFILE,
@@ -148,4 +149,31 @@ export const generateSeedKeywords = createServerFn({ method: "POST" })
       areaLabel: data.areaLabel,
     });
     return { seeds };
+  });
+
+const refineKeywordFitSchema = z.object({
+  projectId: z.string().min(1),
+  keywords: z.array(z.string().min(1)).max(500),
+});
+
+/**
+ * Sharpens the free rules verdicts with one model pass, cached per keyword.
+ *
+ * The rules classifier only fires on exclusion lines the user wrote, which is
+ * its strength and its ceiling: a profile that says only "we don't sell
+ * machines" leaves "how to start a vending machine business" and "spg vending
+ * jobs" unflagged, because nothing rules out DIY or recruitment. This reads
+ * the profile as prose and judges the same way a person would.
+ *
+ * Costs one model call per 40 uncached keywords and nothing at all on a
+ * second look, so it stays behind an explicit click. Never metered SEO spend.
+ */
+export const refineKeywordFit = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(refineKeywordFitSchema)
+  .handler(async ({ data, context }) => {
+    return KeywordFitService.refine({
+      projectId: context.projectId,
+      keywords: data.keywords,
+    });
   });

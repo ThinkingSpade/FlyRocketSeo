@@ -20,6 +20,7 @@ import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { SerpAnalysisCard } from "@/client/features/keywords/components";
 import { KeywordResearchDesktopTable } from "./KeywordResearchDesktopTable";
+import { KeywordActionPlanCard } from "@/client/features/keywords/actionPlan/KeywordActionPlanCard";
 import {
   KeywordResearchPagination,
   useKeywordResearchPagination,
@@ -50,6 +51,7 @@ export function KeywordResearchMobileResults({
   ownDomainRating,
 }: Props) {
   const { filteredRows, mobileTab } = controller;
+  const { projectId } = keywordsRoute.useParams();
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden md:hidden">
@@ -82,7 +84,7 @@ export function KeywordResearchMobileResults({
           ownDomainRating={ownDomainRating}
         />
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
           <SerpAnalysisCard
             items={controller.serpResults}
             keyword={controller.activeSerpKeyword}
@@ -100,6 +102,14 @@ export function KeywordResearchMobileResults({
               controller.setSerpPage(0);
             }}
           />
+          {controller.activeSerpKeyword ? (
+            <KeywordActionPlanCard
+              projectId={projectId}
+              keyword={controller.activeSerpKeyword}
+              serpResults={controller.serpResults}
+              ownDomainRating={ownDomainRating}
+            />
+          ) : null}
         </div>
       )}
     </div>

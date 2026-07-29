@@ -14,9 +14,9 @@
  * page one, because those are the positions actually available.
  */
 
-export type RankingVerdict = "winnable" | "stretch" | "unlikely" | "unknown";
+type RankingVerdict = "winnable" | "stretch" | "unlikely" | "unknown";
 
-export type RankingAssessment = {
+type RankingAssessment = {
   verdict: RankingVerdict;
   /** Top-ten domains no stronger than the client's own. */
   reachableCount: number;

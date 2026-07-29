@@ -212,7 +212,7 @@ export function offerTerms(offer: string): string[] {
   );
 }
 
-export type FitProfile = {
+type FitProfile = {
   offer: string;
   exclusions: string;
 };

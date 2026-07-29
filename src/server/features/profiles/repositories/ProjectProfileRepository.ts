@@ -8,13 +8,14 @@
  * caller-side existence check — two callers racing the profile editor would
  * otherwise hit the unique index instead of the second simply winning.
  */
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@/db";
+import { runBatch } from "@/db/runBatch";
 import { keywordFitVerdicts, projectProfiles } from "@/db/schema";
 import type { ServiceAreaKind } from "@/shared/keyword-fit/profileTypes";
 
-export type ProjectProfileRow = typeof projectProfiles.$inferSelect;
-export type KeywordFitVerdictRow = typeof keywordFitVerdicts.$inferSelect;
+type ProjectProfileRow = typeof projectProfiles.$inferSelect;
+type KeywordFitVerdictRow = typeof keywordFitVerdicts.$inferSelect;
 
 async function getByProject(
   projectId: string,
@@ -27,7 +28,7 @@ async function getByProject(
   return rows[0] ?? null;
 }
 
-export type SaveProfileInput = {
+type SaveProfileInput = {
   projectId: string;
   offer: string;
   customer: string;
@@ -95,9 +96,61 @@ async function listVerdicts(
       // without the project filter this would return another project's cached
       // verdicts for the same keyword — verdicts are only meaningful against
       // the profile that produced them.
-      inArray(keywordFitVerdicts.keyword, [...keywords]),
-    )
-    .then((rows) => rows.filter((row) => row.projectId === projectId));
+      and(
+        eq(keywordFitVerdicts.projectId, projectId),
+        inArray(keywordFitVerdicts.keyword, [...keywords]),
+      ),
+    );
+}
+
+export type VerdictInput = {
+  keyword: string;
+  verdict: "on-offer" | "adjacent" | "wrong-customer";
+  reason: string;
+  source: "rules" | "ai";
+};
+
+/**
+ * Stores a batch of verdicts, replacing any existing row for the same
+ * (project, keyword).
+ *
+ * Replace rather than skip-if-present: the AI pass supersedes a rules verdict
+ * for the same keyword, and the newest write is always the better-informed
+ * one. `source` records which produced the row that survived.
+ */
+async function upsertVerdicts(
+  projectId: string,
+  verdicts: readonly VerdictInput[],
+): Promise<void> {
+  if (verdicts.length === 0) return;
+  const createdAt = new Date().toISOString();
+  // One statement per row rather than a single multi-row insert: D1 caps
+  // bound parameters per statement, and a 100-keyword run would sit close
+  // enough to that ceiling to be worth not finding out about in production.
+  await runBatch((tx) =>
+    verdicts.map((entry) =>
+      tx
+        .insert(keywordFitVerdicts)
+        .values({
+          id: crypto.randomUUID(),
+          projectId,
+          keyword: entry.keyword,
+          verdict: entry.verdict,
+          reason: entry.reason,
+          source: entry.source,
+          createdAt,
+        })
+        .onConflictDoUpdate({
+          target: [keywordFitVerdicts.projectId, keywordFitVerdicts.keyword],
+          set: {
+            verdict: entry.verdict,
+            reason: entry.reason,
+            source: entry.source,
+            createdAt,
+          },
+        }),
+    ),
+  );
 }
 
 /**
@@ -118,5 +171,6 @@ export const ProjectProfileRepository = {
   getByProject,
   upsert,
   listVerdicts,
+  upsertVerdicts,
   clearVerdicts,
 } as const;

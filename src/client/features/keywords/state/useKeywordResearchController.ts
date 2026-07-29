@@ -13,8 +13,10 @@ import {
 } from "@/client/features/keywords/hooks/useKeywordControlsForm";
 import { useKeywordFiltering } from "@/client/features/keywords/hooks/useKeywordFiltering";
 import {
+  mergeFitVerdicts,
   useKeywordFit,
   useProjectProfile,
+  useRefineKeywordFit,
 } from "@/client/features/profiles/useProjectProfile";
 import { useLocalKeywordFilters } from "@/client/features/keywords/hooks/useLocalKeywordFilters";
 import { useKeywordResearchData } from "@/client/features/keywords/hooks/useKeywordResearchData";
@@ -102,6 +104,13 @@ function parseRestoredKeywordResearchGeo(
     parentCountryCode: bundle.volume.parentCountryCode,
   };
 }
+
+/** Stable empty array for the un-run AI fit pass -- see its use below. */
+const NO_AI_VERDICTS: ReadonlyArray<{
+  keyword: string;
+  verdict: "on-offer" | "adjacent" | "wrong-customer";
+  reason: string;
+}> = [];
 
 type OpenKeywordTabInput = {
   keyword: string;
@@ -311,8 +320,24 @@ export function useKeywordResearchController(
   // what lets every row carry a verdict on render rather than behind a button.
   const { profile } = useProjectProfile(input.projectId);
   const keywordsForFit = useMemo(() => rows.map((row) => row.keyword), [rows]);
-  const fit = useKeywordFit(profile, keywordsForFit);
+  const rulesFit = useKeywordFit(profile, keywordsForFit);
   const [hideWrongFit, setHideWrongFit] = useState(false);
+
+  // The optional semantic pass, layered OVER the free rules verdicts rather
+  // than replacing them: a keyword the model didn't reach keeps its rules
+  // label instead of losing one. Runs only from an explicit click.
+  const refineFit = useRefineKeywordFit(input.projectId);
+  // `?? NO_AI_VERDICTS` rather than `?? []`: a fresh array literal every
+  // render would defeat the memo below, re-merging the whole result set on
+  // each keystroke in the filter fields.
+  const aiVerdicts = refineFit.data?.verdicts ?? NO_AI_VERDICTS;
+  const fit = useMemo(
+    () => mergeFitVerdicts(rulesFit, aiVerdicts),
+    [rulesFit, aiVerdicts],
+  );
+  const runFitRefinement = useCallback(() => {
+    if (keywordsForFit.length > 0) refineFit.mutate(keywordsForFit);
+  }, [keywordsForFit, refineFit]);
 
   const { filteredRows, activeFilterCount, wrongFitCount } =
     useKeywordFiltering({
@@ -405,6 +430,8 @@ export function useKeywordResearchController(
     hideWrongFit,
     setHideWrongFit,
     wrongFitCount,
+    runFitRefinement,
+    fitRefinement: refineFit,
     // The geo CAPTURED for the run whose rows/verdict are on screen right
     // now -- null before the first search AND before any restore. Consumers
     // must read this, not `useTargetAreaScope` live, when labeling

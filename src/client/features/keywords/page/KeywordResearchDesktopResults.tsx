@@ -41,6 +41,8 @@ import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeyword
 import { getLanguageCode } from "@/client/features/keywords/locations";
 import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
+import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
@@ -202,6 +204,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
         <span className="text-sm text-base-content/60">
           {keywordCountLabel}
         </span>
+        <FitRefinementButton controller={controller} />
         {controller.wrongFitCount > 0 ? (
           <button
             type="button"
@@ -389,5 +392,48 @@ function DesktopFilters({
 
       <DesktopFilterFields form={filtersForm} />
     </div>
+  );
+}
+
+/**
+ * Runs the optional semantic fit pass over the rows on screen.
+ *
+ * Absent without an OpenRouter key or a profile to judge against, for the
+ * same reason every other AI affordance here is: a button that cannot work is
+ * worse than no button. The free rules verdicts are already applied by the
+ * time this renders -- this only sharpens the cases a written exclusion
+ * cannot reach, like "how to start a vending machine business" for an
+ * operator whose profile only rules out selling.
+ */
+function FitRefinementButton({
+  controller,
+}: {
+  controller: KeywordResearchControllerState;
+}) {
+  const aiAvailable = useAiExplainAvailable();
+  const { profile } = useProjectProfile(keywordsRoute.useParams().projectId);
+  const { fitRefinement } = controller;
+  if (!aiAvailable || profile.offer.trim() === "") return null;
+
+  const result = fitRefinement.data;
+  return (
+    <button
+      type="button"
+      className="btn btn-ghost btn-sm gap-1.5"
+      disabled={fitRefinement.isPending || controller.rows.length === 0}
+      onClick={controller.runFitRefinement}
+      title={
+        result
+          ? `${result.classified} newly checked${result.skipped > 0 ? `, ${result.skipped} over the per-run cap` : ""}`
+          : "Judge every keyword against this client's profile, not just the exclusion rules"
+      }
+    >
+      <Sparkles className="size-3.5 text-base-content/60" />
+      {fitRefinement.isPending
+        ? "Checking fit…"
+        : result
+          ? "Fit checked"
+          : "Check fit with AI"}
+    </button>
   );
 }

@@ -4,6 +4,7 @@ import {
   draftProjectProfile,
   generateSeedKeywords,
   getProjectProfile,
+  refineKeywordFit,
   saveProjectProfile,
 } from "@/serverFunctions/projectProfile";
 import {
@@ -28,7 +29,7 @@ import {
 
 const PROFILE_STALE_MS = 5 * 60_000;
 
-export function projectProfileQueryKey(projectId: string) {
+function projectProfileQueryKey(projectId: string) {
   return ["projectProfile", projectId] as const;
 }
 
@@ -135,4 +136,44 @@ export function useGenerateSeedKeywords(projectId: string) {
       areaLabel: string | null;
     }) => generateSeedKeywords({ data: { projectId, ...input } }),
   });
+}
+
+/**
+ * The AI fit pass over the keywords currently on screen.
+ *
+ * Returns verdicts keyed by keyword, which the caller overlays on the free
+ * rules verdicts. Deliberately a mutation: it costs a model call for anything
+ * not already cached, so it only ever runs from a click.
+ */
+export function useRefineKeywordFit(projectId: string) {
+  return useMutation({
+    mutationFn: (keywords: string[]) =>
+      refineKeywordFit({ data: { projectId, keywords } }),
+  });
+}
+
+/**
+ * Merges AI verdicts over the rules verdicts.
+ *
+ * AI wins where it has an opinion; every other keyword keeps the rules
+ * verdict, so the table never loses labels because the pass covered part of
+ * the set (it is capped, and it can drop a malformed chunk).
+ */
+export function mergeFitVerdicts(
+  rules: ReadonlyMap<string, FitResult>,
+  ai: ReadonlyArray<{
+    keyword: string;
+    verdict: FitResult["verdict"];
+    reason: string;
+  }>,
+): ReadonlyMap<string, FitResult> {
+  if (ai.length === 0) return rules;
+  const merged = new Map(rules);
+  for (const entry of ai) {
+    merged.set(entry.keyword, {
+      verdict: entry.verdict,
+      reason: entry.reason,
+    });
+  }
+  return merged;
 }
