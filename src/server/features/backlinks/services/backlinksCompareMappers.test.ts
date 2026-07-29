@@ -127,10 +127,13 @@ describe("mapIntersectionRows", () => {
 
 describe("summarizeNetworks", () => {
   it("sorts subnets by referring domains", () => {
-    const summary = summarizeNetworks([
-      { network_address: "10.0.1.0/24", referring_domains: 4 },
-      { network_address: "10.0.2.0/24", referring_domains: 40 },
-    ]);
+    const summary = summarizeNetworks(
+      [
+        { network_address: "10.0.1.0/24", referring_domains: 4 },
+        { network_address: "10.0.2.0/24", referring_domains: 40 },
+      ],
+      2,
+    );
     expect(summary.rows.map((row) => row.networkAddress)).toEqual([
       "10.0.2.0/24",
       "10.0.1.0/24",
@@ -138,41 +141,80 @@ describe("summarizeNetworks", () => {
   });
 
   it("totals the referring domains across subnets", () => {
-    const summary = summarizeNetworks([
-      { network_address: "a", referring_domains: 4 },
-      { network_address: "b", referring_domains: 6 },
-    ]);
+    const summary = summarizeNetworks(
+      [
+        { network_address: "a", referring_domains: 4 },
+        { network_address: "b", referring_domains: 6 },
+      ],
+      2,
+    );
     expect(summary.totalDomains).toBe(10);
   });
 
   it("measures how much sits in the three biggest subnets", () => {
-    const summary = summarizeNetworks([
-      { network_address: "a", referring_domains: 30 },
-      { network_address: "b", referring_domains: 30 },
-      { network_address: "c", referring_domains: 20 },
-      { network_address: "d", referring_domains: 10 },
-      { network_address: "e", referring_domains: 10 },
-    ]);
+    const summary = summarizeNetworks(
+      [
+        { network_address: "a", referring_domains: 30 },
+        { network_address: "b", referring_domains: 30 },
+        { network_address: "c", referring_domains: 20 },
+        { network_address: "d", referring_domains: 10 },
+        { network_address: "e", referring_domains: 10 },
+      ],
+      5,
+    );
     expect(summary.topThreeShare).toBeCloseTo(0.8, 5);
   });
 
   it("reports a share of one when there are three or fewer subnets", () => {
-    const summary = summarizeNetworks([
-      { network_address: "a", referring_domains: 5 },
-    ]);
+    const summary = summarizeNetworks(
+      [{ network_address: "a", referring_domains: 5 }],
+      1,
+    );
     expect(summary.topThreeShare).toBe(1);
   });
 
   it("does not divide by zero when nothing has a domain count", () => {
-    const summary = summarizeNetworks([{ network_address: "a" }]);
+    const summary = summarizeNetworks([{ network_address: "a" }], 1);
     expect(summary.totalDomains).toBe(0);
     expect(summary.topThreeShare).toBe(0);
   });
 
   it("drops rows with no network address", () => {
     expect(
-      summarizeNetworks([{ referring_domains: 5 }, { network_address: "  " }])
-        .rows,
+      summarizeNetworks(
+        [{ referring_domains: 5 }, { network_address: "  " }],
+        2,
+      ).rows,
     ).toEqual([]);
+  });
+
+  it("marks the sample incomplete when more networks exist than were returned", () => {
+    // The ratio over a truncated page says nothing about the whole profile:
+    // the largest networks always dominate a list sorted by size.
+    const summary = summarizeNetworks(
+      [
+        { network_address: "a", referring_domains: 50 },
+        { network_address: "b", referring_domains: 50 },
+        { network_address: "c", referring_domains: 50 },
+        { network_address: "d", referring_domains: 1 },
+      ],
+      1000,
+    );
+    expect(summary.topThreeShare).toBeCloseTo(0.9934, 3);
+    expect(summary.isComplete).toBe(false);
+  });
+
+  it("marks the sample complete when the page covers every network", () => {
+    expect(
+      summarizeNetworks([{ network_address: "a", referring_domains: 5 }], 1)
+        .isComplete,
+    ).toBe(true);
+  });
+
+  it("treats an absent total as complete rather than guessing", () => {
+    expect(
+      summarizeNetworks([{ network_address: "a", referring_domains: 5 }], null)
+        .isComplete,
+    ).toBe(true);
   });
 });

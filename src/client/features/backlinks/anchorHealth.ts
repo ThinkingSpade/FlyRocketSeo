@@ -7,6 +7,13 @@
  * manipulation. Google's own guidance treats "keyword-rich anchor text at
  * unnatural scale" as a link-scheme signal, and a natural profile is dominated
  * by brand and URL anchors rather than one repeated phrase.
+ *
+ * The unit is deliberately *anchor mentions*, not unique referring domains.
+ * One domain that links with three different anchors appears on three rows,
+ * and the rows carry no domain identity to de-duplicate on — so summing their
+ * counts gives domain-anchor pairs. Every share below is a share of mentions,
+ * and the copy says so; calling it "of referring domains" would understate a
+ * concentrated phrase whenever the rest of the profile uses varied anchors.
  */
 
 type AnchorCategory =
@@ -25,18 +32,19 @@ export type AnchorHealthRow = {
 type AnchorCategoryBreakdown = {
   category: AnchorCategory;
   label: string;
-  domains: number;
+  /** Anchor mentions, i.e. domain-anchor pairs — see the note above. */
+  mentions: number;
   share: number;
 };
 
 type AnchorConcentration = {
   anchor: string;
-  domains: number;
+  mentions: number;
   share: number;
 };
 
 type AnchorHealth = {
-  totalDomains: number;
+  totalMentions: number;
   categories: AnchorCategoryBreakdown[];
   /** Highest-volume anchor that is neither branded, empty, nor a bare URL. */
   topCommercial: AnchorConcentration | null;
@@ -88,13 +96,13 @@ const GENERIC_ANCHORS = new Set([
 ]);
 
 /**
- * A single commercial phrase past these shares of referring domains is the
+ * A single commercial phrase past these shares of anchor mentions is the
  * shape an anchor-text penalty audit looks for. The thresholds are deliberately
  * forgiving of small profiles, where one guest post can swing the percentage.
  */
 const OVER_OPTIMIZED_SHARE = 0.3;
 const WATCH_SHARE = 0.15;
-const MIN_DOMAINS_FOR_VERDICT = 10;
+const MIN_MENTIONS_FOR_VERDICT = 10;
 
 export function computeAnchorHealth(
   rows: AnchorHealthRow[],
@@ -102,64 +110,64 @@ export function computeAnchorHealth(
 ): AnchorHealth | null {
   const brandTokens = extractBrandTokens(target);
   const counts = new Map<AnchorCategory, number>();
-  let totalDomains = 0;
+  let totalMentions = 0;
   let topCommercial: AnchorConcentration | null = null;
 
   for (const row of rows) {
-    // Referring domains is the honest denominator: one site linking a thousand
+    // Referring domains rather than backlinks: one site linking a thousand
     // times with the same anchor is one endorsement, not a thousand.
-    const domains = row.referringDomains ?? row.backlinks ?? 0;
-    if (domains <= 0) continue;
+    const mentions = row.referringDomains ?? row.backlinks ?? 0;
+    if (mentions <= 0) continue;
 
     const category = classifyAnchor(row.anchor, brandTokens);
-    counts.set(category, (counts.get(category) ?? 0) + domains);
-    totalDomains += domains;
+    counts.set(category, (counts.get(category) ?? 0) + mentions);
+    totalMentions += mentions;
 
     if (
       category === "descriptive" &&
       row.anchor &&
-      (topCommercial == null || domains > topCommercial.domains)
+      (topCommercial == null || mentions > topCommercial.mentions)
     ) {
-      topCommercial = { anchor: row.anchor, domains, share: 0 };
+      topCommercial = { anchor: row.anchor, mentions, share: 0 };
     }
   }
 
-  if (totalDomains === 0) return null;
+  if (totalMentions === 0) return null;
 
   if (topCommercial) {
     topCommercial = {
       ...topCommercial,
-      share: topCommercial.domains / totalDomains,
+      share: topCommercial.mentions / totalMentions,
     };
   }
 
   const categories = CATEGORY_ORDER.flatMap((category) => {
-    const domains = counts.get(category) ?? 0;
-    return domains > 0
+    const mentions = counts.get(category) ?? 0;
+    return mentions > 0
       ? [
           {
             category,
             label: CATEGORY_LABELS[category],
-            domains,
-            share: domains / totalDomains,
+            mentions,
+            share: mentions / totalMentions,
           },
         ]
       : [];
   });
 
   return {
-    totalDomains,
+    totalMentions,
     categories,
     topCommercial,
-    ...describeAnchorProfile(topCommercial, totalDomains),
+    ...describeAnchorProfile(topCommercial, totalMentions),
   };
 }
 
 function describeAnchorProfile(
   topCommercial: AnchorConcentration | null,
-  totalDomains: number,
+  totalMentions: number,
 ): { verdict: AnchorHealth["verdict"]; note: string } {
-  if (!topCommercial || totalDomains < MIN_DOMAINS_FOR_VERDICT) {
+  if (!topCommercial || totalMentions < MIN_MENTIONS_FOR_VERDICT) {
     return {
       verdict: "healthy",
       note: "No single phrase dominates the anchor text.",
@@ -170,18 +178,18 @@ function describeAnchorProfile(
   if (topCommercial.share >= OVER_OPTIMIZED_SHARE) {
     return {
       verdict: "over-optimized",
-      note: `"${topCommercial.anchor}" is the anchor on ${percent}% of referring domains. That much repetition of one commercial phrase is the pattern manual reviews look for — vary future anchors toward brand and URL forms.`,
+      note: `"${topCommercial.anchor}" accounts for ${percent}% of anchor mentions. That much repetition of one commercial phrase is the pattern manual reviews look for — vary future anchors toward brand and URL forms.`,
     };
   }
   if (topCommercial.share >= WATCH_SHARE) {
     return {
       verdict: "watch",
-      note: `"${topCommercial.anchor}" accounts for ${percent}% of referring domains. Not a problem yet, but keep new links away from that exact phrase.`,
+      note: `"${topCommercial.anchor}" accounts for ${percent}% of anchor mentions. Not a problem yet, but keep new links away from that exact phrase.`,
     };
   }
   return {
     verdict: "healthy",
-    note: `The most common phrase anchor is "${topCommercial.anchor}" at ${percent}% of referring domains — a natural spread.`,
+    note: `The most common phrase anchor is "${topCommercial.anchor}" at ${percent}% of anchor mentions — a natural spread.`,
   };
 }
 

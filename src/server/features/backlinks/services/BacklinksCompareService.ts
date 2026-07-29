@@ -207,7 +207,13 @@ async function linkIntersect(
   const result: LinkIntersectResult = {
     rows,
     totalCount: response.totalCount,
-    hasMore: rows.length === LINK_INTERSECT_PAGE_SIZE,
+    // Paging costs a request, so "Next" must not be offered on a guess. A full
+    // page is only evidence of more when the total says so; without a total,
+    // a short page is the one thing that definitely means the end.
+    hasMore:
+      response.totalCount != null
+        ? input.page * LINK_INTERSECT_PAGE_SIZE < response.totalCount
+        : rows.length === LINK_INTERSECT_PAGE_SIZE,
     page: input.page,
     competitors,
     fetchedAt: new Date().toISOString(),
@@ -283,7 +289,7 @@ async function referringNetworks(
   });
 
   const result: ReferringNetworksResult = {
-    ...summarizeNetworks(response.items),
+    ...summarizeNetworks(response.items, response.totalCount),
     fetchedAt: new Date().toISOString(),
   };
 

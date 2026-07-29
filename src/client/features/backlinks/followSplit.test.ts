@@ -1,47 +1,54 @@
 import { describe, expect, it } from "vitest";
-import { computeFollowSplit } from "./followSplit";
+import { computeNofollowExposure } from "./followSplit";
 
-describe("computeFollowSplit", () => {
+describe("computeNofollowExposure", () => {
   it("returns null when the total is missing or zero", () => {
-    expect(computeFollowSplit(null, 10)).toBeNull();
-    expect(computeFollowSplit(0, 0)).toBeNull();
+    expect(computeNofollowExposure(null, 10)).toBeNull();
+    expect(computeNofollowExposure(0, 0)).toBeNull();
   });
 
   it("returns null when the nofollow count is missing", () => {
-    expect(computeFollowSplit(100, null)).toBeNull();
+    expect(computeNofollowExposure(100, null)).toBeNull();
   });
 
-  it("subtracts nofollow from the total to get dofollow", () => {
-    const split = computeFollowSplit(310, 62);
-    expect(split).not.toBeNull();
-    expect(split?.dofollow).toBe(248);
-    expect(split?.nofollow).toBe(62);
-    expect(split?.total).toBe(310);
-    expect(split?.dofollowShare).toBeCloseTo(0.8, 5);
+  it("reports the nofollow share of referring domains", () => {
+    const exposure = computeNofollowExposure(310, 62);
+    expect(exposure?.nofollow).toBe(62);
+    expect(exposure?.total).toBe(310);
+    expect(exposure?.nofollowShare).toBeCloseTo(0.2, 5);
+  });
+
+  it("treats domains with no nofollow link as a floor, not a dofollow total", () => {
+    // DataForSEO counts a domain in `referring_domains_nofollow` if *any* of
+    // its links is nofollow, so the remainder is the domains known to be
+    // nofollow-free — not the domains that pass authority.
+    expect(computeNofollowExposure(100, 70)?.cleanDofollow).toBe(30);
   });
 
   it("calls a majority-nofollow profile out as nofollow-heavy", () => {
-    const split = computeFollowSplit(100, 70);
-    expect(split?.verdict).toBe("nofollow-heavy");
-    expect(split?.note).toContain("30%");
+    const exposure = computeNofollowExposure(100, 70);
+    expect(exposure?.verdict).toBe("nofollow-heavy");
+    expect(exposure?.note).toContain("70%");
+    // It must not claim the other 30 are the only ones passing authority.
+    expect(exposure?.note).toContain("also send dofollow");
   });
 
   it("flags a profile with almost no nofollow links", () => {
-    expect(computeFollowSplit(100, 1)?.verdict).toBe("unusually-clean");
+    expect(computeNofollowExposure(100, 1)?.verdict).toBe("unusually-clean");
   });
 
   it("treats a normal mix as healthy", () => {
-    expect(computeFollowSplit(100, 25)?.verdict).toBe("healthy");
+    expect(computeNofollowExposure(100, 25)?.verdict).toBe("healthy");
   });
 
   it("clamps a nofollow count that exceeds the total", () => {
-    const split = computeFollowSplit(50, 80);
-    expect(split?.dofollow).toBe(0);
-    expect(split?.nofollow).toBe(50);
-    expect(split?.dofollowShare).toBe(0);
+    const exposure = computeNofollowExposure(50, 80);
+    expect(exposure?.nofollow).toBe(50);
+    expect(exposure?.cleanDofollow).toBe(0);
+    expect(exposure?.nofollowShare).toBe(1);
   });
 
   it("rejects a negative nofollow count rather than inventing links", () => {
-    expect(computeFollowSplit(50, -5)).toBeNull();
+    expect(computeNofollowExposure(50, -5)).toBeNull();
   });
 });

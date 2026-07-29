@@ -142,6 +142,12 @@ export const referringNetworksResultSchema = z.object({
   totalDomains: z.number(),
   /** Share of those domains sitting in the three largest subnets, 0-1. */
   topThreeShare: z.number(),
+  /**
+   * Whether `rows` covers every network DataForSEO holds. False means the page
+   * was truncated, and `topThreeShare` describes the sample rather than the
+   * profile — the UI must not draw a concentration conclusion from it.
+   */
+  isComplete: z.boolean().default(false),
   fetchedAt: z.string(),
 });
 

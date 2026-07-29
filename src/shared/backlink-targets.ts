@@ -11,10 +11,18 @@
 export function normalizeComparisonTarget(
   value: string | null | undefined,
 ): string {
-  return (value ?? "")
-    .toLowerCase()
-    .trim()
-    .replace(/^https?:\/\//, "")
-    .replace(/^www\./, "")
-    .replace(/\/+$/, "");
+  return (
+    (value ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/^https?:\/\//, "")
+      .replace(/^www\./, "")
+      // The path goes too. Comparison is domain-level on both sides — the
+      // server sends bare domains to DataForSEO — so keeping it here would let
+      // `rival.com` and `rival.com/pricing` sit in the chips as two
+      // competitors that collapse into one row and one intersect target.
+      .split("/")[0]
+      .split("?")[0]
+      .split("#")[0]
+  );
 }

@@ -221,12 +221,26 @@ function ComparisonTableRow({
 function ComparisonVerdict({ result }: { result: BacklinksCompareResult }) {
   if (result.yourPosition == null || result.totalTargets < 2) return null;
 
+  const yourRow = result.rows.find((row) => row.isYou);
   const leading = result.yourPosition === 1;
+  // Position is competition-ranked, so first place can be shared. Saying "you
+  // lead" when a rival is level would overstate it.
+  const tiedForFirst =
+    leading &&
+    result.rows.filter(
+      (row) => row.referringDomains === yourRow?.referringDomains,
+    ).length > 1;
+
   return (
     <p
       className={`text-sm ${leading ? "text-success" : "text-base-content/70"}`}
     >
-      {leading ? (
+      {tiedForFirst ? (
+        <>
+          You are level at the top on referring domains, across{" "}
+          {result.totalTargets} sites compared.
+        </>
+      ) : leading ? (
         <>
           You lead this group on referring domains, across {result.totalTargets}{" "}
           sites compared.
@@ -284,8 +298,9 @@ export function BacklinksCompareCard({
           </h3>
           <p className="text-xs text-base-content/55">
             Put this link profile side by side with up to{" "}
-            {MAX_COMPARE_COMPETITORS} rivals. One request covers every domain,
-            so a fourth competitor costs no more than the first.
+            {MAX_COMPARE_COMPETITORS} rivals. Comparing runs a fixed set of
+            lookups that each cover every domain at once, so a fourth competitor
+            costs no more than the first.
           </p>
         </div>
 

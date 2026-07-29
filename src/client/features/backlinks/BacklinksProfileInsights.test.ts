@@ -55,13 +55,16 @@ function page<T>(rows: T[]) {
 }
 
 describe("FollowSplitCard", () => {
-  it("renders the dofollow count and the split note", () => {
+  it("reports nofollow exposure without claiming a dofollow domain count", () => {
     const markup = renderToStaticMarkup(
       createElement(FollowSplitCard, { summary: summary() }),
     );
-    expect(markup).toContain("Dofollow vs nofollow");
-    expect(markup).toContain("248");
-    expect(markup).toContain("80%");
+    expect(markup).toContain("Nofollow exposure");
+    expect(markup).toContain("62");
+    expect(markup).toContain("20%");
+    // 310 - 62 = 248 must never be presented as "domains passing authority":
+    // a domain can send both link types and be counted in both numbers.
+    expect(markup).not.toContain("pass authority");
   });
 
   it("renders nothing when the nofollow count is missing", () => {

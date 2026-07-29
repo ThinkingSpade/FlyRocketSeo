@@ -117,9 +117,15 @@ export function buildComparison(inputs: ComparisonInputs): ComparisonResult {
   const ranked = rows.filter((row) => row.referringDomains != null);
   const yourRow = rows.find((row) => row.isYou);
   const leaderRow = ranked[0] ?? null;
+  // Standard competition ranking: everyone on the same count shares a place.
+  // Using the array index instead would break ties alphabetically and report
+  // "#2 of 2, 0 behind" for two sites that are actually level.
   const yourPosition =
     yourRow && yourRow.referringDomains != null
-      ? ranked.indexOf(yourRow) + 1
+      ? ranked.filter(
+          (row) =>
+            (row.referringDomains ?? 0) > (yourRow.referringDomains ?? 0),
+        ).length + 1
       : null;
 
   return {

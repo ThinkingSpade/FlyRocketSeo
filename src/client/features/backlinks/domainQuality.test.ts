@@ -37,10 +37,10 @@ describe("computeDomainQuality", () => {
     expect(quality!.buckets.reduce((sum, b) => sum + b.domains, 0)).toBe(4);
   });
 
-  it("counts DR 30+ as strong, exclusive of 30 itself", () => {
+  it("counts DR 30 itself as strong, matching the 'DR 30+' label", () => {
     const quality = computeDomainQuality(ranks([29, 30, 31, 80]));
-    expect(quality?.strongDomains).toBe(2);
-    expect(quality?.strongShare).toBeCloseTo(0.5, 5);
+    expect(quality?.strongDomains).toBe(3);
+    expect(quality?.strongShare).toBeCloseTo(0.75, 5);
   });
 
   it("takes the median of an odd-length set", () => {

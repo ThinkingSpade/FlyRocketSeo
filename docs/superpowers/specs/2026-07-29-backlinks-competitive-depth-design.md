@@ -55,37 +55,59 @@ F1 and F2 need `backlinksSummaryItemSchema`, the overview mapper and
 | F8  | **Link Intersect** — referring domains that link to _k of your N competitors_ but **not** to you, ranked by intersection count then domain rank. CSV export.                                                             | `domain_intersection` with `targets: {1..N}` + `exclude_targets: [you]`                                                                                                                             |
 | F9  | **Competing domains** — sites that share your referring domains, i.e. who you actually compete with for links                                                                                                            | `backlinks/competitors`                                                                                                                                                                             |
 
-Competitor domains are prefilled from the project's saved competitor list where one exists, and
-are editable as chips. Nothing fires until **Compare** is clicked.
+Competitor domains are entered as chips. **There is no persisted per-project competitor list**
+in this codebase — the Competitors tab discovers them live and records the run in
+`analysis_runs`, which is a restorable result rather than a curated list. So instead of a
+prefill, F9 doubles as the discovery step: its results carry a one-click "Compare" button that
+adds a domain to the chips. Nothing fires until **Compare** is clicked.
 
 ### Wave 3 — feeds and network risk
 
-| #   | Feature                                                                                                         | Endpoint                                                    |
-| --- | --------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| F10 | **New & Lost link feeds** — two new results sub-tabs listing the actual links won and lost, not just the counts | existing `backlinks/live` with `is_new` / `is_lost` filters |
-| F11 | **Referring networks** — IP / subnet concentration, flagging link-network risk                                  | `referring_networks`                                        |
+| #   | Feature                                                                                     | Endpoint                                                    |
+| --- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
+| F10 | **Won / lost link views** — see the actual links won and lost, not just the monthly counts  | existing `backlinks/live` with `is_new` / `is_lost` filters |
+| F11 | **Referring networks** — subnet concentration, flagging link-network risk                   | `referring_networks`                                        |
+
+F10 ships as a **status filter on the existing Backlinks sub-tab**, not as two new sub-tabs.
+Adding a tab means threading a new value through the URL search schema, the sort schemas, the
+tab strip, the filter panel and the export — a large surface for no extra answer. As a filter it
+reuses the sorting, paging and export that are already tested. Asking for lost links overrides
+the existing "hide lost" toggle rather than contradicting it into an empty result.
 
 ## Architecture
 
 Follows the existing three-layer split exactly:
 
 ```
-src/server/lib/dataforseo/backlinks-bulk.ts      (new)  zod schemas + fetchers for bulk_*
-src/server/lib/dataforseo/backlinks-insights.ts  (edit) referring_networks, page_intersection
+src/shared/backlink-targets.ts                   (new)  target normalizer, shared both ways
+src/server/lib/dataforseo/backlinks-bulk.ts      (new)  bulk_* + referring_networks fetchers
+src/server/lib/dataforseo/{fetchers,client}.ts   (edit) register the new fetchers for metering
 src/server/features/backlinks/services/
-    backlinksComparison.ts                       (new)  pure merge/rank helpers + tests
-    BacklinksCompareService.ts                   (new)  R2 cache + credit attribution
-src/serverFunctions/backlinks.ts                 (edit) new metered server functions
+    backlinksComparison.ts / .test.ts            (new)  merge five bulk responses into rows
+    backlinksCompareMappers.ts / .test.ts        (new)  keyed-intersection + network shaping
+    BacklinksCompareService.ts                   (new)  R2 cache + the four entry points
+    backlinksApiFilters.ts                       (edit) F10 status filter
+src/types/schemas/backlinks-compare.ts           (new)  requests + results
+src/serverFunctions/backlinks.ts                 (edit) four new metered server functions
 src/client/features/backlinks/
-    BacklinksCompareCard.tsx                     (new)  competitor chips + comparison table
-    LinkIntersectCard.tsx                        (new)
-    CompetingDomainsCard.tsx                     (new)
+    useBacklinksCompare.ts                       (new)  chips + four independently gated queries
+    BacklinksCompareSection.tsx                  (new)  the block, hidden on a restored run
+    BacklinksCompareCard.tsx / .test.ts          (new)  chips + comparison leaderboard
+    BacklinksGapCards.tsx                        (new)  F8, F9, F11
+    BacklinksProfileInsights.tsx / .test.ts      (new)  F2, F4, F5, F6
     anchorHealth.ts / .test.ts                   (new)  F4 derivation
     domainQuality.ts / .test.ts                  (new)  F5 derivation
     disavow.ts / .test.ts                        (new)  F6 derivation + file format
-    BacklinksProfileSections.tsx                 (edit) F1, F2 breakdowns
+    followSplit.ts / .test.ts                    (new)  F2 derivation
+    BacklinksProfileSections.tsx                 (edit) F1 breakdowns
     BacklinksPageCharts.tsx                      (edit) F3 authority chart
+    BacklinksFilterPanel.tsx                     (edit) F10 status control
 ```
+
+The normalizer lives in `shared/` rather than beside the service because the client needs it to
+de-duplicate chips, and importing it from the service would pull the 1.6 MB `dataforseo-client`
+SDK into the browser bundle — the exact cold-start bloat a previous wave spent a refactor
+removing.
 
 Data flow is unchanged: server function → `BacklinksService`-style service (R2 cache keyed by
 organization + inputs) → `dataforseo` fetcher → zod-validated envelope.

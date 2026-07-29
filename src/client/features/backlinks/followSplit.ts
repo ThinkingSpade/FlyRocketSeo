@@ -1,72 +1,80 @@
 /**
- * Dofollow vs nofollow split, derived from the summary call the overview
- * already makes. DataForSEO reports only the nofollow side, so the dofollow
- * count is a subtraction.
+ * How much of the referring-domain count carries nofollow links, derived from
+ * the summary call the overview already makes.
+ *
+ * DataForSEO's `referring_domains_nofollow` counts domains that point **at
+ * least one** nofollow link at the target. It is not a separate population from
+ * the total: a domain linking twice, once dofollow and once nofollow, is
+ * counted in both numbers. So `total - nofollow` is *not* the number of domains
+ * passing authority, and this deliberately does not claim it is — it reports
+ * the overlap DataForSEO actually measured.
  */
 
-type FollowSplit = {
-  dofollow: number;
+type NofollowExposure = {
+  /** Referring domains with at least one nofollow link. */
   nofollow: number;
   total: number;
-  /** Share of referring domains that pass authority, 0-1. */
-  dofollowShare: number;
-  /** How the share reads against a typical profile. */
+  /** Share of referring domains touched by nofollow, 0-1. */
+  nofollowShare: number;
+  /**
+   * Domains with no nofollow link at all — a floor on how many pass authority,
+   * since the rest may still pass it through their other links.
+   */
+  cleanDofollow: number;
   verdict: "healthy" | "nofollow-heavy" | "unusually-clean";
   note: string;
 };
 
 /**
- * Most real link profiles land somewhere around two thirds dofollow. Below
- * `NOFOLLOW_HEAVY_SHARE` the profile is passing much less authority than its
- * headline count suggests; above `SUSPICIOUSLY_CLEAN_SHARE` the near-total
- * absence of nofollow is itself worth a look, since organic profiles almost
- * always pick up some nofollow links from social and forums.
+ * Past this share, enough of the profile is touched by nofollow that the
+ * headline referring-domain count oversells it. Below the clean threshold, the
+ * near-total absence of nofollow is itself worth a look: organic profiles pick
+ * up nofollow links from social, forums and news comments.
  */
 const NOFOLLOW_HEAVY_SHARE = 0.5;
-const SUSPICIOUSLY_CLEAN_SHARE = 0.97;
+const SUSPICIOUSLY_CLEAN_SHARE = 0.03;
 
-export function computeFollowSplit(
+export function computeNofollowExposure(
   total: number | null,
   nofollow: number | null,
-): FollowSplit | null {
+): NofollowExposure | null {
   if (total == null || total <= 0 || nofollow == null || nofollow < 0) {
     return null;
   }
   // A nofollow count above the total would be provider noise; clamping keeps
-  // the bar from rendering a negative dofollow segment.
+  // the bar from rendering a negative segment.
   const clampedNofollow = Math.min(nofollow, total);
-  const dofollow = total - clampedNofollow;
-  const dofollowShare = dofollow / total;
+  const nofollowShare = clampedNofollow / total;
 
   return {
-    dofollow,
     nofollow: clampedNofollow,
     total,
-    dofollowShare,
-    ...describeSplit(dofollowShare),
+    nofollowShare,
+    cleanDofollow: total - clampedNofollow,
+    ...describeExposure(nofollowShare),
   };
 }
 
-function describeSplit(dofollowShare: number): {
-  verdict: FollowSplit["verdict"];
+function describeExposure(nofollowShare: number): {
+  verdict: NofollowExposure["verdict"];
   note: string;
 } {
-  const percent = Math.round(dofollowShare * 100);
+  const percent = Math.round(nofollowShare * 100);
 
-  if (dofollowShare < NOFOLLOW_HEAVY_SHARE) {
+  if (nofollowShare >= NOFOLLOW_HEAVY_SHARE) {
     return {
       verdict: "nofollow-heavy",
-      note: `Only ${percent}% of referring domains pass authority — the headline backlink count overstates how much ranking value this profile carries.`,
+      note: `${percent}% of referring domains send at least one nofollow link. Some of those domains also send dofollow links, but the headline count still overstates how much authority reaches this site.`,
     };
   }
-  if (dofollowShare >= SUSPICIOUSLY_CLEAN_SHARE) {
+  if (nofollowShare <= SUSPICIOUSLY_CLEAN_SHARE) {
     return {
       verdict: "unusually-clean",
-      note: `${percent}% dofollow is higher than an organic profile usually reaches — worth checking that the links were earned rather than placed.`,
+      note: `Almost no referring domain sends a nofollow link. Organic profiles normally pick some up from social and forums, so it is worth checking these links were earned rather than placed.`,
     };
   }
   return {
     verdict: "healthy",
-    note: `${percent}% of referring domains pass authority, which is a normal mix.`,
+    note: `${percent}% of referring domains send at least one nofollow link, which is a normal mix.`,
   };
 }

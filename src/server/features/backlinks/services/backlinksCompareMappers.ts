@@ -83,11 +83,23 @@ export function mapIntersectionRows(
  * Groups referring links by subnet and measures how concentrated they are. A
  * profile whose links cluster into a handful of networks is the footprint a
  * link farm leaves behind, and no per-domain view shows it.
+ *
+ * `totalCount` is the number of networks DataForSEO holds, which is usually
+ * larger than the page of `items` we asked for. The concentration ratio is
+ * therefore computed over a truncated sample and is only trustworthy when the
+ * page covers everything — `isComplete` records that, and the UI must not call
+ * a profile concentrated on the strength of a truncated one. Taking the top N
+ * networks and dividing by their own total would otherwise report a high share
+ * for every large, perfectly healthy profile.
  */
-export function summarizeNetworks(items: ReferringNetworkItem[]): {
+export function summarizeNetworks(
+  items: ReferringNetworkItem[],
+  totalCount: number | null,
+): {
   rows: ReferringNetworkRow[];
   totalDomains: number;
   topThreeShare: number;
+  isComplete: boolean;
 } {
   const rows = items
     .flatMap((item) => {
@@ -120,5 +132,6 @@ export function summarizeNetworks(items: ReferringNetworkItem[]): {
     rows,
     totalDomains,
     topThreeShare: totalDomains > 0 ? topThree / totalDomains : 0,
+    isComplete: totalCount == null || totalCount <= rows.length,
   };
 }

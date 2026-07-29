@@ -49,7 +49,8 @@ const BUCKETS: ReadonlyArray<{ label: string; min: number; max: number }> = [
   { label: "71+", min: 71, max: Infinity },
 ];
 
-const STRONG_RANK_FLOOR = 31;
+/** Inclusive, so the "DR 30+" the card shows means what it says. */
+const STRONG_RANK_FLOOR = 30;
 
 export function computeDomainQuality(
   rows: DomainQualityRow[],

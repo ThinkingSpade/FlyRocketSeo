@@ -90,9 +90,9 @@ describe("computeAnchorHealth", () => {
       [row("deliotx", 10, 5000), row("coffee machines", 10, 1)],
       "deliotx.com",
     );
-    expect(health?.totalDomains).toBe(20);
+    expect(health?.totalMentions).toBe(20);
     expect(
-      health?.categories.find((c) => c.category === "branded")?.domains,
+      health?.categories.find((c) => c.category === "branded")?.mentions,
     ).toBe(10);
   });
 
@@ -101,7 +101,7 @@ describe("computeAnchorHealth", () => {
       [row("deliotx", null, 7)],
       "deliotx.com",
     );
-    expect(health?.totalDomains).toBe(7);
+    expect(health?.totalMentions).toBe(7);
   });
 
   it("orders the breakdown consistently rather than by volume", () => {

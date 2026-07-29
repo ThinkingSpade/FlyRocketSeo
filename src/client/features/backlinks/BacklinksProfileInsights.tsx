@@ -4,7 +4,7 @@ import { downloadTextFile } from "@/client/lib/csv";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeAnchorHealth } from "./anchorHealth";
 import { computeDomainQuality } from "./domainQuality";
-import { computeFollowSplit } from "./followSplit";
+import { computeNofollowExposure } from "./followSplit";
 import {
   auditToxicDomains,
   buildDisavowFile,
@@ -93,45 +93,46 @@ export function FollowSplitCard({
 }: {
   summary: BacklinksOverviewResult["summary"];
 }) {
-  const split = computeFollowSplit(
+  const exposure = computeNofollowExposure(
     summary.referringDomains,
     summary.referringDomainsNofollow,
   );
-  if (!split) return null;
+  if (!exposure) return null;
 
   const tone =
-    split.verdict === "nofollow-heavy"
+    exposure.verdict === "nofollow-heavy"
       ? "text-warning"
-      : split.verdict === "unusually-clean"
+      : exposure.verdict === "unusually-clean"
         ? "text-base-content/70"
         : "text-success";
 
   return (
-    <InsightCard title="Dofollow vs nofollow" icon={Waypoints}>
+    <InsightCard title="Nofollow exposure" icon={Waypoints}>
       <p className={`text-lg font-semibold ${tone}`}>
-        <span className="tabular-nums">{formatNumber(split.dofollow)}</span>{" "}
+        <span className="tabular-nums">{formatNumber(exposure.nofollow)}</span>{" "}
         <span className="text-sm font-normal text-base-content/60">
-          referring domains pass authority
+          of {formatNumber(exposure.total)} referring domains send a nofollow
+          link
         </span>
       </p>
       <div
         className="flex h-2 w-full overflow-hidden rounded-full bg-base-200"
         role="img"
-        aria-label={`${formatPercent(split.dofollowShare)} dofollow, ${formatPercent(1 - split.dofollowShare)} nofollow`}
+        aria-label={`${formatPercent(exposure.nofollowShare)} of referring domains send at least one nofollow link`}
       >
         <div
           className="h-full bg-primary/70"
-          style={{ width: `${split.dofollowShare * 100}%` }}
+          style={{ width: `${(1 - exposure.nofollowShare) * 100}%` }}
         />
       </div>
       <div className="flex justify-between text-xs text-base-content/60">
-        <span>Dofollow {formatPercent(split.dofollowShare)}</span>
         <span>
-          Nofollow {formatNumber(split.nofollow)} (
-          {formatPercent(1 - split.dofollowShare)})
+          No nofollow at all {formatNumber(exposure.cleanDofollow)} (
+          {formatPercent(1 - exposure.nofollowShare)})
         </span>
+        <span>Some nofollow {formatPercent(exposure.nofollowShare)}</span>
       </div>
-      <p className="text-xs text-base-content/60">{split.note}</p>
+      <p className="text-xs text-base-content/60">{exposure.note}</p>
     </InsightCard>
   );
 }
@@ -146,7 +147,7 @@ export function AnchorHealthCard({
   const health = computeAnchorHealth(anchors?.rows ?? [], target);
   if (!health) return null;
 
-  const max = Math.max(...health.categories.map((row) => row.domains));
+  const max = Math.max(...health.categories.map((row) => row.mentions));
   const tone =
     health.verdict === "over-optimized"
       ? "text-error"
@@ -168,7 +169,7 @@ export function AnchorHealthCard({
           <ShareBar
             key={row.category}
             label={row.label}
-            value={row.domains}
+            value={row.mentions}
             share={row.share}
             max={max}
           />
@@ -176,8 +177,9 @@ export function AnchorHealthCard({
       </ul>
       <p className="text-xs text-base-content/60">{health.note}</p>
       <p className="text-xs text-base-content/40">
-        Across the {formatNumber(health.totalDomains)} referring domains on this
-        page of anchors.
+        Across {formatNumber(health.totalMentions)} anchor mentions on this
+        page. A domain that links with several different anchors is counted once
+        per anchor.
       </p>
     </InsightCard>
   );

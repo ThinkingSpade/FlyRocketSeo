@@ -106,6 +106,37 @@ describe("buildComparison", () => {
     expect(result.gapToLeader).toBe(1790);
   });
 
+  it("treats a tie as a shared place, not a loss on alphabetical order", () => {
+    // `z-you.com` sorts last alphabetically, so an index-based position would
+    // report "#2 of 2, 0 behind" for two sites that are actually level.
+    const result = buildComparison({
+      ...EMPTY,
+      you: "z-you.com",
+      competitors: ["a-rival.com"],
+      referringDomains: [
+        { target: "z-you.com", referring_domains: 100 },
+        { target: "a-rival.com", referring_domains: 100 },
+      ],
+    });
+    expect(result.yourPosition).toBe(1);
+    expect(result.gapToLeader).toBe(0);
+  });
+
+  it("shares a place across a three-way tie", () => {
+    const result = buildComparison({
+      ...EMPTY,
+      you: "you.com",
+      competitors: ["a.com", "b.com"],
+      referringDomains: [
+        { target: "you.com", referring_domains: 50 },
+        { target: "a.com", referring_domains: 100 },
+        { target: "b.com", referring_domains: 100 },
+      ],
+    });
+    // Two sites are ahead, so you are third — competition ranking, not "#2".
+    expect(result.yourPosition).toBe(3);
+  });
+
   it("reports a zero gap when you lead", () => {
     const result = buildComparison({
       ...EMPTY,

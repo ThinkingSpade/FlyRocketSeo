@@ -165,28 +165,35 @@ export function LinkIntersectCard({
               </tbody>
             </table>
           </div>
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-base-content/50">
               A domain linking to more than one competitor has already shown it
               will link to sites like yours.
             </p>
-            <div className="join">
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs join-item"
-                disabled={(result?.page ?? 1) <= 1 || isLoading}
-                onClick={() => onPageChange((result?.page ?? 1) - 1)}
-              >
-                Previous
-              </button>
-              <button
-                type="button"
-                className="btn btn-ghost btn-xs join-item"
-                disabled={!result?.hasMore || isLoading}
-                onClick={() => onPageChange((result?.page ?? 1) + 1)}
-              >
-                Next
-              </button>
+            <div className="flex items-center gap-2">
+              {/* Each page is a fresh lookup, so say so next to the control
+                  that triggers one rather than letting it read as free. */}
+              <span className="text-xs text-base-content/40">
+                Page {result?.page ?? 1} · each page is a new lookup
+              </span>
+              <div className="join">
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs join-item"
+                  disabled={(result?.page ?? 1) <= 1 || isLoading}
+                  onClick={() => onPageChange((result?.page ?? 1) - 1)}
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-xs join-item"
+                  disabled={!result?.hasMore || isLoading}
+                  onClick={() => onPageChange((result?.page ?? 1) + 1)}
+                >
+                  Next
+                </button>
+              </div>
             </div>
           </div>
         </>
@@ -318,10 +325,15 @@ export function ReferringNetworksCard({
   onRun: () => void;
 }) {
   const rows = result?.rows.slice(0, NETWORK_PREVIEW_LIMIT) ?? [];
-  const concentrated =
+  // Only a complete listing supports a claim about the profile. On a truncated
+  // page the top three necessarily dominate their own sample, so calling that
+  // a link network would flag every large, perfectly healthy profile.
+  const canJudge =
     result != null &&
-    result.rows.length >= MIN_NETWORKS_TO_JUDGE &&
-    result.topThreeShare >= NETWORK_CONCENTRATION_WARNING;
+    result.isComplete &&
+    result.rows.length >= MIN_NETWORKS_TO_JUDGE;
+  const concentrated =
+    canJudge && result.topThreeShare >= NETWORK_CONCENTRATION_WARNING;
 
   return (
     <CardShell
@@ -354,11 +366,21 @@ export function ReferringNetworksCard({
           <p
             className={`text-sm ${concentrated ? "text-warning" : "text-base-content/70"}`}
           >
-            {Math.round(result.topThreeShare * 100)}% of these referring domains
-            sit in the three largest subnets
-            {concentrated
-              ? " — that concentration is the footprint a link network leaves."
-              : ", which is a healthy spread."}
+            {canJudge ? (
+              <>
+                {Math.round(result.topThreeShare * 100)}% of referring domains
+                sit in the three largest subnets
+                {concentrated
+                  ? " — that concentration is the footprint a link network leaves."
+                  : ", which is a healthy spread."}
+              </>
+            ) : (
+              <>
+                Showing the largest networks behind this profile. There are more
+                than fit in one lookup, so the split below describes these
+                networks rather than the profile as a whole.
+              </>
+            )}
           </p>
           <div className="overflow-x-auto">
             <table className="table table-sm">
