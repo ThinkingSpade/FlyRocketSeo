@@ -85,6 +85,69 @@ export function BacklinksTrendChart({
   );
 }
 
+/**
+ * Domain Rank over the same twelve months. The `rank` values already ride
+ * along on the history call the overview makes, so this chart costs nothing —
+ * it was simply never plotted.
+ */
+export function BacklinksAuthorityChart({
+  data,
+}: {
+  data: BacklinksOverviewData["trends"];
+}) {
+  const { containerRef, chartWidth } = useChartWidth();
+  const points = data.filter((point) => point.rank != null);
+
+  if (points.length === 0) {
+    return <EmptyChartState />;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-56 min-w-0"
+      aria-label="Domain Rank trend chart"
+    >
+      {chartWidth > 0 ? (
+        <LineChart
+          width={chartWidth}
+          height={224}
+          data={points}
+          margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="currentColor"
+            opacity={0.12}
+          />
+          <XAxis
+            dataKey="date"
+            tickFormatter={formatChartTick}
+            minTickGap={24}
+          />
+          {/* Fixed to the one-hundred rank scale the backlinks calls request,
+              so a flat profile reads as flat instead of being auto-zoomed into
+              looking volatile. */}
+          <YAxis domain={[0, 100]} width={60} />
+          <Tooltip
+            formatter={formatTooltipValue}
+            labelFormatter={formatChartLabel}
+          />
+          <Legend />
+          <Line
+            type="monotone"
+            dataKey="rank"
+            stroke="#a855f7"
+            strokeWidth={2}
+            dot={false}
+            name="Domain Rank"
+          />
+        </LineChart>
+      ) : null}
+    </div>
+  );
+}
+
 export function BacklinksNewLostChart({
   data,
 }: {

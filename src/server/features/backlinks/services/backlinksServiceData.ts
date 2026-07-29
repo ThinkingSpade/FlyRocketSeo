@@ -371,6 +371,20 @@ function buildOverviewResult(args: {
         args.summary.referring_links_tld,
         LINK_BREAKDOWN_LIMIT,
       ),
+      referringLinkAttributes: toLinkBreakdown(
+        args.summary.referring_links_attributes,
+        LINK_BREAKDOWN_LIMIT,
+      ),
+      referringPlatformTypes: toLinkBreakdown(
+        args.summary.referring_links_platform_types,
+        LINK_BREAKDOWN_LIMIT,
+      ),
+      referringPlacements: toLinkBreakdown(
+        args.summary.referring_links_semantic_locations,
+        LINK_BREAKDOWN_LIMIT,
+      ),
+      referringDomainsNofollow: args.summary.referring_domains_nofollow ?? null,
+      referringPagesNofollow: args.summary.referring_pages_nofollow ?? null,
     },
     trends: historyRows.map((item) => ({
       date: item.date,
