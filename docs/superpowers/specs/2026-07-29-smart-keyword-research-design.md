@@ -1,7 +1,19 @@
 # Smart Keyword Research
 
 **Date:** 2026-07-29
-**Status:** Approved design, ready for planning
+**Status:** All five phases implemented on `feat/smart-keyword-research`
+(`fb13666`, `f1f1494`, `20c88ee`, `652081b`, `ffda72a`).
+
+**Verified in a browser:** Phase 0 (one location control; "dallas" surfaces the
+DFW metro; selecting it flips the provider notice and hides the Labs-only
+clickstream toggle) and Phase 1 (profile saves to D1 as confirmed, exclusion
+lines parse, summary reads back), plus Phase 2's no-key degradation.
+
+**Not verified in a browser:** anything needing live data this environment
+cannot produce — Phases 3 and 4 render only alongside SERP results
+(`DATAFORSEO_API_KEY` unset), and Phase 2's model output needs
+`OPENROUTER_API_KEY` (also unset). All of it typechecks, lints and is unit
+tested; none of it has been seen working against real data.
 
 ## Problem
 
