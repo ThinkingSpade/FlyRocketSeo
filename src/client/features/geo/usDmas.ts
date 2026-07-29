@@ -35,26 +35,20 @@
  * commercial property, and neither publisher redistributes it in their free
  * bulk location files — "Contact The Nielsen Company directly for DMA data."
  *
- * The one number that looks like a plausible DMA code anywhere near this
- * codebase is 1026339 ("Dallas-Fort Worth TX"), used as a test fixture in
- * ../../../shared/geo/resolveGeo.test.ts and scripts/verify-geo-support.ts.
- * It is deliberately NOT copied into this file: those two call sites only
- * need *some* number to exercise resolveGeo's branching logic, so being wrong
- * would be harmless there, but a wrong number here reaches a real picker a
- * real user clicks. That fixture has never actually been confirmed against
- * the live API in this environment (no DATAFORSEO_API_KEY has ever been
- * configured here — see .superpowers/sdd/geo-t1-t2-report.md) — it is a
- * plan-time assumption, not a verified fact, and it stays that way until
- * something actually checks it.
- *
- * The real fix: scripts/seed-geo-locations.ts (Task 6) calls the live,
+ * That seed has since run: scripts/seed-geo-locations.ts calls the live,
  * authenticated `POST /v3/keywords_data/google_ads/locations` endpoint, which
- * — per that script's own already-written expectations — returns "DMA
- * Region"-typed rows that the free bulk exports above omit. That endpoint,
- * not this file, is the only channel that actually has this data. Once it has
- * run at least once, extend this array from its output (or read a small
- * number of its rows here as a documented example — do not hand-copy the
- * whole thing).
+ * DOES return the "DMA Region"-typed rows the free bulk exports omit, and
+ * production's `geo_locations` now holds 210 of them. The picker reads those
+ * through `searchGeoLocations` (see buildMetroAreasFromSearch), so this array
+ * staying empty costs a seeded deployment nothing.
+ *
+ * One correction that came out of that seed, recorded here because this file
+ * is where the guess was documented: the long-standing 1026339
+ * ("Dallas-Fort Worth TX") fixture in ../../../shared/geo/resolveGeo.test.ts
+ * and scripts/verify-geo-support.ts was WRONG. 1026339 is the City of Dallas;
+ * the Dallas-Ft. Worth DMA is 200623. Both are sub-country geotargets that
+ * route to Google Ads, so no assertion ever failed over it — the label was
+ * simply false. Both call sites now use 200623.
  */
 export const US_DMAS: ReadonlyArray<{
   code: number;

@@ -61,3 +61,30 @@ export function resolveActiveScopeArea(
 ): TargetArea {
   return confirmed ?? resolveDefaultScopeArea(countryLocationCode);
 }
+
+/**
+ * The area a tab's own scope picker should DISPLAY, given the country that
+ * tab's run is actually going to.
+ *
+ * This deliberately repeats `resolveRunGeo`'s own gate -- a sub-country area
+ * applies only when its parent country matches the run's country -- because
+ * the picker and the request must never disagree. Showing "Dallas-Ft. Worth,
+ * TX" while the run silently goes national (because the country control moved
+ * to Canada) is precisely the mismatch that made the previous two-control
+ * layout unreadable: the header claimed a metro, the form claimed a country,
+ * and neither said which one the numbers came from.
+ *
+ * A `kind: "country"` area is never returned as-is for the same reason
+ * `resolveRunGeo` nulls it out unconditionally: it can be a stale default
+ * resolved against a country the tab has since moved off, so the country
+ * fallback is rebuilt from the LIVE code instead of trusting the embedded one.
+ */
+export function resolveEffectiveScopeArea(
+  area: TargetArea,
+  sessionCountryCode: number,
+): TargetArea {
+  return area.kind !== "country" &&
+    area.parentCountryCode === sessionCountryCode
+    ? area
+    : resolveDefaultScopeArea(sessionCountryCode);
+}

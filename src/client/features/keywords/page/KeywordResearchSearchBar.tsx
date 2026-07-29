@@ -8,11 +8,12 @@ import {
   MAX_KEYWORDS_PER_SUBMIT,
   RESULT_LIMITS,
 } from "@/client/features/keywords/keywordResearchTypes";
-import { LocationSelect } from "@/client/components/LocationSelect";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import type { SeedSuggestion } from "@/client/features/insights/types";
 import { resolveRunGeo } from "@/client/features/geo/resolveRunGeo";
-import type { TargetArea } from "@/shared/geo/types";
+import { resolveEffectiveScopeArea } from "@/client/features/geo/resolveScopeArea";
+import type { TargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { resolveKeywordProviderNotice } from "./keywordProviderNotice";
 import type { KeywordResearchControllerState } from "./types";
 
@@ -20,15 +21,21 @@ type Props = {
   controller: KeywordResearchControllerState;
   suggestions: SeedSuggestion[];
   /**
-   * The project's own confirmed target-area scope (header ScopeControl) --
-   * used ONLY to preview what a submission right now would actually use,
-   * never to relabel an already-fetched run (see resolveRunGeo.ts's own
-   * header for that distinction). This is the same reconciliation every
-   * other metered tab's own "Location" field funnels through, so a
-   * confirmed Dallas-Ft. Worth area correctly overrides the provider
-   * message here too, not just the eventual request.
+   * This tab's target-area scope. The picker below is the tab's ONLY
+   * geography control -- it replaced both the country-only `LocationSelect`
+   * that used to sit in this form and the separate header `ScopeControl`
+   * that sat above it.
+   *
+   * Those two were the actual reason a DFW project looked un-targetable:
+   * the control users reach for (this one, next to the Search button) could
+   * only ever pick a country, while the one that could pick a metro sat in
+   * the page header looking like a display-only breadcrumb. Selecting a
+   * metro here now sets both halves `resolveRunGeo` reconciles at once.
    */
-  targetArea: TargetArea;
+  scope: TargetAreaScope;
+  /** The project's own configured country -- what "Clear" reverts the
+   *  country half to, since clearing drops the confirmed area entirely. */
+  projectCountryCode: number;
 };
 
 function getTextareaRows(value: string): number {
@@ -40,7 +47,8 @@ function getTextareaRows(value: string): number {
 export function KeywordResearchSearchBar({
   controller,
   suggestions,
-  targetArea,
+  scope,
+  projectCountryCode,
 }: Props) {
   const { controlsForm, handleSearchSubmit, isLoading } = controller;
 
@@ -100,10 +108,28 @@ export function KeywordResearchSearchBar({
           <div className="grid grid-cols-2 gap-2 lg:contents">
             <controlsForm.Field name="locationCode">
               {(field) => (
-                <LocationSelect
-                  value={field.state.value}
-                  onChange={(code) => field.handleChange(code)}
-                  className="w-full lg:w-44 lg:shrink-0"
+                <ScopeControl
+                  // Never `scope.area` raw: that can name a metro this run
+                  // would not actually use (see resolveEffectiveScopeArea).
+                  area={resolveEffectiveScopeArea(
+                    scope.area,
+                    field.state.value,
+                  )}
+                  onChange={(area) => {
+                    // One pick, both halves: the country the request goes to
+                    // and the area within it. A metro/city carries its own
+                    // parent country, so picking "Dallas-Ft. Worth, TX" moves
+                    // the country to the US too rather than stranding the
+                    // metro under whatever country was selected before.
+                    field.handleChange(area.parentCountryCode);
+                    scope.onChange(area);
+                  }}
+                  hasConfirmedArea={scope.hasConfirmedArea}
+                  onClear={() => {
+                    field.handleChange(projectCountryCode);
+                    scope.onClear();
+                  }}
+                  className="w-full lg:w-56 lg:shrink-0"
                 />
               )}
             </controlsForm.Field>
@@ -171,7 +197,7 @@ export function KeywordResearchSearchBar({
             // sitting on e.g. Canada is correctly ignored here too.
             const volumeGeo = resolveRunGeo(
               "keyword-volume",
-              targetArea,
+              scope.area,
               locationField.state.value,
             );
             const notice = resolveKeywordProviderNotice(volumeGeo);

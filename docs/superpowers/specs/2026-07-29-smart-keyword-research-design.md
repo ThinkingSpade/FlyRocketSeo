@@ -7,29 +7,29 @@
 
 Keyword Research is tool-shaped, not client-shaped. You type a string, it
 returns strings that resemble it. Four distinct failures, observed on a real
-project (deliotx.com, a DFW vending *operator* — they place and service
+project (deliotx.com, a DFW vending _operator_ — they place and service
 machines in offices; they do not sell machines).
 
 **1. It has no idea what the client sells.** A project is `name`, `domain`,
 `locationCode`, `languageCode` and its target areas
 (`src/db/pg/app.schema.ts:57`). Nothing describes the offer, the buyer, or —
-decisively — what the business is *not*. Expansion is string-similarity via
+decisively — what the business is _not_. Expansion is string-similarity via
 DataForSEO Labs, so `dfw vending` returns everything containing those tokens,
 including `vending machines for sale dfw`. That keyword belongs to a
-*competitor's* customer: someone who wants to buy a machine, not someone who
+_competitor's_ customer: someone who wants to buy a machine, not someone who
 wants one placed in their breakroom. The tool cannot tell the difference, so it
 recommends the client chase demand they cannot serve.
 
 The existing suggestion engine (`src/client/features/insights/suggestionModel.ts`)
 is real but backward-looking: striking distance, under-clicked, topic gaps —
-every candidate is a query the site *already earns impressions for*. It can
+every candidate is a query the site _already earns impressions for_. It can
 never propose a topic the client has never ranked for, which is exactly what a
 new client needs.
 
 **2. The geography control is duplicated, and the wrong one is prominent.**
 The Keyword Research header carries a `ScopeControl`
 (`src/client/features/geo/ScopeControl.tsx`) whose picker supports metros,
-states, cities and countries. The search form carries a *second*, country-only
+states, cities and countries. The search form carries a _second_, country-only
 `LocationSelect` sitting next to the Search button — the one users actually
 reach for. Result: a DFW project looks nationally scoped and un-targetable.
 
@@ -78,7 +78,7 @@ A DFW-scoped project reads volume, CPC, trends, SERP and rank tracking locally
 (Google Ads / SERP APIs, metro code) and difficulty/intent nationally (Labs).
 Every figure must say which it is rather than implying uniform local scope.
 
-**The keyword *idea list* is also national.** Related/suggestions/ideas are Labs
+**The keyword _idea list_ is also national.** Related/suggestions/ideas are Labs
 endpoints. A DFW project gets a national candidate list with DFW volumes
 attached. Locally-specific candidates can only come from generation (Phase 2),
 not from expansion.
@@ -105,7 +105,7 @@ from it. Rejected alternatives:
   inference. The whole value is that a human confirms it once.
 - **A second geography store on the profile.** `project_target_areas` already
   is the geography source of truth with a confirm/propose lifecycle. A parallel
-  store guarantees drift. The profile carries *shape* (`serviceAreaKind`), not
+  store guarantees drift. The profile carries _shape_ (`serviceAreaKind`), not
   coordinates.
 - **Hide wrong-fit keywords.** Silently dropping results is how a tool loses
   trust, and a wrong-fit keyword is sometimes a deliberate content play. Flag
@@ -119,19 +119,19 @@ New table `project_profiles`, one row per project, on **both** D1 and Postgres
 schemas (`src/db/schema.ts`, `src/db/pg/app.schema.ts`) with a migration on
 each. Schema parity is asserted by `schema-parity.test.ts`.
 
-| Column | Type | Purpose |
-| --- | --- | --- |
-| `id` | text PK | |
-| `project_id` | text FK → projects, unique | one profile per project |
-| `offer` | text | what they sell |
-| `customer` | text | who buys it |
-| `exclusions` | text | what they explicitly do NOT do |
-| `brand_terms` | json | names treated as branded |
-| `service_area_kind` | text enum | `local \| regional \| national \| global` |
-| `source` | text enum | `ai \| manual` |
-| `drafted_at` | timestamp | nullable |
-| `confirmed_at` | timestamp | nullable — NULL means unconfirmed draft |
-| `created_at` | timestamp | |
+| Column              | Type                       | Purpose                                   |
+| ------------------- | -------------------------- | ----------------------------------------- |
+| `id`                | text PK                    |                                           |
+| `project_id`        | text FK → projects, unique | one profile per project                   |
+| `offer`             | text                       | what they sell                            |
+| `customer`          | text                       | who buys it                               |
+| `exclusions`        | text                       | what they explicitly do NOT do            |
+| `brand_terms`       | json                       | names treated as branded                  |
+| `service_area_kind` | text enum                  | `local \| regional \| national \| global` |
+| `source`            | text enum                  | `ai \| manual`                            |
+| `drafted_at`        | timestamp                  | nullable                                  |
+| `confirmed_at`      | timestamp                  | nullable — NULL means unconfirmed draft   |
+| `created_at`        | timestamp                  |                                           |
 
 `confirmed_at` mirrors the propose/confirm lifecycle `project_target_areas`
 already uses: an AI draft is a proposal until a human accepts it.
@@ -152,18 +152,29 @@ Replace `LocationSelect` in `KeywordResearchSearchBar.tsx` with
 `area.parentCountryCode`, area = the selected row. This funnels through the
 existing `resolveRunGeo` reconciliation rather than adding a second path.
 
-Add an explicit **Worldwide** option to `GeoLocationSelect` for global clients.
-
-Render per-metric scope beside results using `ResolvedGeo.scope` and
-`geoMetricLabel.ts`, e.g. *Volume: Dallas-Ft. Worth · Difficulty: United States
-(national — provider limit)*. This replaces the current all-or-nothing provider
-notice, which reads as though the whole run is national.
-
 Correct the `1026339` fixture to `200623` where it is labelled as the DMA.
 
-**Done when:** a DFW project can be scoped from the search form itself, results
-state which metrics are local, and no screen shows two competing location
-controls.
+### Two items dropped on contact with the code
+
+**No "Worldwide" option.** The approved roadmap promised one. It cannot be
+built honestly: both Labs and the Google Ads endpoints require a country
+`location_code`, and `TargetArea` has no representation for "everywhere". A
+global client still has to research one market at a time, so a Worldwide row
+would either silently mean "United States" or fail every request. Global
+service area is captured instead as `service_area_kind: global` on the Phase 1
+profile, where it does real work — stripping geo modifiers out of generated
+seeds. (Keyword _Trends_ genuinely has a worldwide mode; that is Google Trends,
+a different provider with a different contract.)
+
+**Per-metric scope labels already exist.** `KeywordResearchDesktopTable.tsx:88`
+already calls `formatGeoMetricLabel("Volume", researchGeo.volume)` and the same
+for CPC, Score and Intent. The headers render bare in the screenshot that
+prompted this work because that run was restored from before geo bundles were
+persisted, so `researchGeo` is null — correct behaviour, not a missing feature.
+Nothing to build.
+
+**Done when:** a DFW project can be scoped from the search form itself, and no
+screen shows two competing location controls.
 
 ## Phase 1 — Business profile + deterministic fit filter
 
@@ -174,7 +185,7 @@ when no profile exists.
 Fit classification with **zero new dependencies**: tokenize `exclusions` into
 negative terms and match against each result keyword. `exclusions: "we don't
 sell machines"` yields `for sale`, `buy`, `sell` → `vending machines for sale
-dfw` is flagged `wrong-customer` with the reason *"you don't sell machines"*.
+dfw` is flagged `wrong-customer` with the reason _"you don't sell machines"_.
 
 Results table gains a fit column and a `Hide wrong-fit (n)` filter chip,
 default off. Default sort demotes `wrong-customer` below `on-offer`.
@@ -213,7 +224,7 @@ alone, and generated seeds include DFW service terms absent from any expansion.
 
 ## Phase 3 — SERP trigger
 
-Replace `SerpAnalysisEmptyState` with an explicit *Analyze SERP for "keyword"*
+Replace `SerpAnalysisEmptyState` with an explicit _Analyze SERP for "keyword"_
 button calling the existing `selectSerpKeyword` authorize path. Distinguish the
 three states the current copy conflates: no keyword chosen, keyword chosen but
 unauthorized, and authorized-but-empty.
@@ -224,12 +235,12 @@ unauthorized, and authorized-but-empty.
 
 A panel keyed to one keyword, assembled in cost tiers.
 
-*Free, renders immediately:* who ranks (top 10 with page type, DR, depth from a
+_Free, renders immediately:_ who ranks (top 10 with page type, DR, depth from a
 capped fetch of the top 3), a winnable/stretch/no verdict against the client's
 own DR, internal-link candidates from GSC pages already ranking for related
 queries.
 
-*Metered, explicit click each:* off-page link targets from competitors'
+_Metered, explicit click each:_ off-page link targets from competitors'
 referring domains; local-pack presence and GBP/citation actions when
 `service_area_kind` is `local` (the `local-pack` need already resolves to a
 metro in `resolveGeo`).
