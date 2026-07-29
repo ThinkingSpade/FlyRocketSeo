@@ -63,10 +63,10 @@ adds a domain to the chips. Nothing fires until **Compare** is clicked.
 
 ### Wave 3 — feeds and network risk
 
-| #   | Feature                                                                                     | Endpoint                                                    |
-| --- | ------------------------------------------------------------------------------------------- | ----------------------------------------------------------- |
-| F10 | **Won / lost link views** — see the actual links won and lost, not just the monthly counts  | existing `backlinks/live` with `is_new` / `is_lost` filters |
-| F11 | **Referring networks** — subnet concentration, flagging link-network risk                   | `referring_networks`                                        |
+| #   | Feature                                                                                    | Endpoint                                                    |
+| --- | ------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
+| F10 | **Won / lost link views** — see the actual links won and lost, not just the monthly counts | existing `backlinks/live` with `is_new` / `is_lost` filters |
+| F11 | **Referring networks** — subnet concentration, flagging link-network risk                  | `referring_networks`                                        |
 
 F10 ships as a **status filter on the existing Backlinks sub-tab**, not as two new sub-tabs.
 Adding a tab means threading a new value through the URL search schema, the sort schemas, the

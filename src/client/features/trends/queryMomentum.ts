@@ -61,7 +61,7 @@ export type QueryMomentum = {
  * least reliable at the bottom, where anonymised queries and rounding
  * dominate.
  */
-export const MIN_IMPRESSIONS_FOR_VERDICT = 10;
+const MIN_IMPRESSIONS_FOR_VERDICT = 10;
 
 /**
  * Percentage swing that still counts as flat.
@@ -70,7 +70,7 @@ export const MIN_IMPRESSIONS_FOR_VERDICT = 10;
  * absorb the weekday-mix and freshness artefacts described in this module's
  * header, both of which move impressions without anything real happening.
  */
-export const FLAT_BAND_PERCENT = 20;
+const FLAT_BAND_PERCENT = 20;
 
 type ImpressionRow = {
   query: string;

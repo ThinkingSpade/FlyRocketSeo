@@ -4,7 +4,6 @@
 // `AreaTrendChart.tsx` (see that file's doc comment): recharts here put 195 KB
 // into the client ENTRY chunk for every visitor on every route.
 import { ChevronDown, ChevronUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { FloatingTooltip, useFloatingTooltip } from "./FloatingTooltip";
 

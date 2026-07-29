@@ -27,7 +27,7 @@ const MOMENTUM_STALE_MS = 5 * 60_000;
 
 type ConnectedMomentum = Extract<QueryMomentumResult, { connected: true }>;
 
-export type TrendingOpportunitiesState = {
+type TrendingOpportunitiesState = {
   opportunities: TrendingOpportunity[];
   isLoading: boolean;
   /** Search Console isn't connected, or the read failed. */
