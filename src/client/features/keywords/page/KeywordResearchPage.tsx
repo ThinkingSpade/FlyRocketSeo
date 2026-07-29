@@ -21,8 +21,14 @@ import { KeywordResearchLoadingState } from "./KeywordResearchLoadingState";
 import { KeywordResearchResults } from "./KeywordResearchResults";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
-import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import {
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
 import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
 import {
@@ -42,6 +48,13 @@ function isKeywordSearchTab(tab: SearchTab): tab is KeywordSearchTab {
 export function KeywordResearchPage(input: Props) {
   const setSearchParams = useKeywordSearchParams();
   const projectId = input.projectId;
+  // The header ScopeControl's state -- separate from this tab's own
+  // location resolution (useResolvedKeywordLocation, deep inside the
+  // controller). Passed as the controller's own 2nd argument, not folded
+  // into `controllerInput`, so it reaches resolveRunGeo() without changing
+  // `Props`' shape -- see useKeywordResearchController's own doc comment.
+  const market = useProjectMarket(projectId);
+  const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
 
   const navigateToKeywordInput = useCallback(
     (tabInput: KeywordSearchTabInput | null) => {
@@ -192,10 +205,10 @@ export function KeywordResearchPage(input: Props) {
           },
     [activeTab, getOpenKeywordTabs, input, searchTabs.limit],
   );
-  const controller = useKeywordResearchController({
-    ...controllerInput,
-    onFormSubmit,
-  });
+  const controller = useKeywordResearchController(
+    { ...controllerInput, onFormSubmit },
+    targetAreaScope.area,
+  );
   useEffect(() => {
     controller.controlsForm.setErrorMap({ onSubmit: undefined });
     controller.controlsForm.setFieldMeta("keyword", (meta) => ({
@@ -279,16 +292,27 @@ export function KeywordResearchPage(input: Props) {
   return (
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold">Keyword Research</h1>
-          <p className="text-sm text-base-content/70">
-            Discover keyword ideas, search demand, and ranking opportunities.
-          </p>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold">Keyword Research</h1>
+            <p className="text-sm text-base-content/70">
+              Discover keyword ideas, search demand, and ranking opportunities.
+            </p>
+          </div>
+          <ScopeControl
+            area={targetAreaScope.area}
+            onChange={targetAreaScope.onChange}
+            hasConfirmedArea={targetAreaScope.hasConfirmedArea}
+            onClear={targetAreaScope.onClear}
+          />
         </div>
+
+        <TargetAreaBanner projectId={projectId} />
 
         <KeywordResearchSearchBar
           controller={controller}
           suggestions={suggestions}
+          targetArea={targetAreaScope.area}
         />
 
         <RestoreRail

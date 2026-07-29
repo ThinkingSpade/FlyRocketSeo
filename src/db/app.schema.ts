@@ -645,6 +645,70 @@ export const geoLocations = sqliteTable(
   ],
 );
 
+// Confirmed (or proposed) target geography for a project -- the output of
+// the detection cascade (Task 3 of the geo-activation plan) and the
+// confirmation banner (Task 5), read by resolveGeo once a tab asks for
+// area-scoped data (Task 6). Nothing in this task (Task 2) queries the table
+// yet -- it only exists so later tasks have somewhere to write.
+//
+// `confirmedAt` is the load-bearing column: NULL means this row is a
+// PROPOSAL surfaced by detection but never accepted by the user, and it MUST
+// NOT change what any tab queries -- only an explicit confirm/manual-set call
+// (Task 4) may write a value here. Treat a null confirmedAt exactly like
+// "this row doesn't exist yet" everywhere except the confirmation banner
+// itself, which is the one place a pending proposal needs to be visible.
+export const projectTargetAreas = sqliteTable(
+  "project_target_areas",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    // Mirrors TargetAreaKind (src/shared/geo/types.ts), spelled out locally
+    // rather than imported -- matches how every other enum-like column in
+    // this file (e.g. rankTrackingConfigs.devices below) is self-contained.
+    kind: text("kind", {
+      enum: ["metro", "city", "region", "country"],
+    }).notNull(),
+    locationCode: integer("location_code").notNull(),
+    label: text("label").notNull(),
+    parentCountryCode: integer("parent_country_code").notNull(),
+    // Which free signal produced this row. "manual" is the picker override
+    // and is confirmed immediately; "gbp"/"gsc" are the detection cascade's
+    // two signals, highest-confidence first.
+    source: text("source", {
+      enum: ["gbp", "gsc", "manual"],
+    }).notNull(),
+    isPrimary: integer("is_primary", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    // NULL = an unconfirmed proposal. See this table's own header comment.
+    confirmedAt: text("confirmed_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // Every read this table will ever serve (getTargetArea, the scope
+    // control, the confirmation banner) starts from a projectId, and the
+    // partial index below only covers the single primary row -- most queries
+    // need every row for a project, not just that one.
+    index("project_target_areas_project_idx").on(table.projectId),
+    // At most one PRIMARY area per project. Partial rather than a plain
+    // unique constraint on projectId, because a project can hold any number
+    // of non-primary rows (a rejected proposal, a secondary confirmed area) --
+    // only "the one primary" is exclusive. `= 1` is SQLite's own on-disk
+    // representation for this boolean-mode column (contrast the Postgres
+    // sibling's native `= true`) -- schema-parity.test.ts's
+    // uniqueColumnTuples only asserts a WHERE clause is present on both
+    // dialects, never its literal text, so the two are intentionally not
+    // required to match verbatim.
+    uniqueIndex("project_target_areas_one_primary_per_project_idx")
+      .on(table.projectId)
+      .where(sql`${table.isPrimary} = 1`),
+  ],
+);
+
 // ============================================================================
 // Google Business Profile write tables
 // ============================================================================

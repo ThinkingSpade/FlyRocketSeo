@@ -17,24 +17,80 @@ import {
   estimateRankCheckCredits,
 } from "@/shared/rank-tracking";
 import {
-  DEFAULT_LOCATION_CODE,
   getLanguageCode,
   getLanguageOptions,
 } from "@/client/features/keywords/locations";
-import { LocationSelect } from "@/client/components/LocationSelect";
+import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
+import type { TargetArea } from "@/shared/geo/types";
+import { resolveInitialConfigArea } from "./rankTrackingConfigArea";
+import { useConfigAreaLookup } from "./useConfigAreaLookup";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
 
 type Props = {
   projectId: string;
   existingConfig?: RankTrackingConfig | null;
+  /**
+   * The project's own confirmed target-area scope (whatever grain --
+   * metro, city, or the country fallback), for a brand-new config's own
+   * initial pick. Omitted entirely by the one caller that always edits an
+   * existing config (`$configId.tsx`) -- `resolveInitialConfigArea` never
+   * consults this once `existingConfig` is set, so passing it there would be
+   * inert. See that function's own doc comment for why editing never takes
+   * this over the config's own stored location.
+   */
+  defaultArea?: TargetArea;
   onClose: () => void;
   onSaved: (createdConfigId?: string) => void;
   onConfigCreated?: () => void;
 };
 
+/** Split out of the main component purely to keep that function under this
+ *  codebase's max-lines-per-function budget -- self-contained (only reads
+ *  its own props), so extracting it changes no behaviour. */
+function CostEstimateSummary({
+  devices,
+  serpDepth,
+  schedule,
+}: {
+  devices: "both" | "desktop" | "mobile";
+  serpDepth: number;
+  schedule: RankTrackingConfig["scheduleInterval"];
+}) {
+  // Scheduled checks run through the cheaper task queue; manual configs only
+  // ever pay the live price.
+  const { costUsd: costPerKeyword } = estimateRankCheckCredits(
+    1,
+    devices,
+    serpDepth,
+    schedule === "manual" ? "live" : "queued",
+  );
+  const checksPerMonth =
+    schedule === "daily" ? 30 : schedule === "weekly" ? 4 : 1;
+  return (
+    <div className="rounded-lg bg-base-200/50 px-3 py-2.5 text-xs text-base-content/70 space-y-0.5">
+      <div>
+        <span className="font-mono font-semibold text-base-content">
+          ~${costPerKeyword.toFixed(4)}
+        </span>{" "}
+        per keyword per check
+      </div>
+      {schedule !== "manual" && (
+        <div>
+          50 keywords would cost{" "}
+          <span className="font-mono font-semibold text-base-content">
+            ~${(costPerKeyword * 50 * checksPerMonth).toFixed(2)}
+          </span>
+          /month
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function RankTrackingConfigModal({
   projectId,
   existingConfig,
+  defaultArea,
   onClose,
   onSaved,
   onConfigCreated,
@@ -45,16 +101,34 @@ export function RankTrackingConfigModal({
   const [devices, setDevices] = useState<"both" | "desktop" | "mobile">(
     existingConfig?.devices ?? "mobile",
   );
-  const [locationCode, setLocationCode] = useState(
-    existingConfig?.locationCode ?? DEFAULT_LOCATION_CODE,
+  const [area, setArea] = useState<TargetArea>(() =>
+    resolveInitialConfigArea({
+      existingLocationCode: existingConfig?.locationCode ?? null,
+      defaultArea: defaultArea ?? null,
+    }),
   );
+  // True once the user picks a location themselves -- stops the async
+  // by-code resolution below from clobbering that choice if it lands after
+  // the user has already moved on.
+  const [areaTouched, setAreaTouched] = useState(false);
+  // Resolves an EXISTING config's stored non-country locationCode (the bare
+  // "Location #<code>" gap) via the free geo_locations by-code read, once it
+  // comes back -- see useConfigAreaLookup.ts's own doc comment.
+  useConfigAreaLookup(
+    existingConfig?.locationCode ?? null,
+    areaTouched,
+    setArea,
+  );
+  // Derived from the AREA's own parent country, not its (possibly
+  // sub-country) locationCode directly -- getLanguageCode/getLanguageOptions
+  // are keyed by country code, and a metro/city code isn't one (same fix
+  // shape as resolveGeo.ts's own languageForCountry).
   const [languageCode, setLanguageCode] = useState(
-    existingConfig?.languageCode ??
-      getLanguageCode(existingConfig?.locationCode ?? DEFAULT_LOCATION_CODE),
+    existingConfig?.languageCode ?? getLanguageCode(area.parentCountryCode),
   );
   const languageOptions = useMemo(
-    () => getLanguageOptions(locationCode),
-    [locationCode],
+    () => getLanguageOptions(area.parentCountryCode),
+    [area.parentCountryCode],
   );
   const [serpDepth, setSerpDepth] = useState(existingConfig?.serpDepth ?? 40);
   const [schedule, setSchedule] = useState<
@@ -70,7 +144,7 @@ export function RankTrackingConfigModal({
           domain: normalizedDomain,
           devices,
           serpDepth,
-          locationCode,
+          locationCode: area.locationCode,
           languageCode,
           scheduleInterval: schedule,
         },
@@ -96,7 +170,7 @@ export function RankTrackingConfigModal({
           domain: normalizedDomain,
           devices,
           serpDepth,
-          locationCode,
+          locationCode: area.locationCode,
           languageCode,
           scheduleInterval: schedule,
         },
@@ -154,7 +228,7 @@ export function RankTrackingConfigModal({
           configId={createdConfigId}
           projectId={projectId}
           domain={domain}
-          locationCode={locationCode}
+          locationCode={area.locationCode}
           languageCode={languageCode}
           onDone={(id) => onSaved(id)}
           onClose={closeKeywordStep}
@@ -195,15 +269,22 @@ export function RankTrackingConfigModal({
 
         <div className="form-control">
           <label className="label">
-            <span className="label-text font-medium">Country</span>
+            <span className="label-text font-medium">Location</span>
           </label>
-          <LocationSelect
-            value={locationCode}
-            onChange={(newLocationCode) => {
-              setLocationCode(newLocationCode);
-              setLanguageCode(getLanguageCode(newLocationCode));
+          <GeoLocationSelect
+            value={area}
+            onChange={(nextArea) => {
+              setAreaTouched(true);
+              setArea(nextArea);
+              setLanguageCode(getLanguageCode(nextArea.parentCountryCode));
             }}
           />
+          {!isEdit && defaultArea && defaultArea.kind !== "country" ? (
+            <div className="mt-1.5 text-xs text-base-content/50">
+              Defaulted from your confirmed target area — change it above to
+              track a different market.
+            </div>
+          ) : null}
         </div>
 
         <div className="form-control">
@@ -313,37 +394,11 @@ export function RankTrackingConfigModal({
           </div>
         </div>
 
-        {(() => {
-          // Scheduled checks run through the cheaper task queue; manual
-          // configs only ever pay the live price.
-          const { costUsd: costPerKeyword } = estimateRankCheckCredits(
-            1,
-            devices,
-            serpDepth,
-            schedule === "manual" ? "live" : "queued",
-          );
-          const checksPerMonth =
-            schedule === "daily" ? 30 : schedule === "weekly" ? 4 : 1;
-          return (
-            <div className="rounded-lg bg-base-200/50 px-3 py-2.5 text-xs text-base-content/70 space-y-0.5">
-              <div>
-                <span className="font-mono font-semibold text-base-content">
-                  ~${costPerKeyword.toFixed(4)}
-                </span>{" "}
-                per keyword per check
-              </div>
-              {schedule !== "manual" && (
-                <div>
-                  50 keywords would cost{" "}
-                  <span className="font-mono font-semibold text-base-content">
-                    ~${(costPerKeyword * 50 * checksPerMonth).toFixed(2)}
-                  </span>
-                  /month
-                </div>
-              )}
-            </div>
-          );
-        })()}
+        <CostEstimateSummary
+          devices={devices}
+          serpDepth={serpDepth}
+          schedule={schedule}
+        />
 
         <div className="flex justify-end gap-2 pt-2">
           <button

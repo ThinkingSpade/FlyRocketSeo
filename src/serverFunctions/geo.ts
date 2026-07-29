@@ -30,6 +30,26 @@ export const searchGeoLocations = createServerFn({ method: "POST" })
     return GeoLocationRepository.search(data);
   });
 
+const getGeoLocationByCodeSchema = z.object({
+  code: z.number().int().positive(),
+});
+
+/**
+ * Resolves one `geo_locations` row by its own code -- the free-by-code read
+ * added for the target-area detection cascade (GeoLocationRepository.getByCode),
+ * now also backing RankTrackingConfigModal.tsx's redisplay of a config saved
+ * with a metro/city location. Same "reads only, reads D1 only" guarantee as
+ * searchGeoLocations above: no metered provider can be reached by opening an
+ * edit modal. Returns null for a code the table has no row for -- the caller
+ * must render that as "unrecognised", never a guessed name.
+ */
+export const getGeoLocationByCode = createServerFn({ method: "POST" })
+  .middleware(requireAuthenticatedContext)
+  .validator(getGeoLocationByCodeSchema)
+  .handler(async ({ data }) => {
+    return GeoLocationRepository.getByCode(data.code);
+  });
+
 /**
  * How many rows `geo_locations` currently holds — the read the Settings
  * page's "Seed location data" section shows before an operator triggers

@@ -38,6 +38,9 @@ import {
 } from "@/client/components/table/TableBulkActionBar";
 import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeywordsModal";
 import { getLanguageCode } from "@/client/features/keywords/locations";
+import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
+import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
+import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -112,15 +115,33 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
   const {
     activeFilterCount,
     filteredRows,
+    researchGeo,
     rows,
     selectedRows,
     sheetsExportRows,
     showFilters,
   } = controller;
+  // Muted per-metric suffix, e.g. "total vol · DFW" / "avg KD · US" -- from
+  // the geo CAPTURED for this run (researchGeo), never re-derived from the
+  // live scope control. Null before any search, or for a restored run
+  // recorded before Defect 1's geo bundle existed -- both cases render the
+  // bare label, honestly claiming no particular geography rather than
+  // guessing. A restored run recorded AFTER that fix carries its own
+  // bundle, so this reads its real geography instead (see
+  // useKeywordResearchController.ts's own `researchGeo`).
+  const volumeSuffix = researchGeo ? geoMetricSuffix(researchGeo.volume) : "";
+  const difficultySuffix = researchGeo
+    ? geoMetricSuffix(researchGeo.difficulty)
+    : "";
   const { page, pageSize, pageRows, setPage, setPageSize } =
     useKeywordResearchPagination(filteredRows);
   const { projectId } = keywordsRoute.useParams();
   const [showTrackModal, setShowTrackModal] = useState(false);
+  // Task 6's on-demand difficulty backfill, bounded to THIS page
+  // (`pageRows`) -- see the hook's own header for why it never spans the
+  // whole result set.
+  const { mergedRows, affordance: difficultyAffordance } =
+    useKeywordResearchDifficultyBackfill(projectId, pageRows, researchGeo);
 
   const isSliced = activeFilterCount > 0 || controller.groupTerm != null;
   const keywordCountLabel =
@@ -183,8 +204,9 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
             title="Summed monthly volume and average difficulty of the keywords shown"
           >
             · {formatCompactNumber(totals.totalVolume)} total vol
+            {volumeSuffix ? ` (${volumeSuffix})` : ""}
             {totals.averageDifficulty != null
-              ? ` · avg KD ${totals.averageDifficulty}`
+              ? ` · avg KD ${totals.averageDifficulty}${difficultySuffix ? ` (${difficultySuffix})` : ""}`
               : ""}
           </span>
         ) : null}
@@ -261,11 +283,24 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
       />
 
       {showFilters ? <DesktopFilters controller={controller} /> : null}
+      {difficultyAffordance ? (
+        <div className="shrink-0 border-b border-base-300 px-4 py-2">
+          <DifficultyOverviewControl
+            count={difficultyAffordance.count}
+            unavailableMessage={difficultyAffordance.unavailableMessage}
+            isLoading={difficultyAffordance.isLoading}
+            isError={difficultyAffordance.isError}
+            loaded={false}
+            onLoad={difficultyAffordance.onLoad}
+          />
+        </div>
+      ) : null}
       <KeywordResearchDesktopTable
         activeFilterCount={controller.activeFilterCount}
-        filteredRows={pageRows}
+        filteredRows={mergedRows}
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
+        researchGeo={researchGeo}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
         sortDir={controller.sortDir}

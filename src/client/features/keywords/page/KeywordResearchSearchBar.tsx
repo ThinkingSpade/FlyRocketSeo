@@ -8,15 +8,27 @@ import {
   MAX_KEYWORDS_PER_SUBMIT,
   RESULT_LIMITS,
 } from "@/client/features/keywords/keywordResearchTypes";
-import { isLabsLocationCode } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import type { SeedSuggestion } from "@/client/features/insights/types";
+import { resolveRunGeo } from "@/client/features/geo/resolveRunGeo";
+import type { TargetArea } from "@/shared/geo/types";
+import { resolveKeywordProviderNotice } from "./keywordProviderNotice";
 import type { KeywordResearchControllerState } from "./types";
 
 type Props = {
   controller: KeywordResearchControllerState;
   suggestions: SeedSuggestion[];
+  /**
+   * The project's own confirmed target-area scope (header ScopeControl) --
+   * used ONLY to preview what a submission right now would actually use,
+   * never to relabel an already-fetched run (see resolveRunGeo.ts's own
+   * header for that distinction). This is the same reconciliation every
+   * other metered tab's own "Location" field funnels through, so a
+   * confirmed Dallas-Ft. Worth area correctly overrides the provider
+   * message here too, not just the eventual request.
+   */
+  targetArea: TargetArea;
 };
 
 function getTextareaRows(value: string): number {
@@ -25,7 +37,11 @@ function getTextareaRows(value: string): number {
   return Math.min(MAX_KEYWORDS_PER_SUBMIT, Math.max(1, lines));
 }
 
-export function KeywordResearchSearchBar({ controller, suggestions }: Props) {
+export function KeywordResearchSearchBar({
+  controller,
+  suggestions,
+  targetArea,
+}: Props) {
   const { controlsForm, handleSearchSubmit, isLoading } = controller;
 
   return (
@@ -146,47 +162,71 @@ export function KeywordResearchSearchBar({ controller, suggestions }: Props) {
           }}
         </controlsForm.Field>
         <controlsForm.Field name="locationCode">
-          {(locationField) =>
-            isLabsLocationCode(locationField.state.value) ? (
-              <controlsForm.Field name="clickstream">
-                {(field) => (
-                  <div className="flex items-center gap-2">
-                    <label className="label cursor-pointer justify-start gap-2 p-0">
-                      <input
-                        type="checkbox"
-                        className="toggle toggle-sm toggle-primary"
-                        checked={field.state.value}
-                        onChange={(event) =>
-                          field.handleChange(event.target.checked)
-                        }
-                      />
-                      <span className="text-sm font-medium text-base-content/80">
-                        Clickstream-refined volumes
-                      </span>
-                    </label>
-                    <div
-                      className="tooltip tooltip-right"
-                      data-tip="Google reports one combined search volume for similar keywords (e.g. 'seo tool' and 'seo tools'). Turn this on to estimate each keyword's own volume. Costs 2x the credits."
-                    >
-                      <Info className="size-3.5 text-base-content/50" />
+          {(locationField) => {
+            // What THIS run will actually use if submitted right now --
+            // reconciled the same way every other metered tab's own
+            // "Location" field is (resolveRunGeo.ts's own header): a
+            // confirmed metro/city only applies when its parent country
+            // matches THIS control's value, so a DFW area under a session
+            // sitting on e.g. Canada is correctly ignored here too.
+            const volumeGeo = resolveRunGeo(
+              "keyword-volume",
+              targetArea,
+              locationField.state.value,
+            );
+            const notice = resolveKeywordProviderNotice(volumeGeo);
+
+            if (notice.kind === "labs") {
+              return (
+                <controlsForm.Field name="clickstream">
+                  {(field) => (
+                    <div className="flex items-center gap-2">
+                      <label className="label cursor-pointer justify-start gap-2 p-0">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={field.state.value}
+                          onChange={(event) =>
+                            field.handleChange(event.target.checked)
+                          }
+                        />
+                        <span className="text-sm font-medium text-base-content/80">
+                          Clickstream-refined volumes
+                        </span>
+                      </label>
+                      <div
+                        className="tooltip tooltip-right"
+                        data-tip="Google reports one combined search volume for similar keywords (e.g. 'seo tool' and 'seo tools'). Turn this on to estimate each keyword's own volume. Costs 2x the credits."
+                      >
+                        <Info className="size-3.5 text-base-content/50" />
+                      </div>
                     </div>
-                  </div>
-                )}
-              </controlsForm.Field>
-            ) : (
+                  )}
+                </controlsForm.Field>
+              );
+            }
+
+            // Google Ads only ever returns volume, CPC, and trends -- never
+            // difficulty or intent (this file's own domain fact). Naming the
+            // confirmed area specifically when THAT is why (rather than the
+            // whole country lacking Labs coverage) is Gap 2's actual fix:
+            // otherwise a metro-scoped US project reads exactly like a
+            // Google-Ads-only country such as Iceland, with no hint that
+            // picking a different area would restore difficulty and intent.
+            return (
               <div
                 className="flex items-start gap-2 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-sm text-base-content/80"
                 role="status"
               >
                 <Info className="mt-0.5 size-4 shrink-0 text-info" />
                 <span>
-                  Keyword data for this country comes from Google Ads — search
-                  volume, CPC, and trends are available, but difficulty and
-                  intent are not.
+                  {notice.kind === "google-ads-local"
+                    ? `This search is scoped to ${notice.areaLabel}, which Google Ads covers instead of DataForSEO Labs — search volume, CPC, and trends are available, but difficulty and intent are not.`
+                    : "Keyword data for this country comes from Google Ads — search volume, CPC, and trends are available, but difficulty and intent are not."}
                 </span>
               </div>
-            )
-          }
+            );
+          }}
         </controlsForm.Field>
       </div>
     </div>

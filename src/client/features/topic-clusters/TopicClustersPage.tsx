@@ -15,6 +15,13 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ClusterPlan } from "@/client/features/topic-clusters/ClusterPlan";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
+import {
+  captureClusterAreaLabel,
+  extractStoredConfirmedAreaLabel,
+} from "@/client/features/topic-clusters/clusterAreaLabel";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -101,6 +108,11 @@ export function TopicClustersPage({
   // The URL's own `loc` param always wins; the project's configured market
   // only fills in for a tab opened with no location in the URL at all.
   const activeLocation = locationCode ?? market.locationCode;
+  // The header ScopeControl's own state -- a SEPARATE concept from the
+  // country-only `locationInput` field below, which stays untouched here.
+  // Must never be read into `run`'s key or `clustersQuery`'s queryKey;
+  // wiring the chosen area into the actual fetch is Task 6's job.
+  const targetAreaScope = useTargetAreaScope(projectId, activeLocation);
 
   const suggestions = useProjectSuggestions(projectId, "topic-gap");
   const handoff = useHandoff(projectId);
@@ -165,6 +177,16 @@ export function TopicClustersPage({
     topic: string;
     locationCode: number;
   } | null>(null);
+  // Defect 2 fix: the confirmed-area label CAPTURED for the run in
+  // `runInput` -- set in the same breath as `runInput` itself (submit /
+  // "Run again" below), never recomputed from live scope afterward (see
+  // clusterAreaLabel.ts's own header). Null both before any run this
+  // session AND when that run captured no confirmed area -- disambiguated
+  // from "not captured yet" by always gating reads on `restoredRun` below,
+  // never on this value's own nullability.
+  const [runConfirmedAreaLabel, setRunConfirmedAreaLabel] = useState<
+    string | null
+  >(null);
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
   );
@@ -180,6 +202,10 @@ export function TopicClustersPage({
           projectId,
           topic: runInput?.topic ?? "",
           locationCode: runInput?.locationCode ?? activeLocation,
+          // Sent purely so the server can persist it in this run's history
+          // -- this tab's own numbers never use it (see the schema's own
+          // doc comment).
+          confirmedAreaLabel: runConfirmedAreaLabel,
         },
       }),
   });
@@ -195,23 +221,42 @@ export function TopicClustersPage({
   });
   const plan = clustersQuery.data ?? restored?.result;
   const restoredRun = clustersQuery.data == null ? restored : null;
+  // Whichever source `plan` itself just came from (mirrors the line above):
+  // a restored plan reads ITS OWN persisted caveat state; a live/just-re-run
+  // plan reads what was captured for THIS submission. Gating on
+  // `restoredRun` (not `runConfirmedAreaLabel ?? ...`) matters because a
+  // captured value of null is legitimate here -- it means "this run had no
+  // confirmed area", not "nothing captured yet".
+  const effectiveConfirmedAreaLabel = restoredRun
+    ? extractStoredConfirmedAreaLabel(restoredRun.params)
+    : runConfirmedAreaLabel;
   const errorMessage = clustersQuery.isError
     ? getStandardErrorMessage(clustersQuery.error)
     : null;
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Network className="size-5" />
-          Topic Clusters
-        </h1>
-        <p className="text-sm text-base-content/60">
-          Turn one topic into a hub-and-spoke content plan: the hub page&rsquo;s
-          keyword set plus the subtopic clusters worth their own articles — each
-          one a click away from a full content brief.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <Network className="size-5" />
+            Topic Clusters
+          </h1>
+          <p className="text-sm text-base-content/60">
+            Turn one topic into a hub-and-spoke content plan: the hub
+            page&rsquo;s keyword set plus the subtopic clusters worth their own
+            articles — each one a click away from a full content brief.
+          </p>
+        </div>
+        <ScopeControl
+          area={targetAreaScope.area}
+          onChange={targetAreaScope.onChange}
+          hasConfirmedArea={targetAreaScope.hasConfirmedArea}
+          onClear={targetAreaScope.onClear}
+        />
       </div>
+
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
@@ -221,6 +266,14 @@ export function TopicClustersPage({
               event.preventDefault();
               const next = input.trim();
               if (!next) return;
+              // Captured HERE, at authorize()-time -- never recomputed from
+              // live scope afterward (Defect 2 fix).
+              setRunConfirmedAreaLabel(
+                captureClusterAreaLabel(
+                  targetAreaScope.hasConfirmedArea,
+                  targetAreaScope.area,
+                ),
+              );
               setRunInput({
                 topic: next,
                 locationCode: Number(locationInput),
@@ -317,6 +370,14 @@ export function TopicClustersPage({
           onRunAgain={() => {
             setInput(restoredRun.result.topic);
             setLocationInput(String(restoredRun.result.locationCode));
+            // A genuine new user-authorized run, so it captures the
+            // CURRENT live scope -- same as a fresh submit (Defect 2 fix).
+            setRunConfirmedAreaLabel(
+              captureClusterAreaLabel(
+                targetAreaScope.hasConfirmedArea,
+                targetAreaScope.area,
+              ),
+            );
             setRunInput({
               topic: restoredRun.result.topic,
               locationCode: restoredRun.result.locationCode,
@@ -358,7 +419,27 @@ export function TopicClustersPage({
         </div>
       ) : null}
 
-      {plan ? <ClusterPlan plan={plan} projectId={projectId} /> : null}
+      {plan ? (
+        <ClusterPlan
+          plan={plan}
+          projectId={projectId}
+          // Task 6: Topic Clusters' keyword-idea source (Labs
+          // keyword_suggestions) has no metro-capable equivalent, so
+          // volume/difficulty here are always national -- the CONFIRMED
+          // area (not "whether it applied") lets the verdict flag that
+          // mismatch instead of silently ignoring a metro the header
+          // ScopeControl visibly shows.
+          //
+          // Defect 2 fix: this used to read `targetAreaScope` live on every
+          // render, so switching the header control after `plan` loaded
+          // instantly relabelled an already-rendered plan as describing a
+          // DIFFERENT city than the one it was actually planned for.
+          // `effectiveConfirmedAreaLabel` instead reads whatever was
+          // CAPTURED for this specific plan (or, for a restored plan, what
+          // that run itself persisted) -- see its own definition above.
+          confirmedAreaLabel={effectiveConfirmedAreaLabel}
+        />
+      ) : null}
     </div>
   );
 }

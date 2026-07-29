@@ -15,6 +15,8 @@ import {
 import { ClusterPlanBody } from "@/client/features/topic-clusters/ClusterPlanBody";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildClustersVerdict } from "@/client/features/insights/verdicts/content";
+import { resolveStoredGeo } from "@/client/features/geo/resolveRunGeo";
+import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 
 /**
  * The fetched plan's own view: priority-ranked clusters, coverage against the
@@ -26,13 +28,37 @@ import { buildClustersVerdict } from "@/client/features/insights/verdicts/conten
 export function ClusterPlan({
   plan,
   projectId,
+  confirmedAreaLabel = null,
 }: {
   plan: NonNullable<Awaited<ReturnType<typeof getTopicClusters>>>;
   projectId: string;
+  /** The project's CONFIRMED target area label, if any (Task 6) -- passed
+   *  straight through to buildClustersVerdict's own field of the same name;
+   *  see that field's doc comment for why this is "confirmed", not
+   *  "applied". */
+  confirmedAreaLabel?: string | null;
 }) {
   // Priority ranking + totals are pure client-side cuts of the fetched plan.
   const clusters = useMemo(() => prioritizeClusters(plan.clusters), [plan]);
   const totals = useMemo(() => computeClusterPlanTotals(plan.clusters), [plan]);
+  // Defect 2 fix: the muted "· US" qualifier for volume/KD. Unlike
+  // `confirmedAreaLabel` above, this is safe to derive straight from the
+  // plan's OWN `locationCode`/`languageCode` (no bundle needed): this tab's
+  // "Location" `<select>` only ever writes a real LOCATION_OPTIONS country
+  // there (Labs keyword_suggestions has no metro-capable path at all), so
+  // it can never be a metro/DMA code the way a restored SERP or Keyword
+  // Research run's stored code can. `keyword-difficulty` (not
+  // `keyword-volume`) matches this tab's TRUE provider -- Labs-only, no
+  // Google Ads fallback -- so the label never implies a provider this tab
+  // never actually calls, even though only scope/label/locationCode
+  // (identical between the two needs here) end up rendered.
+  const geoSuffix = geoMetricSuffix(
+    resolveStoredGeo(
+      "keyword-difficulty",
+      plan.locationCode,
+      plan.languageCode,
+    ),
+  );
   // clusters is already sorted by opportunity (prioritizeClusters' own
   // order), so the verdict's lead candidate is always the plan's own P1
   // cluster -- it can never name a different "worth a hub" pick than the
@@ -47,8 +73,9 @@ export function ClusterPlan({
           totalVolume: cluster.totalVolume,
           averageDifficulty: cluster.averageDifficulty,
         })),
+        confirmedAreaLabel,
       }),
-    [plan.topic, clusters],
+    [plan.topic, clusters, confirmedAreaLabel],
   );
   const coverageState = useTopicPlanCoverage({
     projectId,
@@ -97,10 +124,12 @@ export function ClusterPlan({
         </span>
         <span className="badge badge-ghost tabular-nums">
           {totals.totalVolume.toLocaleString()} total vol
+          {geoSuffix ? ` (${geoSuffix})` : ""}
         </span>
         {totals.averageDifficulty != null ? (
           <span className="badge badge-ghost tabular-nums">
             avg KD {totals.averageDifficulty}
+            {geoSuffix ? ` (${geoSuffix})` : ""}
           </span>
         ) : null}
         <div className="flex-1" />
@@ -120,6 +149,7 @@ export function ClusterPlan({
         clusters={clusters}
         projectId={projectId}
         coverage={coverageState.coverage}
+        geoSuffix={geoSuffix}
       />
     </>
   );

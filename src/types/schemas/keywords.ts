@@ -1,6 +1,22 @@
 import { z } from "zod";
 import { TAG_COLOR_KEYS } from "@/shared/tag-colors";
 import { booleanSearchParamSchema } from "@/types/schemas/domain";
+import {
+  STORED_GEO_BUNDLE_VERSION,
+  storedMetricGeoSchema,
+} from "@/types/schemas/geo";
+
+/** The two geographies one Keyword Research run captures (see
+ *  useKeywordResearchController.ts's own `KeywordResearchGeo`) -- sent
+ *  purely so the server can persist it in this run's `paramsJson`; a
+ *  restore reads it back directly instead of reconstructing it from the
+ *  bare `locationCode` below (which, for a local run, is itself a metro
+ *  code -- indistinguishable from an unrecognised country without this). */
+export const keywordResearchGeoBundleSchema = z.object({
+  v: z.literal(STORED_GEO_BUNDLE_VERSION),
+  volume: storedMetricGeoSchema,
+  difficulty: storedMetricGeoSchema,
+});
 
 const savedKeywordTagSchema = z.string().trim().min(1).max(64);
 const tagColorSchema = z.enum(TAG_COLOR_KEYS);
@@ -29,6 +45,11 @@ export const researchKeywordsSchema = z.object({
     .default("auto"),
   // Clickstream-refined volumes double the DataForSEO request cost; opt-in.
   clickstream: z.boolean().optional().default(false),
+  /** Optional: older callers (search tabs restored pre-fix, the MCP tool)
+   *  send nothing, and this run's history simply carries no geo bundle --
+   *  see resolveRunGeo.ts's own header for why that must degrade to
+   *  "geography unknown", never an assumed national fallback. */
+  geo: keywordResearchGeoBundleSchema.optional(),
 });
 
 export const saveKeywordsSchema = z
@@ -175,6 +196,53 @@ export const serpAnalysisSchema = z.object({
   locationCode: z.number().int().positive().default(2840),
   languageCode: z.string().min(2).max(8).default("en"),
 });
+
+/**
+ * Task 6's on-demand "Load difficulty for these N" affordance (Keyword
+ * Research, SERP Overview): one explicit-click `keyword_overview` call,
+ * bounded to whatever page of keywords is on screen right now. Both
+ * `locationCode` and `languageCode` are REQUIRED (no default, unlike the
+ * schemas above) -- the caller must pass exactly the country-level pair its
+ * own `resolveGeo("keyword-difficulty", ...)` resolved, not a value this
+ * schema quietly fills in, since a silently-defaulted language could
+ * disagree with the language the rest of that same run actually used.
+ *
+ * Keyword Research's own table pages can run larger than this (up to 500
+ * rows -- see KeywordResearchPagination.tsx's own page-size options), so its
+ * backfill hook caps a single page's request to this many keywords rather
+ * than assuming a page always fits in one call; the button's own count
+ * always matches whatever it actually sends, never the full page.
+ */
+export const KEYWORD_DIFFICULTY_OVERVIEW_MAX_KEYWORDS = 100;
+export const keywordDifficultyOverviewSchema = z.object({
+  projectId: z.string().min(1),
+  keywords: z
+    .array(z.string().min(1))
+    .min(1)
+    .max(KEYWORD_DIFFICULTY_OVERVIEW_MAX_KEYWORDS),
+  locationCode: z.number().int().positive(),
+  languageCode: z.string().min(2).max(8),
+});
+export type KeywordDifficultyOverviewInput = z.infer<
+  typeof keywordDifficultyOverviewSchema
+>;
+
+const keywordIntentValues = [
+  "informational",
+  "commercial",
+  "transactional",
+  "navigational",
+  "unknown",
+] as const;
+
+export const keywordDifficultyOverviewRowSchema = z.object({
+  keyword: z.string(),
+  keywordDifficulty: z.number().nullable(),
+  intent: z.enum(keywordIntentValues).nullable(),
+});
+export type KeywordDifficultyOverviewRow = z.infer<
+  typeof keywordDifficultyOverviewRowSchema
+>;
 
 /* ------------------------------------------------------------------ */
 /*  URL search params schema for /p/$projectId/keywords                */

@@ -1,11 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { z } from "zod";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { LOCATIONS, getLanguageCode } from "@/client/features/keywords/utils";
 import { DEFAULT_LOCATION_CODE } from "@/client/features/keywords/locations";
 import { parseKeywordInput } from "@/client/features/keywords/state/keywordControllerActions";
 import { researchKeywords } from "@/serverFunctions/keywords";
-import { keywordResearchResultSchema } from "@/types/schemas/keywords";
+import {
+  keywordResearchResultSchema,
+  type keywordResearchGeoBundleSchema,
+} from "@/types/schemas/keywords";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import type {
@@ -30,6 +34,12 @@ type KeywordResearchQueryInput = {
   clickstream: boolean;
 };
 
+/** Defect 1 fix: the CAPTURED geo bundle from authorize()-time
+ *  (useKeywordResearchController.ts's own `KeywordResearchGeo`, converted
+ *  to its wire shape). Opaque to this module -- forwarded verbatim so the
+ *  server can persist it, never inspected here. */
+type KeywordResearchGeoBundle = z.infer<typeof keywordResearchGeoBundleSchema>;
+
 type KeywordResearchRequest = {
   projectId: string;
   keywords: string[];
@@ -39,12 +49,28 @@ type KeywordResearchRequest = {
   resultLimit: ResultLimit;
   mode: KeywordMode;
   clickstream: boolean;
+  geo?: KeywordResearchGeoBundle;
 };
 
 export const KEYWORD_RESEARCH_STALE_TIME_MS = 24 * 60 * 60 * 1000;
 
+/**
+ * `languageCodeOverride` is Task 6's geo threading: when `input.locationCode`
+ * is a resolved metro/DMA code (see `resolveRunGeo`), the bare
+ * `getLanguageCode(input.locationCode)` fallback below would miss (that
+ * table is keyed by country code only) and silently default to "en" --
+ * correct today by coincidence (every seeded metro is US), wrong the moment
+ * a non-English country gets metro rows. Passing the geo's OWN resolved
+ * language sidesteps that instead of relying on the coincidence.
+ *
+ * `geo` is Defect 1's fix: the bundle captured alongside `languageCodeOverride`
+ * at the exact same authorize()-time snapshot, sent purely so the server can
+ * persist it for a later restore.
+ */
 export function buildKeywordResearchRequest(
   input: KeywordResearchQueryInput,
+  languageCodeOverride?: string,
+  geo?: KeywordResearchGeoBundle,
 ): KeywordResearchRequest | null {
   const keywords = parseKeywordInput(input.keywordInput);
   const seedKeyword = keywords[0] ?? "";
@@ -55,10 +81,11 @@ export function buildKeywordResearchRequest(
     keywords,
     seedKeyword,
     locationCode: input.locationCode,
-    languageCode: getLanguageCode(input.locationCode),
+    languageCode: languageCodeOverride ?? getLanguageCode(input.locationCode),
     resultLimit: input.resultLimit,
     mode: input.mode,
     clickstream: input.clickstream,
+    geo,
   };
 }
 
@@ -89,21 +116,44 @@ export function keywordResearchQueryFn(request: KeywordResearchRequest) {
       resultLimit: request.resultLimit,
       mode: request.mode,
       clickstream: request.clickstream,
+      geo: request.geo,
     },
   });
 }
+
+/** Everything captured alongside `authorizedInput` at the SAME
+ *  authorize()-time snapshot (see useKeywordResearchController.ts) --
+ *  bundled into one parameter so this function's own signature stays
+ *  under the project's max-params budget as Defect 1 added a second
+ *  captured value alongside the pre-existing language override. */
+type AuthorizedCapture = {
+  // Already `authorizedInput`'s own `locationCode` may be a resolved metro
+  // code by the time it reaches here, so this must come from the same
+  // capture rather than being re-derived from that (non-country) code.
+  languageCode: string | null;
+  // Defect 1 fix: the geo bundle captured alongside `authorizedInput`, sent
+  // purely so the server can persist it for a later restore.
+  geo: KeywordResearchGeoBundle | null;
+};
 
 export function useKeywordResearchData(
   input: KeywordResearchQueryInput,
   addSearch: AddSearchFn,
   authorizedInput: KeywordResearchQueryInput | null,
   runNonce: number,
+  authorizedCapture: AuthorizedCapture = { languageCode: null, geo: null },
 ) {
   const { projectId } = input;
   const request = useMemo<KeywordResearchRequest | null>(
     () =>
-      authorizedInput ? buildKeywordResearchRequest(authorizedInput) : null,
-    [authorizedInput],
+      authorizedInput
+        ? buildKeywordResearchRequest(
+            authorizedInput,
+            authorizedCapture.languageCode ?? undefined,
+            authorizedCapture.geo ?? undefined,
+          )
+        : null,
+    [authorizedInput, authorizedCapture.languageCode, authorizedCapture.geo],
   );
   const queryKey = useMemo(
     () => buildKeywordResearchQueryKey(request),

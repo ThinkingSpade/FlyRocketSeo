@@ -20,6 +20,8 @@ import { DifficultyBadge } from "@/client/features/domain/components/DifficultyB
 import { TrendSparkline } from "@/client/components/TrendSparkline";
 import { formatNumber } from "@/client/features/keywords/utils";
 import { keywordRowNote } from "@/client/features/insights/verdicts/keywords";
+import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
+import type { ResolvedGeo } from "@/shared/geo/types";
 import type { KeywordResearchRow } from "@/types/keywords";
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
 
@@ -30,6 +32,22 @@ type Props = {
   /** This project's own Ahrefs domain rating, for the "needs DR X+" note
    *  under each row's difficulty score. */
   ownDomainRating: number | null;
+  /**
+   * The geo CAPTURED for the run whose rows are on screen right now (see
+   * useKeywordResearchController.ts's own `researchGeo`) -- never the live
+   * scope control. Null before any search, and for a restored run recorded
+   * before the geo bundle existed: both cases must render bare headers
+   * (no suffix) rather than an assumed national one.
+   *
+   * Volume and CPC share `volume`'s geography -- both come back on the same
+   * Google-Ads/Labs request, exactly like SerpOverviewPage.tsx's own
+   * `formatGeoMetricLabel("CPC", geo.volume)`. Score (keyword difficulty)
+   * and Intent share `difficulty`'s -- both are Labs-only, country-level
+   * needs (resolveGeo.ts's own NATIONAL_ONLY set), so a separately-resolved
+   * "search-intent" geo would always equal this one; reusing it avoids a
+   * redundant resolve for an identical result.
+   */
+  researchGeo: { volume: ResolvedGeo; difficulty: ResolvedGeo } | null;
   selectedRows: Set<string>;
   setSelectedRows: (rows: Set<string>) => void;
   sortDir: SortDir;
@@ -46,6 +64,7 @@ export function KeywordResearchDesktopTable({
   filteredRows,
   overviewKeyword,
   ownDomainRating,
+  researchGeo,
   selectedRows,
   setSelectedRows,
   sortDir,
@@ -62,6 +81,21 @@ export function KeywordResearchDesktopTable({
       ) as RowSelectionState,
     [selectedRows],
   );
+  // Bare labels (no suffix) when no run geo is captured -- never an assumed
+  // national one. See this file's own Props doc comment for why CPC reuses
+  // `volume` and Intent reuses `difficulty`.
+  const volumeLabel = researchGeo
+    ? formatGeoMetricLabel("Volume", researchGeo.volume)
+    : "Volume";
+  const cpcLabel = researchGeo
+    ? formatGeoMetricLabel("CPC", researchGeo.volume)
+    : "CPC";
+  const scoreLabel = researchGeo
+    ? formatGeoMetricLabel("Score", researchGeo.difficulty)
+    : "Score";
+  const intentLabel = researchGeo
+    ? formatGeoMetricLabel("Intent", researchGeo.difficulty)
+    : "Intent";
   const columns = useMemo<ColumnDef<KeywordResearchRow>[]>(
     () => [
       makeSelectionColumn<KeywordResearchRow>(selectAnchorRef),
@@ -92,7 +126,7 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("searchVolume", {
         header: () => (
           <SortHeader
-            label="Volume"
+            label={volumeLabel}
             field="searchVolume"
             current={sortField}
             dir={sortDir}
@@ -124,7 +158,7 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("cpc", {
         header: () => (
           <SortHeader
-            label="CPC"
+            label={cpcLabel}
             helpText="Cost per click in USD."
             field="cpc"
             current={sortField}
@@ -168,7 +202,7 @@ export function KeywordResearchDesktopTable({
       keywordColumnHelper.accessor("keywordDifficulty", {
         header: () => (
           <SortHeader
-            label="Score"
+            label={scoreLabel}
             helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10."
             field="keywordDifficulty"
             current={sortField}
@@ -194,7 +228,7 @@ export function KeywordResearchDesktopTable({
         meta: { headerClassName: "text-right", cellClassName: "text-right" },
       }),
       keywordColumnHelper.accessor("intent", {
-        header: "Intent",
+        header: () => <span>{intentLabel}</span>,
         cell: ({ getValue }) => <IntentBadge intent={getValue()} />,
         meta: {
           headerClassName: "text-center",
@@ -202,7 +236,17 @@ export function KeywordResearchDesktopTable({
         },
       }),
     ],
-    [ownDomainRating, selectAnchorRef, sortDir, sortField, toggleSort],
+    [
+      cpcLabel,
+      intentLabel,
+      ownDomainRating,
+      scoreLabel,
+      selectAnchorRef,
+      sortDir,
+      sortField,
+      toggleSort,
+      volumeLabel,
+    ],
   );
   const table = useAppTable({
     data: filteredRows,

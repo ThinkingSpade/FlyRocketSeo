@@ -55,6 +55,7 @@ export function DraftGrader({
   terms,
   questions,
   outlines = [],
+  areaLabel = null,
 }: {
   projectId: string;
   /** The brief's target keyword, for the verdict's read. */
@@ -67,6 +68,10 @@ export function DraftGrader({
   questions: string[];
   /** Each competitor's H2 outline, for the outline-coverage check. */
   outlines?: string[][];
+  /** The metro the analyzed competitors were ranked in (Task 6), when that
+   *  ranking-pages lookup went local -- see buildContentVerdict's own
+   *  `areaLabel` doc comment. */
+  areaLabel?: string | null;
 }) {
   const [draft, setDraft] = useState("");
   const normalized = draft.toLowerCase();
@@ -116,6 +121,7 @@ export function DraftGrader({
     totalSubtopics: outlineThemes.length,
     unansweredQuestions,
     totalQuestions: questions.length,
+    areaLabel,
   });
 
   return (

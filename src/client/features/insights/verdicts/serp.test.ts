@@ -155,6 +155,44 @@ describe("buildSerpVerdict", () => {
   });
 });
 
+describe("buildSerpVerdict area labeling (Task 6)", () => {
+  it("prefixes the read with the area when the SERP was locally scoped", () => {
+    const verdict = buildSerpVerdict({
+      keyword: "office coffee",
+      ownDomainRating: 40,
+      competitorRatings: [35, 42, 44],
+      resultCount: 10,
+      paaQuestions: [],
+      areaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read).toBe(
+      "In Dallas-Ft. Worth, TX, the top results have a median DR of 42 against your DR 40 — close enough that authority is unlikely to decide this one. Effort is better spent on the page itself.",
+    );
+  });
+
+  it("says nothing extra for a national result -- identical to omitting the field", () => {
+    const withNull = buildSerpVerdict({
+      keyword: "office coffee",
+      ownDomainRating: 40,
+      competitorRatings: [35, 42, 44],
+      resultCount: 10,
+      paaQuestions: [],
+      areaLabel: null,
+    });
+    const omitted = buildSerpVerdict({
+      keyword: "office coffee",
+      ownDomainRating: 40,
+      competitorRatings: [35, 42, 44],
+      resultCount: 10,
+      paaQuestions: [],
+    });
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read.startsWith("In ")).toBe(false);
+  });
+});
+
 describe("serpRowNote", () => {
   it("states the gap for a result stronger than the site", () => {
     expect(serpRowNote({ domainRating: 45 }, { ownDomainRating: 12 })).toBe(

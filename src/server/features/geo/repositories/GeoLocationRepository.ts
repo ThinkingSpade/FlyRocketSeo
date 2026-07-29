@@ -21,6 +21,12 @@ type GeoLocationSearchResult = {
   type: string;
   stateCode: string | null;
   countryCode: number;
+  // Nullable: not every seeded row sits inside a DMA (e.g. a rural city with
+  // no metro), and `geoLocationSeedMapping.ts`'s own resolveParentMetroCode
+  // never invents one -- carried through here (added for the target-area
+  // detection cascade, Task 4) so a caller can hop from a city to its own
+  // metro without a second, separate query shape.
+  parentMetroCode: number | null;
 };
 
 type SearchInput = {
@@ -61,6 +67,7 @@ async function search(input: SearchInput): Promise<GeoLocationSearchResult[]> {
       type: geoLocations.type,
       stateCode: geoLocations.stateCode,
       countryCode: geoLocations.countryCode,
+      parentMetroCode: geoLocations.parentMetroCode,
     })
     .from(geoLocations)
     .where(where)
@@ -82,4 +89,32 @@ async function count(): Promise<number> {
   return result?.value ?? 0;
 }
 
-export const GeoLocationRepository = { search, count } as const;
+/**
+ * Look up a single row by its own primary key. Added for the target-area
+ * detection cascade (Task 4 of the activation plan): resolving a business's
+ * declared city to its metro is a two-step lookup -- find the city row by
+ * name (`search`, above), then follow ITS `parentMetroCode` back to the
+ * metro row itself, which `search`'s name-prefix matching cannot do (a DMA's
+ * stored name, e.g. "Dallas-Ft. Worth, TX,Texas,United States", does not
+ * contain a suburb's name like "Plano"). Still a plain, unconditional read —
+ * same "reads only, reads D1 only" charter as `search`.
+ */
+async function getByCode(
+  code: number,
+): Promise<GeoLocationSearchResult | null> {
+  const rows = await db
+    .select({
+      code: geoLocations.code,
+      name: geoLocations.name,
+      type: geoLocations.type,
+      stateCode: geoLocations.stateCode,
+      countryCode: geoLocations.countryCode,
+      parentMetroCode: geoLocations.parentMetroCode,
+    })
+    .from(geoLocations)
+    .where(eq(geoLocations.code, code))
+    .limit(1);
+  return rows[0] ?? null;
+}
+
+export const GeoLocationRepository = { search, count, getByCode } as const;

@@ -4,6 +4,16 @@ export const topicClustersRequestSchema = z.object({
   projectId: z.string().uuid(),
   topic: z.string().trim().min(1).max(200),
   locationCode: z.number().int().positive().optional(),
+  /**
+   * Defect 2 fix: the project's CONFIRMED target area label at the moment
+   * this run was authorized, when a sub-country one was confirmed --
+   * null/omitted otherwise. Sent purely so the server can persist it for a
+   * later restore; this tab's own numbers never use it (Labs
+   * `keyword_suggestions` has no metro-capable equivalent), so it drives
+   * only the "these numbers are nationwide" caveat, never the request
+   * itself. See clusterAreaLabel.ts's own header.
+   */
+  confirmedAreaLabel: z.string().max(200).nullable().optional(),
 });
 
 /* ------------------------------------------------------------------ */

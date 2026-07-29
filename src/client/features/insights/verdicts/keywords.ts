@@ -30,7 +30,29 @@ type KeywordsVerdictInput = {
   rows: KeywordCandidate[];
   /** The project's own domain rating, for the reachability call. */
   ownDomainRating: number | null;
+  /**
+   * The metro these keyword IDEAS were scoped to, when the run went local
+   * (Task 6's geo activation) -- optional so every pre-Task-6 caller/test
+   * above keeps compiling unchanged. Keyword difficulty itself is always
+   * Labs-only/national regardless of this (see resolveGeo.ts's
+   * NATIONAL_ONLY set), so this never claims the DIFFICULTY score is local
+   * -- it only flags that the reachability read below is judging a LOCAL
+   * keyword list against a NATIONAL difficulty score, the "leans on a
+   * national figure" case this task's defensibility rule requires stating.
+   */
+  areaLabel?: string | null;
 };
+
+/** Appends a parenthetical noting the national/local mismatch -- see
+ *  `areaLabel`'s own doc comment above. No-ops when there's no local area
+ *  to flag (the common case), leaving every pre-Task-6 read unchanged. */
+function withNationalDifficultyNote(
+  areaLabel: string | null | undefined,
+  sentence: string,
+): string {
+  if (!areaLabel) return sentence;
+  return `${sentence} (Difficulty reflects nationwide data; these keyword ideas are scoped to ${areaLabel}.)`;
+}
 
 /** Below this many rows with a known difficulty score, "N winnable" is just
  *  a couple of keywords restated as a fraction, not a real read on the
@@ -102,7 +124,10 @@ export function buildKeywordsVerdict(input: KeywordsVerdictInput): Verdict {
       (a, b) => a.keywordDifficulty - b.keywordDifficulty,
     )[0];
     return {
-      read: `None of the ${formatCount(ratedCount)} keywords with a known difficulty score are within reach of your DR ${ownDomainRating} site.`,
+      read: withNationalDifficultyNote(
+        input.areaLabel,
+        `None of the ${formatCount(ratedCount)} keywords with a known difficulty score are within reach of your DR ${ownDomainRating} site.`,
+      ),
       tone: "bad",
       actions: [
         {
@@ -126,14 +151,20 @@ export function buildKeywordsVerdict(input: KeywordsVerdictInput): Verdict {
 
   if (winnableCount / ratedCount >= WINNABLE_MAJORITY_SHARE) {
     return {
-      read: `${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site.`,
+      read: withNationalDifficultyNote(
+        input.areaLabel,
+        `${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site.`,
+      ),
       tone: "good",
       actions: [action],
     };
   }
 
   return {
-    read: `Only ${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site -- the rest need more authority than you currently have.`,
+    read: withNationalDifficultyNote(
+      input.areaLabel,
+      `Only ${formatCount(winnableCount)} of the ${formatCount(ratedCount)} keywords with a known difficulty score (${winnablePct}%) are within reach of your DR ${ownDomainRating} site -- the rest need more authority than you currently have.`,
+    ),
     tone: "mixed",
     actions: [action],
   };
@@ -169,7 +200,28 @@ type TrendsVerdictInput = {
    *  non-nullable numbers can't represent "this month never had data",
    *  which the real computation genuinely produces. */
   seriesByKeyword: Record<string, Array<number | null>>;
+  /**
+   * The metro this interest series was actually scoped to (Task 6), when
+   * the run resolved to a LOCAL geo -- omitted/null for a worldwide result
+   * (Keyword Trends' own national-equivalent default, since
+   * getKeywordTrends omits `locationCode` entirely rather than scoping to
+   * the session's country -- see TrendsPage.tsx's own comment on that).
+   * Optional so every pre-Task-6 caller/test keeps compiling unchanged.
+   */
+  areaLabel?: string | null;
 };
+
+/** Prefixes a verdict sentence with "In <area>, " -- mirrors serp.ts's own
+ *  `withAreaPrefix` (kept as a separate small copy rather than a shared
+ *  import, matching this file's own `formatCount` already being a separate
+ *  copy from serp.ts's). No-ops for a worldwide result. */
+function withAreaPrefix(
+  areaLabel: string | null | undefined,
+  sentence: string,
+): string {
+  if (!areaLabel) return sentence;
+  return `In ${areaLabel}, ${sentence.charAt(0).toLowerCase()}${sentence.slice(1)}`;
+}
 
 const MONTH_NAMES = [
   "January",
@@ -271,7 +323,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
 
   if (strongest.spread < FLAT_SEASONALITY_SPREAD) {
     return {
-      read: `Interest in "${strongest.keyword}" stays fairly flat across the year (peak in ${peakName} vs low in ${lowName}, only a ${strongest.spread}-point gap on the 0-100 scale) -- not a strong enough swing to plan a publish date around.`,
+      read: withAreaPrefix(
+        input.areaLabel,
+        `Interest in "${strongest.keyword}" stays fairly flat across the year (peak in ${peakName} vs low in ${lowName}, only a ${strongest.spread}-point gap on the 0-100 scale) -- not a strong enough swing to plan a publish date around.`,
+      ),
       tone: "bad",
       actions: [],
     };
@@ -279,7 +334,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
 
   if (strongest.spread < MEANINGFUL_SEASONALITY_SPREAD) {
     return {
-      read: `"${strongest.keyword}" shows a modest seasonal swing: interest peaks in ${peakName} and dips in ${lowName}, a ${strongest.spread}-point gap -- present, but not pronounced enough to commit a publish date to.`,
+      read: withAreaPrefix(
+        input.areaLabel,
+        `"${strongest.keyword}" shows a modest seasonal swing: interest peaks in ${peakName} and dips in ${lowName}, a ${strongest.spread}-point gap -- present, but not pronounced enough to commit a publish date to.`,
+      ),
       tone: "mixed",
       actions: [
         {
@@ -294,7 +352,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
   const publishMonth =
     MONTH_NAMES[(strongest.peakMonth - LEAD_TIME_MONTHS + 12) % 12];
   return {
-    read: `"${strongest.keyword}" peaks in ${peakName} (interest ${strongest.peakValue} vs a low of ${strongest.lowValue} in ${lowName}) -- a real seasonal swing worth timing content around.`,
+    read: withAreaPrefix(
+      input.areaLabel,
+      `"${strongest.keyword}" peaks in ${peakName} (interest ${strongest.peakValue} vs a low of ${strongest.lowValue} in ${lowName}) -- a real seasonal swing worth timing content around.`,
+    ),
     tone: "good",
     actions: [
       {

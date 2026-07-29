@@ -27,6 +27,12 @@ export function KeywordResearchResults({
           seed: controller.searchedKeyword ?? "",
           rows: controller.rows,
           ownDomainRating,
+          // Only when the CAPTURED run (not live scope) actually went local
+          // -- see useKeywordResearchController.ts's own `researchGeo`.
+          areaLabel:
+            controller.researchGeo?.volume.scope === "local"
+              ? controller.researchGeo.volume.label
+              : null,
         })}
         projectId={projectId}
         tab="Keyword Research"

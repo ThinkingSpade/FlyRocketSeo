@@ -175,6 +175,38 @@ describe("buildKeywordsVerdict", () => {
   });
 });
 
+describe("buildKeywordsVerdict area labeling (Task 6)", () => {
+  it("notes the national/local mismatch when the ideas were locally scoped", () => {
+    const verdict = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(3, () => 20),
+      ownDomainRating: 40,
+      areaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read).toContain(
+      "Difficulty reflects nationwide data; these keyword ideas are scoped to Dallas-Ft. Worth, TX.",
+    );
+  });
+
+  it("says nothing extra for a national result -- identical to omitting the field", () => {
+    const withNull = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(3, () => 20),
+      ownDomainRating: 40,
+      areaLabel: null,
+    });
+    const omitted = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(3, () => 20),
+      ownDomainRating: 40,
+    });
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read).not.toContain("Dallas");
+  });
+});
+
 describe("keywordRowNote", () => {
   it("says nothing when the row has no known difficulty score", () => {
     expect(
@@ -351,5 +383,42 @@ describe("buildTrendsVerdict", () => {
     expect(verdict.tone).toBe("good");
     expect(verdict.read).toContain("coffee subscription");
     expect(verdict.read).not.toContain("flat term");
+  });
+
+  it("prefixes the read with the area when the run was locally scoped (Task 6)", () => {
+    const months = Array.from({ length: 12 }, () => null) as Array<
+      number | null
+    >;
+    [10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100].forEach((value, i) => {
+      months[i] = value;
+    });
+    const verdict = buildTrendsVerdict({
+      keywords: ["coffee subscription"],
+      seriesByKeyword: { "coffee subscription": months },
+      areaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read.startsWith("In Dallas-Ft. Worth, TX, ")).toBe(true);
+  });
+
+  it("says nothing extra for a worldwide result -- identical to omitting the field", () => {
+    const months = Array.from({ length: 12 }, () => null) as Array<
+      number | null
+    >;
+    [10, 15, 20, 25, 30, 40, 50, 60, 70, 80, 90, 100].forEach((value, i) => {
+      months[i] = value;
+    });
+    const withNull = buildTrendsVerdict({
+      keywords: ["coffee subscription"],
+      seriesByKeyword: { "coffee subscription": months },
+      areaLabel: null,
+    });
+    const omitted = buildTrendsVerdict({
+      keywords: ["coffee subscription"],
+      seriesByKeyword: { "coffee subscription": months },
+    });
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read.startsWith("In ")).toBe(false);
   });
 });

@@ -621,6 +621,43 @@ export const geoLocations = pgTable(
   ],
 );
 
+// See src/db/app.schema.ts for the full rationale (detection cascade +
+// confirmation banner + resolveGeo) and why `confirmedAt` is load-bearing.
+// Kept structurally identical here -- schema-parity.test.ts enforces it --
+// with only the dialect-specific timestamp default and boolean type differing.
+export const projectTargetAreas = pgTable(
+  "project_target_areas",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    kind: text("kind", {
+      enum: ["metro", "city", "region", "country"],
+    }).notNull(),
+    locationCode: integer("location_code").notNull(),
+    label: text("label").notNull(),
+    parentCountryCode: integer("parent_country_code").notNull(),
+    source: text("source", {
+      enum: ["gbp", "gsc", "manual"],
+    }).notNull(),
+    isPrimary: boolean("is_primary").notNull().default(false),
+    // NULL = an unconfirmed proposal. See this table's own header comment.
+    confirmedAt: timestampColumn("confirmed_at"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    index("project_target_areas_project_idx").on(table.projectId),
+    // Same partial-unique intent as the SQLite sibling; `= true` is
+    // Postgres's own native boolean literal (SQLite has no boolean type,
+    // hence `= 1` there) -- schema-parity.test.ts only checks that a WHERE
+    // clause is present on both dialects, never its exact text.
+    uniqueIndex("project_target_areas_one_primary_per_project_idx")
+      .on(table.projectId)
+      .where(sql`${table.isPrimary} = true`),
+  ],
+);
+
 // ============================================================================
 // Google Business Profile write tables
 // ============================================================================

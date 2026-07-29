@@ -30,6 +30,19 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
+import {
+  parseStoredGeo,
+  resolveRunGeo,
+  toStoredMetricGeo,
+} from "@/client/features/geo/resolveRunGeo";
+import { describeGeoRunError } from "@/client/features/geo/geoUnavailableMessage";
+import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import { trendsGeoBundleSchema } from "@/types/schemas/trends";
+import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -118,6 +131,38 @@ function toSeriesByKeyword(
 }
 
 /**
+ * Captured once at authorize()-time (submit / "Run again"), never
+ * recomputed later from the live scope control -- see resolveRunGeo.ts's
+ * own header for why. Reuses the "keyword-volume" need: Trends has no
+ * `GeoNeed` of its own, but that need's local/national split (Google Ads
+ * metro vs. Labs country) is exactly the local/worldwide split this tab
+ * needs too, and it's the same need Keyword Research/SERP Overview already
+ * resolve their own volume from.
+ */
+function captureTrendsRunGeo(
+  area: TargetArea,
+  sessionLocationCode: number,
+): ResolvedGeo {
+  return resolveRunGeo("keyword-volume", area, sessionLocationCode);
+}
+
+/**
+ * Unlike every other tab's "national" scope, Trends' own default is not the
+ * session's country -- `getKeywordTrends` OMITS `locationCode` entirely when
+ * no compatible target area applies (see the query below), which the
+ * DataForSEO Trends Explore endpoint documents as WORLDWIDE interest, not
+ * country-scoped. Labeling that "United States" (resolveRunGeo's own
+ * national-branch label) would overclaim a specificity this tab never
+ * actually queried for -- so this label is bespoke to this tab rather than
+ * reusing the shared `geoMetricSuffix`, which assumes national == the
+ * session's own country (true everywhere else, not here).
+ */
+function trendsMetricLabel(geo: ResolvedGeo | null): string {
+  if (!geo) return "Interest";
+  return geo.scope === "local" ? `Interest · ${geo.label}` : "Interest";
+}
+
+/**
  * The submit button, paired with an invisible copy of the "Keywords
  * (comma-separated...)" label above it. The form aligns its columns with
  * `items-start` so the keyword column's chips (rendered after the input) can
@@ -176,7 +221,26 @@ export function TrendsPage({
   // so deriving this from `query` alone left the tab telling the user to
   // "enter keywords" while a suggestion sat prefilled in the box.
   const enteredKeywords = parseKeywords(input);
+  // Unlike SERP Overview/Content Optimizer/Topic Clusters, this tab has no
+  // country field of its own today -- `market.locationCode` only seeds
+  // `useTargetAreaScope`'s own country fallback and `captureTrendsRunGeo`'s
+  // session location below, never sent to getKeywordTrends directly.
+  const market = useProjectMarket(projectId);
+  const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
   const [runKeywords, setRunKeywords] = useState<string[] | null>(null);
+  // The geo CAPTURED for the run in `runKeywords` -- set in the same breath
+  // as `runKeywords` itself (submit / "Run again" below), never recomputed
+  // from live scope afterward. Null for a restored (not re-run) result --
+  // see the `effectiveGeo`/restore branch below, which reads that run's OWN
+  // persisted geo bundle instead.
+  const [runGeo, setRunGeo] = useState<ResolvedGeo | null>(null);
+  // The session location `runGeo` above was captured against (Defect 1
+  // fix) -- captured alongside it, never re-read from `market.locationCode`
+  // later, so a persisted bundle's `parentCountryCode` always describes
+  // what this run actually used even if the project's market later changes.
+  const [runGeoCountryCode, setRunGeoCountryCode] = useState<number | null>(
+    null,
+  );
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, parseKeywords(input)),
   );
@@ -185,15 +249,43 @@ export function TrendsPage({
     authorized: run.authorized,
     runNonce: run.runNonce,
     enabled: runKeywords != null,
-    queryKey: ["keyword-trends", projectId, runKeywords],
+    queryKey: ["keyword-trends", projectId, runKeywords, runGeo?.locationCode],
     queryFn: () =>
       getKeywordTrends({
-        data: { projectId, keywords: runKeywords ?? [] },
+        data: {
+          projectId,
+          keywords: runKeywords ?? [],
+          // Sent ONLY for a genuinely local run -- omitting it (the
+          // pre-Task-6 default, and still the default for every project
+          // with no compatible target area) is what makes Trends Explore
+          // return worldwide interest, its own documented behavior.
+          // Sending the session's own country code here would silently
+          // narrow every existing worldwide result to that country, a
+          // real behavior change this task must not make.
+          locationCode:
+            runGeo?.scope === "local" ? runGeo.locationCode : undefined,
+          languageCode: runGeo?.languageCode,
+          // Defect 1 fix: sent purely so the server can persist it in this
+          // run's history -- never read back to decide anything about THIS
+          // request, which is already fully determined by the two fields
+          // above.
+          geo:
+            runGeo && runGeoCountryCode != null
+              ? {
+                  v: STORED_GEO_BUNDLE_VERSION,
+                  interest: toStoredMetricGeo(runGeo, runGeoCountryCode),
+                }
+              : undefined,
+        },
       }),
   });
 
   const errorMessage = trendsQuery.isError
-    ? getStandardErrorMessage(trendsQuery.error)
+    ? describeGeoRunError(
+        "trend data",
+        runGeo ?? { scope: "national", label: "" },
+        getStandardErrorMessage(trendsQuery.error),
+      )
     : null;
 
   const suggestions = useProjectSuggestions(projectId, "high-volume");
@@ -248,6 +340,15 @@ export function TrendsPage({
   });
   const result = trendsQuery.data ?? restored?.result;
   const restoredRun = trendsQuery.data == null ? restored : null;
+  // Defect 1 fix: a restored run's OWN persisted geo bundle -- null for a
+  // run recorded before this bundle existed, which must read as "geography
+  // unknown" (bare "Interest", same as no geo at all) rather than guessing
+  // it was worldwide or national. `runGeo` (a live/just-re-run capture)
+  // always wins when both exist, matching `result`'s own `??` precedence.
+  const restoredGeo =
+    parseStoredGeo(trendsGeoBundleSchema, restoredRun?.params)?.interest ??
+    null;
+  const effectiveGeo = runGeo ?? restoredGeo;
   const seriesByKeyword = useMemo(
     () =>
       toSeriesByKeyword(
@@ -258,17 +359,27 @@ export function TrendsPage({
 
   return (
     <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
-      <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Activity className="size-5" />
-          Keyword Trends
-        </h1>
-        <p className="text-sm text-base-content/60">
-          Compare Google Trends interest over time for up to{" "}
-          {MAX_TRENDS_KEYWORDS} keywords — spot seasonality and momentum before
-          committing to a topic.
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="flex items-center gap-2 text-xl font-semibold">
+            <Activity className="size-5" />
+            Keyword Trends
+          </h1>
+          <p className="text-sm text-base-content/60">
+            Compare Google Trends interest over time for up to{" "}
+            {MAX_TRENDS_KEYWORDS} keywords — spot seasonality and momentum
+            before committing to a topic.
+          </p>
+        </div>
+        <ScopeControl
+          area={targetAreaScope.area}
+          onChange={targetAreaScope.onChange}
+          hasConfirmedArea={targetAreaScope.hasConfirmedArea}
+          onClear={targetAreaScope.onClear}
+        />
       </div>
+
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
@@ -278,6 +389,12 @@ export function TrendsPage({
               event.preventDefault();
               const next = parseKeywords(input);
               if (next.length === 0) return;
+              // Captured HERE, at authorize()-time -- never recomputed from
+              // live scope afterward.
+              setRunGeo(
+                captureTrendsRunGeo(targetAreaScope.area, market.locationCode),
+              );
+              setRunGeoCountryCode(market.locationCode);
               setRunKeywords(next);
               run.authorize();
               // Hands the primary (first) keyword to whichever tab the user
@@ -350,6 +467,13 @@ export function TrendsPage({
           onRunAgain={() => {
             const next = restoredRun.result.keywords.join(", ");
             setInput(next);
+            // A genuine new user-authorized run, so it captures the CURRENT
+            // live scope -- trendsResultSchema stores no locationCode of its
+            // own to fall back to (unlike SERP Overview's stored result).
+            setRunGeo(
+              captureTrendsRunGeo(targetAreaScope.area, market.locationCode),
+            );
+            setRunGeoCountryCode(market.locationCode);
             setRunKeywords(restoredRun.result.keywords);
             run.authorize(
               createMeteredRunKey(projectId, restoredRun.result.keywords),
@@ -383,6 +507,7 @@ export function TrendsPage({
               keywords={result.keywords}
               averages={result.averages}
               points={result.points}
+              geoLabel={trendsMetricLabel(effectiveGeo)}
             />
           )}
         </div>
@@ -393,6 +518,8 @@ export function TrendsPage({
           verdict={buildTrendsVerdict({
             keywords: result.keywords,
             seriesByKeyword,
+            areaLabel:
+              effectiveGeo?.scope === "local" ? effectiveGeo.label : null,
           })}
           projectId={projectId}
           tab="Keyword Trends"
@@ -419,13 +546,19 @@ function TrendsChart({
   keywords,
   averages,
   points,
+  geoLabel,
 }: {
   keywords: string[];
   averages: (number | null)[];
   points: Array<{ timestamp: number; date: string; values: (number | null)[] }>;
+  /** From `trendsMetricLabel` -- only ever "Interest · <area>" for a
+   *  genuinely local run; bare "Interest" (rendered as nothing extra here)
+   *  for the worldwide default, matching this chart's pre-Task-6 look. */
+  geoLabel: string;
 }) {
   const { containerRef, width: chartWidth } = useChartWidth();
   const height = 288;
+  const showGeoLabel = geoLabel !== "Interest";
 
   const data = points.map((point) => {
     const row: Record<string, number | null> = { timestamp: point.timestamp };
@@ -437,6 +570,9 @@ function TrendsChart({
 
   return (
     <div className="space-y-3">
+      {showGeoLabel ? (
+        <p className="text-xs text-base-content/50">{geoLabel}</p>
+      ) : null}
       <div className="flex flex-wrap items-center gap-3">
         {keywords.map((keyword, index) => (
           <span

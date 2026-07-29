@@ -15,6 +15,26 @@ import type { GeoNeed, ResolvedGeo, TargetArea } from "./types";
  * the figure does not exist at all when the resolved country is one Labs
  * does not cover (`provider: "none"`), rather than naming a provider that
  * cannot serve it.
+ *
+ * A real limitation this function cannot close, and does not try to:
+ * `scope`/`provider` are assigned from the SELECTED area alone, before any
+ * provider response exists. DataForSEO's own response types document
+ * `location_code` as "location code in a POST array" — an echo of what this
+ * module sent, never independent proof of what a provider actually used to
+ * produce a result. That is equally true whichever kind of code was sent —
+ * there is no field, for a metro OR a country, that a successful (200)
+ * response carries back to confirm the request wasn't silently normalised to
+ * something broader. So a metro/DMA code rests on exactly the same trust
+ * basis this app has always extended to a country code (both are simply
+ * echoed back, and DMA Region is a documented supported location type for
+ * the same Google Ads/SERP endpoint family, sourced from DataForSEO's own
+ * locations endpoint) — hedging one kind of code and not the other would be
+ * an arbitrary double standard, not extra honesty. The one failure this data
+ * CAN independently prove is an outright rejection: the call throws, which
+ * `geoUnavailableMessage.ts` (describeGeoRunError/describeGeoFetchFailure)
+ * turns into a specific message. A 200 response is trusted at face value for
+ * every scope alike; callers must not read it as stronger proof for one kind
+ * of location than another.
  */
 
 /** Needs that only exist at country level, whatever the target area. */

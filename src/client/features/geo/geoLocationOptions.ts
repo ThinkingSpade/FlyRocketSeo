@@ -11,6 +11,7 @@
  * this (same reasoning Task 7 already applied to `likePattern.ts`).
  */
 import type { TargetArea, TargetAreaKind } from "@/shared/geo/types";
+import { toGeoDisplayName } from "@/shared/geo/geoDisplayName";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -130,32 +131,19 @@ export function filterCountryAreas(query: string): TargetArea[] {
 }
 
 /**
- * `stateCode` disambiguates the common case (two same-named US cities in
- * different states, e.g. Springfield IL vs MO); `countryCode` disambiguates
- * the rest, via the same LOCATION_OPTIONS table the rest of this module
- * already treats as the single source of truth for country display names.
- * Falls back to the bare name only when neither is available — never
- * invents a label.
- */
-export function formatCityLabel(
-  name: string,
-  stateCode: string | null,
-  countryCode: number,
-): string {
-  if (stateCode) return `${name}, ${stateCode}`;
-  const country = LOCATION_OPTIONS.find(
-    (option) => option.code === countryCode,
-  );
-  return country ? `${name}, ${country.shortLabel}` : name;
-}
-
-/**
  * `geo_locations` seeds every Google geotarget type into one table —
  * countries, states, DMAs and cities alike (see
  * scripts/seed-geo-locations.ts) — but metros/states/countries already have
  * their own dedicated, curated sources above. Filtering to "City" here is
  * what stops a seeded deployment from showing e.g. "Texas" twice: once from
  * US_STATES, once from D1.
+ *
+ * `toGeoDisplayName` (not the row's own `stateCode` column) is what
+ * disambiguates two same-named cities: the stored `name` already carries the
+ * city's state as its own hierarchy segment (e.g.
+ * "Springfield,Illinois,United States"), and trimming that hierarchy down to
+ * "Springfield, Illinois" keeps exactly that segment while dropping only the
+ * redundant trailing country — no separate abbreviation lookup needed.
  */
 export function buildCityAreas(
   results: readonly GeoSearchResult[],
@@ -165,7 +153,7 @@ export function buildCityAreas(
     .map((result) => ({
       kind: "city",
       locationCode: result.code,
-      label: formatCityLabel(result.name, result.stateCode, result.countryCode),
+      label: toGeoDisplayName(result.name, result.type),
       parentCountryCode: result.countryCode,
     }));
 }
@@ -182,6 +170,11 @@ export function buildCityAreas(
  * region names already embed their state (e.g. "Dallas-Fort Worth TX", per
  * `filterMetroAreas`'s own comment above), so no extra disambiguation suffix
  * is needed here, matching how the bundled metros format their own label.
+ *
+ * The seeded `name` is still DataForSEO's full hierarchy string (e.g.
+ * "Dallas-Ft. Worth, TX,Texas,United States"), not the bare DMA name —
+ * `toGeoDisplayName` strips the redundant trailing state/country before it
+ * ever reaches a rendered row.
  */
 export function buildMetroAreasFromSearch(
   results: readonly GeoSearchResult[],
@@ -191,7 +184,7 @@ export function buildMetroAreasFromSearch(
     .map((result) => ({
       kind: "metro",
       locationCode: result.code,
-      label: result.name,
+      label: toGeoDisplayName(result.name, result.type),
       parentCountryCode: result.countryCode,
     }));
 }

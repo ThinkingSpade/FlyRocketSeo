@@ -191,6 +191,42 @@ describe("buildContentVerdict", () => {
   });
 });
 
+describe("buildContentVerdict area labeling (Task 6)", () => {
+  it("prefixes the read with the area when competitors were locally scoped", () => {
+    const verdict = buildContentVerdict({
+      keyword: "office coffee",
+      targetWordCount: 1000,
+      currentWordCount: 1000,
+      missingSubtopics: [],
+      totalSubtopics: 4,
+      unansweredQuestions: [],
+      totalQuestions: 3,
+      areaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read.startsWith("In Dallas-Ft. Worth, TX, your draft")).toBe(
+      true,
+    );
+  });
+
+  it("says nothing extra for a national result -- identical to omitting the field", () => {
+    const base = {
+      keyword: "office coffee",
+      targetWordCount: 1000,
+      currentWordCount: 1000,
+      missingSubtopics: [],
+      totalSubtopics: 4,
+      unansweredQuestions: [],
+      totalQuestions: 3,
+    };
+    const withNull = buildContentVerdict({ ...base, areaLabel: null });
+    const omitted = buildContentVerdict(base);
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read.startsWith("In ")).toBe(false);
+  });
+});
+
 describe("buildClustersVerdict", () => {
   it("says so when no clusters were found", () => {
     const verdict = buildClustersVerdict({
@@ -361,5 +397,40 @@ describe("buildClustersVerdict", () => {
         weight: 100,
       },
     ]);
+  });
+});
+
+describe("buildClustersVerdict area labeling (Task 6)", () => {
+  const cluster = {
+    name: "Office coffee subscription",
+    keywordCount: 6,
+    totalVolume: 200,
+    averageDifficulty: null,
+  };
+
+  it("flags a confirmed-but-unused target area rather than staying silent", () => {
+    const verdict = buildClustersVerdict({
+      topic: "office coffee",
+      clusters: [cluster],
+      confirmedAreaLabel: "Dallas-Ft. Worth, TX",
+    });
+
+    expect(verdict.read).toContain("nationwide");
+    expect(verdict.read).toContain("Dallas-Ft. Worth, TX");
+  });
+
+  it("says nothing extra with no confirmed area -- identical to omitting the field", () => {
+    const withNull = buildClustersVerdict({
+      topic: "office coffee",
+      clusters: [cluster],
+      confirmedAreaLabel: null,
+    });
+    const omitted = buildClustersVerdict({
+      topic: "office coffee",
+      clusters: [cluster],
+    });
+
+    expect(withNull.read).toBe(omitted.read);
+    expect(withNull.read).not.toContain("nationwide");
   });
 });

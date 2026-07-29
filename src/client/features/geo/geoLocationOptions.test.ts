@@ -12,7 +12,6 @@ import {
   filterMetroAreas,
   filterStateAreas,
   flattenGeoGroups,
-  formatCityLabel,
   groupGeoAreas,
   isSameArea,
   selectCityAreas,
@@ -27,28 +26,44 @@ import {
 // exactly what proves buildMetroAreasFromSearch keeps a DMA row while
 // dropping City/State/Country ones out of the identical array
 // buildCityAreas keeps City from and drops the rest of.
+//
+// `name` on both the City and DMA Region fixtures below is the REAL stored
+// hierarchy shape (verified live against production D1 — see
+// geoDisplayName.test.ts's own header), not a bare place name: these are
+// exactly what previously proved the labels below were built from an already-
+// clean name, when production data never is.
 const SPRINGFIELD_IL: GeoSearchResult = {
   code: 1_017_962,
-  name: "Springfield",
+  name: "Springfield,Illinois,United States",
   type: "City",
   stateCode: "IL",
   countryCode: 2840,
+  // No DMA in this fixture set rolls this row up (only DALLAS_FORT_WORTH_DMA
+  // below is a metro), so null is the honest value here, not a placeholder.
+  parentMetroCode: null,
 };
 const DALLAS_FORT_WORTH_DMA: GeoSearchResult = {
-  code: 1_026_339,
-  name: "Dallas-Fort Worth TX",
+  // Real Dallas-Ft. Worth DMA code, verified against seeded production data
+  // (see the geo-activation plan's "two facts" note) — 1_026_339 was Plan 1's
+  // invented placeholder; do not propagate it further.
+  code: 200_623,
+  name: "Dallas-Ft. Worth, TX,Texas,United States",
   type: "DMA Region",
   stateCode: "TX",
   countryCode: 2840,
+  // A metro has no "parent metro" of its own — see
+  // geoLocationSeedMapping.ts's resolveParentMetroCode for the same rule.
+  parentMetroCode: null,
 };
 const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
   SPRINGFIELD_IL,
   {
     code: 1_017_961,
-    name: "Springfield",
+    name: "Springfield,Missouri,United States",
     type: "City",
     stateCode: "MO",
     countryCode: 2840,
+    parentMetroCode: null,
   },
   {
     code: 21_176,
@@ -56,6 +71,7 @@ const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
     type: "State",
     stateCode: "TX",
     countryCode: 2840,
+    parentMetroCode: null,
   },
   {
     code: 2840,
@@ -63,13 +79,21 @@ const MIXED_TYPE_RESULTS: GeoSearchResult[] = [
     type: "Country",
     stateCode: null,
     countryCode: 2840,
+    parentMetroCode: null,
   },
   {
     code: 1_006_932,
+    // Bare, not a hierarchy: only the US is seeded today (geo location
+    // seeding is scoped to one country), so a non-US row's real stored shape
+    // is unverified — left bare rather than inventing one. toGeoDisplayName
+    // passes a comma-less name through unchanged, so this still proves the
+    // "don't touch what you haven't verified" behaviour rather than the
+    // state-trimming behaviour the US fixtures above prove.
     name: "Paris",
     type: "City",
     stateCode: null,
     countryCode: 2250,
+    parentMetroCode: null,
   },
   DALLAS_FORT_WORTH_DMA,
 ];
@@ -141,21 +165,6 @@ describe("filterCountryAreas", () => {
   });
 });
 
-describe("formatCityLabel", () => {
-  it("disambiguates same-named US cities by state", () => {
-    expect(formatCityLabel("Springfield", "IL", 2840)).toBe("Springfield, IL");
-    expect(formatCityLabel("Springfield", "MO", 2840)).toBe("Springfield, MO");
-  });
-
-  it("falls back to the country's short label when there is no state", () => {
-    expect(formatCityLabel("Paris", null, 2250)).toBe("Paris, FR");
-  });
-
-  it("falls back to the bare name when neither is available, rather than inventing a label", () => {
-    expect(formatCityLabel("Nowhereville", null, 999_999)).toBe("Nowhereville");
-  });
-});
-
 describe("buildCityAreas", () => {
   // geo_locations holds every Google geotarget type, not just cities — a
   // seeded deployment could return a State/Country/DMA row for a query that
@@ -168,25 +177,27 @@ describe("buildCityAreas", () => {
     expect(areas.every((area) => area.kind === "city")).toBe(true);
   });
 
-  it("disambiguates and carries the row's own country as parentCountryCode", () => {
+  it("disambiguates same-named cities via the stored name's own state segment", () => {
     const areas = buildCityAreas(MIXED_TYPE_RESULTS);
     expect(areas).toEqual([
       {
         kind: "city",
         locationCode: 1_017_962,
-        label: "Springfield, IL",
+        label: "Springfield, Illinois",
         parentCountryCode: 2840,
       },
       {
         kind: "city",
         locationCode: 1_017_961,
-        label: "Springfield, MO",
+        label: "Springfield, Missouri",
         parentCountryCode: 2840,
       },
       {
         kind: "city",
+        // Bare fixture (see MIXED_TYPE_RESULTS's own comment): passed through
+        // unchanged since there's no hierarchy to trim, not "Paris, FR".
         locationCode: 1_006_932,
-        label: "Paris, FR",
+        label: "Paris",
         parentCountryCode: 2250,
       },
     ]);
@@ -209,8 +220,11 @@ describe("buildMetroAreasFromSearch", () => {
     expect(buildMetroAreasFromSearch(MIXED_TYPE_RESULTS)).toEqual([
       {
         kind: "metro",
-        locationCode: 1_026_339,
-        label: "Dallas-Fort Worth TX",
+        locationCode: 200_623,
+        // Trimmed from the stored hierarchy "Dallas-Ft. Worth,
+        // TX,Texas,United States" -- proves this label is no longer the raw
+        // stored name verbatim.
+        label: "Dallas-Ft. Worth, TX",
         parentCountryCode: 2840,
       },
     ]);

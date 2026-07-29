@@ -14,7 +14,7 @@ import { contentBriefSchema } from "@/types/schemas/content";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
-import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
+import { getLanguageCode, LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import { CompetitorOutlines } from "@/client/features/content/CompetitorOutlines";
 import { DraftGrader } from "@/client/features/content/DraftGrader";
 import {
@@ -23,6 +23,23 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { ScopeControl } from "@/client/features/geo/ScopeControl";
+import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import {
+  useTargetAreaScope,
+  type TargetAreaScope,
+} from "@/client/features/geo/useTargetAreaScope";
+import {
+  parseStoredGeo,
+  resolveRunGeo,
+  resolveStoredGeo,
+  toStoredMetricGeo,
+} from "@/client/features/geo/resolveRunGeo";
+import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
+import { describeGeoRunError } from "@/client/features/geo/geoUnavailableMessage";
+import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
+import { contentGeoBundleSchema } from "@/types/schemas/content";
+import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -47,6 +64,78 @@ type CompetitorAnalysis = {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
+}
+
+/**
+ * The two geographies one brief can carry (Task 6): `competitors` (the
+ * ranking-pages SERP call) can go genuinely local -- it's the same "serp"
+ * need SERP Overview resolves -- while `terms` (Labs `related_keywords`,
+ * the "terms to include" volume list) has no metro-capable equivalent
+ * wired up, so it is ALWAYS resolved with no area at all, honestly
+ * national regardless of the confirmed target area. Bundled together so
+ * every render path reads one captured object instead of two independent
+ * ones that could drift. `parentCountryCode` (Defect 1 fix) is the single
+ * session location this WHOLE bundle was captured against -- see
+ * `toStoredMetricGeo`'s own doc comment for why one value covers every
+ * metric here -- carried so the bundle can be persisted for a later
+ * restore.
+ */
+type ContentRunGeo = {
+  competitors: ResolvedGeo;
+  terms: ResolvedGeo;
+  parentCountryCode: number;
+};
+
+/** Captured once at authorize()-time -- see resolveRunGeo.ts's own header
+ *  for why this must never be recomputed from the live scope control. */
+function captureContentRunGeo(
+  area: TargetArea,
+  sessionLocationCode: number,
+  sessionLanguageCode: string,
+): ContentRunGeo {
+  return {
+    competitors: resolveRunGeo("serp", area, sessionLocationCode),
+    // No area argument at all: Labs' related_keywords is the sole term
+    // source and has no metro-capable equivalent, so this can never
+    // honestly claim local scope -- see this type's own doc comment.
+    terms: resolveStoredGeo(
+      "keyword-volume",
+      sessionLocationCode,
+      sessionLanguageCode,
+    ),
+    parentCountryCode: sessionLocationCode,
+  };
+}
+
+/** The wire payload sent alongside a live request purely so the server can
+ *  persist it -- this page never reads its own return value back for
+ *  anything (see `parseRestoredContentRunGeo` below for the restore side). */
+function buildContentGeoPayload(geo: ContentRunGeo) {
+  return {
+    v: STORED_GEO_BUNDLE_VERSION,
+    competitors: toStoredMetricGeo(geo.competitors, geo.parentCountryCode),
+    terms: toStoredMetricGeo(geo.terms, geo.parentCountryCode),
+  } as const;
+}
+
+/**
+ * For a restored/auto-restored brief that never went through this
+ * session's own authorize() call -- reads the geo bundle THAT RUN
+ * persisted (Defect 1 fix), never the live scope control, and never
+ * reconstructed from the bare stored `locationCode` (which, for a local
+ * `competitors` lookup, is itself a metro code). A brief recorded before
+ * this bundle existed (or a corrupt one) returns null -- "geography
+ * unknown for this run" -- which every render below already treats the
+ * same as no geo at all.
+ */
+function parseRestoredContentRunGeo(params: unknown): ContentRunGeo | null {
+  const bundle = parseStoredGeo(contentGeoBundleSchema, params);
+  if (!bundle) return null;
+  return {
+    competitors: bundle.competitors,
+    terms: bundle.terms,
+    parentCountryCode: bundle.competitors.parentCountryCode,
+  };
 }
 
 /**
@@ -117,6 +206,12 @@ export function ContentOptimizerPage({
   // The URL's own `loc` param always wins; the project's configured market
   // only fills in for a tab opened with no location in the URL at all.
   const activeLocation = locationCode ?? market.locationCode;
+  // The header ScopeControl's own state -- a SEPARATE concept from the
+  // country-only `locationInput` field below, which stays untouched here.
+  // Read only by `captureContentRunGeo`, and only at authorize()-time (see
+  // `runGeo` state below) -- never directly into `run`'s key or a live
+  // re-derive.
+  const targetAreaScope = useTargetAreaScope(projectId, activeLocation);
 
   const suggestions = useProjectSuggestions(projectId, "under-clicked");
   const handoff = useHandoff(projectId);
@@ -181,6 +276,10 @@ export function ContentOptimizerPage({
     keyword: string;
     locationCode: number;
   } | null>(null);
+  // The geo CAPTURED for the run in `runInput` -- set in the same breath,
+  // never recomputed from live scope afterward. See `ContentRunGeo`'s own
+  // doc comment for why this is two geographies, not one.
+  const [runGeo, setRunGeo] = useState<ContentRunGeo | null>(null);
   const [competitorsAuthorized, setCompetitorsAuthorized] = useState(false);
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
@@ -192,13 +291,19 @@ export function ContentOptimizerPage({
     authorized: run.authorized,
     runNonce: run.runNonce,
     enabled: runInput != null,
-    queryKey: ["content-brief", projectId, runInput],
+    queryKey: ["content-brief", projectId, runInput, runGeo?.competitors],
     queryFn: () =>
       getContentBrief({
         data: {
           projectId,
           keyword: runInput?.keyword ?? "",
           locationCode: runInput?.locationCode ?? activeLocation,
+          serpLocationCode: runGeo?.competitors.locationCode,
+          serpLanguageCode: runGeo?.competitors.languageCode,
+          // Defect 1 fix: sent purely so the server can persist it in this
+          // run's history -- never read back to decide anything about THIS
+          // request, which is already fully determined by the fields above.
+          geo: runGeo ? buildContentGeoPayload(runGeo) : undefined,
         },
       }),
   });
@@ -214,8 +319,23 @@ export function ContentOptimizerPage({
   });
   const brief = briefQuery.data ?? restored?.result;
   const restoredRun = briefQuery.data == null ? restored : null;
+  // Same mutual-exclusivity as SERP Overview's `effectiveGeo`: `runGeo` only
+  // ever gets set alongside `runInput`, so whenever a live run is active it
+  // describes THAT run; a restored brief (`runInput == null`) instead reads
+  // that run's OWN persisted geo bundle (Defect 1 fix) -- never today's
+  // live scope control, and never reconstructed from the bare stored
+  // locationCode (which used to force BOTH competitors and terms into the
+  // same national-only guess, ignoring a genuinely local competitors fetch
+  // entirely).
+  const effectiveGeo: ContentRunGeo | null =
+    runGeo ??
+    (restoredRun ? parseRestoredContentRunGeo(restoredRun.params) : null);
   const errorMessage = briefQuery.isError
-    ? getStandardErrorMessage(briefQuery.error)
+    ? describeGeoRunError(
+        "this brief's ranking pages",
+        effectiveGeo?.competitors ?? { scope: "national", label: "" },
+        getStandardErrorMessage(briefQuery.error),
+      )
     : null;
 
   // Remember successful briefs so the empty state can relink them. Keyed on
@@ -286,7 +406,8 @@ export function ContentOptimizerPage({
 
   return (
     <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
-      <ContentOptimizerHeading />
+      <ContentOptimizerHeading scope={targetAreaScope} />
+      <TargetAreaBanner projectId={projectId} />
 
       <div className="card border border-base-300 bg-base-100">
         <div className="card-body gap-3 p-4">
@@ -297,6 +418,15 @@ export function ContentOptimizerPage({
               const next = input.trim();
               if (!next) return;
               setCompetitorsAuthorized(false);
+              // Captured HERE, at authorize()-time -- never recomputed from
+              // live scope afterward.
+              setRunGeo(
+                captureContentRunGeo(
+                  targetAreaScope.area,
+                  Number(locationInput),
+                  getLanguageCode(Number(locationInput)),
+                ),
+              );
               setRunInput({
                 keyword: next,
                 locationCode: Number(locationInput),
@@ -388,6 +518,15 @@ export function ContentOptimizerPage({
           setInput(restoredRun.result.keyword);
           setLocationInput(String(restoredRun.result.locationCode));
           setCompetitorsAuthorized(false);
+          // A genuine new user-authorized run: captures the CURRENT live
+          // scope, same as a fresh submit.
+          setRunGeo(
+            captureContentRunGeo(
+              targetAreaScope.area,
+              restoredRun.result.locationCode,
+              restoredRun.result.languageCode,
+            ),
+          );
           setRunInput({
             keyword: restoredRun.result.keyword,
             locationCode: restoredRun.result.locationCode,
@@ -472,7 +611,20 @@ export function ContentOptimizerPage({
           {brief.terms.length > 0 ? (
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body gap-2 p-4">
-                <h2 className="text-sm font-semibold">Terms to include</h2>
+                <h2 className="text-sm font-semibold">
+                  {effectiveGeo
+                    ? formatGeoMetricLabel(
+                        "Terms to include",
+                        effectiveGeo.terms,
+                      )
+                    : "Terms to include"}
+                </h2>
+                {effectiveGeo?.competitors.scope === "local" ? (
+                  <p className="text-xs text-base-content/45">
+                    Volume here is nationwide -- Labs has no metro-level
+                    equivalent for term discovery yet.
+                  </p>
+                ) : null}
                 <div className="flex flex-wrap gap-1.5">
                   {brief.terms.map((term) => (
                     <span key={term.keyword} className="badge badge-ghost">
@@ -520,6 +672,11 @@ export function ContentOptimizerPage({
           ) : null}
 
           <div className="card border border-base-300 bg-base-100">
+            {effectiveGeo?.competitors.scope === "local" ? (
+              <p className="px-4 pt-3 text-xs text-base-content/45">
+                Ranking pages · {effectiveGeo.competitors.label}
+              </p>
+            ) : null}
             <div className="overflow-x-auto">
               <table className="table table-sm">
                 <thead>
@@ -586,6 +743,11 @@ export function ContentOptimizerPage({
             terms={brief.terms}
             questions={brief.paaQuestions}
             outlines={loadedAnalyses.map((analysis) => analysis.h2)}
+            areaLabel={
+              effectiveGeo?.competitors.scope === "local"
+                ? effectiveGeo.competitors.label
+                : null
+            }
           />
 
           <p className="text-xs text-base-content/40">
@@ -598,18 +760,26 @@ export function ContentOptimizerPage({
   );
 }
 
-function ContentOptimizerHeading() {
+function ContentOptimizerHeading({ scope }: { scope: TargetAreaScope }) {
   return (
-    <div>
-      <h1 className="flex items-center gap-2 text-xl font-semibold">
-        <NotebookPen className="size-5" />
-        Content Optimizer
-      </h1>
-      <p className="text-sm text-base-content/60">
-        Build a data-backed content brief from the pages that actually rank:
-        target length, subtopics to cover, terms to include, and the questions
-        searchers ask.
-      </p>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div>
+        <h1 className="flex items-center gap-2 text-xl font-semibold">
+          <NotebookPen className="size-5" />
+          Content Optimizer
+        </h1>
+        <p className="text-sm text-base-content/60">
+          Build a data-backed content brief from the pages that actually rank:
+          target length, subtopics to cover, terms to include, and the questions
+          searchers ask.
+        </p>
+      </div>
+      <ScopeControl
+        area={scope.area}
+        onChange={scope.onChange}
+        hasConfirmedArea={scope.hasConfirmedArea}
+        onClear={scope.onClear}
+      />
     </div>
   );
 }

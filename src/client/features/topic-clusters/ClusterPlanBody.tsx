@@ -26,11 +26,18 @@ export function ClusterPlanBody({
   clusters,
   projectId,
   coverage,
+  geoSuffix,
 }: {
   plan: NonNullable<Awaited<ReturnType<typeof getTopicClusters>>>;
   clusters: ReturnType<typeof prioritizeClusters>;
   projectId: string;
   coverage: PlanCoverage | null;
+  /** Defect 2 fix: the muted "US" (no "·") qualifier for this plan's
+   *  volume/KD figures -- see ClusterPlan.tsx's own `geoSuffix` for why
+   *  it's safe to derive directly from `plan.locationCode` here. Empty
+   *  string when there's nothing truthful to append (see
+   *  `geoMetricSuffix`'s own doc comment). */
+  geoSuffix: string;
 }) {
   return (
     <>
@@ -92,10 +99,11 @@ export function ClusterPlanBody({
                     {cluster.name}
                   </h3>
                   <span className="text-xs text-base-content/50 tabular-nums">
-                    {cluster.totalVolume.toLocaleString()} vol ·{" "}
+                    {cluster.totalVolume.toLocaleString()} vol
+                    {geoSuffix ? ` (${geoSuffix})` : ""} ·{" "}
                     {cluster.keywords.length} keywords
                     {cluster.averageDifficulty != null
-                      ? ` · KD ${Math.round(cluster.averageDifficulty)}`
+                      ? ` · KD ${Math.round(cluster.averageDifficulty)}${geoSuffix ? ` (${geoSuffix})` : ""}`
                       : ""}
                   </span>
                 </div>
