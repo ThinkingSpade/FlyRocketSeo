@@ -49,20 +49,21 @@ export function useProjectSuggestions(
   const savedRows = savedQuery.data?.rows;
 
   const signals = useMemo<FreeSignals>(() => {
-    // The report is a discriminated union (`connected: false` when Search
-    // Console isn't hooked up); only the connected variant carries the rows.
-    const connected = report?.connected === true ? report : null;
+    const savedKeywords = (savedRows ?? []).map((row) => ({
+      keyword: row.keyword,
+      searchVolume: row.searchVolume,
+    }));
+    // The report is a union; the not-connected variant carries only a reason,
+    // so an early return is what narrows it to the variant holding the rows.
+    if (!report || !report.connected) {
+      return { ...EMPTY_SIGNALS, savedKeywords };
+    }
     return {
-      queryTotals: connected?.queryTotals ?? EMPTY_SIGNALS.queryTotals,
-      queryPages: connected?.queryPages ?? EMPTY_SIGNALS.queryPages,
-      strikingDistance:
-        connected?.strikingDistance ?? EMPTY_SIGNALS.strikingDistance,
-      ctrOpportunities:
-        connected?.ctrOpportunities ?? EMPTY_SIGNALS.ctrOpportunities,
-      savedKeywords: (savedRows ?? []).map((row) => ({
-        keyword: row.keyword,
-        searchVolume: row.searchVolume,
-      })),
+      queryTotals: report.queryTotals,
+      queryPages: report.queryPages,
+      strikingDistance: report.strikingDistance,
+      ctrOpportunities: report.ctrOpportunities,
+      savedKeywords,
     };
   }, [report, savedRows]);
 

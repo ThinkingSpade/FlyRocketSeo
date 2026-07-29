@@ -354,7 +354,7 @@ describe("GscService.disconnect", () => {
   });
 
   it("unlinks the caller's dangling grant when no property was ever bound", async () => {
-    // Linked Google but never picked a property → no connection row. Disconnect
+    // Linked Google but never picked a property â†’ no connection row. Disconnect
     // should still drop the caller's own grant.
     mocks.getByProjectId.mockResolvedValue(null);
     mocks.existsForConnector.mockResolvedValue(false);

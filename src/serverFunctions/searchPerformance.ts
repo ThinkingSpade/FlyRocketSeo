@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
-  GscNotConnectedError,
   GscService,
-  isExpectedGrantFailure,
+  toGscUnavailable,
 } from "@/server/features/gsc/services/GscService";
 import {
   resolveDateRange,
@@ -50,12 +49,6 @@ function buildGscFilters(data: { device?: string; country?: string }): {
       ]
     : deviceFilters;
   return { deviceFilters, filters };
-}
-
-/** Not connected, or a dead/denied grant (token failure or 401/403): the page
- *  renders the connect card. Other statuses (429, 5xx) are real faults. */
-function isExpectedConnectionFailure(error: unknown): boolean {
-  return error instanceof GscNotConnectedError || isExpectedGrantFailure(error);
 }
 
 /**
@@ -129,10 +122,10 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
         countries: toDimensionRows(countries.rows),
       };
     } catch (error) {
-      if (isExpectedConnectionFailure(error)) {
-        return { connected: false as const };
-      }
-      throw error;
+      return toGscUnavailable(error, {
+        projectId,
+        surface: "searchPerformanceReport",
+      });
     }
   });
 
@@ -176,10 +169,10 @@ export const getSearchPerformanceTable = createServerFn({ method: "POST" })
         rows,
       };
     } catch (error) {
-      if (isExpectedConnectionFailure(error)) {
-        return { connected: false as const };
-      }
-      throw error;
+      return toGscUnavailable(error, {
+        projectId: context.projectId,
+        surface: "searchPerformanceTable",
+      });
     }
   });
 
@@ -271,9 +264,9 @@ export const getContentPerformance = createServerFn({ method: "POST" })
         previous: toContentPages(previous.rows),
       };
     } catch (error) {
-      if (isExpectedConnectionFailure(error)) {
-        return { connected: false as const };
-      }
-      throw error;
+      return toGscUnavailable(error, {
+        projectId,
+        surface: "contentPerformance",
+      });
     }
   });

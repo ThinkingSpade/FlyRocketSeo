@@ -5,6 +5,7 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
+import { getGscAccessNotice } from "@/client/features/gsc/gscAccessCopy";
 import { SelfHostedSetupWarning } from "@/client/features/gsc/SelfHostedSetupWarning";
 import { SitePicker } from "@/client/features/gsc/SitePicker";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
@@ -14,13 +15,18 @@ import {
   listGscSites,
   setGscSite,
 } from "@/serverFunctions/gsc";
+import type { GscAccessFailureReason } from "@/shared/gsc";
 
 const GRANT_STATUS_KEY = ["gscGrantStatus"];
 
 export function SearchConsoleConnectionCard({
   projectId,
+  failureReason,
 }: {
   projectId: string;
+  /** Why the caller's last data read failed, when it did. A bound property
+   *  Google refuses must not keep showing a green "Connected" pill. */
+  failureReason?: GscAccessFailureReason;
 }) {
   const hosted = isHostedClientAuthMode();
   const queryClient = useQueryClient();
@@ -36,6 +42,12 @@ export function SearchConsoleConnectionCard({
   const connected = Boolean(connection?.connected);
   const selfHostedNeedsSetup =
     !hosted && connectionQuery.isSuccess && !connection?.googleOAuthConfigured;
+  // `connected` here only means "a property row exists" — it never proves Google
+  // still honours the grant. When a read failed, that reason wins over the row.
+  const accessFailure =
+    connected && failureReason && failureReason !== "not_connected"
+      ? failureReason
+      : null;
 
   const showPicker = picking || (connection?.currentUserHasGrant && !connected);
   const sitesQuery = useQuery({
@@ -107,9 +119,11 @@ export function SearchConsoleConnectionCard({
           ? undefined
           : selfHostedNeedsSetup
             ? "setup_required"
-            : connected
-              ? "connected"
-              : "disconnected"
+            : accessFailure
+              ? "action_required"
+              : connected
+                ? "connected"
+                : "disconnected"
       }
     >
       {connectionQuery.isLoading ? (
@@ -119,6 +133,15 @@ export function SearchConsoleConnectionCard({
         </div>
       ) : selfHostedNeedsSetup ? (
         <SelfHostedSetupWarning />
+      ) : accessFailure && !picking ? (
+        <BrokenState
+          reason={accessFailure}
+          siteUrl={connection?.siteUrl ?? ""}
+          connectedByEmail={connection?.connectedByEmail ?? null}
+          onReconnect={handleConnect}
+          onDisconnect={() => disconnectMutation.mutate()}
+          disconnecting={disconnectMutation.isPending}
+        />
       ) : connected && !picking ? (
         <ConnectedState
           siteUrl={connection?.siteUrl ?? ""}
@@ -181,7 +204,7 @@ function IntegrationCard({
   status,
   children,
 }: {
-  status?: "connected" | "disconnected" | "setup_required";
+  status?: "connected" | "disconnected" | "setup_required" | "action_required";
   children: React.ReactNode;
 }) {
   return (
@@ -197,40 +220,120 @@ function IntegrationCard({
   );
 }
 
+const STATUS_PILL = {
+  connected: {
+    label: "Connected",
+    tint: "border-success/30 bg-success/10 text-success",
+    dot: "bg-success",
+  },
+  setup_required: {
+    label: "Setup required",
+    tint: "border-warning/30 bg-warning/10 text-warning",
+    dot: "bg-warning",
+  },
+  action_required: {
+    label: "Action needed",
+    tint: "border-warning/30 bg-warning/10 text-warning",
+    dot: "bg-warning",
+  },
+  disconnected: {
+    label: "Not connected",
+    tint: "border-base-300 bg-base-200 text-base-content/60",
+    dot: "bg-base-content/40",
+  },
+} as const;
+
 function StatusPill({
   status,
 }: {
-  status: "connected" | "disconnected" | "setup_required";
+  status: "connected" | "disconnected" | "setup_required" | "action_required";
 }) {
-  const connected = status === "connected";
-  const setupRequired = status === "setup_required";
+  const pill = STATUS_PILL[status];
   return (
     <span
       className={[
         "inline-flex shrink-0 items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-medium",
-        connected
-          ? "border-success/30 bg-success/10 text-success"
-          : setupRequired
-            ? "border-warning/30 bg-warning/10 text-warning"
-            : "border-base-300 bg-base-200 text-base-content/60",
+        pill.tint,
       ].join(" ")}
     >
-      <span
-        className={[
-          "size-1.5 rounded-full",
-          connected
-            ? "bg-success"
-            : setupRequired
-              ? "bg-warning"
-              : "bg-base-content/40",
-        ].join(" ")}
-      />
-      {connected
-        ? "Connected"
-        : setupRequired
-          ? "Setup required"
-          : "Not connected"}
+      <span className={["size-1.5 rounded-full", pill.dot].join(" ")} />
+      {pill.label}
     </span>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Bound-but-broken state
+// ---------------------------------------------------------------------------
+
+/** A property is bound, but Google refused the last read. Shows which property
+ *  is affected and the fix, instead of a green pill over a page with no data. */
+function BrokenState({
+  reason,
+  siteUrl,
+  connectedByEmail,
+  onReconnect,
+  onDisconnect,
+  disconnecting,
+}: {
+  reason: GscAccessFailureReason;
+  siteUrl: string;
+  connectedByEmail: string | null;
+  onReconnect: () => void;
+  onDisconnect: () => void;
+  disconnecting: boolean;
+}) {
+  const notice = getGscAccessNotice(reason);
+  return (
+    <div className="space-y-4">
+      <div className="rounded-lg border border-warning/30 bg-warning/5 p-3.5">
+        <p className="text-sm font-medium text-warning">{notice.title}</p>
+        {notice.detail ? (
+          <p className="mt-1 text-xs text-base-content/70">{notice.detail}</p>
+        ) : null}
+      </div>
+      <div className="flex items-center gap-3 rounded-lg border border-base-300 bg-base-200/40 p-3.5">
+        <div className="grid size-9 shrink-0 place-items-center rounded-md border border-base-300 bg-base-100">
+          <GoogleGlyph className="size-[18px]" />
+        </div>
+        <div className="min-w-0">
+          <p className="truncate font-mono text-sm">{siteUrl}</p>
+          {connectedByEmail ? (
+            <p className="truncate text-xs text-base-content/55">
+              Connected by {connectedByEmail}
+            </p>
+          ) : null}
+        </div>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        {notice.action.kind === "enable_api" ? (
+          <a
+            href={notice.action.href}
+            target="_blank"
+            rel="noreferrer"
+            className="btn btn-sm"
+          >
+            {notice.action.label}
+          </a>
+        ) : null}
+        <button
+          type="button"
+          onClick={onReconnect}
+          className="inline-flex items-center gap-2.5 rounded-lg border border-base-300 bg-base-100 px-4 py-2.5 text-sm font-semibold shadow-sm transition hover:bg-base-200"
+        >
+          <GoogleGlyph className="size-[18px]" />
+          Reconnect with Google
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm text-error hover:bg-error/10"
+          onClick={onDisconnect}
+          disabled={disconnecting}
+        >
+          Disconnect
+        </button>
+      </div>
+    </div>
   );
 }
 

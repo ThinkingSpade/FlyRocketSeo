@@ -147,6 +147,10 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
     placeholderData: keepPreviousData,
   });
   const report = reportQuery.data;
+  // Distinguishes "never connected" from "connected but Google refused the
+  // read" so the card below can't show a green pill over an empty page.
+  const accessFailureReason =
+    report && !report.connected ? report.reason : undefined;
 
   const isTableTab = tab === "queries" || tab === "pages";
   const dimension = tabDimension(tab);
@@ -213,7 +217,10 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
           </div>
         ) : !report?.connected ? (
           <div className="max-w-2xl">
-            <SearchConsoleConnectionCard projectId={projectId} />
+            <SearchConsoleConnectionCard
+              projectId={projectId}
+              failureReason={accessFailureReason}
+            />
           </div>
         ) : (
           <>

@@ -1,7 +1,11 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { account } from "@/db/schema";
-import { GSC_OAUTH_PROVIDER_ID, type GscSitesErrorReason } from "@/shared/gsc";
+import {
+  GSC_OAUTH_PROVIDER_ID,
+  type GscAccessFailureReason,
+  type GscSitesErrorReason,
+} from "@/shared/gsc";
 import { AppError } from "@/server/lib/errors";
 import {
   createGscClient,
@@ -79,6 +83,49 @@ export function isExpectedGrantFailure(error: unknown): boolean {
     error instanceof GscApiError &&
     (error.status === 401 || error.status === 403)
   );
+}
+
+/** Why a data read failed, or null when the failure is a real fault the caller
+ *  must surface (429, 5xx, transport, programming defects). Mirrors the set
+ *  `isExpectedGrantFailure` already swallows, but keeps the reason instead of
+ *  collapsing every cause to a bare "not connected". */
+export function classifyGscAccessFailure(
+  error: unknown,
+): GscAccessFailureReason | null {
+  if (error instanceof GscNotConnectedError) return "not_connected";
+  if (error instanceof GscTokenError) return "requires_reconnect";
+  if (error instanceof GscApiError) {
+    if (error.status === 401) return "requires_reconnect";
+    if (error.status === 403) {
+      return isApiNotConfiguredError(error)
+        ? "api_not_configured"
+        : "permission_denied";
+    }
+  }
+  return null;
+}
+
+/** The standard "no data, and here's why" result for a read surface. Rethrows
+ *  anything that isn't a connection/permission problem so real faults still
+ *  reach the client (and error tracking) instead of masquerading as a
+ *  never-connected project. Logs the classified failure — a bound property that
+ *  Google refuses used to fail completely silently. Never logs the error message
+ *  or body; those can carry tokens. */
+export function toGscUnavailable(
+  error: unknown,
+  context: { projectId: string; surface: string },
+): { connected: false; reason: GscAccessFailureReason } {
+  const reason = classifyGscAccessFailure(error);
+  if (!reason) throw error;
+  if (reason !== "not_connected") {
+    console.warn("[GSC] Search Console read failed", {
+      surface: context.surface,
+      projectId: context.projectId,
+      reason,
+      status: error instanceof GscApiError ? error.status : null,
+    });
+  }
+  return { connected: false, reason };
 }
 
 function isApiNotConfiguredError(error: GscApiError): boolean {
