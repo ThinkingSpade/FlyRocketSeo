@@ -96,6 +96,17 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
         customer,
         (f) => f.fetchBacklinksNewLostTimeseries,
       ),
+      bulkRanks: lazyMeter(customer, (f) => f.fetchBulkRanks),
+      bulkBacklinks: lazyMeter(customer, (f) => f.fetchBulkBacklinks),
+      bulkReferringDomains: lazyMeter(
+        customer,
+        (f) => f.fetchBulkReferringDomains,
+      ),
+      bulkNewLostReferringDomains: lazyMeter(
+        customer,
+        (f) => f.fetchBulkNewLostReferringDomains,
+      ),
+      referringNetworks: lazyMeter(customer, (f) => f.fetchReferringNetworks),
     },
     keywords: {
       related: lazyMeter(customer, (f) => f.fetchRelatedKeywords),

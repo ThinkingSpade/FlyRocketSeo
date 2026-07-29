@@ -64,6 +64,10 @@ export const backlinksSummaryItemSchema = z
     new_referring_domains: z.number().nullable().optional(),
     lost_referring_domains: z.number().nullable().optional(),
     backlinks_spam_score: z.number().nullable().optional(),
+    // Nofollow counts, so the dofollow share is a subtraction rather than a
+    // second call.
+    referring_domains_nofollow: z.number().nullable().optional(),
+    referring_pages_nofollow: z.number().nullable().optional(),
     // Label -> count splits, e.g. { BE: 1720 } and { anchor: 2115, image: 55 }.
     // They ride along on the summary call we already make, so reading them
     // costs nothing extra.
@@ -76,6 +80,21 @@ export const backlinksSummaryItemSchema = z
       .nullable()
       .optional(),
     referring_links_tld: z
+      .record(z.string(), z.number().nullable())
+      .nullable()
+      .optional(),
+    /** rel values seen on the links: noopener, nofollow, ugc, sponsored… */
+    referring_links_attributes: z
+      .record(z.string(), z.number().nullable())
+      .nullable()
+      .optional(),
+    /** What kind of site links: blogs, cms, ecommerce, news, unknown… */
+    referring_links_platform_types: z
+      .record(z.string(), z.number().nullable())
+      .nullable()
+      .optional(),
+    /** Where on the page the link sits: article, section, footer, sidebar… */
+    referring_links_semantic_locations: z
       .record(z.string(), z.number().nullable())
       .nullable()
       .optional(),

@@ -35,6 +35,38 @@ describe("buildBacklinksRowsApiFilters", () => {
     ]);
   });
 
+  it("narrows to links won when status is new", () => {
+    expect(buildBacklinksRowsApiFilters({ status: "new" })).toEqual([
+      ["is_new", "=", true],
+    ]);
+  });
+
+  it("narrows to links lost when status is lost", () => {
+    expect(buildBacklinksRowsApiFilters({ status: "lost" })).toEqual([
+      ["is_lost", "=", true],
+    ]);
+  });
+
+  it("lets an explicit lost view win over the hide-lost toggle", () => {
+    // Both at once would ask for links that are lost and not lost, which
+    // DataForSEO would answer with nothing at all.
+    expect(
+      buildBacklinksRowsApiFilters({ status: "lost", hideLost: true }),
+    ).toEqual([["is_lost", "=", true]]);
+  });
+
+  it("still hides lost links when the status filter is off", () => {
+    expect(buildBacklinksRowsApiFilters({ hideLost: true })).toEqual([
+      ["is_lost", "=", false],
+    ]);
+  });
+
+  it("keeps hide-lost alongside a won-links view", () => {
+    expect(
+      buildBacklinksRowsApiFilters({ status: "new", hideLost: true }),
+    ).toEqual([["is_new", "=", true], "and", ["is_lost", "=", false]]);
+  });
+
   it("emits a single include term as a plain condition", () => {
     expect(buildBacklinksRowsApiFilters({ include: "blog" })).toEqual([
       ["url_from", "ilike", "%blog%"],

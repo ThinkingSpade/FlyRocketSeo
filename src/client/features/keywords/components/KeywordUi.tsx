@@ -4,11 +4,11 @@ import { IntentBadge } from "./IntentBadge";
 export { SerpAnalysisCard } from "./SerpAnalysisCard";
 
 export type { SortDir, SortField } from "./DisplayPrimitives";
-export {
-  AreaTrendChart,
-  HeaderHelpLabel,
-  SortHeader,
-} from "./DisplayPrimitives";
+// AreaTrendChart is deliberately NOT re-exported here. This module is itself
+// re-exported by components/index.ts, so listing it would put recharts back in
+// every barrel consumer's graph -- the exact thing AreaTrendChart.tsx was
+// split out to prevent. Import it from "./AreaTrendChart" directly.
+export { HeaderHelpLabel, SortHeader } from "./DisplayPrimitives";
 
 export function OverviewStats({ keyword }: { keyword: KeywordResearchRow }) {
   return (

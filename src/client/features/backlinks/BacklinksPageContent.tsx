@@ -6,6 +6,13 @@ import {
   BrokenLinkReclaimCard,
   LinkVelocityCard,
 } from "./BacklinksProfileSections";
+import {
+  AnchorHealthCard,
+  DomainQualityCard,
+  FollowSplitCard,
+  ToxicLinksCard,
+} from "./BacklinksProfileInsights";
+import { BacklinksCompareSection } from "./BacklinksCompareSection";
 import { BacklinksResultsCard } from "./BacklinksPageSections";
 import {
   BacklinksErrorState,
@@ -179,6 +186,23 @@ export function BacklinksBody({
           returned, so none of them spends. */}
       <LinkVelocityCard trends={overviewData.newLostTrends} />
       <BacklinksProfileBreakdowns summary={overviewData.summary} />
+
+      {/* Derived views over data already fetched: the follow split reads the
+          overview summary, the other two read whichever results sub-tab the
+          user has opened. None of them fetch, so they are safe on a restored
+          run — they simply render nothing until their rows exist. */}
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        <FollowSplitCard summary={overviewData.summary} />
+        <DomainQualityCard referringDomains={referringDomainsPage} />
+        <AnchorHealthCard
+          anchors={anchorsPage}
+          target={overviewData.displayTarget || searchState.target}
+        />
+      </div>
+      <ToxicLinksCard
+        referringDomains={referringDomainsPage}
+        target={overviewData.displayTarget || searchState.target}
+      />
       {/* Pure read of data already on the page -- renders for a restored run
           too, unlike the metered cards below it. */}
       <NextStepsCard
@@ -193,6 +217,15 @@ export function BacklinksBody({
         tab="Backlinks"
       />
       {isRestoredRun ? null : <BrokenLinkReclaimCard topPages={topPagesPage} />}
+      {/* Every card in here is metered and starts disabled, but a restored run
+          should not even offer buttons that spend against a target the user
+          didn't just ask for. */}
+      {isRestoredRun ? null : (
+        <BacklinksCompareSection
+          projectId={projectId}
+          target={overviewData.displayTarget || searchState.target}
+        />
+      )}
       {/* Both of these fetch on their own — the timeline is a metered history
           call, and the results card drives the paginated sub-tabs. A restored
           run is meant to cost nothing, so they wait for "Run again". */}

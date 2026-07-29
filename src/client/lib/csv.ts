@@ -50,7 +50,16 @@ function sanitizeCsvValue(
 }
 
 export function downloadCsv(filename: string, content: string): void {
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+  downloadTextFile(filename, content, "text/csv");
+}
+
+/** Same browser download path as `downloadCsv`, for non-CSV text exports. */
+export function downloadTextFile(
+  filename: string,
+  content: string,
+  mimeType = "text/plain",
+): void {
+  const blob = new Blob([content], { type: `${mimeType};charset=utf-8;` });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;

@@ -20,6 +20,13 @@ import {
   referringDomainsPageRequestSchema,
   topPagesPageRequestSchema,
 } from "@/types/schemas/backlinks";
+import { BacklinksCompareService } from "@/server/features/backlinks/services/BacklinksCompareService";
+import {
+  backlinksCompareRequestSchema,
+  competingDomainsRequestSchema,
+  linkIntersectRequestSchema,
+  referringNetworksRequestSchema,
+} from "@/types/schemas/backlinks-compare";
 
 // The web UI exposes spam score as a regular user filter, so the implicit
 // DataForSEO spam-score cutoff stays off for all web requests.
@@ -91,6 +98,52 @@ export const getBacklinksAnchors = createServerFn({
   .validator(anchorsPageRequestSchema)
   .handler(({ data, context }) =>
     BacklinksService.profileAnchorsPage(data, context),
+  );
+
+/**
+ * The analyzed domain against up to four competitors. Five `bulk_*` calls cover
+ * every target regardless of how many competitors were supplied, so the cost is
+ * flat rather than per-competitor.
+ */
+export const getBacklinksComparison = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(backlinksCompareRequestSchema)
+  .handler(({ data, context }) =>
+    BacklinksCompareService.compareProfiles(
+      { target: data.target, competitors: data.competitors },
+      context,
+    ),
+  );
+
+/** Referring domains that link to the competitors but not to this target. */
+export const getBacklinksLinkIntersect = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(linkIntersectRequestSchema)
+  .handler(({ data, context }) =>
+    BacklinksCompareService.linkIntersect(
+      {
+        target: data.target,
+        competitors: data.competitors,
+        page: data.page,
+      },
+      context,
+    ),
+  );
+
+/** Sites sharing the most referring domains with this target. */
+export const getBacklinksCompetingDomains = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(competingDomainsRequestSchema)
+  .handler(({ data, context }) =>
+    BacklinksCompareService.competingDomains({ target: data.target }, context),
+  );
+
+/** Referring links grouped by subnet, to expose network concentration. */
+export const getBacklinksReferringNetworks = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(referringNetworksRequestSchema)
+  .handler(({ data, context }) =>
+    BacklinksCompareService.referringNetworks({ target: data.target }, context),
   );
 
 /** Timelines shift monthly; a day of cache keeps repeat views free. */

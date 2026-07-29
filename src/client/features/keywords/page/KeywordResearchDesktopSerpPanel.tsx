@@ -1,9 +1,9 @@
 import { getRouteApi } from "@tanstack/react-router";
 import { Globe } from "lucide-react";
-import {
-  AreaTrendChart,
-  SerpAnalysisCard,
-} from "@/client/features/keywords/components";
+import { SerpAnalysisCard } from "@/client/features/keywords/components";
+// Direct import, not through the components barrel: that is what keeps
+// recharts out of the client entry chunk (see AreaTrendChart.tsx).
+import { AreaTrendChart } from "@/client/features/keywords/components/AreaTrendChart";
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordResearchControllerState } from "./types";
 import { SerpPanelActions } from "./keywordResearchDesktopFilters";

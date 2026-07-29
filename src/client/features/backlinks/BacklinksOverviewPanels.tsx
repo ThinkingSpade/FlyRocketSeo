@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft } from "lucide-react";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import {
+  BacklinksAuthorityChart,
   BacklinksNewLostChart,
   BacklinksTrendChart,
 } from "./BacklinksPageCharts";
@@ -124,6 +125,12 @@ function TrendPanels({ data }: { data: BacklinksOverviewData }) {
         description="Backlink acquisition and attrition"
       >
         <BacklinksNewLostChart data={data.newLostTrends} />
+      </TrendCard>
+      <TrendCard
+        title="Authority trend"
+        description="Domain Rank over the last year"
+      >
+        <BacklinksAuthorityChart data={data.trends} />
       </TrendCard>
     </>
   );

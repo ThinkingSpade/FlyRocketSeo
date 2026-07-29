@@ -24,6 +24,13 @@ export {
   fetchBulkSpamScores,
 } from "./backlinks-insights";
 export {
+  fetchBulkBacklinks,
+  fetchBulkNewLostReferringDomains,
+  fetchBulkRanks,
+  fetchBulkReferringDomains,
+  fetchReferringNetworks,
+} from "./backlinks-bulk";
+export {
   fetchDomainRankOverview,
   fetchKeywordIdeas,
   fetchKeywordOverview,

@@ -1,4 +1,12 @@
-import { Activity, Globe, Link2, Wrench } from "lucide-react";
+import {
+  Activity,
+  Globe,
+  LayoutTemplate,
+  Link2,
+  MousePointerClick,
+  Server,
+  Wrench,
+} from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeLinkVelocity } from "./linkVelocity";
@@ -24,14 +32,29 @@ function formatNumber(value: number, digits = 0): string {
   });
 }
 
+/**
+ * DataForSEO returns these split keys as raw API tokens (`noopener`,
+ * `unknown`, `article`). Title-case them and swap underscores for spaces so a
+ * client-facing report doesn't read like a payload dump. Country and TLD codes
+ * are already displayed as-is by their own panels, so nothing here uppercases.
+ */
+function humanizeLabel(label: string): string {
+  const spaced = label.replace(/[_-]+/g, " ").trim();
+  if (spaced === "") return label;
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
 function BreakdownList({
   title,
   icon,
   rows,
+  humanize = false,
 }: {
   title: string;
   icon: typeof Globe;
   rows: Array<{ label: string; value: number }>;
+  /** Raw API tokens get title-cased; codes like `US` and `.com` do not. */
+  humanize?: boolean;
 }) {
   if (rows.length === 0) return null;
   const max = Math.max(...rows.map((row) => row.value));
@@ -47,7 +70,9 @@ function BreakdownList({
           {rows.map((row) => (
             <li key={row.label} className="space-y-0.5">
               <div className="flex items-baseline justify-between gap-2 text-sm">
-                <span className="truncate">{row.label}</span>
+                <span className="truncate">
+                  {humanize ? humanizeLabel(row.label) : row.label}
+                </span>
                 <span className="shrink-0 tabular-nums text-base-content/60">
                   {formatNumber(row.value)}
                 </span>
@@ -74,7 +99,10 @@ export function BacklinksProfileBreakdowns({
   const hasAny =
     summary.referringCountries.length > 0 ||
     summary.referringTlds.length > 0 ||
-    summary.referringLinkTypes.length > 0;
+    summary.referringLinkTypes.length > 0 ||
+    summary.referringLinkAttributes.length > 0 ||
+    summary.referringPlatformTypes.length > 0 ||
+    summary.referringPlacements.length > 0;
   if (!hasAny) return null;
 
   return (
@@ -93,6 +121,25 @@ export function BacklinksProfileBreakdowns({
         title="Link types"
         icon={Link2}
         rows={summary.referringLinkTypes}
+      />
+      {/* Three more splits the same summary call already returned. */}
+      <BreakdownList
+        title="Link attributes"
+        icon={MousePointerClick}
+        rows={summary.referringLinkAttributes}
+        humanize
+      />
+      <BreakdownList
+        title="Site types"
+        icon={Server}
+        rows={summary.referringPlatformTypes}
+        humanize
+      />
+      <BreakdownList
+        title="Placement on page"
+        icon={LayoutTemplate}
+        rows={summary.referringPlacements}
+        humanize
       />
     </div>
   );

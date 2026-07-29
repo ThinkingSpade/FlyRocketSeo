@@ -1,5 +1,5 @@
 /* eslint-disable max-lines */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_CREDITS_PER_USD,
@@ -192,6 +192,20 @@ function mockDataforseoResult(costUsd: number) {
 }
 
 describe("meterDataforseoCall with split balances", () => {
+  // `client.ts` reaches its fetchers through `await import(...)`, and the
+  // mocked graph behind that (the real subscription module included) resolves
+  // on first use. Whichever test called the client first was paying seconds
+  // for a one-time module load and timing out under parallel load, which read
+  // as a flaky billing test rather than what it was. Warm it once here, where
+  // the cost belongs and where a generous timeout is honest.
+  beforeAll(async () => {
+    isHostedServerAuthModeMock.mockResolvedValue(false);
+    mockDataforseoResult(0);
+    await createDataforseoClient(billingCustomer).backlinks.summary(
+      backlinksInput,
+    );
+  }, 30_000);
+
   beforeEach(() => {
     vi.clearAllMocks();
   });

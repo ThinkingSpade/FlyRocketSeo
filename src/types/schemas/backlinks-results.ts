@@ -90,6 +90,16 @@ export const backlinksOverviewSchema = z.object({
     referringLinkTypes: z.array(linkBreakdownRowSchema).default([]),
     /** Referring-domain split by top-level domain (.com, .org, .edu…). */
     referringTlds: z.array(linkBreakdownRowSchema).default([]),
+    /** rel attributes on the links — nofollow, ugc, sponsored, noopener. */
+    referringLinkAttributes: z.array(linkBreakdownRowSchema).default([]),
+    /** What kind of site links — blogs, cms, ecommerce, news. */
+    referringPlatformTypes: z.array(linkBreakdownRowSchema).default([]),
+    /** Where on the page the link sits — article, footer, sidebar. */
+    referringPlacements: z.array(linkBreakdownRowSchema).default([]),
+    /** Referring domains/pages carrying rel="nofollow". The dofollow share is
+     *  the total minus these, so no extra call is needed for the split. */
+    referringDomainsNofollow: z.number().nullable().default(null),
+    referringPagesNofollow: z.number().nullable().default(null),
   }),
   trends: z.array(backlinksTrendRowSchema),
   newLostTrends: z.array(backlinksNewLostTrendRowSchema),

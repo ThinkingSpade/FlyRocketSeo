@@ -254,6 +254,27 @@ function BacklinksToggleControls({
         </div>
       </div>
 
+      {/* The "new links" and "lost links" feeds, as a narrowing of this list
+          rather than separate tabs — sorting, paging and export stay on one
+          code path. */}
+      <div className="space-y-1.5">
+        <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
+          Status
+        </p>
+        <div className="flex items-center gap-1">
+          {(["", "new", "lost"] as const).map((value) => (
+            <button
+              key={value || "all"}
+              type="button"
+              className={`btn btn-xs ${draft.status === value ? "btn-soft" : "btn-ghost"}`}
+              onClick={() => setValue("status", value)}
+            >
+              {value === "" ? "All" : value === "new" ? "Won" : "Lost"}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
           Visibility
