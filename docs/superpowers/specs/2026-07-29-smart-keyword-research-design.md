@@ -4,16 +4,33 @@
 **Status:** All five phases implemented on `feat/smart-keyword-research`
 (`fb13666`, `f1f1494`, `20c88ee`, `652081b`, `ffda72a`).
 
-**Verified in a browser:** Phase 0 (one location control; "dallas" surfaces the
-DFW metro; selecting it flips the provider notice and hides the Labs-only
-clickstream toggle) and Phase 1 (profile saves to D1 as confirmed, exclusion
-lines parse, summary reads back), plus Phase 2's no-key degradation.
+**All five phases verified end to end against live DataForSEO and OpenRouter**
+(2026-07-29, ~$0.13 of DataForSEO credit: two keyword expansions and one SERP
+fetch).
 
-**Not verified in a browser:** anything needing live data this environment
-cannot produce — Phases 3 and 4 render only alongside SERP results
-(`DATAFORSEO_API_KEY` unset), and Phase 2's model output needs
-`OPENROUTER_API_KEY` (also unset). All of it typechecks, lints and is unit
-tested; none of it has been seen working against real data.
+What the live run proved, and what it broke:
+
+- Drafting read deliotx.com and produced the exclusion _"We don't sell vending
+  machines or break room equipment"_ on its own, plus
+  `serviceAreaKind: local`. That drafted line then flagged and demoted all 24
+  purchase keywords in a real `dfw vending` run, quoting itself back as the
+  reason.
+- Seed generation returned 30 candidates, every one service-intent, each
+  localized and bare exactly as `seedGeo.ts` specifies.
+- Three defects survived unit tests and only died on real responses — see
+  `205a06a`: an unset `maxOutputTokens` reserved the model's full 65,536-token
+  context and 402'd every draft; a 402 rendered as "an unexpected error"; and
+  the action plan assessed all 100 SERP results instead of page one, yielding
+  "69 of the 84 ranking pages we could rate" and "57 of the 100 results are
+  assorted pages".
+
+**One finding worth acting on:** scoping a run to the DFW metro returns far
+fewer keyword ideas than the same seed at country scope (2 vs 50 for
+`dfw vending`), because a sub-country area routes the whole run to Google Ads
+while Labs — which produces the large related-keyword list — is country-only.
+This is the documented provider split behaving correctly, but the practical
+advice is to research at country scope and use the metro for volume, SERP and
+rank tracking.
 
 ## Problem
 
