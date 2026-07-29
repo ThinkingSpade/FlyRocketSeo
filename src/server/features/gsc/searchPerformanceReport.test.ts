@@ -1,76 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCtrOpportunityRows,
-  buildQueryTotals,
   buildStrikingDistanceRows,
   previousPeriod,
   sumSearchTotals,
   toDimensionRows,
 } from "@/server/features/gsc/searchPerformanceReport";
-
-describe("buildQueryTotals", () => {
-  it("aggregates query x page rows per query, sorted by clicks", () => {
-    const totals = buildQueryTotals([
-      {
-        keys: ["vending dallas", "https://a/"],
-        clicks: 3,
-        impressions: 50,
-        ctr: 0.06,
-        position: 4,
-      },
-      {
-        keys: ["vending dallas", "https://b/"],
-        clicks: 2,
-        impressions: 30,
-        ctr: 0.07,
-        position: 6,
-      },
-      {
-        keys: ["delio vending", "https://a/"],
-        clicks: 10,
-        impressions: 40,
-        ctr: 0.25,
-        position: 1,
-      },
-      { clicks: 99, impressions: 99, ctr: 1, position: 1 },
-    ]);
-
-    expect(totals).toEqual([
-      { query: "delio vending", clicks: 10, impressions: 40, position: 1 },
-      { query: "vending dallas", clicks: 5, impressions: 80, position: 4 },
-    ]);
-  });
-
-  it("keeps the best page's position regardless of row order", () => {
-    const totals = buildQueryTotals([
-      {
-        keys: ["kw", "https://deep/"],
-        clicks: 0,
-        impressions: 10,
-        ctr: 0,
-        position: 40,
-      },
-      {
-        keys: ["kw", "https://best/"],
-        clicks: 1,
-        impressions: 5,
-        ctr: 0.2,
-        position: 7,
-      },
-      {
-        keys: ["kw", "https://mid/"],
-        clicks: 0,
-        impressions: 8,
-        ctr: 0,
-        position: 19,
-      },
-    ]);
-
-    expect(totals).toEqual([
-      { query: "kw", clicks: 1, impressions: 23, position: 7 },
-    ]);
-  });
-});
 
 describe("sumSearchTotals", () => {
   it("sums clicks/impressions and impression-weights position", () => {

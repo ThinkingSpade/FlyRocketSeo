@@ -34,8 +34,14 @@ const SITE_UNVERIFIED_PERMISSION = "siteUnverifiedUser";
 type GscPerformanceResult = {
   siteUrl: string;
   connectedBy: string | null;
+  /** The request as sent, including the row limit actually applied after
+   *  clamping. Truncation checks must compare against `request.rowLimit`, never
+   *  against the limit the caller asked for. */
   request: GscSearchAnalyticsRequest;
   rows: GscSearchAnalyticsRow[];
+  /** What Google says it aggregated by. Only meaningful to callers deriving
+   *  property-level totals; see `buildPropertyQueryTotals`. */
+  responseAggregationType?: string;
 };
 
 type GscSiteListResult = {
@@ -302,12 +308,16 @@ async function getPerformance(
   }
   const request = buildSearchAnalyticsRequest(input, new Date(), ceiling);
   const client = createGscClient({ userId: connection.connectedByUserId });
-  const rows = await client.querySearchAnalytics(connection.siteUrl, request);
+  const { rows, responseAggregationType } = await client.querySearchAnalytics(
+    connection.siteUrl,
+    request,
+  );
   return {
     siteUrl: connection.siteUrl,
     connectedBy: connection.connectedAccountEmail,
     request,
     rows,
+    responseAggregationType,
   };
 }
 

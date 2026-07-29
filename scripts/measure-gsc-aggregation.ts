@@ -17,10 +17,10 @@
 import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
 import {
   buildCtrOpportunityRows,
-  buildQueryTotals,
   buildStrikingDistanceRows,
   toQueryPageRows,
 } from "@/server/features/gsc/searchPerformanceReport";
+import { buildPropertyQueryTotals } from "@/server/features/gsc/gscAggregation";
 
 const SIZES = [1000, 2500, 5000, 10_000, 25_000];
 const REPEATS = 5;
@@ -52,7 +52,7 @@ function syntheticRows(count: number): GscSearchAnalyticsRow[] {
 
 function timeAggregate(rows: GscSearchAnalyticsRow[]): number {
   const start = performance.now();
-  buildQueryTotals(rows);
+  buildPropertyQueryTotals(rows);
   buildStrikingDistanceRows(rows);
   buildCtrOpportunityRows(rows);
   toQueryPageRows(rows);

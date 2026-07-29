@@ -9,9 +9,9 @@ import {
   type GscPerformanceFilter,
 } from "@/server/features/gsc/searchAnalytics";
 import { fetchAllRows } from "@/server/features/gsc/fetchAllRows";
+import { buildPropertyQueryTotals } from "@/server/features/gsc/gscAggregation";
 import {
   buildCtrOpportunityRows,
-  buildQueryTotals,
   buildStrikingDistanceRows,
   previousPeriod,
   sumSearchTotals,
@@ -27,6 +27,9 @@ import {
 
 // query x page fan-out needs more rows to find the 5..20 band.
 const STRIKING_DISTANCE_FETCH_LIMIT = 1000;
+// Property-aggregated query rows for demand totals. One key per row rather than
+// two, so cheaper to parse than the query x page pull of the same size.
+const QUERY_TOTALS_FETCH_LIMIT = 2500;
 // dimensions:["date"] returns one row per day; the longest range is ~92 days.
 const DAILY_ROW_LIMIT = 200;
 const COUNTRY_ROW_LIMIT = 25;
@@ -76,40 +79,55 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
     const { deviceFilters, filters } = buildGscFilters(data);
 
     try {
-      const [current, previous, queryPages, countries] = await Promise.all([
-        GscService.getAnalyticsPerformance({
-          projectId,
-          startDate,
-          endDate,
-          dimensions: ["date"],
-          filters,
-          rowLimit: DAILY_ROW_LIMIT,
-        }),
-        GscService.getAnalyticsPerformance({
-          projectId,
-          startDate: prev.startDate,
-          endDate: prev.endDate,
-          dimensions: ["date"],
-          filters,
-          rowLimit: DAILY_ROW_LIMIT,
-        }),
-        GscService.getAnalyticsPerformance({
-          projectId,
-          startDate,
-          endDate,
-          dimensions: ["query", "page"],
-          filters,
-          rowLimit: STRIKING_DISTANCE_FETCH_LIMIT,
-        }),
-        GscService.getAnalyticsPerformance({
-          projectId,
-          startDate,
-          endDate,
-          dimensions: ["country"],
-          filters: deviceFilters,
-          rowLimit: COUNTRY_ROW_LIMIT,
-        }),
-      ]);
+      const [current, previous, queryPages, queryTotalsPull, countries] =
+        await Promise.all([
+          GscService.getAnalyticsPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["date"],
+            filters,
+            rowLimit: DAILY_ROW_LIMIT,
+          }),
+          GscService.getAnalyticsPerformance({
+            projectId,
+            startDate: prev.startDate,
+            endDate: prev.endDate,
+            dimensions: ["date"],
+            filters,
+            rowLimit: DAILY_ROW_LIMIT,
+          }),
+          GscService.getAnalyticsPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["query", "page"],
+            filters,
+            rowLimit: STRIKING_DISTANCE_FETCH_LIMIT,
+          }),
+          // Query demand totals need their OWN property-aggregated pull. They
+          // used to be summed out of the query x page rows above, which
+          // double-counts: Google counts a property once per impression however
+          // many of its URLs appear, while page rows count each URL. GSC is
+          // free, so the extra call costs latency, not money.
+          GscService.getAnalyticsPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["query"],
+            filters,
+            rowLimit: QUERY_TOTALS_FETCH_LIMIT,
+            aggregationType: "byProperty",
+          }),
+          GscService.getAnalyticsPerformance({
+            projectId,
+            startDate,
+            endDate,
+            dimensions: ["country"],
+            filters: deviceFilters,
+            rowLimit: COUNTRY_ROW_LIMIT,
+          }),
+        ]);
 
       return {
         connected: true as const,
@@ -123,7 +141,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
         prevTotals: sumSearchTotals(previous.rows),
         strikingDistance: buildStrikingDistanceRows(queryPages.rows),
         ctrOpportunities: buildCtrOpportunityRows(queryPages.rows),
-        queryTotals: buildQueryTotals(queryPages.rows),
+        queryTotals: buildPropertyQueryTotals(queryTotalsPull.rows),
         queryPages: toQueryPageRows(queryPages.rows),
         countries: toDimensionRows(countries.rows),
       };

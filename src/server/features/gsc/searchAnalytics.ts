@@ -61,6 +61,8 @@ export const GSC_ANALYTICS_ROW_CEILING = 5000;
 // GSC data trails by ~2-3 days; default the end of convenience ranges before it.
 const GSC_DATA_LAG_DAYS = 3;
 
+export type GscAggregationType = "auto" | "byPage" | "byProperty";
+
 export type GscDimension = (typeof GSC_DIMENSIONS)[number];
 type GscFilterOperator = (typeof GSC_FILTER_OPERATORS)[number];
 export type GscSearchType = (typeof GSC_SEARCH_TYPES)[number];
@@ -83,6 +85,13 @@ export type GscPerformanceInput = {
   startRow?: number;
   type?: GscSearchType;
   dataState?: "all" | "final";
+  /** How Google should aggregate. Left unset this defaults to `"auto"`, meaning
+   *  Google chooses and the caller cannot know what it got. Set `"byProperty"`
+   *  for demand totals: page aggregation counts each displayed URL separately,
+   *  so a property showing two URLs for one query yields two impressions
+   *  instead of one. Note that grouping or filtering by `page` forces page
+   *  aggregation regardless of what is requested here. */
+  aggregationType?: GscAggregationType;
 };
 
 function clamp(value: number, min: number, max: number): number {
@@ -168,6 +177,9 @@ export function buildSearchAnalyticsRequest(
     type: input.type ?? "web",
     dataState: input.dataState ?? "all",
   };
+  if (input.aggregationType) {
+    request.aggregationType = input.aggregationType;
+  }
   if (input.startRow && input.startRow > 0) {
     request.startRow = input.startRow;
   }
