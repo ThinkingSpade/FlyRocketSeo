@@ -62,7 +62,10 @@ export function KeywordResearchDesktopResults({
         controller={controller}
         ownDomainRating={ownDomainRating}
       />
-      <KeywordResearchDesktopSerpPanel controller={controller} />
+      <KeywordResearchDesktopSerpPanel
+        controller={controller}
+        ownDomainRating={ownDomainRating}
+      />
     </div>
   );
 }
