@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import {
   buildSearchAnalyticsRequest,
+  GSC_ANALYTICS_ROW_CEILING,
+  GSC_MCP_ROW_CEILING,
   resolveDateRange,
 } from "@/server/features/gsc/searchAnalytics";
 
@@ -112,5 +114,43 @@ describe("buildSearchAnalyticsRequest", () => {
       buildSearchAnalyticsRequest({ projectId: "p1", startRow: 1000 }, TODAY)
         .startRow,
     ).toBe(1000);
+  });
+});
+
+describe("row ceiling", () => {
+  // The 1000-row cap exists to protect the MCP agent's context window. The
+  // analytics UI inherited it silently, which made every truncation flag
+  // downstream unreachable: callers asked for 5000, got 1000, and then tested
+  // `rows.length >= 5000` to decide whether the pull was truncated.
+  it("clamps to the MCP ceiling by default", () => {
+    const request = buildSearchAnalyticsRequest(
+      { projectId: "p1", rowLimit: 5000 },
+      TODAY,
+    );
+    expect(request.rowLimit).toBe(GSC_MCP_ROW_CEILING);
+  });
+
+  it("honours an explicit analytics ceiling", () => {
+    const request = buildSearchAnalyticsRequest(
+      { projectId: "p1", rowLimit: 5000 },
+      TODAY,
+      GSC_ANALYTICS_ROW_CEILING,
+    );
+    expect(request.rowLimit).toBe(5000);
+  });
+
+  it("still clamps a request above the supplied ceiling", () => {
+    const request = buildSearchAnalyticsRequest(
+      { projectId: "p1", rowLimit: 99_000 },
+      TODAY,
+      GSC_ANALYTICS_ROW_CEILING,
+    );
+    expect(request.rowLimit).toBe(GSC_ANALYTICS_ROW_CEILING);
+  });
+
+  it("keeps the analytics ceiling above the MCP one", () => {
+    // Guards the regression directly: if these converge again, the analytics
+    // path silently loses pagination headroom and truncation detection breaks.
+    expect(GSC_ANALYTICS_ROW_CEILING).toBeGreaterThan(GSC_MCP_ROW_CEILING);
   });
 });

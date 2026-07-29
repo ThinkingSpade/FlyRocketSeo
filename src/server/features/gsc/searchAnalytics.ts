@@ -33,10 +33,16 @@ export const GSC_DATE_RANGES = [
 ] as const;
 
 export const GSC_DEFAULT_ROW_LIMIT = 1000;
-// v1 caps rows-per-call at 1000 to protect the MCP context window. The GSC API
-// supports up to 25000, but we keep fetched == returned so counts stay honest;
-// the agent paginates with `startRow` for more.
-export const GSC_MAX_ROW_LIMIT = 1000;
+// The MCP tool path caps rows-per-call to protect the agent's context window.
+// The GSC API supports up to 25000; we keep fetched == returned there so counts
+// stay honest, and the agent paginates with `startRow` for more.
+export const GSC_MCP_ROW_CEILING = 1000;
+// The analytics UI has no context-window constraint, so it gets its own
+// ceiling. It used to inherit the MCP cap, which made downstream truncation
+// flags unreachable: callers requested 5000, silently received 1000, then
+// tested `rows.length >= 5000` and always concluded "not truncated".
+// Beyond this, `fetchAllRows` paginates rather than asking for a bigger page.
+export const GSC_ANALYTICS_ROW_CEILING = 5000;
 // GSC data trails by ~2-3 days; default the end of convenience ranges before it.
 const GSC_DATA_LAG_DAYS = 3;
 
@@ -133,6 +139,7 @@ export function resolveDateRange(
 export function buildSearchAnalyticsRequest(
   input: GscPerformanceInput,
   today: Date = new Date(),
+  ceiling: number = GSC_MCP_ROW_CEILING,
 ): GscSearchAnalyticsRequest {
   const { startDate, endDate } = resolveDateRange(input, today);
   const request: GscSearchAnalyticsRequest = {
@@ -142,11 +149,7 @@ export function buildSearchAnalyticsRequest(
       input.dimensions && input.dimensions.length > 0
         ? input.dimensions
         : ["query"],
-    rowLimit: clamp(
-      input.rowLimit ?? GSC_DEFAULT_ROW_LIMIT,
-      1,
-      GSC_MAX_ROW_LIMIT,
-    ),
+    rowLimit: clamp(input.rowLimit ?? GSC_DEFAULT_ROW_LIMIT, 1, ceiling),
     type: input.type ?? "web",
     dataState: input.dataState ?? "all",
   };

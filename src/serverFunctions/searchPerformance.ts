@@ -28,8 +28,11 @@ const STRIKING_DISTANCE_FETCH_LIMIT = 1000;
 // dimensions:["date"] returns one row per day; the longest range is ~92 days.
 const DAILY_ROW_LIMIT = 200;
 const COUNTRY_ROW_LIMIT = 25;
-// Export pulls the whole dimension in one shot, capped at GSC's per-call max
-// (GSC_MAX_ROW_LIMIT). Large stores get everything up to this ceiling.
+// Export pulls one page and stops. 1000 is NOT a GSC limit — GSC allows 25000
+// per request plus `startRow` pagination — it is the cap this path inherited
+// from the MCP tool ceiling. Anything past row 1000 is currently missing from
+// the file without telling the user, since GSC orders rows by clicks desc.
+// TODO(task-7): paginate via fetchAllRows and surface the applied limit.
 const EXPORT_ROW_LIMIT = 1000;
 
 /** Build GSC filter groups shared by every call. Device applies everywhere;
