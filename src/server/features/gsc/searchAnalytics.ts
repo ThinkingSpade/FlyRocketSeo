@@ -41,7 +41,22 @@ export const GSC_MCP_ROW_CEILING = 1000;
 // ceiling. It used to inherit the MCP cap, which made downstream truncation
 // flags unreachable: callers requested 5000, silently received 1000, then
 // tested `rows.length >= 5000` and always concluded "not truncated".
-// Beyond this, `fetchAllRows` paginates rather than asking for a bigger page.
+//
+// 5000 is a CPU limit, not an API limit -- GSC itself allows 25000 per request.
+// Measured by scripts/measure-gsc-aggregation.ts against the real aggregation
+// functions, as JSON.parse + aggregate on one invocation (dev machine, so a
+// LOWER bound on isolate cost):
+//
+//   rows     payload   parse    aggregate   total
+//    1000     0.1 MB   0.33ms      0.51ms   0.84ms
+//    5000     0.7 MB   1.83ms      1.55ms   3.38ms   <- here
+//   10000     1.3 MB   4.12ms      2.22ms   6.35ms   too tight
+//   25000     3.3 MB   8.76ms      6.91ms  15.67ms   over budget
+//
+// Workers Free allows 10ms CPU per invocation, shared with routing, auth, D1
+// round trips and response serialization. Parsing dominates, so raising this
+// is not free even when the aggregation looks cheap. Do NOT paginate past this
+// on a path that parses and aggregates in-request: report truncation instead.
 export const GSC_ANALYTICS_ROW_CEILING = 5000;
 // GSC data trails by ~2-3 days; default the end of convenience ranges before it.
 const GSC_DATA_LAG_DAYS = 3;
