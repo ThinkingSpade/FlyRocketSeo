@@ -115,7 +115,10 @@ const SPRINGFIELD_MO_ROW = {
 const SPRINGFIELD_IL_AREA: TargetArea = {
   kind: "city",
   locationCode: 1_017_962,
-  label: "Springfield, Illinois",
+  // From the row's own `stateCode`, not the name's second segment — see
+  // `toCityLabel`. The two agree here; they do not for the city rows whose
+  // hierarchy carries a county instead.
+  label: "Springfield, IL",
   parentCountryCode: 2840,
 };
 

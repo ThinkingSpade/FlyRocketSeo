@@ -46,3 +46,32 @@ export function toGeoDisplayName(storedName: string, type: string): string {
 
   return segments.slice(0, segments.length - dropCount).join(", ");
 }
+
+/**
+ * A city's display label: the bare city name plus its derived state code —
+ * "Dallas, TX".
+ *
+ * Trimming the stored hierarchy reads correctly for
+ * "Springfield,Illinois,United States", but the segment after the city is not
+ * reliably the state. A sizeable minority of seeded city rows carry a COUNTY
+ * there, which renders as "Dallas, Dallas County" and disambiguates nothing —
+ * there are six US cities called Dallas. `stateCode` is derived by walking the
+ * parent chain when the table is seeded, so it is authoritative where the name
+ * string is not.
+ *
+ * Falls back to the trimmed name when there is no state code, which keeps
+ * non-US cities exactly as they were. The "<city>, <ST>" shape matches how
+ * metros already format themselves ("Dallas-Ft. Worth, TX"), so both kinds of
+ * option read consistently in one list.
+ */
+export function toCityLabel(city: {
+  name: string;
+  type: string;
+  stateCode: string | null;
+}): string {
+  const trimmed = toGeoDisplayName(city.name, city.type);
+  if (!city.stateCode) return trimmed;
+
+  const bareCity = city.name.split(",")[0]?.trim();
+  return bareCity ? `${bareCity}, ${city.stateCode}` : trimmed;
+}

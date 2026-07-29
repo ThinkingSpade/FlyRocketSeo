@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toGeoDisplayName } from "./geoDisplayName";
+import { toCityLabel, toGeoDisplayName } from "./geoDisplayName";
 
 /**
  * Real stored `geo_locations.name` formats, verified live against production
@@ -69,6 +69,47 @@ describe("toGeoDisplayName", () => {
     // by blindly dropping 2 -- keep the raw value instead of destroying it.
     expect(toGeoDisplayName("SomeMetro,United States", "DMA Region")).toBe(
       "SomeMetro,United States",
+    );
+  });
+});
+
+describe("toCityLabel", () => {
+  it("uses the derived state code, not the name's second segment", () => {
+    expect(
+      toCityLabel({
+        name: "Springfield,Illinois,United States",
+        type: "City",
+        stateCode: "IL",
+      }),
+    ).toBe("Springfield, IL");
+  });
+
+  it("disambiguates a city whose hierarchy carries a county", () => {
+    // The case that motivated this: trimming the hierarchy yields
+    // "Dallas, Dallas County", which distinguishes nothing — there are six US
+    // cities called Dallas, and this is the one in Texas.
+    expect(
+      toCityLabel({
+        name: "Dallas,Dallas County,Texas,United States",
+        type: "City",
+        stateCode: "TX",
+      }),
+    ).toBe("Dallas, TX");
+  });
+
+  it("falls back to the trimmed name for a city with no state code", () => {
+    expect(
+      toCityLabel({
+        name: "Lyon,Auvergne-Rhone-Alpes,France",
+        type: "City",
+        stateCode: null,
+      }),
+    ).toBe("Lyon, Auvergne-Rhone-Alpes");
+  });
+
+  it("keeps a bare city name that has no hierarchy at all", () => {
+    expect(toCityLabel({ name: "Monaco", type: "City", stateCode: null })).toBe(
+      "Monaco",
     );
   });
 });

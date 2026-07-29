@@ -53,7 +53,7 @@ import {
   type DetectTargetAreaInput,
   type TargetAreaProposal,
 } from "@/server/features/geo/detectTargetArea";
-import { toGeoDisplayName } from "@/shared/geo/geoDisplayName";
+import { toCityLabel, toGeoDisplayName } from "@/shared/geo/geoDisplayName";
 import { DEFAULT_LOCATION_CODE } from "@/shared/keyword-locations";
 import type { TargetArea } from "@/shared/geo/types";
 
@@ -212,7 +212,7 @@ async function resolveAreaForPlaceName(
   return {
     kind: "city",
     locationCode: best.code,
-    label: toGeoDisplayName(best.name, best.type),
+    label: toCityLabel(best),
     parentCountryCode: best.countryCode,
   };
 }

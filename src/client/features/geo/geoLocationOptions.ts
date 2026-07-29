@@ -11,7 +11,7 @@
  * this (same reasoning Task 7 already applied to `likePattern.ts`).
  */
 import type { TargetArea, TargetAreaKind } from "@/shared/geo/types";
-import { toGeoDisplayName } from "@/shared/geo/geoDisplayName";
+import { toCityLabel, toGeoDisplayName } from "@/shared/geo/geoDisplayName";
 import {
   DEFAULT_LOCATION_CODE,
   LOCATION_OPTIONS,
@@ -138,12 +138,17 @@ export function filterCountryAreas(query: string): TargetArea[] {
  * what stops a seeded deployment from showing e.g. "Texas" twice: once from
  * US_STATES, once from D1.
  *
- * `toGeoDisplayName` (not the row's own `stateCode` column) is what
- * disambiguates two same-named cities: the stored `name` already carries the
- * city's state as its own hierarchy segment (e.g.
- * "Springfield,Illinois,United States"), and trimming that hierarchy down to
- * "Springfield, Illinois" keeps exactly that segment while dropping only the
- * redundant trailing country — no separate abbreviation lookup needed.
+ * Two same-named cities are disambiguated with the row's own `stateCode`
+ * rather than with the second segment of the stored `name`. Trimming the
+ * hierarchy reads correctly for "Springfield,Illinois,United States", but the
+ * segment after the city is not reliably the state — a sizeable minority of
+ * seeded city rows carry a COUNTY there, which renders as "Dallas, Dallas
+ * County" and disambiguates nothing (there are six US cities called Dallas).
+ * `stateCode` is derived by walking the parent chain when the table is seeded,
+ * so it is authoritative where the name string is not.
+ *
+ * Falling back to the trimmed name keeps non-US cities, which have no
+ * `stateCode`, exactly as they were.
  */
 export function buildCityAreas(
   results: readonly GeoSearchResult[],
@@ -153,7 +158,7 @@ export function buildCityAreas(
     .map((result) => ({
       kind: "city",
       locationCode: result.code,
-      label: toGeoDisplayName(result.name, result.type),
+      label: toCityLabel(result),
       parentCountryCode: result.countryCode,
     }));
 }

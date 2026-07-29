@@ -177,19 +177,19 @@ describe("buildCityAreas", () => {
     expect(areas.every((area) => area.kind === "city")).toBe(true);
   });
 
-  it("disambiguates same-named cities via the stored name's own state segment", () => {
+  it("disambiguates same-named cities with the row's derived state code", () => {
     const areas = buildCityAreas(MIXED_TYPE_RESULTS);
     expect(areas).toEqual([
       {
         kind: "city",
         locationCode: 1_017_962,
-        label: "Springfield, Illinois",
+        label: "Springfield, IL",
         parentCountryCode: 2840,
       },
       {
         kind: "city",
         locationCode: 1_017_961,
-        label: "Springfield, Missouri",
+        label: "Springfield, MO",
         parentCountryCode: 2840,
       },
       {
@@ -199,6 +199,32 @@ describe("buildCityAreas", () => {
         locationCode: 1_006_932,
         label: "Paris",
         parentCountryCode: 2250,
+      },
+    ]);
+  });
+
+  it("labels a city whose hierarchy carries a county, not a state", () => {
+    // Why the label reads stateCode rather than the name's second segment: a
+    // sizeable minority of seeded city rows put the COUNTY there, and trimming
+    // the hierarchy would render "Dallas, Dallas County" — which distinguishes
+    // nothing, since there are six US cities called Dallas.
+    expect(
+      buildCityAreas([
+        {
+          code: 1_026_339,
+          name: "Dallas,Dallas County,Texas,United States",
+          type: "City",
+          stateCode: "TX",
+          countryCode: 2840,
+          parentMetroCode: null,
+        },
+      ]),
+    ).toEqual([
+      {
+        kind: "city",
+        locationCode: 1_026_339,
+        label: "Dallas, TX",
+        parentCountryCode: 2840,
       },
     ]);
   });
