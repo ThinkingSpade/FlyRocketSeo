@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { GbpScheduledPost } from "@/server/features/gbp/repositories/GbpScheduledPostRepository";
+import { GbpWriteService } from "./GbpWriteService";
+import { GbpTokenError } from "@/server/lib/gbpClient";
 
 const mocks = vi.hoisted(() => ({
   isGbpWriteConfigured: vi.fn(),
@@ -40,8 +42,11 @@ vi.mock(
 
 vi.mock("@/server/lib/gbpClient", () => ({
   createGbpClient: () => ({ createLocalPost: mocks.createLocalPost }),
-  GbpApiError: class GbpApiError extends Error {},
-  GbpTokenError: class GbpTokenError extends Error {},
+  // Anonymous on purpose: the property name already supplies each class's
+  // `.name`, and naming the expressions would shadow the GbpTokenError
+  // imported above.
+  GbpApiError: class extends Error {},
+  GbpTokenError: class extends Error {},
   // None of these tests exercise a transport-level failure -- always false,
   // same as the real heuristic would say for a plain string/Error/
   // GbpApiError/GbpTokenError that isn't a fetch-shaped TypeError.
@@ -96,7 +101,6 @@ describe("GbpWriteService.publishPost re-reads after a failed claim (finding A7)
       .mockResolvedValueOnce(post({ status: "scheduled" })) // initial read
       .mockResolvedValueOnce(null); // re-read after the failed claim
     mocks.claimForPublishing.mockResolvedValue(null);
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -117,7 +121,6 @@ describe("GbpWriteService.publishPost re-reads after a failed claim (finding A7)
       .mockResolvedValueOnce(post({ status: "scheduled" }))
       .mockResolvedValueOnce(post({ status: "published" }));
     mocks.claimForPublishing.mockResolvedValue(null);
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -136,7 +139,6 @@ describe("GbpWriteService.publishPost re-reads after a failed claim (finding A7)
       .mockResolvedValueOnce(post({ status: "scheduled" }))
       .mockResolvedValueOnce(post({ status: "failed" }));
     mocks.claimForPublishing.mockResolvedValue(null);
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -158,7 +160,6 @@ describe("GbpWriteService.publishPost re-reads after a failed claim (finding A7)
       .mockResolvedValueOnce(post({ status: "scheduled" }))
       .mockResolvedValueOnce(post({ status: "scheduled" }));
     mocks.claimForPublishing.mockResolvedValue(null);
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -179,7 +180,6 @@ describe("GbpWriteService.publishPost re-reads after a failed claim (finding A7)
     mocks.createLocalPost.mockResolvedValue({
       publishedPostName: "accounts/123/locations/456/localPosts/1",
     });
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -234,7 +234,6 @@ describe("GbpWriteService.publishPost after a successful Google write (final wav
     // out ("a non-Error exception anywhere in the publish/update catch
     // path").
     mocks.createLocalPost.mockRejectedValue("weird non-error throw");
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -259,7 +258,6 @@ describe("GbpWriteService.publishPost after a successful Google write (final wav
     // Same non-Error shape, this time failing the step AFTER Google's call
     // already succeeded.
     mocks.markPublished.mockRejectedValue("boom");
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -277,7 +275,6 @@ describe("GbpWriteService.publishPost after a successful Google write (final wav
       publishedPostName: "accounts/123/locations/456/localPosts/1",
     });
     mocks.markPublished.mockRejectedValue(new Error("db blip"));
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     await GbpWriteService.publishPost({
       postId: POST_ID,
@@ -303,7 +300,6 @@ describe("GbpWriteService.publishPost after a successful Google write (final wav
 describe("GbpWriteService not-configured message honesty (final wave item 3)", () => {
   it("does not assert the Cloud Console setup or verification review specifically need finishing", async () => {
     mocks.isGbpWriteConfigured.mockResolvedValue(false);
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.searchCategories({
       projectId: PROJECT_ID,
@@ -339,11 +335,9 @@ describe("GbpWriteService.messageForGbpFailure honesty (final wave item 1)", () 
   });
 
   it("does not assert the connection specifically expired or was revoked for a token error", async () => {
-    const { GbpTokenError } = await import("@/server/lib/gbpClient");
     mocks.createLocalPost.mockRejectedValue(
       new GbpTokenError("could not mint a token"),
     );
-    const { GbpWriteService } = await import("./GbpWriteService");
 
     const result = await GbpWriteService.publishPost({
       postId: POST_ID,

@@ -11,6 +11,8 @@ export function SerpAnalysisCard({
   page,
   pageSize,
   onPageChange,
+  analyzeKeyword,
+  onAnalyze,
 }: {
   items: SerpResultItem[];
   keyword?: string | null;
@@ -20,6 +22,10 @@ export function SerpAnalysisCard({
   page: number;
   pageSize: number;
   onPageChange: (p: number) => void;
+  /** The keyword an Analyze click would run, when none is loaded yet --
+   *  normally whichever row the table has highlighted. */
+  analyzeKeyword?: string | null;
+  onAnalyze?: () => void;
 }) {
   const totalPages = Math.ceil(items.length / pageSize);
   const pageItems = items.slice(page * pageSize, (page + 1) * pageSize);
@@ -37,7 +43,15 @@ export function SerpAnalysisCard({
       </div>
     );
   }
-  if (items.length === 0) return <SerpAnalysisEmptyState keyword={keyword} />;
+  if (items.length === 0) {
+    return (
+      <SerpAnalysisEmptyState
+        keyword={keyword}
+        analyzeKeyword={analyzeKeyword}
+        onAnalyze={onAnalyze}
+      />
+    );
+  }
 
   return (
     <div>
@@ -162,13 +176,58 @@ function SerpAnalysisLoadingState() {
   );
 }
 
-function SerpAnalysisEmptyState({ keyword }: { keyword?: string | null }) {
+/**
+ * Three genuinely different situations the previous copy collapsed into one.
+ *
+ * It read "No SERP details available for this keyword yet. Try clicking
+ * another keyword to load data." in every case -- including the most common
+ * one, where no keyword had EVER been selected for SERP analysis. The panel
+ * offered no control that would load anything, so it described a data gap
+ * while actually being a dead end: the only thing that fetches a SERP is a
+ * table row click, and nothing on screen said so.
+ */
+function SerpAnalysisEmptyState({
+  keyword,
+  analyzeKeyword,
+  onAnalyze,
+}: {
+  keyword?: string | null;
+  analyzeKeyword?: string | null;
+  onAnalyze?: () => void;
+}) {
+  // A keyword WAS analyzed and genuinely came back with no organic results.
+  if (keyword) {
+    return (
+      <div className="py-8 text-center text-sm text-base-content/60">
+        <p>No organic results came back for “{keyword}”.</p>
+        <p className="mt-1 text-base-content/50">
+          Pick another keyword to try a different SERP.
+        </p>
+      </div>
+    );
+  }
+
+  // Nothing analyzed yet, but there is a row to analyze -- give it a control
+  // instead of describing the absence.
+  if (analyzeKeyword && onAnalyze) {
+    return (
+      <div className="flex flex-col items-center gap-2 py-8 text-center">
+        <p className="text-sm text-base-content/60">
+          See who currently ranks for “{analyzeKeyword}”.
+        </p>
+        <button type="button" className="btn btn-sm" onClick={onAnalyze}>
+          Analyze this SERP
+        </button>
+        <p className="text-sm text-base-content/50">
+          Uses SERP credits. Clicking any keyword row does the same thing.
+        </p>
+      </div>
+    );
+  }
+
   return (
-    <div className="text-sm text-base-content/50 text-center py-8">
-      <p>No SERP details available for this keyword yet.</p>
-      {keyword ? (
-        <p className="mt-1">Try clicking another keyword to load data.</p>
-      ) : null}
+    <div className="py-8 text-center text-sm text-base-content/50">
+      <p>Search for keywords, then pick one to see who ranks for it.</p>
     </div>
   );
 }

@@ -12,6 +12,12 @@ import {
   type KeywordControlsValues,
 } from "@/client/features/keywords/hooks/useKeywordControlsForm";
 import { useKeywordFiltering } from "@/client/features/keywords/hooks/useKeywordFiltering";
+import {
+  mergeFitVerdicts,
+  useKeywordFit,
+  useProjectProfile,
+  useRefineKeywordFit,
+} from "@/client/features/profiles/useProjectProfile";
 import { useLocalKeywordFilters } from "@/client/features/keywords/hooks/useLocalKeywordFilters";
 import { useKeywordResearchData } from "@/client/features/keywords/hooks/useKeywordResearchData";
 import { useKeywordSelection } from "@/client/features/keywords/hooks/useKeywordSelection";
@@ -98,6 +104,13 @@ function parseRestoredKeywordResearchGeo(
     parentCountryCode: bundle.volume.parentCountryCode,
   };
 }
+
+/** Stable empty array for the un-run AI fit pass -- see its use below. */
+const NO_AI_VERDICTS: ReadonlyArray<{
+  keyword: string;
+  verdict: "on-offer" | "adjacent" | "wrong-customer";
+  reason: string;
+}> = [];
 
 type OpenKeywordTabInput = {
   keyword: string;
@@ -301,13 +314,41 @@ export function useKeywordResearchController(
     clearActiveKeywordResult();
   }, [activeSearchKey, clearActiveKeywordResult]);
 
-  const { filteredRows, activeFilterCount } = useKeywordFiltering({
-    rows,
-    filters: filterValues,
-    groupTerm,
-    sortField: input.sortField,
-    sortDir: input.sortDir,
-  });
+  // Fit is derived from this project's business profile -- one free D1 read
+  // plus pure string work over rows already on screen (see useProjectProfile
+  // and keywordFit.ts). No metered provider is reachable from here, which is
+  // what lets every row carry a verdict on render rather than behind a button.
+  const { profile } = useProjectProfile(input.projectId);
+  const keywordsForFit = useMemo(() => rows.map((row) => row.keyword), [rows]);
+  const rulesFit = useKeywordFit(profile, keywordsForFit);
+  const [hideWrongFit, setHideWrongFit] = useState(false);
+
+  // The optional semantic pass, layered OVER the free rules verdicts rather
+  // than replacing them: a keyword the model didn't reach keeps its rules
+  // label instead of losing one. Runs only from an explicit click.
+  const refineFit = useRefineKeywordFit(input.projectId);
+  // `?? NO_AI_VERDICTS` rather than `?? []`: a fresh array literal every
+  // render would defeat the memo below, re-merging the whole result set on
+  // each keystroke in the filter fields.
+  const aiVerdicts = refineFit.data?.verdicts ?? NO_AI_VERDICTS;
+  const fit = useMemo(
+    () => mergeFitVerdicts(rulesFit, aiVerdicts),
+    [rulesFit, aiVerdicts],
+  );
+  const runFitRefinement = useCallback(() => {
+    if (keywordsForFit.length > 0) refineFit.mutate(keywordsForFit);
+  }, [keywordsForFit, refineFit]);
+
+  const { filteredRows, activeFilterCount, wrongFitCount } =
+    useKeywordFiltering({
+      rows,
+      filters: filterValues,
+      groupTerm,
+      sortField: input.sortField,
+      sortDir: input.sortDir,
+      fit,
+      hideWrongFit,
+    });
 
   // Term groups are cut from the full result set (not the filtered rows), so
   // the rail stays stable while the user slices with it.
@@ -385,6 +426,12 @@ export function useKeywordResearchController(
     activeSerpKeyword,
     confirmSave,
     controlsForm,
+    fit,
+    hideWrongFit,
+    setHideWrongFit,
+    wrongFitCount,
+    runFitRefinement,
+    fitRefinement: refineFit,
     // The geo CAPTURED for the run whose rows/verdict are on screen right
     // now -- null before the first search AND before any restore. Consumers
     // must read this, not `useTargetAreaScope` live, when labeling
@@ -437,6 +484,10 @@ export function useKeywordResearchController(
     toggleAllRows: handleToggleAllRows,
     toggleRowSelection,
     toggleSort,
+    // Exposed so the SERP panel's own "Analyze this SERP" control can start a
+    // run. Selecting a keyword for the free OVERVIEW panel and fetching its
+    // (metered) SERP are separate acts; only the second goes through here.
+    setSerpKeyword,
     SERP_PAGE_SIZE,
   };
 }

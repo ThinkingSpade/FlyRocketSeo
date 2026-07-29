@@ -71,6 +71,8 @@ export const {
   gscOauthConfig,
   geoLocations,
   projectTargetAreas,
+  projectProfiles,
+  keywordFitVerdicts,
   gbpConnections,
   gbpScheduledPosts,
 } = schema;

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GbpScheduledPostRepository } from "./GbpScheduledPostRepository";
 
 // The REAL double-publish guard lives in claimForPublishing's WHERE clause
 // (id AND status='scheduled'), not in the pure canStartPublishing predicate
@@ -83,8 +84,6 @@ describe("GbpScheduledPostRepository.claimForPublishing (the real CAS guard)", (
     mocks.update.mockImplementation(
       makeFakeTable([{ id: "post-1", status: "scheduled" }]).update,
     );
-    const { GbpScheduledPostRepository } =
-      await import("./GbpScheduledPostRepository");
 
     const claimed =
       await GbpScheduledPostRepository.claimForPublishing("post-1");
@@ -96,8 +95,6 @@ describe("GbpScheduledPostRepository.claimForPublishing (the real CAS guard)", (
     mocks.update.mockImplementation(
       makeFakeTable([{ id: "post-1", status: "scheduled" }]).update,
     );
-    const { GbpScheduledPostRepository } =
-      await import("./GbpScheduledPostRepository");
 
     const first = await GbpScheduledPostRepository.claimForPublishing("post-1");
     const second =
@@ -113,8 +110,6 @@ describe("GbpScheduledPostRepository.claimForPublishing (the real CAS guard)", (
       mocks.update.mockImplementation(
         makeFakeTable([{ id: "post-1", status }]).update,
       );
-      const { GbpScheduledPostRepository } =
-        await import("./GbpScheduledPostRepository");
 
       await expect(
         GbpScheduledPostRepository.claimForPublishing("post-1"),
@@ -126,8 +121,6 @@ describe("GbpScheduledPostRepository.claimForPublishing (the real CAS guard)", (
     mocks.update.mockImplementation(
       makeFakeTable([{ id: "post-1", status: "scheduled" }]).update,
     );
-    const { GbpScheduledPostRepository } =
-      await import("./GbpScheduledPostRepository");
 
     await expect(
       GbpScheduledPostRepository.claimForPublishing("no-such-post"),

@@ -733,8 +733,9 @@ export function isLabsLocationCode(locationCode: number): boolean {
  * measured directly off this file's own tables, every country code in
  * LOCATION_OPTIONS tops out at 2894 (Zambia), while the smallest real
  * sub-country code this app bundles is 21132 (Alaska, in
- * `src/client/features/geo/usStates.ts`) — DMA and city codes run into the
- * millions (e.g. 1026339). 10,000 sits cleanly between the two, so anything
+ * `src/client/features/geo/usStates.ts`) — while seeded DMA codes sit in the
+ * hundreds of thousands (Dallas-Ft. Worth is 200623) and city codes run into
+ * the millions (Dallas is 1026339). 10,000 sits below all of them, so anything
  * below it is not a plausible geotarget of any kind — a typo'd
  * `locationCode: 1`, not merely an unrecognised country — and must not be
  * routed to a metered Google Ads call as if it were.

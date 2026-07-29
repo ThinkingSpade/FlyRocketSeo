@@ -1,4 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  GscNotConnectedError,
+  classifyGscAccessFailure,
+  toGscUnavailable,
+} from "./GscService";
 
 const mocks = vi.hoisted(() => {
   class GscApiError extends Error {
@@ -45,25 +50,18 @@ vi.mock("@/server/features/gsc/repositories/GscConnectionRepository", () => ({
 
 describe("classifyGscAccessFailure", () => {
   it("reports a project with no bound property as not connected", async () => {
-    const { classifyGscAccessFailure, GscNotConnectedError } =
-      await import("./GscService");
-
     expect(classifyGscAccessFailure(new GscNotConnectedError("p1"))).toBe(
       "not_connected",
     );
   });
 
   it("asks for reconnect when no access token can be minted", async () => {
-    const { classifyGscAccessFailure } = await import("./GscService");
-
     expect(classifyGscAccessFailure(new mocks.GscTokenError())).toBe(
       "requires_reconnect",
     );
   });
 
   it("asks for reconnect on a 401", async () => {
-    const { classifyGscAccessFailure } = await import("./GscService");
-
     expect(
       classifyGscAccessFailure(
         new mocks.GscApiError(401, "unauthenticated", "unauthenticated"),
@@ -77,8 +75,6 @@ describe("classifyGscAccessFailure", () => {
     "Search Console API has not been used in project 123 before",
     "Search Console API is disabled for this project",
   ])("reports an API-not-configured 403 (%s)", async (body) => {
-    const { classifyGscAccessFailure } = await import("./GscService");
-
     expect(
       classifyGscAccessFailure(new mocks.GscApiError(403, "denied", body)),
     ).toBe("api_not_configured");
@@ -89,8 +85,6 @@ describe("classifyGscAccessFailure", () => {
     '{"error":{"status":"PERMISSION_DENIED"}}',
     "forbidden",
   ])("reports any other 403 as a denied property (%s)", async (body) => {
-    const { classifyGscAccessFailure } = await import("./GscService");
-
     expect(
       classifyGscAccessFailure(new mocks.GscApiError(403, "denied", body)),
     ).toBe("permission_denied");
@@ -99,8 +93,6 @@ describe("classifyGscAccessFailure", () => {
   it.each([429, 500, 503])(
     "leaves status %s unclassified so the caller surfaces a real fault",
     async (status) => {
-      const { classifyGscAccessFailure } = await import("./GscService");
-
       expect(
         classifyGscAccessFailure(new mocks.GscApiError(status, "later")),
       ).toBeNull();
@@ -108,8 +100,6 @@ describe("classifyGscAccessFailure", () => {
   );
 
   it("leaves an unexpected error unclassified", async () => {
-    const { classifyGscAccessFailure } = await import("./GscService");
-
     expect(classifyGscAccessFailure(new Error("boom"))).toBeNull();
   });
 });
@@ -126,8 +116,6 @@ describe("toGscUnavailable", () => {
   const ctx = { projectId: "p1", surface: "searchPerformanceReport" };
 
   it("returns the reason so the client can offer a reconnect", async () => {
-    const { toGscUnavailable } = await import("./GscService");
-
     expect(toGscUnavailable(new mocks.GscTokenError(), ctx)).toEqual({
       connected: false,
       reason: "requires_reconnect",
@@ -135,8 +123,6 @@ describe("toGscUnavailable", () => {
   });
 
   it("logs a bound-but-failing property without leaking the error body", async () => {
-    const { toGscUnavailable } = await import("./GscService");
-
     toGscUnavailable(
       new mocks.GscApiError(403, "secret-token", "secret-body"),
       ctx,
@@ -157,9 +143,6 @@ describe("toGscUnavailable", () => {
   });
 
   it("stays quiet when the project simply has no property bound yet", async () => {
-    const { toGscUnavailable, GscNotConnectedError } =
-      await import("./GscService");
-
     expect(toGscUnavailable(new GscNotConnectedError("p1"), ctx)).toEqual({
       connected: false,
       reason: "not_connected",
@@ -168,7 +151,6 @@ describe("toGscUnavailable", () => {
   });
 
   it("rethrows a real fault instead of hiding it as disconnected", async () => {
-    const { toGscUnavailable } = await import("./GscService");
     const outage = new mocks.GscApiError(503, "unavailable");
 
     expect(() => toGscUnavailable(outage, ctx)).toThrow(outage);

@@ -3,7 +3,6 @@ import {
   Download,
   FileDown,
   LineChart,
-  RotateCcw,
   Save,
   Sheet,
   SlidersHorizontal,
@@ -21,6 +20,7 @@ import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { SerpAnalysisCard } from "@/client/features/keywords/components";
 import { KeywordResearchDesktopTable } from "./KeywordResearchDesktopTable";
+import { KeywordActionPlanCard } from "@/client/features/keywords/actionPlan/KeywordActionPlanCard";
 import {
   KeywordResearchPagination,
   useKeywordResearchPagination,
@@ -35,6 +35,7 @@ import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeyword
 import { getLanguageCode } from "@/client/features/keywords/locations";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
+import { MobileFilters } from "./keywordResearchMobileFilters";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -50,6 +51,7 @@ export function KeywordResearchMobileResults({
   ownDomainRating,
 }: Props) {
   const { filteredRows, mobileTab } = controller;
+  const { projectId } = keywordsRoute.useParams();
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden md:hidden">
@@ -82,7 +84,7 @@ export function KeywordResearchMobileResults({
           ownDomainRating={ownDomainRating}
         />
       ) : (
-        <div className="flex-1 overflow-y-auto p-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-2">
           <SerpAnalysisCard
             items={controller.serpResults}
             keyword={controller.activeSerpKeyword}
@@ -92,7 +94,22 @@ export function KeywordResearchMobileResults({
             page={controller.serpPage}
             pageSize={controller.SERP_PAGE_SIZE}
             onPageChange={controller.setSerpPage}
+            analyzeKeyword={controller.overviewKeyword?.keyword ?? null}
+            onAnalyze={() => {
+              const target = controller.overviewKeyword;
+              if (!target) return;
+              controller.setSerpKeyword(target.keyword);
+              controller.setSerpPage(0);
+            }}
           />
+          {controller.activeSerpKeyword ? (
+            <KeywordActionPlanCard
+              projectId={projectId}
+              keyword={controller.activeSerpKeyword}
+              serpResults={controller.serpResults}
+              ownDomainRating={ownDomainRating}
+            />
+          ) : null}
         </div>
       )}
     </div>
@@ -273,6 +290,7 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
         filteredRows={mergedRows}
         overviewKeyword={controller.overviewKeyword}
         ownDomainRating={ownDomainRating}
+        fit={controller.fit}
         researchGeo={researchGeo}
         selectedRows={controller.selectedRows}
         setSelectedRows={controller.setSelectedRows}
@@ -304,121 +322,5 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
         />
       ) : null}
     </div>
-  );
-}
-
-function MobileFilters({
-  controller,
-}: {
-  controller: KeywordResearchControllerState;
-}) {
-  const { activeFilterCount, filtersForm } = controller;
-
-  return (
-    <div className="shrink-0 border-b border-base-300 bg-gradient-to-b from-base-100 to-base-200/30 px-4 py-3 space-y-3">
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <p className="text-xs font-semibold">Refine table results</p>
-          {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
-              {activeFilterCount}
-            </span>
-          ) : null}
-        </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
-          onClick={controller.resetFilters}
-          disabled={activeFilterCount === 0}
-        >
-          <RotateCcw className="size-3" />
-          Clear
-        </button>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2">
-        <filtersForm.Field name="include">
-          {(field) => (
-            <input
-              className="input input-bordered input-sm bg-base-100"
-              placeholder="Include terms (audit, checker)"
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-            />
-          )}
-        </filtersForm.Field>
-        <filtersForm.Field name="exclude">
-          {(field) => (
-            <input
-              className="input input-bordered input-sm bg-base-100"
-              placeholder="Exclude terms (jobs, course)"
-              value={field.state.value}
-              onChange={(event) => field.handleChange(event.target.value)}
-            />
-          )}
-        </filtersForm.Field>
-      </div>
-
-      <div className="grid grid-cols-2 gap-2">
-        <MobileRangeInput
-          form={filtersForm}
-          name="minVol"
-          placeholder="Min volume"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="maxVol"
-          placeholder="Max volume"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="minCpc"
-          placeholder="Min CPC"
-          step="0.01"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="maxCpc"
-          placeholder="Max CPC"
-          step="0.01"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="minKd"
-          placeholder="Min difficulty"
-        />
-        <MobileRangeInput
-          form={filtersForm}
-          name="maxKd"
-          placeholder="Max difficulty"
-        />
-      </div>
-    </div>
-  );
-}
-
-function MobileRangeInput({
-  form,
-  name,
-  placeholder,
-  step,
-}: {
-  form: KeywordResearchControllerState["filtersForm"];
-  name: "minVol" | "maxVol" | "minCpc" | "maxCpc" | "minKd" | "maxKd";
-  placeholder: string;
-  step?: string;
-}) {
-  return (
-    <form.Field name={name}>
-      {(field) => (
-        <input
-          className="input input-bordered input-sm bg-base-100"
-          placeholder={placeholder}
-          type="number"
-          step={step}
-          value={field.state.value}
-          onChange={(event) => field.handleChange(event.target.value)}
-        />
-      )}
-    </form.Field>
   );
 }

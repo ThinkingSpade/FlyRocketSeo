@@ -7,6 +7,7 @@ import {
 import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordResearchControllerState } from "./types";
 import { SerpPanelActions } from "./keywordResearchDesktopFilters";
+import { KeywordActionPlanCard } from "@/client/features/keywords/actionPlan/KeywordActionPlanCard";
 
 // Split out of KeywordResearchDesktopResults.tsx to keep that file under the
 // line-count cap -- this panel is otherwise unrelated to the table/filters it
@@ -52,8 +53,12 @@ const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
 export function KeywordResearchDesktopSerpPanel({
   controller,
+  ownDomainRating,
 }: {
   controller: KeywordResearchControllerState;
+  /** This project's own DR, already loaded free by the page -- the figure the
+   *  action plan below measures the SERP against. */
+  ownDomainRating: number | null;
 }) {
   const { projectId } = keywordsRoute.useParams();
   const { overviewKeyword } = controller;
@@ -105,9 +110,28 @@ export function KeywordResearchDesktopSerpPanel({
             page={controller.serpPage}
             pageSize={controller.SERP_PAGE_SIZE}
             onPageChange={controller.setSerpPage}
+            // The row the table already highlights. Selecting a keyword for
+            // the OVERVIEW panel is free and automatic; fetching its SERP is
+            // neither, which is why the two are separate and this needs its
+            // own explicit control rather than following the highlight.
+            analyzeKeyword={overviewKeyword?.keyword ?? null}
+            onAnalyze={() => {
+              if (!overviewKeyword) return;
+              controller.setSerpKeyword(overviewKeyword.keyword);
+              controller.setSerpPage(0);
+            }}
           />
         </div>
       </div>
+
+      {controller.activeSerpKeyword ? (
+        <KeywordActionPlanCard
+          projectId={projectId}
+          keyword={controller.activeSerpKeyword}
+          serpResults={controller.serpResults}
+          ownDomainRating={ownDomainRating}
+        />
+      ) : null}
     </div>
   );
 }

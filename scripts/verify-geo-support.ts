@@ -32,10 +32,15 @@ import { loadLocalEnv, parseArgs } from "./cli-utils";
 
 const API_BASE = "https://api.dataforseo.com";
 
-// Reused from the plan/spec rather than re-guessed, so this spike checks the
-// exact code the rest of the plan already assumes (see resolveGeo.test.ts's
-// DFW fixture and keyword-locations.test.ts's sub-country-code test).
-const DFW_LOCATION_CODE = 1_026_339;
+// The real Dallas-Ft. Worth DMA code, read from the seeded `geo_locations`
+// table in production (`type = 'DMA Region'`) rather than assumed.
+//
+// This was 1_026_339 until it was checked: that code is the CITY of Dallas,
+// not the DMA. Both are valid sub-country geotargets that route to Google
+// Ads, so nothing failed loudly -- the probe simply verified metro support
+// using a city, and every "DFW" label in the test suite named the wrong
+// place. Matches resolveGeo.test.ts's DFW fixture.
+const DFW_LOCATION_CODE = 200_623;
 const PROBE_LANGUAGE_CODE = "en";
 // The design doc's own running example (deliotx.com, a DFW coffee/water service).
 const PROBE_KEYWORD = "office coffee service";

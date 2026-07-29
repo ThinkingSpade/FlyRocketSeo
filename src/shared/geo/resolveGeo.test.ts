@@ -7,8 +7,8 @@ const UK = { locationCode: 2826, languageCode: "en" };
 
 const DFW: TargetArea = {
   kind: "metro",
-  locationCode: 1026339,
-  label: "Dallas-Fort Worth TX",
+  locationCode: 200623,
+  label: "Dallas-Ft. Worth, TX",
   parentCountryCode: 2840,
 };
 
@@ -92,10 +92,10 @@ describe("resolveGeo label without a target area", () => {
 describe("resolveGeo with a metro target area", () => {
   it("takes keyword volume local, via Google Ads", () => {
     expect(resolveGeo("keyword-volume", DFW, US)).toMatchObject({
-      locationCode: 1026339,
+      locationCode: 200623,
       provider: "google_ads",
       scope: "local",
-      label: "Dallas-Fort Worth TX",
+      label: "Dallas-Ft. Worth, TX",
     });
   });
 
@@ -121,23 +121,23 @@ describe("resolveGeo with a metro target area", () => {
 
   it("takes the SERP local", () => {
     expect(resolveGeo("serp", DFW, US)).toMatchObject({
-      locationCode: 1026339,
+      locationCode: 200623,
       provider: "serp",
       scope: "local",
-      label: "Dallas-Fort Worth TX",
+      label: "Dallas-Ft. Worth, TX",
     });
   });
 
   it("takes rank tracking local", () => {
     // Full tuple (Finding 7): the brief's own example — a DFW rank-tracking
-    // result with locationCode 1026339 but provider "labs"/scope
+    // result with locationCode 200623 but provider "labs"/scope
     // "national"/label "United States" — would still have passed the old
     // locationCode-only assertion below.
     expect(resolveGeo("rank-tracking", DFW, US)).toMatchObject({
-      locationCode: 1026339,
+      locationCode: 200623,
       provider: "serp",
       scope: "local",
-      label: "Dallas-Fort Worth TX",
+      label: "Dallas-Ft. Worth, TX",
     });
   });
 
@@ -152,7 +152,7 @@ describe("resolveGeo with a metro target area", () => {
 
   it("routes the local pack to the business provider", () => {
     expect(resolveGeo("local-pack", DFW, US)).toMatchObject({
-      locationCode: 1026339,
+      locationCode: 200623,
       provider: "business",
       scope: "local",
     });
@@ -162,7 +162,7 @@ describe("resolveGeo with a metro target area", () => {
     // Guards the fix above the other way: giving the no-area case a real
     // country label must not clobber the has-area case's own label.
     expect(resolveGeo("local-pack", DFW, US).label).toBe(
-      "Dallas-Fort Worth TX",
+      "Dallas-Ft. Worth, TX",
     );
   });
 
@@ -326,8 +326,8 @@ describe("resolveGeo language selection when the target area's country differs f
   it("keeps the session's own language for a same-country target area", () => {
     const dfw: TargetArea = {
       kind: "metro",
-      locationCode: 1026339,
-      label: "Dallas-Fort Worth TX",
+      locationCode: 200623,
+      label: "Dallas-Ft. Worth, TX",
       parentCountryCode: 2840,
     };
     const usInSpanish = { locationCode: 2840, languageCode: "es" };

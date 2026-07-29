@@ -26,8 +26,8 @@ import {
   useProjectMarket,
 } from "@/client/hooks/useProjectDomain";
 import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
-import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { useProjectSuggestions } from "@/client/features/insights/useProjectSuggestions";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -48,11 +48,13 @@ function isKeywordSearchTab(tab: SearchTab): tab is KeywordSearchTab {
 export function KeywordResearchPage(input: Props) {
   const setSearchParams = useKeywordSearchParams();
   const projectId = input.projectId;
-  // The header ScopeControl's state -- separate from this tab's own
-  // location resolution (useResolvedKeywordLocation, deep inside the
-  // controller). Passed as the controller's own 2nd argument, not folded
-  // into `controllerInput`, so it reaches resolveRunGeo() without changing
-  // `Props`' shape -- see useKeywordResearchController's own doc comment.
+  // This tab's scope state. Unlike the other five geo-aware tabs, the picker
+  // it drives lives INSIDE the search form (KeywordResearchSearchBar) rather
+  // than in this header: a country-only control sitting next to the Search
+  // button, with the metro-capable one in the header, meant a DFW project
+  // read as un-targetable. Still passed as the controller's own 2nd
+  // argument, not folded into `controllerInput`, so it reaches
+  // resolveRunGeo() without changing `Props`' shape.
   const market = useProjectMarket(projectId);
   const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
 
@@ -292,27 +294,23 @@ export function KeywordResearchPage(input: Props) {
   return (
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Keyword Research</h1>
-            <p className="text-sm text-base-content/70">
-              Discover keyword ideas, search demand, and ranking opportunities.
-            </p>
-          </div>
-          <ScopeControl
-            area={targetAreaScope.area}
-            onChange={targetAreaScope.onChange}
-            hasConfirmedArea={targetAreaScope.hasConfirmedArea}
-            onClear={targetAreaScope.onClear}
-          />
+        <div>
+          <h1 className="text-2xl font-semibold">Keyword Research</h1>
+          <p className="text-sm text-base-content/70">
+            Discover keyword ideas, search demand, and ranking opportunities.
+          </p>
         </div>
 
         <TargetAreaBanner projectId={projectId} />
 
+        <ProjectProfileCard projectId={projectId} />
+
         <KeywordResearchSearchBar
           controller={controller}
           suggestions={suggestions}
-          targetArea={targetAreaScope.area}
+          scope={targetAreaScope}
+          projectCountryCode={market.locationCode}
+          projectId={projectId}
         />
 
         <RestoreRail

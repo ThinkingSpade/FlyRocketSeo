@@ -21,8 +21,35 @@ import { TrendSparkline } from "@/client/components/TrendSparkline";
 import { formatNumber } from "@/client/features/keywords/utils";
 import { keywordRowNote } from "@/client/features/insights/verdicts/keywords";
 import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
+import { UserX } from "lucide-react";
+import type { FitMap } from "@/client/features/keywords/hooks/useKeywordFiltering";
+import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import type { ResolvedGeo } from "@/shared/geo/types";
 import type { KeywordResearchRow } from "@/types/keywords";
+
+/**
+ * The one visual mark a fit verdict earns in the table.
+ *
+ * Only `wrong-customer` renders anything. "on-offer" and "adjacent" are the
+ * expected cases and marking them would put an icon on nearly every row,
+ * which is noise rather than signal -- and the row's position already carries
+ * that information, since fit is the leading sort key.
+ *
+ * A bare muted glyph with a title, not a coloured badge: this table already
+ * carries difficulty and intent badges, and a third competing colour would
+ * make the row harder to read rather than more informative.
+ */
+function FitMarker({ fit }: { fit: FitResult | undefined }) {
+  if (fit?.verdict !== "wrong-customer") return null;
+  return (
+    <UserX
+      className="size-3.5 shrink-0 text-base-content/40"
+      aria-label={fit.reason}
+    >
+      <title>{fit.reason}</title>
+    </UserX>
+  );
+}
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
 
 type Props = {
@@ -48,6 +75,9 @@ type Props = {
    * redundant resolve for an identical result.
    */
   researchGeo: { volume: ResolvedGeo; difficulty: ResolvedGeo } | null;
+  /** Per-keyword business-fit verdicts. Empty when the project has no usable
+   *  profile, in which case no row shows a marker at all. */
+  fit: FitMap;
   selectedRows: Set<string>;
   setSelectedRows: (rows: Set<string>) => void;
   sortDir: SortDir;
@@ -65,6 +95,7 @@ export function KeywordResearchDesktopTable({
   overviewKeyword,
   ownDomainRating,
   researchGeo,
+  fit,
   selectedRows,
   setSelectedRows,
   sortDir,
@@ -112,10 +143,13 @@ export function KeywordResearchDesktopTable({
         ),
         cell: ({ row }) => (
           <span
-            className="block min-w-48 whitespace-normal break-words font-medium capitalize md:min-w-0 md:truncate"
+            className="flex min-w-48 items-center gap-1.5 md:min-w-0"
             title={row.original.keyword}
           >
-            {row.original.keyword}
+            <span className="whitespace-normal break-words font-medium capitalize md:truncate">
+              {row.original.keyword}
+            </span>
+            <FitMarker fit={fit.get(row.original.keyword)} />
           </span>
         ),
         meta: {
@@ -238,6 +272,7 @@ export function KeywordResearchDesktopTable({
     ],
     [
       cpcLabel,
+      fit,
       intentLabel,
       ownDomainRating,
       scoreLabel,

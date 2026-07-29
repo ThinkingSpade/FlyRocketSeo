@@ -5,6 +5,7 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { z } from "zod";
 import { MCP_AUTH_CONTEXT_PROP } from "@/server/mcp/context";
+import { handleSelfHostedFlyRocketSeoMcpRequest } from "@/server/mcp/transport";
 
 const selfHostedAuthMocks = vi.hoisted(() => ({
   resolveCloudflareAccessContext: vi.fn(),
@@ -103,9 +104,6 @@ describe("handleSelfHostedFlyRocketSeoMcpRequest", () => {
   });
 
   it("accepts local no-auth MCP requests with the local admin context", async () => {
-    const { handleSelfHostedFlyRocketSeoMcpRequest } =
-      await import("@/server/mcp/transport");
-
     const response = await handleSelfHostedFlyRocketSeoMcpRequest(
       createMcpRequest(),
       "local_noauth",
@@ -131,9 +129,6 @@ describe("handleSelfHostedFlyRocketSeoMcpRequest", () => {
   });
 
   it("accepts Cloudflare Access MCP requests through the existing Access resolver", async () => {
-    const { handleSelfHostedFlyRocketSeoMcpRequest } =
-      await import("@/server/mcp/transport");
-
     const response = await handleSelfHostedFlyRocketSeoMcpRequest(
       createMcpRequest(),
       "cloudflare_access",
@@ -163,9 +158,6 @@ describe("handleSelfHostedFlyRocketSeoMcpRequest", () => {
   // The OOM came from the GET SSE stream pinning a per-request McpServer, so
   // GET must 405 without ever building one.
   it("returns 405 for the standalone GET SSE stream without building a server", async () => {
-    const { handleSelfHostedFlyRocketSeoMcpRequest } =
-      await import("@/server/mcp/transport");
-
     const response = await handleSelfHostedFlyRocketSeoMcpRequest(
       new Request("https://flyrocketseo.test/mcp", {
         method: "GET",
@@ -183,9 +175,6 @@ describe("handleSelfHostedFlyRocketSeoMcpRequest", () => {
   });
 
   it("lets the MCP transport handle OPTIONS without auth context", async () => {
-    const { handleSelfHostedFlyRocketSeoMcpRequest } =
-      await import("@/server/mcp/transport");
-
     const response = await handleSelfHostedFlyRocketSeoMcpRequest(
       new Request("https://flyrocketseo.test/mcp", { method: "OPTIONS" }),
       "cloudflare_access",
@@ -203,9 +192,6 @@ describe("handleSelfHostedFlyRocketSeoMcpRequest", () => {
 
   // Directory scanners (e.g. Smithery) read server metadata from initialize.
   it("serves directory metadata in the initialize response", async () => {
-    const { handleSelfHostedFlyRocketSeoMcpRequest } =
-      await import("@/server/mcp/transport");
-
     await handleSelfHostedFlyRocketSeoMcpRequest(
       createMcpRequest(),
       "local_noauth",
