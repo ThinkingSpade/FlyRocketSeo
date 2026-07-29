@@ -12,6 +12,7 @@ import {
   FollowSplitCard,
   ToxicLinksCard,
 } from "./BacklinksProfileInsights";
+import { BacklinksCompareSection } from "./BacklinksCompareSection";
 import { BacklinksResultsCard } from "./BacklinksPageSections";
 import {
   BacklinksErrorState,
@@ -216,6 +217,15 @@ export function BacklinksBody({
         tab="Backlinks"
       />
       {isRestoredRun ? null : <BrokenLinkReclaimCard topPages={topPagesPage} />}
+      {/* Every card in here is metered and starts disabled, but a restored run
+          should not even offer buttons that spend against a target the user
+          didn't just ask for. */}
+      {isRestoredRun ? null : (
+        <BacklinksCompareSection
+          projectId={projectId}
+          target={overviewData.displayTarget || searchState.target}
+        />
+      )}
       {/* Both of these fetch on their own — the timeline is a metered history
           call, and the results card drives the paginated sub-tabs. A restored
           run is meant to cost nothing, so they wait for "Run again". */}

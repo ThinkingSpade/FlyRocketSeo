@@ -4,7 +4,7 @@
  * count is a subtraction.
  */
 
-export type FollowSplit = {
+type FollowSplit = {
   dofollow: number;
   nofollow: number;
   total: number;

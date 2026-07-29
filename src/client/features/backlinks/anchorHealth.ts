@@ -9,7 +9,7 @@
  * by brand and URL anchors rather than one repeated phrase.
  */
 
-export type AnchorCategory =
+type AnchorCategory =
   | "branded"
   | "naked-url"
   | "generic"
@@ -22,20 +22,20 @@ export type AnchorHealthRow = {
   referringDomains: number | null;
 };
 
-export type AnchorCategoryBreakdown = {
+type AnchorCategoryBreakdown = {
   category: AnchorCategory;
   label: string;
   domains: number;
   share: number;
 };
 
-export type AnchorConcentration = {
+type AnchorConcentration = {
   anchor: string;
   domains: number;
   share: number;
 };
 
-export type AnchorHealth = {
+type AnchorHealth = {
   totalDomains: number;
   categories: AnchorCategoryBreakdown[];
   /** Highest-volume anchor that is neither branded, empty, nor a bare URL. */

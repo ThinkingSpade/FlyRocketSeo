@@ -15,7 +15,7 @@ export type ToxicCandidateRow = {
   spamScore: number | null;
 };
 
-export type ToxicCandidate = {
+type ToxicCandidate = {
   domain: string;
   backlinks: number;
   rank: number | null;
@@ -24,7 +24,7 @@ export type ToxicCandidate = {
   reason: string;
 };
 
-export type ToxicAudit = {
+type ToxicAudit = {
   candidates: ToxicCandidate[];
   /** Backlinks accounted for by the flagged domains. */
   affectedBacklinks: number;
@@ -39,7 +39,7 @@ export type ToxicAudit = {
  * it. Nothing here disavows anything automatically — this only produces a file
  * for a human to review.
  */
-export const DEFAULT_SPAM_THRESHOLD = 60;
+const DEFAULT_SPAM_THRESHOLD = 60;
 
 export function auditToxicDomains(
   rows: ToxicCandidateRow[],

@@ -8,12 +8,12 @@
  * long-tail filler.
  */
 
-export type DomainQualityRow = {
+type DomainQualityRow = {
   rank: number | null;
   spamScore?: number | null;
 };
 
-export type QualityBucket = {
+type QualityBucket = {
   label: string;
   min: number;
   max: number;
@@ -21,7 +21,7 @@ export type QualityBucket = {
   share: number;
 };
 
-export type DomainQuality = {
+type DomainQuality = {
   buckets: QualityBucket[];
   /** Domains counted — rows without a rank are excluded. */
   ranked: number;
