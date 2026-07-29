@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  describeGeoFetchFailure,
   describeGeoRunError,
   describeGeoUnavailable,
 } from "./geoUnavailableMessage";
@@ -49,5 +50,25 @@ describe("describeGeoRunError (a metered call failed while an area was active)",
       "Something went wrong.",
     );
     expect(message).toBe("Something went wrong.");
+  });
+});
+
+describe("describeGeoFetchFailure (a specific per-metric enrichment was attempted and threw)", () => {
+  it("names both the metric and the geography that failed", () => {
+    const message = describeGeoFetchFailure("Domain traffic", {
+      label: "United States",
+    });
+    expect(message).toContain("Domain traffic");
+    expect(message).toContain("United States");
+    // Honesty requirement, matching its siblings: never imply a number is
+    // showing when nothing was loaded.
+    expect(message).not.toMatch(/showing the national figure/i);
+  });
+
+  it("distinguishes a local geography's own label the same way its siblings do", () => {
+    const message = describeGeoFetchFailure("Keyword volume and CPC", {
+      label: "Dallas-Ft. Worth, TX",
+    });
+    expect(message).toContain("Dallas-Ft. Worth, TX");
   });
 });

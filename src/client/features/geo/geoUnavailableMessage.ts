@@ -39,3 +39,24 @@ export function describeGeoRunError(
   if (geo.scope !== "local") return fallbackMessage;
   return `Couldn't load ${metricLabel} for ${geo.label} -- this location may not be supported yet. ${fallbackMessage}`;
 }
+
+/**
+ * A third honest-degradation case, distinct from the two above: the OVERALL
+ * request succeeded, but one specific per-metric enrichment inside it was
+ * attempted and failed (e.g. SERP Overview's Labs domain-traffic call, or its
+ * Google Ads/Labs keyword-stat call -- see SerpOverviewService.ts). Unlike
+ * `describeGeoUnavailable`, this isn't a pre-flight "no provider covers this
+ * geography" prediction -- a network call genuinely ran and threw. Unlike
+ * `describeGeoRunError`, the whole run didn't fail, so the tab's generic
+ * error alert never fires; without this, that specific figure would just
+ * render as a bare "--" with no way to tell "no data" apart from "couldn't
+ * load". Names both the metric and its geography for the same reason its
+ * siblings do: a bare "couldn't load" leaves the user unable to tell whether
+ * a different location would even help.
+ */
+export function describeGeoFetchFailure(
+  metricLabel: string,
+  geo: Pick<ResolvedGeo, "label">,
+): string {
+  return `${metricLabel} couldn't be loaded for ${geo.label} this run -- showing nothing rather than a guessed number.`;
+}

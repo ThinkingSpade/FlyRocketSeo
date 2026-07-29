@@ -55,20 +55,19 @@ import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import {
-  parseStoredGeo,
-  resolveRunGeo,
-  toStoredMetricGeo,
-} from "@/client/features/geo/resolveRunGeo";
-import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
-import {
-  describeGeoRunError,
+  describeGeoFetchFailure,
   describeGeoUnavailable,
 } from "@/client/features/geo/geoUnavailableMessage";
 import { useKeywordDifficultyOverview } from "@/client/features/keywords/hooks/useKeywordDifficultyOverview";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
-import type { ResolvedGeo, TargetArea } from "@/shared/geo/types";
-import { serpGeoBundleSchema } from "@/types/schemas/serp";
-import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
+import {
+  buildSerpGeoPayload,
+  captureSerpRunGeo,
+  describeGeoRunErrorForSerp,
+  formatSerpGeoLabel,
+  parseRestoredSerpRunGeo,
+  type SerpRunGeo,
+} from "@/client/features/serp/serpRunGeo";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -94,92 +93,6 @@ function difficultyTone(value: number | null | undefined): InsightTone {
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
-}
-
-/** The three geo needs this tab's own numbers can each independently
- *  answer -- volume/CPC can go genuinely local (Google Ads), difficulty
- *  stays Labs-only/national regardless (see resolveGeo.ts's NATIONAL_ONLY
- *  set), and the SERP results themselves have their own provider label.
- *  Bundled together because every render path below needs all three at
- *  once, and a bundle can't accidentally mix a captured value for one need
- *  with a live one for another. `parentCountryCode` (Defect 1 fix) is the
- *  single session location this WHOLE bundle was captured against -- see
- *  `toStoredMetricGeo`'s own doc comment for why one value covers every
- *  metric here -- carried so the bundle can be persisted for a later
- *  restore. */
-type SerpRunGeo = {
-  serp: ResolvedGeo;
-  volume: ResolvedGeo;
-  difficulty: ResolvedGeo;
-  parentCountryCode: number;
-};
-
-/**
- * Captured once at authorize()-time (form submit / "Run again"), never
- * recomputed from the live scope control afterward -- see resolveRunGeo.ts's
- * own header for why. This is the function that makes "the label describes
- * what was actually fetched" true: every render below reads its RETURN
- * VALUE (stashed in `runGeo` state), not a fresh call against whatever
- * `targetAreaScope.area` happens to be during that render.
- */
-function captureSerpRunGeo(
-  area: TargetArea,
-  sessionLocationCode: number,
-): SerpRunGeo {
-  return {
-    serp: resolveRunGeo("serp", area, sessionLocationCode),
-    volume: resolveRunGeo("keyword-volume", area, sessionLocationCode),
-    difficulty: resolveRunGeo("keyword-difficulty", area, sessionLocationCode),
-    parentCountryCode: sessionLocationCode,
-  };
-}
-
-/** The wire payload sent alongside a live request purely so the server can
- *  persist it -- this page never reads its own return value back for
- *  anything (see `parseRestoredSerpRunGeo` below for the restore side). */
-function buildSerpGeoPayload(geo: SerpRunGeo) {
-  return {
-    v: STORED_GEO_BUNDLE_VERSION,
-    serp: toStoredMetricGeo(geo.serp, geo.parentCountryCode),
-    volume: toStoredMetricGeo(geo.volume, geo.parentCountryCode),
-    difficulty: toStoredMetricGeo(geo.difficulty, geo.parentCountryCode),
-  } as const;
-}
-
-/**
- * For a restored/auto-restored run that never went through this session's
- * own authorize() call -- reads the geo bundle THAT RUN persisted (Defect 1
- * fix), never the live scope control (re-applying today's scope to
- * yesterday's data is the exact stale-label failure this task exists to
- * prevent) and never reconstructed from the bare stored `locationCode`
- * (which, for a local run, is itself a metro code -- see resolveRunGeo.ts's
- * own header on `resolveStoredGeo` for why that used to mislabel a DFW run
- * as an unnamed national one). A run recorded before this bundle existed
- * (or a corrupt one) returns null -- "geography unknown for this run" --
- * which every render below already treats the same as no geo at all.
- */
-function parseRestoredSerpRunGeo(params: unknown): SerpRunGeo | null {
-  const bundle = parseStoredGeo(serpGeoBundleSchema, params);
-  if (!bundle) return null;
-  return {
-    serp: bundle.serp,
-    volume: bundle.volume,
-    difficulty: bundle.difficulty,
-    parentCountryCode: bundle.serp.parentCountryCode,
-  };
-}
-
-/** Task 6 Step 4's "a provider rejects the location" case for this tab's
- *  main SERP call: when the run that just failed was scoped LOCAL, say so
- *  specifically instead of showing the tab's bare generic error text. No
- *  geo captured yet (a query can error before any run ever succeeded) falls
- *  back to the plain message unchanged. */
-function describeGeoRunErrorForSerp(
-  geo: SerpRunGeo | null,
-  fallbackMessage: string,
-): string {
-  if (!geo) return fallbackMessage;
-  return describeGeoRunError("this SERP", geo.serp, fallbackMessage);
 }
 
 /** The project's own DR, or null when there's no domain or Ahrefs hasn't
@@ -424,24 +337,35 @@ function SerpKeywordStatsTiles({
     difficultyValue == null &&
     (canBackfillDifficulty || difficultyUnavailableMessage != null);
 
+  // Defect 3 fix: the server attempted these enrichments and they threw --
+  // distinct from a tile simply reading "—" because there was nothing to
+  // show. Named messages, not a boolean render, so the user learns WHAT
+  // failed and for WHICH geography rather than guessing from a blank tile.
+  const keywordStatsFailureMessage = result.keywordStatsUnavailable
+    ? describeGeoFetchFailure("Keyword volume and CPC", geo.volume)
+    : null;
+  const domainTrafficFailureMessage = result.domainTrafficUnavailable
+    ? describeGeoFetchFailure("Domain traffic", geo.domainAnalytics)
+    : null;
+
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <InsightTile
           icon={BarChart3}
-          label={formatGeoMetricLabel("Volume", geo.volume)}
+          label={formatSerpGeoLabel("Volume", geo.volume)}
           value={formatCount(result.keywordStats?.searchVolume)}
           tone="primary"
         />
         <InsightTile
           icon={Gauge}
-          label={formatGeoMetricLabel("Difficulty", geo.difficulty)}
+          label={formatSerpGeoLabel("Difficulty", geo.difficulty)}
           value={difficultyValue ?? "—"}
           tone={difficultyTone(difficultyValue)}
         />
         <InsightTile
           icon={CircleDollarSign}
-          label={formatGeoMetricLabel("CPC", geo.volume)}
+          label={formatSerpGeoLabel("CPC", geo.volume)}
           value={
             result.keywordStats?.cpc != null
               ? `$${result.keywordStats.cpc.toFixed(2)}`
@@ -451,7 +375,7 @@ function SerpKeywordStatsTiles({
         />
         <InsightTile
           icon={ListOrdered}
-          label="Organic results"
+          label={formatSerpGeoLabel("Organic results", geo.serp)}
           value={result.totalOrganic}
           // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
           // when that's fewer than the total, the table below isn't the whole
@@ -479,6 +403,16 @@ function SerpKeywordStatsTiles({
             })
           }
         />
+      ) : null}
+      {keywordStatsFailureMessage ? (
+        <p className="text-xs text-base-content/50">
+          {keywordStatsFailureMessage}
+        </p>
+      ) : null}
+      {domainTrafficFailureMessage ? (
+        <p className="text-xs text-base-content/50">
+          {domainTrafficFailureMessage}
+        </p>
       ) : null}
     </div>
   );
@@ -593,10 +527,17 @@ export function SerpOverviewPage({
           keyword: runInput?.keyword ?? "",
           locationCode: runInput?.locationCode ?? activeLocation,
           languageCode: runInput?.languageCode,
+          // Defect 2 fix: the country-only pair for the Labs domain-traffic
+          // enrichment -- deliberately separate from locationCode/languageCode
+          // above, which stay whatever this run's SERP/keyword-stats geography
+          // resolved to (a metro code for a local run). See serpRunGeo.ts's
+          // own captureSerpRunGeo and SerpOverviewService.ts's
+          // resolveDomainAnalyticsLocation.
+          domainAnalyticsLocationCode: runGeo?.domainAnalytics.locationCode,
+          domainAnalyticsLanguageCode: runGeo?.domainAnalytics.languageCode,
           // Defect 1 fix: sent purely so the server can persist it in this
           // run's history -- never read back to decide anything about THIS
-          // request, which is already fully determined by the two fields
-          // above.
+          // request, which is already fully determined by the fields above.
           geo: runGeo ? buildSerpGeoPayload(runGeo) : undefined,
         },
       }),
@@ -831,6 +772,7 @@ export function SerpOverviewPage({
             result={result}
             ratings={ratings}
             ownDomainRating={ownDomainRating}
+            geo={effectiveGeo}
           />
 
           {result.paaQuestions.length > 0 ? (
@@ -870,10 +812,12 @@ function SerpResultsTable({
   result,
   ratings,
   ownDomainRating,
+  geo,
 }: {
   result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
   ratings: DomainRatings | null;
   ownDomainRating: number | null;
+  geo: SerpRunGeo;
 }) {
   // Ahrefs-style estimate: keyword volume spread over a standard
   // CTR-by-position curve. Client-side, no extra API spend.
@@ -895,7 +839,7 @@ function SerpResultsTable({
                   className="text-right"
                   title="Estimated monthly clicks for this result: search volume × a standard CTR-by-position curve"
                 >
-                  Est. clicks
+                  {formatSerpGeoLabel("Est. clicks", geo.volume)}
                 </th>
               ) : null}
               <th className="text-right">DR</th>
@@ -903,7 +847,7 @@ function SerpResultsTable({
                 className="text-right"
                 title="Estimated monthly organic traffic for the whole domain"
               >
-                Domain traffic
+                {formatSerpGeoLabel("Domain traffic", geo.domainAnalytics)}
               </th>
             </tr>
           </thead>
