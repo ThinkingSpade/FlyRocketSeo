@@ -1,7 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireProjectContext } from "@/serverFunctions/middleware";
-import { GscService } from "@/server/features/gsc/services/GscService";
+import {
+  GscNotConnectedError,
+  GscService,
+} from "@/server/features/gsc/services/GscService";
 import { resolveDateRange } from "@/server/features/gsc/searchAnalytics";
 import { previousPeriod } from "@/server/features/gsc/searchPerformanceReport";
 import { SEARCH_PERFORMANCE_RANGES } from "@/types/schemas/search-performance";
@@ -18,21 +21,34 @@ import { SEARCH_PERFORMANCE_RANGES } from "@/types/schemas/search-performance";
  *
  * Free and unmetered. Search Console has no per-call cost, which is why the
  * action list may load on mount while everything that costs money in this app
- * stays behind a click.
+ * stays behind a click. Three parallel calls sit well inside Workers' six
+ * simultaneous outgoing connections.
  *
- * BOTH period fetches use `dimensions: ["query"]`, and that symmetry is not
- * incidental -- it is the correctness condition for the whole feature. Google
- * aggregates impressions differently per dimension set: query-only counts one
- * impression per property appearance, while query x page counts one per URL
- * shown. Comparing a query x page sum against a query-only sum makes a
- * two-page query look like it doubled when nothing changed at all. Page
- * attribution comes from a SEPARATE query x page call whose impression counts
- * are never compared across periods.
+ * BOTH period fetches use `dimensions: ["query"]`, and that symmetry is the
+ * correctness condition for the whole feature. Google aggregates impressions
+ * per dimension set: query-only counts one impression per property appearance,
+ * query x page counts one per URL shown. Comparing a query x page sum against
+ * a query-only sum makes a two-page query look like it doubled when nothing
+ * changed. Page attribution comes from a SEPARATE query x page call whose
+ * impression counts are never compared across periods.
  */
 
-/** GSC's practical per-call ceiling for this shape; matches
- *  `STRIKING_DISTANCE_FETCH_LIMIT` in searchPerformance.ts. */
-const QUERY_ROW_LIMIT = 1000;
+/**
+ * Row limits.
+ *
+ * Search Console sorts rows by CLICKS and accepts up to 25,000 per call, so a
+ * low limit does not merely shorten the list -- it biases it, because this
+ * feature ranks by impressions. A high-impression, zero-click query is exactly
+ * the opportunity worth surfacing and exactly the row a clicks-ordered cut
+ * drops first. 5,000 covers any site this product realistically serves while
+ * staying well short of response sizes that would strain a Worker; when it is
+ * still not enough, `currentTruncated` says so rather than pretending.
+ *
+ * The query x page pull has much higher cardinality over the same query set,
+ * so its shortfall is handled separately: a missing page row is never treated
+ * as proof that no page ranks (see `page`'s own comment).
+ */
+const QUERY_ROW_LIMIT = 5000;
 
 const inputSchema = z.object({
   projectId: z.string().min(1),
@@ -44,18 +60,26 @@ export type QueryMomentumRow = {
   impressions: number;
   clicks: number;
   /**
-   * GSC's own average position for the query at property level -- the average
+   * GSC's average position for the query at property level -- the average
    * topmost position across the result sets the site appeared in. It names no
    * single URL, which is why `page` is derived separately and why the UI must
-   * not present this as "the position of that page".
+   * never present it as "that page ranks #N".
    */
   position: number;
-  /** The page taking the largest share of this query's impressions, or null.
-   *  Chosen by impressions, never by best position: the page that is actually
-   *  being seen is the one any fix should target. */
+  /**
+   * The page taking the largest share of this query's impressions, or null
+   * when the attribution call returned no row for it.
+   *
+   * NULL MEANS "NOT ATTRIBUTED", NEVER "NO PAGE EXISTS". A query in the
+   * current pull is by definition one the site was shown for, so a page of
+   * theirs ranks whether or not the higher-cardinality query x page call
+   * happened to include it. Consumers must not infer "write a new page" from
+   * a null here -- that was a real defect this comment exists to prevent.
+   */
   page: string | null;
-  /** Share of the query's impressions that `page` accounts for, 0..1. Below
-   *  ~0.6 the query genuinely fans out and no single page owns it. */
+  /** Share of the query's impressions `page` accounts for, 0..1, or null when
+   *  unattributed. Computed only from rows that came back, so it is a lower
+   *  bound on the true share. */
   pageShare: number | null;
 };
 
@@ -123,6 +147,11 @@ export type QueryMomentumResult =
       };
       current: QueryMomentumRow[];
       previous: Array<{ query: string; impressions: number }>;
+      /** The current pull may have been cut short, so the ranking is drawn
+       *  from a clicks-ordered sample rather than from every query. */
+      currentTruncated: boolean;
+      /** The prior pull may have been cut short, so a row can lack a baseline
+       *  for a reason other than genuinely having none. */
       previousTruncated: boolean;
     };
 
@@ -136,8 +165,9 @@ export const getQueryMomentum = createServerFn({ method: "POST" })
     const prev = previousPeriod(startDate, endDate);
     const projectId = context.projectId;
 
+    let current, previous, currentPages;
     try {
-      const [current, previous, currentPages] = await Promise.all([
+      [current, previous, currentPages] = await Promise.all([
         GscService.getPerformance({
           projectId,
           startDate,
@@ -161,51 +191,50 @@ export const getQueryMomentum = createServerFn({ method: "POST" })
           rowLimit: QUERY_ROW_LIMIT,
         }),
       ]);
-
-      const pages = dominantPageByQuery(currentPages.rows);
-      const currentRows: QueryMomentumRow[] = current.rows.flatMap((row) => {
-        const query = row.keys?.[0];
-        if (!query) return [];
-        const owner = pages.get(query);
-        return [
-          {
-            query,
-            impressions: row.impressions,
-            clicks: row.clicks,
-            position: row.position,
-            page: owner?.page ?? null,
-            pageShare: owner?.share ?? null,
-          },
-        ];
-      });
-
-      const previousImpressions = sumImpressionsByQuery(previous.rows);
-
-      return {
-        connected: true as const,
-        range: {
-          startDate,
-          endDate,
-          prevStartDate: prev.startDate,
-          prevEndDate: prev.endDate,
-        },
-        current: currentRows,
-        previous: [...previousImpressions.entries()].map(
-          ([query, impressions]) => ({ query, impressions }),
-        ),
-        /**
-         * Whether the prior pull was clipped. Necessary but NOT sufficient
-         * evidence that a missing query is genuinely new: Search Console sorts
-         * by clicks and does not guarantee every row even below the requested
-         * limit, and anonymised queries are withheld entirely. The momentum
-         * model therefore never claims novelty at all -- it reports "no
-         * baseline" -- and this flag only decides whether the UI explains why.
-         */
-        previousTruncated: previous.rows.length >= QUERY_ROW_LIMIT,
-      };
-    } catch {
-      // A missing or broken Search Console connection costs the user this
-      // list, never the tab. The comparison chart below it still works.
-      return { connected: false as const };
+    } catch (error) {
+      // ONLY a missing connection degrades to an empty card. Anything else --
+      // a Google 5xx, an expired token, a TypeError in our own mapping -- has
+      // to reach the error path so react-query can retry and the failure stays
+      // visible, instead of being disguised as "you haven't connected yet".
+      if (error instanceof GscNotConnectedError) return { connected: false };
+      throw error;
     }
+
+    const pages = dominantPageByQuery(currentPages.rows);
+    const currentRows: QueryMomentumRow[] = current.rows.flatMap((row) => {
+      const query = row.keys?.[0];
+      if (!query) return [];
+      const owner = pages.get(query);
+      return [
+        {
+          query,
+          impressions: row.impressions,
+          clicks: row.clicks,
+          position: row.position,
+          page: owner?.page ?? null,
+          pageShare: owner?.share ?? null,
+        },
+      ];
+    });
+
+    const previousImpressions = sumImpressionsByQuery(previous.rows);
+
+    return {
+      connected: true,
+      range: {
+        startDate,
+        endDate,
+        prevStartDate: prev.startDate,
+        prevEndDate: prev.endDate,
+      },
+      current: currentRows,
+      previous: [...previousImpressions.entries()].map(
+        ([query, impressions]) => ({ query, impressions }),
+      ),
+      // Reaching the limit means the response MAY have been clipped, not that
+      // it was -- a property with exactly this many queries trips it too. The
+      // UI wording hedges accordingly.
+      currentTruncated: current.rows.length >= QUERY_ROW_LIMIT,
+      previousTruncated: previous.rows.length >= QUERY_ROW_LIMIT,
+    };
   });

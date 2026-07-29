@@ -32,9 +32,16 @@ export type TrendingOpportunitiesState = {
   isLoading: boolean;
   /** Search Console isn't connected, or the read failed. */
   unavailable: boolean;
-  /** GSC clipped the prior period, so "new this period" can't be trusted and
-   *  no row claims it. Surfaced so the UI can say why. */
+  /** The prior pull may have been clipped, so some rows lack a baseline for a
+   *  reason other than genuinely having none. */
   priorPeriodTruncated: boolean;
+  /** The current pull may have been clipped. Search Console orders rows by
+   *  CLICKS while this list ranks by impressions, so a clipped pull is a
+   *  biased sample, not merely a short one. */
+  currentPeriodTruncated: boolean;
+  /** Connected and read successfully, but nothing met the bar. Distinct from
+   *  unavailable so the card can explain instead of vanishing. */
+  empty: boolean;
 };
 
 export function useTrendingOpportunities(
@@ -95,5 +102,7 @@ export function useTrendingOpportunities(
     isLoading: query.isLoading,
     unavailable: query.isError || query.data?.connected === false,
     priorPeriodTruncated: data?.previousTruncated ?? false,
+    currentPeriodTruncated: data?.currentTruncated ?? false,
+    empty: data !== null && opportunities.length === 0,
   };
 }

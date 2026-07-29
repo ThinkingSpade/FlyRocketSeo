@@ -10,13 +10,20 @@ import { momentumLabel, type QueryMomentum } from "./queryMomentum";
  *
  *   - WHERE THEY RANK decides the action. Ranking 6th and ranking 40th call
  *     for different work regardless of which way impressions are moving.
- *   - MOMENTUM decides the priority and supplies the reason. Rising
- *     impressions do not change what you should do to a page ranking 6th;
- *     they change whether it is worth doing this month.
+ *   - MOMENTUM decides the priority and supplies the reason.
  *
- * Only ONE momentum state overrides the action: an unreadable signal, where
- * recommending anything would be guessing. Falling impressions deliberately
- * do NOT suppress the action -- see `investigate` below.
+ * Two things override the action, because in both cases the position-based
+ * advice would be actively wrong rather than merely low-priority: an
+ * unreadable signal (`watch`), and impressions split across several of the
+ * client's own pages (`consolidate`).
+ *
+ * There is no "write a new page" action here, and its absence is deliberate.
+ * Every candidate comes from Search Console, and a query only appears there
+ * because the site was SHOWN for it -- so a page of theirs already ranks,
+ * always. Recommending a second page would invite them to compete with
+ * themselves. (An earlier version emitted exactly that whenever the page
+ * attribution call had been truncated, telling users "you have no page
+ * ranking for this yet" about pages that plainly ranked.)
  */
 
 export type OpportunityAction =
@@ -24,7 +31,7 @@ export type OpportunityAction =
   | "fix"
   | "expand"
   | "rebuild"
-  | "write-new"
+  | "consolidate"
   | "investigate"
   | "watch";
 
@@ -35,12 +42,13 @@ export type TrendingOpportunity = {
   reason: string;
   /**
    * GSC's average position for the query at property level. It names no
-   * single URL -- see `getQueryMomentum` -- so it may only be used to pick a
-   * band of work, never presented as "that page ranks #N".
+   * single URL, so it may only pick a band of work -- never be presented as
+   * "that page ranks #N".
    */
-  position: number | null;
+  position: number;
+  /** The page taking the largest known share of impressions, or null when the
+   *  attribution call did not cover this query. Null never means "no page". */
   page: string | null;
-  /** Share of impressions the named page accounts for, when known. */
   pageShare: number | null;
   momentum: QueryMomentum;
   score: number;
@@ -54,32 +62,21 @@ const FIX_MAX_POSITION = 10;
 const EXPAND_MAX_POSITION = 20;
 
 /**
- * Below this share, no single page owns the query.
+ * Below this share, no single page owns the query and the action changes.
  *
- * Matters because the action names a page. When impressions are spread across
- * several URLs, "fix this page" is the wrong instruction -- the real problem
- * is usually that they compete with each other, which is Cannibalization's
- * job, not this list's.
+ * It changes the ACTION rather than merely appending a warning, which is what
+ * an earlier version did: it rendered "Fix this page" and linked to Content
+ * Optimizer while its own reason told the user their pages were competing.
+ * Two contradictory instructions in one row is worse than either alone.
  */
 const DOMINANT_PAGE_SHARE = 0.6;
-
-/** Weight per momentum state, relative to steady impressions. */
-const MOMENTUM_WEIGHT: Record<QueryMomentum["direction"], number> = {
-  rising: 1.5,
-  "no-baseline": 1.1,
-  flat: 1,
-  // Not zero. A query losing impressions still has impressions, and a ranking
-  // loss on a big keyword can be the most valuable thing on the page.
-  falling: 0.9,
-  unknown: 0,
-};
 
 const ACTION_LABELS: Record<OpportunityAction, string> = {
   defend: "Defend it",
   fix: "Fix this page",
   expand: "Expand it",
   rebuild: "Rebuild this page",
-  "write-new": "Write a new page",
+  consolidate: "Sort out competing pages",
   investigate: "Find out what changed",
   watch: "Watch",
 };
@@ -88,65 +85,76 @@ export function opportunityActionLabel(action: OpportunityAction): string {
   return ACTION_LABELS[action];
 }
 
-/**
- * `hasPage` separates "ranks badly" from "does not rank at all".
- *
- * A query at position 40 DOES have a ranking page, so telling the user to
- * write another one invites two of their own pages competing for the same
- * query. That case gets `rebuild`; only a candidate with no ranking page at
- * all gets `write-new`.
- */
-function actionForPosition(
-  position: number | null,
-  hasPage: boolean,
-): OpportunityAction {
-  if (position === null || !hasPage) return "write-new";
+function actionForPosition(position: number): OpportunityAction {
   if (position <= DEFEND_MAX_POSITION) return "defend";
   if (position <= FIX_MAX_POSITION) return "fix";
   if (position <= EXPAND_MAX_POSITION) return "expand";
   return "rebuild";
 }
 
-function fanOutNote(pageShare: number | null): string {
-  return pageShare !== null && pageShare < DOMINANT_PAGE_SHARE
-    ? " Impressions are split across several of your pages, so check they aren't competing first."
-    : "";
-}
-
 function reasonFor(input: {
   action: OpportunityAction;
-  position: number | null;
-  pageShare: number | null;
+  position: number;
   momentum: QueryMomentum;
 }): string {
   const trend = momentumLabel(input.momentum).toLowerCase();
-  const rank = input.position === null ? null : Math.round(input.position);
-  const fanOut = fanOutNote(input.pageShare);
+  const rank = Math.round(input.position);
 
   switch (input.action) {
     case "watch":
       return "Too few impressions to tell whether this is going anywhere yet.";
+    case "consolidate":
+      return `Several of your own pages split this query's impressions, so no single one is strong. Decide which should own it before improving anything (${trend}).`;
     case "investigate":
-      return `You average #${rank} and ${trend} — a ranking or indexing loss looks exactly like this, so find the cause before writing anything.${fanOut}`;
+      return `You average #${rank} and ${trend} — a ranking or indexing loss looks exactly like this, so find the cause before writing anything.`;
     case "defend":
-      return `You average #${rank} and ${trend} — refresh it before someone takes the spot.${fanOut}`;
+      return `You average #${rank} and ${trend} — refresh it before someone takes the spot.`;
     case "fix":
-      return `You average #${rank}, one page-quality step from the top 3, and ${trend}.${fanOut}`;
+      return `You average #${rank}, one page-quality step from the top 3, and ${trend}.`;
     case "expand":
-      // Parenthesised rather than a second sentence: `trend` is lowercased for
-      // mid-sentence use, so starting a sentence with it reads as a typo.
-      return `You average #${rank} — that needs real added depth, not a tweak (${trend}).${fanOut}`;
+      return `You average #${rank} — that needs real added depth, not a tweak (${trend}).`;
     case "rebuild":
-      return `You average #${rank}, too far back for a tweak to win. Rebuild the page you already have rather than adding a second one.${fanOut}`;
-    case "write-new":
-      return "You have no page ranking for this yet.";
+      return `You average #${rank}, too far back for a tweak to win. Rebuild the page that ranks — or give this its own page if that one is really about something else (${trend}).`;
   }
+}
+
+/**
+ * Priority weight.
+ *
+ * Two properties this has to have, both learned from getting it wrong:
+ *
+ *   1. It ranks by what is AT STAKE, which for a declining query is what it
+ *      used to earn, not what is left. A query that fell from 10,000
+ *      impressions to 1,000 matters far more than one that rose from 467 to
+ *      700; scoring on current impressions alone put the smaller one first.
+ *   2. It is CONTINUOUS in the percentage. A categorical multiplier meant one
+ *      extra impression at the dead-band edge (120 vs 121 against a baseline
+ *      of 100) moved the score by 51%, so the list reshuffled on noise.
+ *
+ * The modifier is clamped because momentum should tilt the order, never
+ * dominate it -- a huge percentage on a tiny keyword must not outrank a real
+ * one.
+ */
+const MOMENTUM_TILT_MAX = 0.5;
+const MOMENTUM_TILT_MIN = -0.25;
+
+function scoreFor(momentum: QueryMomentum): number {
+  if (momentum.direction === "unknown") return 0;
+
+  const atStake = Math.max(momentum.impressions, momentum.prevImpressions ?? 0);
+  if (momentum.percent === null) return atStake;
+
+  const tilt = Math.min(
+    MOMENTUM_TILT_MAX,
+    Math.max(MOMENTUM_TILT_MIN, momentum.percent / 200),
+  );
+  return atStake * (1 + tilt);
 }
 
 export type OpportunityCandidate = {
   keyword: string;
   momentum: QueryMomentum;
-  position: number | null;
+  position: number;
   page: string | null;
   pageShare: number | null;
 };
@@ -155,14 +163,14 @@ export type OpportunityCandidate = {
  * Ranks candidates into a to-do list.
  *
  * A wrong-customer keyword is DROPPED, not demoted: every row here is an
- * instruction to go do work, and no version of "write this page" is correct
+ * instruction to go do work, and no version of "improve this page" is correct
  * for somebody else's customer. That differs from the Keyword Research table,
  * which demotes rather than hides because the user is browsing there rather
  * than being told what to do.
  *
- * The guarantee is only as good as the profile: with none saved, the fit map
- * is empty and nothing is filtered. That is the honest failure mode -- an
- * unfiltered list rather than a falsely-confident one.
+ * The guarantee is only as good as the profile: with none saved the fit map is
+ * empty and nothing is filtered. That is the honest failure mode -- an
+ * unfiltered list rather than a falsely confident one.
  */
 export function buildTrendingOpportunities(input: {
   candidates: readonly OpportunityCandidate[];
@@ -176,13 +184,17 @@ export function buildTrendingOpportunities(input: {
     }
 
     const { direction } = candidate.momentum;
-    const hasPage = candidate.page !== null;
+    const splitAcrossPages =
+      candidate.pageShare !== null && candidate.pageShare < DOMINANT_PAGE_SHARE;
+
     const action: OpportunityAction =
       direction === "unknown"
         ? "watch"
-        : direction === "falling" && hasPage
-          ? "investigate"
-          : actionForPosition(candidate.position, hasPage);
+        : splitAcrossPages
+          ? "consolidate"
+          : direction === "falling"
+            ? "investigate"
+            : actionForPosition(candidate.position);
 
     out.push({
       keyword: candidate.keyword,
@@ -190,14 +202,13 @@ export function buildTrendingOpportunities(input: {
       reason: reasonFor({
         action,
         position: candidate.position,
-        pageShare: candidate.pageShare,
         momentum: candidate.momentum,
       }),
       position: candidate.position,
       page: candidate.page,
       pageShare: candidate.pageShare,
       momentum: candidate.momentum,
-      score: candidate.momentum.impressions * MOMENTUM_WEIGHT[direction],
+      score: scoreFor(candidate.momentum),
     });
   }
 
