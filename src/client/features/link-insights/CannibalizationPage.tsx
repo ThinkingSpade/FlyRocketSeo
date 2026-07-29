@@ -89,11 +89,27 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       {data?.connected && rows.length === 0 ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
-            <p className="font-medium">No cannibalization detected</p>
-            <p className="max-w-md text-sm text-base-content/60">
-              No query currently has two of your pages splitting meaningful
-              impressions — that&rsquo;s a healthy site.
-            </p>
+            {data.truncated ? (
+              <>
+                <p className="font-medium">
+                  None found in the queries we could check
+                </p>
+                <p className="max-w-md text-sm text-base-content/60">
+                  Search Console returned {data.rowsExamined.toLocaleString()}{" "}
+                  query-and-page rows, ordered by clicks, and capped the pull
+                  there. No overlap among those — but this isn&rsquo;t your
+                  whole site, so it isn&rsquo;t an all-clear.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">No cannibalization detected</p>
+                <p className="max-w-md text-sm text-base-content/60">
+                  No query currently has two of your pages splitting meaningful
+                  impressions — that&rsquo;s a healthy site.
+                </p>
+              </>
+            )}
           </div>
         </div>
       ) : null}

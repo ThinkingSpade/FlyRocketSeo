@@ -61,6 +61,12 @@ export const getLinkInsights = createServerFn({ method: "POST" })
         range: { startDate, endDate },
         opportunities: buildLinkOpportunities(result.rows),
         cannibalization: buildCannibalizationRows(result.rows),
+        // Both lists are conclusions about what ISN'T there, drawn from a
+        // clicks-ordered pull that Search Console does not promise is complete.
+        // Without this the UI could not tell "your site is fine" from "we
+        // didn't look past row 1000", and it said the former.
+        rowsExamined: result.rows.length,
+        truncated: result.rows.length >= (result.request.rowLimit ?? 0),
       };
     } catch (error) {
       if (

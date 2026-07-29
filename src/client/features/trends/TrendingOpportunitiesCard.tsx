@@ -50,14 +50,28 @@ export function TrendingOpportunitiesCard({ projectId }: Props) {
 
   // Connected, read fine, nothing to say. Explaining beats vanishing: a card
   // that disappears reads as a broken feature.
+  //
+  // Two different empty states, because "you have none" and "none in what we
+  // could read" are different facts. Search Console returns rows ordered by
+  // clicks and does not promise all of them, so when the pull hit our limit we
+  // have not established absence and must not claim it.
   if (empty || actionable.length === 0) {
     return (
       <Shell>
-        <p className="text-sm text-base-content/60">
-          Search Console has no queries with enough impressions yet to rank.
-          Once a keyword reaches around ten impressions in a period, it shows up
-          here with something to do about it.
-        </p>
+        {currentPeriodTruncated ? (
+          <p className="text-sm text-base-content/60">
+            Nothing to act on among the queries Search Console returned. It
+            returns them ordered by clicks and caps how many come back at once,
+            so this is not the whole picture — a high-impression keyword with no
+            clicks yet could be sitting outside it.
+          </p>
+        ) : (
+          <p className="text-sm text-base-content/60">
+            Search Console has no queries with enough impressions yet to rank.
+            Once a keyword reaches around ten impressions in a period, it shows
+            up here with something to do about it.
+          </p>
+        )}
       </Shell>
     );
   }
