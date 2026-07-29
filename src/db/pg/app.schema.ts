@@ -610,12 +610,18 @@ export const geoLocations = pgTable(
     /** The metro this place rolls up into, when it has one. */
     parentMetroCode: integer("parent_metro_code"),
     countryCode: integer("country_code").notNull(),
-    /** Drives search ranking so "dal" surfaces Dallas before Dalton. */
+    /** NEVER populated: DataForSEO's `google_ads/locations` endpoint — the
+     * only source anything in `src/server/features/geo` seeds this table
+     * from — has no such field on any row (see `geoLocationSeedMapping.ts`'s
+     * own `GeoLocationRow` comment). Column kept rather than dropped so a
+     * future enrichment step has somewhere to write one; nothing today reads
+     * it (`GeoLocationRepository.search` orders by type-priority + name
+     * instead — see `searchOrdering.ts` for why). */
     population: integer("population"),
   },
   (table) => [
-    // The picker searches by name prefix within a country, ordered by
-    // population. Without this the search is a full scan on every keystroke.
+    // The picker searches by name prefix within a country. Without this the
+    // search is a full scan on every keystroke.
     index("geo_locations_country_name_idx").on(table.countryCode, table.name),
     index("geo_locations_type_idx").on(table.type),
   ],

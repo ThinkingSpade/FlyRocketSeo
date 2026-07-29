@@ -10,10 +10,11 @@
  * — the grep that proves this boundary greps for their names, and a match
  * inside a comment describing the rule would be a confusing false positive.)
  */
-import { and, count as countFn, eq, sql } from "drizzle-orm";
+import { and, count as countFn, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { geoLocations } from "@/db/schema";
-import { buildNamePrefixPattern } from "./likePattern";
+import { buildNamePrefixWhere } from "./likePattern";
+import { buildTypePriorityOrder } from "./searchOrdering";
 
 type GeoLocationSearchResult = {
   code: number;
@@ -36,25 +37,22 @@ type SearchInput = {
 };
 
 /**
- * Prefix search over `name`, optionally scoped to a country, ordered by
- * population (bigger places first) with unpopulated rows sorting last, then
- * alphabetically — so "dal" surfaces Dallas before the much-smaller Dalton.
- * `ESCAPE '\'` pairs with buildNamePrefixPattern's own escaping of `%`/`_`/`\`
- * so a place name containing one of those characters can't be mismatched
- * against as a wildcard.
+ * Prefix search over `name`, optionally scoped to a country, ordered by type
+ * priority (a "DMA Region"/"City" row before a "County"/"Postal Code" one)
+ * then alphabetically — so "dal" surfaces the Dallas-Ft. Worth metro and
+ * Dallas itself before "Dallas County, Alabama". See `buildTypePriorityOrder`
+ * (searchOrdering.ts) for why this replaced a `population`-based ordering
+ * that shipped as a complete no-op (that column is never populated).
  *
- * Wrapping `name` in `lower(...)` and lowercasing the query in JS before
- * building the pattern, rather than bare `name LIKE pattern`, is required for
- * dialect parity: SQLite's LIKE is ASCII case-insensitive by default, but
- * PostgreSQL's is case-SENSITIVE, so a seeded Postgres row "Dallas" would
- * match `query: "dal"` on D1 and silently return zero rows on Postgres.
- * Matches KeywordResearchRepository.buildSavedKeywordWhere's identical
- * `lower(column) like <pre-lowercased literal>` convention, used there for
- * the exact same cross-dialect reason, rather than relying on collation.
+ * The name-matching condition itself — including its ESCAPE clause, which
+ * shipped broken in production and is why this search returned zero results
+ * for every query — lives in `buildNamePrefixWhere` (likePattern.ts), kept
+ * there specifically so it can be tested against a real SQLite engine
+ * without this file's own `@/db` import getting in the way (see that
+ * function's doc comment).
  */
 async function search(input: SearchInput): Promise<GeoLocationSearchResult[]> {
-  const pattern = buildNamePrefixPattern(input.query.toLocaleLowerCase());
-  const nameMatches = sql`lower(${geoLocations.name}) LIKE ${pattern} ESCAPE '\'`;
+  const nameMatches = buildNamePrefixWhere(geoLocations.name, input.query);
   const where =
     input.countryCode === undefined
       ? nameMatches
@@ -71,7 +69,7 @@ async function search(input: SearchInput): Promise<GeoLocationSearchResult[]> {
     })
     .from(geoLocations)
     .where(where)
-    .orderBy(sql`${geoLocations.population} DESC NULLS LAST`, geoLocations.name)
+    .orderBy(buildTypePriorityOrder(geoLocations.type), geoLocations.name)
     .limit(input.limit);
 }
 
