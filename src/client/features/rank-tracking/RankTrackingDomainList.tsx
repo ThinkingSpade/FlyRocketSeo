@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
-import { LOCATIONS } from "@/client/features/keywords/locations";
 import {
   AlertTriangle,
   Archive,
@@ -25,6 +24,11 @@ import {
   getDomainListFilterOptions,
   type DomainListFilters,
 } from "./RankTrackingFilters";
+import { getGeoLocationsByCodes } from "@/serverFunctions/geo";
+import {
+  locationCodesNeedingLookup,
+  resolveRankTrackingLocationLabels,
+} from "./rankTrackingLocationLabel";
 
 type ConfigSummary = Awaited<
   ReturnType<typeof getRankTrackingConfigSummaries>
@@ -63,6 +67,45 @@ export function RankTrackingDomainList({
     [allSummaries],
   );
   const activeFilterCount = countActiveDomainListFilters(filters);
+
+  // One batched read for the whole list rather than one per row: this list is
+  // unpaginated and a project may hold up to MAX_CONFIGS_PER_PROJECT configs,
+  // so per-row resolution would fan out to that many POSTs on a single render.
+  // Keyed off ALL summaries, not the filtered subset, so changing a filter
+  // re-labels from cache instead of issuing a new query. Free D1 read, and
+  // skipped entirely for an all-country project (the common case).
+  const codesNeedingLookup = useMemo(
+    () => locationCodesNeedingLookup(allSummaries.map((s) => s.locationCode)),
+    [allSummaries],
+  );
+  const { data: geoRows, isError: geoFailed } = useQuery({
+    queryKey: ["geo-locations-by-codes", codesNeedingLookup],
+    queryFn: () =>
+      getGeoLocationsByCodes({ data: { codes: codesNeedingLookup } }),
+    enabled: codesNeedingLookup.length > 0,
+  });
+  // An empty array means "resolved, and these are all the rows there are".
+  // That is the right input both when nothing needed looking up (every code is
+  // a country) and when the read FAILED with nothing cached: a failure then
+  // degrades to "unrecognised" exactly as a confirmed-absent row does, rather
+  // than leaving the bare-code placeholder standing as the final answer
+  // forever -- see UNRECOGNISED_GEO_CODE_LABEL in rankTrackingConfigArea.
+  //
+  // Rows already retained from an earlier success WIN over that fallback,
+  // though. TanStack Query keeps `data` and sets isError when a background
+  // refetch of stale data fails, and discarding it there would flip a list of
+  // real metro names to "Unrecognised location" while the detail header (whose
+  // useConfigAreaLookup checks data before isError) still showed them. Built
+  // inside the memo so the empty-array literal isn't a fresh dep every render.
+  const locationLabels = useMemo(() => {
+    let rows = geoRows;
+    if (codesNeedingLookup.length === 0) rows = [];
+    else if (rows === undefined && geoFailed) rows = [];
+    return resolveRankTrackingLocationLabels(
+      allSummaries.map((s) => s.locationCode),
+      rows,
+    );
+  }, [allSummaries, codesNeedingLookup, geoFailed, geoRows]);
 
   const archiveMutation = useMutation({
     mutationFn: (configId: string) =>
@@ -144,6 +187,10 @@ export function RankTrackingDomainList({
                 key={summary.id}
                 projectId={projectId}
                 summary={summary}
+                locationLabel={
+                  locationLabels.get(summary.locationCode) ??
+                  String(summary.locationCode)
+                }
                 onArchive={() => setArchiveTarget(summary)}
               />
             ))
@@ -188,10 +235,12 @@ export function RankTrackingDomainList({
 function DomainRow({
   projectId,
   summary,
+  locationLabel,
   onArchive,
 }: {
   projectId: string;
   summary: ConfigSummary;
+  locationLabel: string;
   onArchive: () => void;
 }) {
   return (
@@ -205,8 +254,7 @@ function DomainRow({
       <div className="min-w-0 flex-1 pointer-events-none">
         <p className="font-medium truncate">{summary.domain}</p>
         <p className="text-xs text-base-content/60">
-          {LOCATIONS[summary.locationCode] ?? "US"} &middot;{" "}
-          {devicesLabel(summary.devices)} &middot;{" "}
+          {locationLabel} &middot; {devicesLabel(summary.devices)} &middot;{" "}
           {scheduleLabel(summary.scheduleInterval)}
           {summary.lastRunCompletedAt && (
             <>
