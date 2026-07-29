@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { GscAccessNotice } from "@/client/features/gsc/GscAccessNotice";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
@@ -32,6 +32,10 @@ export function SearchPerformanceCard({ projectId }: { projectId: string }) {
       }),
   });
   const report = reportQuery.data;
+  // A bound-but-broken property reports why; only a genuinely unbound project
+  // gets the first-run prompt.
+  const accessFailureReason =
+    report && !report.connected ? report.reason : "not_connected";
 
   return (
     <DashboardCard
@@ -45,13 +49,10 @@ export function SearchPerformanceCard({ projectId }: { projectId: string }) {
         <CardTilesSkeleton />
       ) : !report?.connected ? (
         <CardEmpty>
-          <p>Connect Google Search Console to see clicks and impressions.</p>
-          <Link
-            {...searchPerformanceLink}
-            className="btn btn-primary btn-sm mt-3"
-          >
-            Connect Search Console
-          </Link>
+          <GscAccessNotice
+            reason={accessFailureReason}
+            connectLink={searchPerformanceLink}
+          />
         </CardEmpty>
       ) : (
         (() => {

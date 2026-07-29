@@ -45,7 +45,11 @@ export function useSeedSuggestions(projectId: string): SeedSuggestion[] {
     staleTime: 5 * 60_000,
   });
 
-  const fromGsc = (gscQuery.data?.queryTotals ?? [])
+  // Only the connected variant of the report carries rows.
+  const gscReport = gscQuery.data;
+  const fromGsc = (
+    gscReport && "queryTotals" in gscReport ? gscReport.queryTotals : []
+  )
     .toSorted((a, b) => b.impressions - a.impressions)
     .slice(0, 5)
     .map((row) => ({
