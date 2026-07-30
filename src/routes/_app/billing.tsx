@@ -76,7 +76,7 @@ function BillingPage() {
   if (billingRouteState === "error") {
     return (
       <div className="mx-auto w-full max-w-2xl space-y-4 p-4 py-10 md:p-6 md:py-12">
-        <h1 className="text-xl font-semibold">Billing unavailable</h1>
+        <h1 className="text-2xl font-semibold">Billing unavailable</h1>
         <p className="text-sm text-base-content/70">
           {getStandardErrorMessage(
             customerQuery.error,
@@ -122,7 +122,7 @@ function BillingPage() {
 
   return (
     <div className="mx-auto w-full max-w-2xl space-y-5 p-4 py-10 md:p-6 md:py-12">
-      <h1 className="text-xl font-semibold">Billing</h1>
+      <h1 className="text-2xl font-semibold">Billing</h1>
 
       <div className="grid gap-5 md:grid-cols-2">
         {/* Subscription card */}

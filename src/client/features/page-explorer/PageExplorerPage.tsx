@@ -29,6 +29,7 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -142,10 +143,10 @@ export function PageExplorerPage({
   const snapshot = snapshotQuery.data ?? null;
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <FileSearch className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <FileSearch className="size-6" />
           Page Explorer
         </h1>
         <p className="text-sm text-base-content/60">
@@ -305,6 +306,6 @@ export function PageExplorerPage({
       {result ? (
         <PageExplorerResults result={result} snapshot={snapshot} />
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }

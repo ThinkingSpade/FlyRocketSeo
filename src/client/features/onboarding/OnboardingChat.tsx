@@ -89,7 +89,9 @@ function SiteForm({ projectId }: { projectId: string }) {
             alt="FlyRocketSEO"
             className="mx-auto size-10 rounded-lg"
           />
-          <h1 className="text-xl font-semibold">Tell us about your website.</h1>
+          <h1 className="text-2xl font-semibold">
+            Tell us about your website.
+          </h1>
           <p className="text-sm text-base-content/60">
             If you have multiple websites, you can set that up later.
           </p>

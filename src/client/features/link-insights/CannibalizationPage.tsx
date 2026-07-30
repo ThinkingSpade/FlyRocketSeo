@@ -12,6 +12,7 @@ import {
 } from "@/client/features/link-insights/useLinkInsights";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { resolveQueryState } from "@/client/components/state/queryState";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 const SEVERITY_BADGE: Record<
   CannibalizationSeverity,
@@ -43,10 +44,10 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4">
+    <AppPageShell>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Split className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <Split className="size-6" />
           Cannibalization
         </h1>
         {/* States what the data shows, then what it might mean — in that order.
@@ -213,6 +214,6 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
           {data.range.endDate}. Free — uses your own GSC data.
         </p>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }

@@ -28,6 +28,7 @@ import { GbpAuditCard } from "./GbpAuditCard";
 import { GbpWriteSection } from "./GbpWriteSection";
 import { LocalReviewsSection } from "./LocalReviewsSection";
 import { CitationTrackerSection } from "@/client/features/citations/CitationTrackerSection";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -137,10 +138,10 @@ export function LocalSeoPage({
       : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <MapPin className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <MapPin className="size-6" />
           Local SEO
         </h1>
         <p className="text-sm text-base-content/60">
@@ -268,7 +269,7 @@ export function LocalSeoPage({
           </>
         )
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }
 

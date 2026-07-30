@@ -37,6 +37,7 @@ import {
 } from "@/client/features/insights/handoffStore";
 import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type Props = Omit<KeywordResearchControllerInput, "onFormSubmit">;
 type KeywordSearchTab = SearchTab & { input: KeywordSearchTabInput };
@@ -292,73 +293,71 @@ export function KeywordResearchPage(input: Props) {
   }, [keywordIsDirty, currentKeyword, prefill.value, controller.controlsForm]);
 
   return (
-    <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
-      <div className="mx-auto flex max-w-7xl flex-col gap-5">
-        <div>
-          <h1 className="text-2xl font-semibold">Keyword Research</h1>
-          <p className="text-sm text-base-content/70">
-            Discover keyword ideas, search demand, and ranking opportunities.
-          </p>
-        </div>
-
-        <TargetAreaBanner projectId={projectId} />
-
-        <ProjectProfileCard projectId={projectId} />
-
-        <KeywordResearchSearchBar
-          controller={controller}
-          suggestions={suggestions}
-          scope={targetAreaScope}
-          projectCountryCode={market.locationCode}
-          projectId={projectId}
-        />
-
-        <RestoreRail
-          projectId={projectId}
-          feature={RUN_FEATURES.keywordResearch}
-          selectedRunId={controller.selectedRunId}
-          onSelectRun={controller.setSelectedRunId}
-          idle={!controller.hasSearched || controller.restoredRun != null}
-          restoredRun={controller.restoredRun}
-          onRunAgain={() => {
-            if (!controller.restoredRun) return;
-            controller.controlsForm.setFieldValue(
-              "keyword",
-              controller.restoredRun.label,
-            );
-            void controller.controlsForm.handleSubmit();
-          }}
-        />
-
-        {controller.hasSearched ? (
-          <div className="flex flex-col gap-2">
-            <button
-              type="button"
-              data-testid="keyword-research-recent-searches"
-              className="btn btn-ghost btn-sm w-fit gap-2 px-0 text-base-content/70 hover:bg-transparent"
-              onClick={showRecentSearches}
-            >
-              <ArrowLeft className="size-4" />
-              Recent searches
-            </button>
-            <SearchTabStrip
-              projectId={projectId}
-              tabs={searchTabs.tabs}
-              activeTabId={searchTabs.activeTabId}
-              onSelect={searchTabs.selectTab}
-              onClose={searchTabs.closeTab}
-              onViewed={searchTabs.markTabViewed}
-            />
-          </div>
-        ) : null}
-        <KeywordResearchContent
-          controller={controller}
-          projectId={input.projectId}
-          ownDomainRating={ownDomainRating}
-        />
-        <KeywordSaveDialog controller={controller} />
+    <AppPageShell>
+      <div>
+        <h1 className="text-2xl font-semibold">Keyword Research</h1>
+        <p className="text-sm text-base-content/70">
+          Discover keyword ideas, search demand, and ranking opportunities.
+        </p>
       </div>
-    </div>
+
+      <TargetAreaBanner projectId={projectId} />
+
+      <ProjectProfileCard projectId={projectId} />
+
+      <KeywordResearchSearchBar
+        controller={controller}
+        suggestions={suggestions}
+        scope={targetAreaScope}
+        projectCountryCode={market.locationCode}
+        projectId={projectId}
+      />
+
+      <RestoreRail
+        projectId={projectId}
+        feature={RUN_FEATURES.keywordResearch}
+        selectedRunId={controller.selectedRunId}
+        onSelectRun={controller.setSelectedRunId}
+        idle={!controller.hasSearched || controller.restoredRun != null}
+        restoredRun={controller.restoredRun}
+        onRunAgain={() => {
+          if (!controller.restoredRun) return;
+          controller.controlsForm.setFieldValue(
+            "keyword",
+            controller.restoredRun.label,
+          );
+          void controller.controlsForm.handleSubmit();
+        }}
+      />
+
+      {controller.hasSearched ? (
+        <div className="flex flex-col gap-2">
+          <button
+            type="button"
+            data-testid="keyword-research-recent-searches"
+            className="btn btn-ghost btn-sm w-fit gap-2 px-0 text-base-content/70 hover:bg-transparent"
+            onClick={showRecentSearches}
+          >
+            <ArrowLeft className="size-4" />
+            Recent searches
+          </button>
+          <SearchTabStrip
+            projectId={projectId}
+            tabs={searchTabs.tabs}
+            activeTabId={searchTabs.activeTabId}
+            onSelect={searchTabs.selectTab}
+            onClose={searchTabs.closeTab}
+            onViewed={searchTabs.markTabViewed}
+          />
+        </div>
+      ) : null}
+      <KeywordResearchContent
+        controller={controller}
+        projectId={input.projectId}
+        ownDomainRating={ownDomainRating}
+      />
+      <KeywordSaveDialog controller={controller} />
+    </AppPageShell>
   );
 }
 

@@ -18,8 +18,8 @@ export function ReportToolbar({
   return (
     <div className="report-no-print mb-4 flex flex-wrap items-end justify-between gap-3">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <FileText className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <FileText className="size-6" />
           Client Report
         </h1>
         <p className="text-sm text-base-content/60">

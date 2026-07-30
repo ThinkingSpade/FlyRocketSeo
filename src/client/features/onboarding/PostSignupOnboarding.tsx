@@ -39,7 +39,7 @@ export function PostSignupOnboarding({
         <p className="text-xs font-medium uppercase tracking-wide text-base-content/50">
           Step {step + 1} of {ONBOARDING_LAST_STEP + 1}
         </p>
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-2xl font-semibold">
           {firstName
             ? `Welcome to FlyRocketSEO, ${firstName}!`
             : "Welcome to FlyRocketSEO!"}

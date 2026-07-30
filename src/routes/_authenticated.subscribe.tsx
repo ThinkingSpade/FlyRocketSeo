@@ -123,7 +123,7 @@ function SubscribePage() {
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-2xl font-semibold">
           Finalizing your subscription&hellip;
         </h1>
         <span className="loading loading-spinner loading-md" />
@@ -150,7 +150,7 @@ function SubscribePage() {
             alt="FlyRocketSEO"
             className="mx-auto size-10 rounded-lg"
           />
-          <h1 className="text-xl font-semibold">Billing unavailable</h1>
+          <h1 className="text-2xl font-semibold">Billing unavailable</h1>
         </div>
 
         <p className="text-sm text-center text-base-content/70">
@@ -209,7 +209,7 @@ function SubscribePage() {
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
-        <h1 className="text-xl font-semibold">
+        <h1 className="text-2xl font-semibold">
           {isUpgradeFlow
             ? "Upgrade your plan"
             : firstName

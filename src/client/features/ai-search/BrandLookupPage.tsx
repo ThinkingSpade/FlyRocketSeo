@@ -26,6 +26,7 @@ import {
 } from "@/types/schemas/ai-search";
 import { detectTarget } from "@/shared/targetDetection";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type Props = {
   projectId: string;
@@ -208,82 +209,80 @@ function BrandLookupPageInner({
   const resultData = authorizedLookup ? lookupQuery.data : undefined;
 
   return (
-    <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold">AI Visibility</h1>
-          <p className="text-sm text-base-content/70">
-            See how AI search cites any brand name or domain.
-          </p>
-        </div>
-
-        {planGate.isFreePlan ? (
-          <AiSearchPaidPlanGate
-            feature="AI Visibility"
-            description="See how ChatGPT and Google AI Overview cite any brand or domain — total mentions, sample prompts where it appears, and the pages cited alongside it."
-            bullets={BRAND_LOOKUP_BULLETS}
-          />
-        ) : (
-          <>
-            <BrandLookupSearchCard
-              query={query}
-              onQueryChange={(next) => {
-                setQuery(next);
-                if (validationError) setValidationError(null);
-              }}
-              competitors={competitorsInput}
-              onCompetitorsChange={(next) => {
-                setCompetitorsInput(next);
-                if (validationError) setValidationError(null);
-              }}
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-              validationError={validationError}
-            />
-
-            {errorMessage ? (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
-              >
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
-
-            {isLoading ? (
-              <AiSearchLoadingState />
-            ) : resultData ? (
-              <>
-                <div>
-                  <Link
-                    from="/p/$projectId/brand-lookup"
-                    to="/p/$projectId/brand-lookup"
-                    params={{ projectId }}
-                    search={{ q: undefined, c: undefined }}
-                    replace
-                    className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
-                  >
-                    <ArrowLeft className="size-4" />
-                    Recent searches
-                  </Link>
-                </div>
-                <BrandLookupResults result={resultData} projectId={projectId} />
-              </>
-            ) : !errorMessage ? (
-              <>
-                <ProjectVisibilityPanel projectId={projectId} />
-                <BrandLookupHistorySection
-                  projectId={projectId}
-                  history={history}
-                  historyLoaded={historyLoaded}
-                  onRemoveHistoryItem={removeHistoryItem}
-                />
-              </>
-            ) : null}
-          </>
-        )}
+    <AppPageShell>
+      <div>
+        <h1 className="text-2xl font-semibold">AI Visibility</h1>
+        <p className="text-sm text-base-content/70">
+          See how AI search cites any brand name or domain.
+        </p>
       </div>
-    </div>
+
+      {planGate.isFreePlan ? (
+        <AiSearchPaidPlanGate
+          feature="AI Visibility"
+          description="See how ChatGPT and Google AI Overview cite any brand or domain — total mentions, sample prompts where it appears, and the pages cited alongside it."
+          bullets={BRAND_LOOKUP_BULLETS}
+        />
+      ) : (
+        <>
+          <BrandLookupSearchCard
+            query={query}
+            onQueryChange={(next) => {
+              setQuery(next);
+              if (validationError) setValidationError(null);
+            }}
+            competitors={competitorsInput}
+            onCompetitorsChange={(next) => {
+              setCompetitorsInput(next);
+              if (validationError) setValidationError(null);
+            }}
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+            validationError={validationError}
+          />
+
+          {errorMessage ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          ) : null}
+
+          {isLoading ? (
+            <AiSearchLoadingState />
+          ) : resultData ? (
+            <>
+              <div>
+                <Link
+                  from="/p/$projectId/brand-lookup"
+                  to="/p/$projectId/brand-lookup"
+                  params={{ projectId }}
+                  search={{ q: undefined, c: undefined }}
+                  replace
+                  className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+                >
+                  <ArrowLeft className="size-4" />
+                  Recent searches
+                </Link>
+              </div>
+              <BrandLookupResults result={resultData} projectId={projectId} />
+            </>
+          ) : !errorMessage ? (
+            <>
+              <ProjectVisibilityPanel projectId={projectId} />
+              <BrandLookupHistorySection
+                projectId={projectId}
+                history={history}
+                historyLoaded={historyLoaded}
+                onRemoveHistoryItem={removeHistoryItem}
+              />
+            </>
+          ) : null}
+        </>
+      )}
+    </AppPageShell>
   );
 }

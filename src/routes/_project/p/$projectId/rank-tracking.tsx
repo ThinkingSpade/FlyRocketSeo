@@ -3,6 +3,7 @@ import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 export const Route = createFileRoute("/_project/p/$projectId/rank-tracking")({
   component: RankTrackingLayout,
@@ -30,27 +31,25 @@ function RankTrackingLayout() {
   const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
 
   return (
-    <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h1 className="text-2xl font-semibold">Rank Tracking</h1>
-            <p className="text-sm text-base-content/70">
-              Track keyword positions across domains
-            </p>
-          </div>
-          <ScopeControl
-            area={targetAreaScope.area}
-            onChange={targetAreaScope.onChange}
-            hasConfirmedArea={targetAreaScope.hasConfirmedArea}
-            onClear={targetAreaScope.onClear}
-          />
+    <AppPageShell>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold">Rank Tracking</h1>
+          <p className="text-sm text-base-content/70">
+            Track keyword positions across domains
+          </p>
         </div>
-
-        <TargetAreaBanner projectId={projectId} />
-
-        <Outlet />
+        <ScopeControl
+          area={targetAreaScope.area}
+          onChange={targetAreaScope.onChange}
+          hasConfirmedArea={targetAreaScope.hasConfirmedArea}
+          onClear={targetAreaScope.onClear}
+        />
       </div>
-    </div>
+
+      <TargetAreaBanner projectId={projectId} />
+
+      <Outlet />
+    </AppPageShell>
   );
 }

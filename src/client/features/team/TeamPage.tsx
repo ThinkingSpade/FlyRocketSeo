@@ -61,7 +61,7 @@ export function TeamPage() {
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
       <div className="mx-auto w-full max-w-2xl space-y-8">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team</h1>
+          <h1 className="text-2xl font-semibold">Team</h1>
           <p className="mt-1 text-sm text-base-content/60">
             Invite trusted teammates to this shared workspace.
           </p>

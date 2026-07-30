@@ -49,8 +49,6 @@ export const CHART_CURSOR_BAR = {
   fillOpacity: 0.08,
 } as const;
 
-/** Grid lines. Deliberately fainter than the axis text. */
-export const CHART_GRID_STROKE = {
-  stroke: BASE_CONTENT,
-  strokeOpacity: 0.12,
-} as const;
+// No grid token: every CartesianGrid already uses stroke="currentColor" with an
+// opacity, which is theme-aware for the same reason as the tokens above. Adding a
+// second way to say it would be the drift this file exists to remove.

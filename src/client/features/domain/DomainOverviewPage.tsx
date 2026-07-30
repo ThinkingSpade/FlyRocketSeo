@@ -87,6 +87,7 @@ import type {
   DomainSortMode,
   SortOrder,
 } from "@/client/features/domain/types";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type Props = {
   projectId: string;
@@ -737,200 +738,198 @@ export function DomainOverviewPage({
   ) : null;
 
   return (
-    <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div className="flex flex-wrap items-start justify-between gap-2">
-          <div>
-            <h1 className="text-2xl font-semibold">Domain Overview</h1>
-            <p className="text-sm text-base-content/70">
-              Analyze any domain&apos;s SEO profile: traffic, keywords, and
-              backlinks.
-            </p>
-          </div>
-          <DataFreshness
-            fetchedAt={state.overview?.fetchedAt}
-            onRefresh={() => void state.refetchOverview()}
-            refreshing={state.overviewRefreshing}
+    <AppPageShell>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className="text-2xl font-semibold">Domain Overview</h1>
+          <p className="text-sm text-base-content/70">
+            Analyze any domain&apos;s SEO profile: traffic, keywords, and
+            backlinks.
+          </p>
+        </div>
+        <DataFreshness
+          fetchedAt={state.overview?.fetchedAt}
+          onRefresh={() => void state.refetchOverview()}
+          refreshing={state.overviewRefreshing}
+        />
+      </div>
+
+      <DomainSearchCard
+        controlsForm={state.controlsForm}
+        isLoading={state.isLoading}
+        onSubmit={handleSearchSubmit}
+        onSortChange={(sort) =>
+          state.applySort(sort, getDefaultSortOrder(sort))
+        }
+        onLocationChange={(locationCode) =>
+          state.applyLocationChange(locationCode)
+        }
+      />
+
+      {state.isLoading ? (
+        <>
+          {tabControls}
+          <DomainOverviewLoadingState />
+        </>
+      ) : state.overview === null ? (
+        <div className="space-y-4 pt-1">
+          <AnalyzeDomainPrompt
+            domain={projectDomain}
+            title="Start with your own site"
+            description="Run a full organic profile for this project's domain — or search any competitor above."
+            preview={DOMAIN_ANALYZE_PREVIEW}
+            onAnalyze={() => {
+              if (!projectDomain) return;
+              state.controlsForm.setFieldValue("domain", projectDomain);
+              void state.controlsForm.handleSubmit();
+            }}
+            isBusy={state.isLoading}
+          />
+          <DomainHistorySection
+            history={state.history}
+            historyLoaded={state.historyLoaded}
+            onRemoveHistoryItem={state.removeHistoryItem}
+            onSelectHistoryItem={state.handleHistorySelect}
           />
         </div>
-
-        <DomainSearchCard
-          controlsForm={state.controlsForm}
-          isLoading={state.isLoading}
-          onSubmit={handleSearchSubmit}
-          onSortChange={(sort) =>
-            state.applySort(sort, getDefaultSortOrder(sort))
-          }
-          onLocationChange={(locationCode) =>
-            state.applyLocationChange(locationCode)
-          }
-        />
-
-        {state.isLoading ? (
-          <>
-            {tabControls}
-            <DomainOverviewLoadingState />
-          </>
-        ) : state.overview === null ? (
-          <div className="space-y-4 pt-1">
-            <AnalyzeDomainPrompt
-              domain={projectDomain}
-              title="Start with your own site"
-              description="Run a full organic profile for this project's domain — or search any competitor above."
-              preview={DOMAIN_ANALYZE_PREVIEW}
-              onAnalyze={() => {
-                if (!projectDomain) return;
-                state.controlsForm.setFieldValue("domain", projectDomain);
+      ) : (
+        <>
+          {state.restoredRun ? (
+            <RecentRunsList
+              projectId={projectId}
+              feature={RUN_FEATURES.domainOverview}
+              activeRunId={state.selectedRunId}
+              onSelect={state.setSelectedRunId}
+            />
+          ) : null}
+          {state.restoredRun ? (
+            <RestoredRunBanner
+              label={state.restoredRun.label}
+              lastRanAt={state.restoredRun.lastRanAt}
+              runCount={state.restoredRun.runCount}
+              onRunAgain={() => {
+                state.controlsForm.setFieldValue(
+                  "domain",
+                  state.restoredRun?.label ?? "",
+                );
                 void state.controlsForm.handleSubmit();
               }}
-              isBusy={state.isLoading}
             />
-            <DomainHistorySection
-              history={state.history}
-              historyLoaded={state.historyLoaded}
-              onRemoveHistoryItem={state.removeHistoryItem}
-              onSelectHistoryItem={state.handleHistorySelect}
+          ) : null}
+          {tabControls}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            <StatCard
+              label="Estimated Organic Traffic"
+              value={formatMetric(
+                state.overview.organicTraffic,
+                state.overview.hasData,
+              )}
+            />
+            <StatCard
+              label="Organic Keywords"
+              value={formatMetric(
+                state.overview.organicKeywords,
+                state.overview.hasData,
+              )}
             />
           </div>
-        ) : (
-          <>
-            {state.restoredRun ? (
-              <RecentRunsList
-                projectId={projectId}
-                feature={RUN_FEATURES.domainOverview}
-                activeRunId={state.selectedRunId}
-                onSelect={state.setSelectedRunId}
-              />
-            ) : null}
-            {state.restoredRun ? (
-              <RestoredRunBanner
-                label={state.restoredRun.label}
-                lastRanAt={state.restoredRun.lastRanAt}
-                runCount={state.restoredRun.runCount}
-                onRunAgain={() => {
-                  state.controlsForm.setFieldValue(
-                    "domain",
-                    state.restoredRun?.label ?? "",
-                  );
-                  void state.controlsForm.handleSubmit();
-                }}
-              />
-            ) : null}
-            {tabControls}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <StatCard
-                label="Estimated Organic Traffic"
-                value={formatMetric(
-                  state.overview.organicTraffic,
-                  state.overview.hasData,
-                )}
-              />
-              <StatCard
-                label="Organic Keywords"
-                value={formatMetric(
-                  state.overview.organicKeywords,
-                  state.overview.hasData,
-                )}
-              />
-            </div>
 
-            {state.overview.hasData && state.overview.positionBuckets ? (
-              <PositionDistribution buckets={state.overview.positionBuckets} />
-            ) : null}
+          {state.overview.hasData && state.overview.positionBuckets ? (
+            <PositionDistribution buckets={state.overview.positionBuckets} />
+          ) : null}
 
-            {/* Pure read of data already on the page -- renders even when
+          {/* Pure read of data already on the page -- renders even when
                 hasData is false (an honest "unknown" tone), unlike the
                 metered cards below it. */}
-            <NextStepsCard
-              verdict={buildDomainVerdict({
-                domain: state.overview.domain,
-                organicKeywords: state.overview.organicKeywords,
-                organicTraffic: state.overview.organicTraffic,
-                positionBuckets: state.overview.positionBuckets,
-              })}
+          <NextStepsCard
+            verdict={buildDomainVerdict({
+              domain: state.overview.domain,
+              organicKeywords: state.overview.organicKeywords,
+              organicTraffic: state.overview.organicTraffic,
+              positionBuckets: state.overview.positionBuckets,
+            })}
+            projectId={projectId}
+            tab="Domain Overview"
+          />
+
+          {state.overview.hasData ? (
+            <DomainCompetitorsCard
               projectId={projectId}
-              tab="Domain Overview"
+              domain={state.overview.domain}
             />
+          ) : null}
 
-            {state.overview.hasData ? (
-              <DomainCompetitorsCard
-                projectId={projectId}
-                domain={state.overview.domain}
-              />
-            ) : null}
+          {state.overview.hasData ? (
+            <DomainVisibilityTrend
+              projectId={projectId}
+              domain={state.overview.domain}
+              locationCode={routeState.locationCode}
+              languageCode={getLanguageCode(routeState.locationCode)}
+            />
+          ) : null}
 
-            {state.overview.hasData ? (
-              <DomainVisibilityTrend
-                projectId={projectId}
-                domain={state.overview.domain}
-                locationCode={routeState.locationCode}
-                languageCode={getLanguageCode(routeState.locationCode)}
-              />
-            ) : null}
-
-            {!state.overview.hasData ? (
-              <div className="alert alert-info">
-                <span>
-                  Not enough data for this domain yet. Try another domain or
-                  include subdomains.
-                </span>
-              </div>
-            ) : null}
-
-            <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
-                <div role="tablist" className="tabs tabs-border w-fit">
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={routeState.tab === "keywords"}
-                    className={`tab ${routeState.tab === "keywords" ? "tab-active" : ""}`}
-                    onClick={() => state.handleTabChange("keywords")}
-                  >
-                    Top Keywords
-                  </button>
-                  <button
-                    type="button"
-                    role="tab"
-                    aria-selected={routeState.tab === "pages"}
-                    className={`tab ${routeState.tab === "pages" ? "tab-active" : ""}`}
-                    onClick={() => state.handleTabChange("pages")}
-                  >
-                    Top Pages
-                  </button>
-                </div>
-              </div>
-
-              {routeState.tab === "keywords" ? (
-                <KeywordsTab
-                  key="keywords"
-                  projectId={projectId}
-                  domain={state.overview.domain}
-                  languageCode={state.languageCode}
-                  routeState={routeState}
-                  canSaveKeywords={state.canSaveKeywords}
-                  setSearchParams={state.setSearchParams}
-                  onSortClick={state.handleSortColumnClick}
-                  onPageChange={state.goToPage}
-                  onPageSizeChange={state.setPageSize}
-                />
-              ) : (
-                <PagesTab
-                  key="pages"
-                  projectId={projectId}
-                  domain={state.overview.domain}
-                  languageCode={state.languageCode}
-                  routeState={routeState}
-                  setSearchParams={state.setSearchParams}
-                  onSortClick={state.handleSortColumnClick}
-                  onPageChange={state.goToPage}
-                  onPageSizeChange={state.setPageSize}
-                />
-              )}
+          {!state.overview.hasData ? (
+            <div className="alert alert-info">
+              <span>
+                Not enough data for this domain yet. Try another domain or
+                include subdomains.
+              </span>
             </div>
-          </>
-        )}
-      </div>
-    </div>
+          ) : null}
+
+          <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
+            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
+              <div role="tablist" className="tabs tabs-border w-fit">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={routeState.tab === "keywords"}
+                  className={`tab ${routeState.tab === "keywords" ? "tab-active" : ""}`}
+                  onClick={() => state.handleTabChange("keywords")}
+                >
+                  Top Keywords
+                </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={routeState.tab === "pages"}
+                  className={`tab ${routeState.tab === "pages" ? "tab-active" : ""}`}
+                  onClick={() => state.handleTabChange("pages")}
+                >
+                  Top Pages
+                </button>
+              </div>
+            </div>
+
+            {routeState.tab === "keywords" ? (
+              <KeywordsTab
+                key="keywords"
+                projectId={projectId}
+                domain={state.overview.domain}
+                languageCode={state.languageCode}
+                routeState={routeState}
+                canSaveKeywords={state.canSaveKeywords}
+                setSearchParams={state.setSearchParams}
+                onSortClick={state.handleSortColumnClick}
+                onPageChange={state.goToPage}
+                onPageSizeChange={state.setPageSize}
+              />
+            ) : (
+              <PagesTab
+                key="pages"
+                projectId={projectId}
+                domain={state.overview.domain}
+                languageCode={state.languageCode}
+                routeState={routeState}
+                setSearchParams={state.setSearchParams}
+                onSortClick={state.handleSortColumnClick}
+                onPageChange={state.goToPage}
+                onPageSizeChange={state.setPageSize}
+              />
+            )}
+          </div>
+        </>
+      )}
+    </AppPageShell>
   );
 }
