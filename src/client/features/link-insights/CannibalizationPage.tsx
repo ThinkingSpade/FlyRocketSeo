@@ -10,6 +10,8 @@ import {
   toPath,
   useLinkInsights,
 } from "@/client/features/link-insights/useLinkInsights";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { resolveQueryState } from "@/client/components/state/queryState";
 
 const SEVERITY_BADGE: Record<
   CannibalizationSeverity,
@@ -94,30 +96,36 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
         </div>
       ) : null}
 
+      {/* First consumer of QueryStateBoundary. The hand-written truncated/complete
+          ternary this replaces was correct, but it was the twelfth copy of the
+          same reasoning — and getting it wrong is invisible until a client acts
+          on a false all-clear. The boundary owns the rule now: an unestablished
+          absence cannot render the confident sentence, because the caller never
+          gets the chance to supply it. */}
       {data?.connected && rows.length === 0 ? (
         <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
-            {data.truncated ? (
-              <>
-                <p className="font-medium">
-                  None found in the queries we could check
-                </p>
-                <p className="max-w-md text-sm text-base-content/60">
-                  Search Console returned {data.rowsExamined.toLocaleString()}{" "}
-                  query-and-page rows, ordered by clicks, and capped the pull
-                  there. No overlap among those — but this isn&rsquo;t your
-                  whole site, so it isn&rsquo;t an all-clear.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="font-medium">No cannibalization detected</p>
-                <p className="max-w-md text-sm text-base-content/60">
-                  No query currently has two of your pages splitting meaningful
-                  impressions — that&rsquo;s a healthy site.
-                </p>
-              </>
-            )}
+          <div className="card-body items-center py-6">
+            <QueryStateBoundary
+              state={resolveQueryState({
+                isPending: false,
+                isError: false,
+                connected: true,
+                rowCount: rows.length,
+                sampling: [
+                  {
+                    label: "The Search Console query-and-page pull",
+                    truncated: data.truncated,
+                    rowsExamined: data.rowsExamined,
+                  },
+                ],
+              })}
+              loading={null}
+              errorMessage="Cannibalization data could not be loaded."
+              emptyTitle="No cannibalization detected"
+              emptyBody="No query currently has two of your pages splitting meaningful impressions — that's a healthy site."
+            >
+              {null}
+            </QueryStateBoundary>
           </div>
         </div>
       ) : null}
