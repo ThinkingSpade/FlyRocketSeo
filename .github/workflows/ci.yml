@@ -5,6 +5,10 @@ on:
   push:
     branches:
       - main
+  # Lets this be kicked by hand from the Actions tab. Needed here because this
+  # workflow arrived with the fork and had never produced a single run, so there
+  # was no way to confirm it works without opening a throwaway PR.
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -38,14 +42,16 @@ jobs:
       - name: Run tests
         run: pnpm run test:ci
 
-      - name: Install website dependencies
-        run: pnpm --dir web install --frozen-lockfile
-
-      - name: Run website type checks
-        run: pnpm --dir web run types:check
-
-      - name: Build website
-        run: pnpm --dir web run build
+      # The three `web/` steps that used to sit here are gone: the marketing site
+      # was deleted during de-branding, so `pnpm --dir web install` would have
+      # failed on the missing directory. Every run of this workflow would have
+      # been red — worth knowing, because it never ran at all.
+      #
+      # No build step on purpose. The Cloudflare "Workers Builds" check already
+      # builds every PR, and `ci:check` runs `tsc --noEmit`, so adding
+      # `pnpm run build` here would be the third pass over the same work. What
+      # this workflow uniquely provides is prettier, knip, oxlint and the 2000+
+      # test suite — none of which Workers Builds runs.
 
   docker-build:
     runs-on: ubuntu-latest
