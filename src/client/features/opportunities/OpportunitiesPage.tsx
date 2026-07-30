@@ -26,6 +26,7 @@ import {
   type Opportunity,
   type OpportunityKind,
 } from "./opportunityModel";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 const KIND_META: Record<
   OpportunityKind,
@@ -116,10 +117,10 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
   const technicalSourcesFailed = historyQuery.isError || auditQuery.isError;
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Lightbulb className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <Lightbulb className="size-6" />
           SEO Opportunities
         </h1>
         <p className="text-sm text-base-content/60">
@@ -342,7 +343,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           </ul>
         )}
       </AppCard>
-    </div>
+    </AppPageShell>
   );
 }
 

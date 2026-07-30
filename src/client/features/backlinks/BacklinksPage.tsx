@@ -37,6 +37,7 @@ import {
   BACKLINKS_DEFAULT_SORT,
   DEFAULT_BACKLINKS_PAGE_SIZE,
 } from "@/types/schemas/backlinks";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -311,106 +312,104 @@ export function BacklinksPage({
     ],
   );
   return (
-    <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Backlinks</h1>
-          <p className="text-sm text-base-content/70">
-            Understand who links to a site, what changed recently, and which
-            pages attract links.
-          </p>
-        </div>
-
-        <BacklinksSearchCard
-          errorMessage={overviewErrorMessage}
-          initialValues={searchCardInitialValues}
-          canOpenSearch={(values) =>
-            searchTabs.canOpenTab(toBacklinksTabInput(values))
-          }
-          tabLimit={searchTabs.limit}
-          onSubmit={runBacklinksSearch}
-          prefillTarget={targetPrefill}
-        />
-
-        {searchState.target.trim() === "" ? (
-          <RecentRunsList
-            projectId={projectId}
-            feature={RUN_FEATURES.backlinks}
-            activeRunId={selectedRunId}
-            onSelect={setSelectedRunId}
-          />
-        ) : null}
-
-        {restoredRun ? (
-          <RestoredRunBanner
-            label={restoredRun.label}
-            lastRanAt={restoredRun.lastRanAt}
-            runCount={restoredRun.runCount}
-            onRunAgain={() => {
-              runBacklinksSearch({
-                // From the restored result rather than its label, so "run
-                // again" repeats the same scope it was originally run at.
-                target: restoredRun.result.overview.target,
-                scope: restoredRun.result.overview.scope,
-              });
-            }}
-          />
-        ) : null}
-
-        {searchState.target.trim() === "" && !restoredRun ? (
-          <AnalyzeDomainPrompt
-            domain={projectDomain}
-            title="Check your own link profile"
-            description="See who links to this project's domain, what changed lately, and which pages earn the links."
-            preview={BACKLINKS_ANALYZE_PREVIEW}
-            onAnalyze={() => {
-              if (!projectDomain) return;
-              runBacklinksSearch({ target: projectDomain, scope: "domain" });
-            }}
-            isBusy={overviewQuery.isLoading}
-          />
-        ) : null}
-
-        <BacklinksBody
-          projectId={projectId}
-          meteredAuthorized={searchAuthorized}
-          meteredRunNonce={run.runNonce}
-          history={history}
-          historyLoaded={historyLoaded}
-          overviewData={overviewData}
-          overviewError={overviewErrorMessage}
-          overviewLoading={searchAuthorized && overviewQuery.isLoading}
-          backlinksRowsPage={rowsQuery.data}
-          referringDomainsPage={referringDomainsQuery.data}
-          topPagesPage={topPagesQuery.data}
-          anchorsPage={anchorsQuery.data}
-          searchState={searchState}
-          filters={filters}
-          sorting={sorting}
-          domainExpansion={domainExpansion}
-          tabErrorMessage={activeTabErrorMessage}
-          tabLoading={searchAuthorized && activeTabQuery.isLoading}
-          tabFetching={activeTabQuery.isFetching}
-          onPageChange={handlePageChange}
-          onPageSizeChange={handlePageSizeChange}
-          onRemoveHistoryItem={removeHistoryItem}
-          onRetryOverview={() => run.authorize()}
-          onSortingChange={handleSortingChange}
-          onTabChange={handleResultTabChange}
-          onViewChange={handleViewChange}
-          searchTabs={
-            searchState.target
-              ? {
-                  activeTabId: searchTabs.activeTabId,
-                  tabs: searchTabs.tabs,
-                  onSelect: searchTabs.selectTab,
-                  onClose: searchTabs.closeTab,
-                  onViewed: searchTabs.markTabViewed,
-                }
-              : null
-          }
-        />
+    <AppPageShell>
+      <div>
+        <h1 className="text-2xl font-semibold">Backlinks</h1>
+        <p className="text-sm text-base-content/70">
+          Understand who links to a site, what changed recently, and which pages
+          attract links.
+        </p>
       </div>
-    </div>
+
+      <BacklinksSearchCard
+        errorMessage={overviewErrorMessage}
+        initialValues={searchCardInitialValues}
+        canOpenSearch={(values) =>
+          searchTabs.canOpenTab(toBacklinksTabInput(values))
+        }
+        tabLimit={searchTabs.limit}
+        onSubmit={runBacklinksSearch}
+        prefillTarget={targetPrefill}
+      />
+
+      {searchState.target.trim() === "" ? (
+        <RecentRunsList
+          projectId={projectId}
+          feature={RUN_FEATURES.backlinks}
+          activeRunId={selectedRunId}
+          onSelect={setSelectedRunId}
+        />
+      ) : null}
+
+      {restoredRun ? (
+        <RestoredRunBanner
+          label={restoredRun.label}
+          lastRanAt={restoredRun.lastRanAt}
+          runCount={restoredRun.runCount}
+          onRunAgain={() => {
+            runBacklinksSearch({
+              // From the restored result rather than its label, so "run
+              // again" repeats the same scope it was originally run at.
+              target: restoredRun.result.overview.target,
+              scope: restoredRun.result.overview.scope,
+            });
+          }}
+        />
+      ) : null}
+
+      {searchState.target.trim() === "" && !restoredRun ? (
+        <AnalyzeDomainPrompt
+          domain={projectDomain}
+          title="Check your own link profile"
+          description="See who links to this project's domain, what changed lately, and which pages earn the links."
+          preview={BACKLINKS_ANALYZE_PREVIEW}
+          onAnalyze={() => {
+            if (!projectDomain) return;
+            runBacklinksSearch({ target: projectDomain, scope: "domain" });
+          }}
+          isBusy={overviewQuery.isLoading}
+        />
+      ) : null}
+
+      <BacklinksBody
+        projectId={projectId}
+        meteredAuthorized={searchAuthorized}
+        meteredRunNonce={run.runNonce}
+        history={history}
+        historyLoaded={historyLoaded}
+        overviewData={overviewData}
+        overviewError={overviewErrorMessage}
+        overviewLoading={searchAuthorized && overviewQuery.isLoading}
+        backlinksRowsPage={rowsQuery.data}
+        referringDomainsPage={referringDomainsQuery.data}
+        topPagesPage={topPagesQuery.data}
+        anchorsPage={anchorsQuery.data}
+        searchState={searchState}
+        filters={filters}
+        sorting={sorting}
+        domainExpansion={domainExpansion}
+        tabErrorMessage={activeTabErrorMessage}
+        tabLoading={searchAuthorized && activeTabQuery.isLoading}
+        tabFetching={activeTabQuery.isFetching}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+        onRemoveHistoryItem={removeHistoryItem}
+        onRetryOverview={() => run.authorize()}
+        onSortingChange={handleSortingChange}
+        onTabChange={handleResultTabChange}
+        onViewChange={handleViewChange}
+        searchTabs={
+          searchState.target
+            ? {
+                activeTabId: searchTabs.activeTabId,
+                tabs: searchTabs.tabs,
+                onSelect: searchTabs.selectTab,
+                onClose: searchTabs.closeTab,
+                onViewed: searchTabs.markTabViewed,
+              }
+            : null
+        }
+      />
+    </AppPageShell>
   );
 }

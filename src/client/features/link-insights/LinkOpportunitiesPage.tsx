@@ -9,6 +9,7 @@ import {
 } from "@/client/features/link-insights/useLinkInsights";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { resolveQueryState } from "@/client/components/state/queryState";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type PresenceResult = {
   linksToTarget: boolean;
@@ -87,10 +88,10 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
   });
 
   return (
-    <div className="mx-auto flex w-full max-w-5xl flex-col gap-4 p-4">
+    <AppPageShell>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Waypoints className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <Waypoints className="size-6" />
           Link Opportunities
         </h1>
         <p className="text-sm text-base-content/60">
@@ -243,6 +244,6 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
           {data.range.endDate}. Free — uses your own GSC data.
         </p>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }
