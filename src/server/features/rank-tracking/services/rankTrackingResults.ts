@@ -1,5 +1,5 @@
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
-import { toSqliteTimestamp } from "@/server/features/rank-tracking/rankTrackingTimestamps";
+import { toStoredTimestamp } from "@/server/features/rank-tracking/rankTrackingTimestamps";
 import { AppError } from "@/server/lib/errors";
 import type { ComparePeriod } from "@/types/schemas/rank-tracking";
 import type {
@@ -27,7 +27,9 @@ export async function getLatestResults(
   run: { id: string; lastCheckedAt: string } | null;
 }> {
   const days = PERIOD_DAYS[comparePeriod];
-  const targetDate = toSqliteTimestamp(
+  // Compared as a string against checked_at, which D1 and Postgres store in
+  // different formats -- so it must be formatted for the ACTIVE backend.
+  const targetDate = toStoredTimestamp(
     new Date(Date.now() - days * 24 * 60 * 60 * 1000),
   );
 

@@ -13,7 +13,7 @@ import {
 } from "drizzle-orm";
 import { db } from "@/db";
 import { rankCheckRuns, rankSnapshots } from "@/db/schema";
-import { toSqliteTimestamp } from "@/server/features/rank-tracking/rankTrackingTimestamps";
+import { toStoredTimestamp } from "@/server/features/rank-tracking/rankTrackingTimestamps";
 
 function completedRunIdsForConfig(configId: string) {
   return db
@@ -28,7 +28,9 @@ function completedRunIdsForConfig(configId: string) {
 }
 
 function cutoffTimestamp(sinceDays: number): string {
-  return toSqliteTimestamp(
+  // Provider-aware: this value is compared as a STRING against checked_at, and
+  // the two backends store that column in different text formats.
+  return toStoredTimestamp(
     new Date(Date.now() - sinceDays * 24 * 60 * 60 * 1000),
   );
 }
@@ -176,28 +178,41 @@ export async function getSnapshotsForConfig(
     .groupBy(rankSnapshots.trackingKeywordId, rankSnapshots.device)
     .as("grouped");
 
-  return db
-    .select({
-      id: rankSnapshots.id,
-      runId: rankSnapshots.runId,
-      trackingKeywordId: rankSnapshots.trackingKeywordId,
-      keyword: rankSnapshots.keyword,
-      device: rankSnapshots.device,
-      position: rankSnapshots.position,
-      url: rankSnapshots.url,
-      serpFeatures: rankSnapshots.serpFeatures,
-      checkedAt: rankSnapshots.checkedAt,
-    })
-    .from(rankSnapshots)
-    .innerJoin(
-      grouped,
-      and(
-        eq(rankSnapshots.trackingKeywordId, grouped.trackingKeywordId),
-        eq(rankSnapshots.device, grouped.device),
-        eq(rankSnapshots.checkedAt, grouped.targetCheckedAt),
-      ),
-    )
-    .where(inArray(rankSnapshots.runId, completedRunIds));
+  return (
+    db
+      .select({
+        id: rankSnapshots.id,
+        runId: rankSnapshots.runId,
+        trackingKeywordId: rankSnapshots.trackingKeywordId,
+        keyword: rankSnapshots.keyword,
+        device: rankSnapshots.device,
+        position: rankSnapshots.position,
+        url: rankSnapshots.url,
+        serpFeatures: rankSnapshots.serpFeatures,
+        checkedAt: rankSnapshots.checkedAt,
+      })
+      .from(rankSnapshots)
+      .innerJoin(
+        grouped,
+        and(
+          eq(rankSnapshots.trackingKeywordId, grouped.trackingKeywordId),
+          eq(rankSnapshots.device, grouped.device),
+          eq(rankSnapshots.checkedAt, grouped.targetCheckedAt),
+        ),
+      )
+      .where(inArray(rankSnapshots.runId, completedRunIds))
+      // The join matches on timestamp equality, and D1's `current_timestamp` has
+      // one-second precision — so two completed runs in the same second BOTH match
+      // for a keyword/device, and whichever the consumer reduces last wins.
+      // Without an ordering that winner is whatever order the database returned,
+      // so the displayed "latest" rank could flap between 5 and 10 across
+      // identical stored data.
+      //
+      // The tie-break is arbitrary but STABLE, which is the property that matters:
+      // a rank that changes on refresh without the data changing reads as the app
+      // being broken.
+      .orderBy(asc(rankSnapshots.checkedAt), asc(rankSnapshots.id))
+  );
 }
 
 export async function getLatestSnapshotsForKeywords(configId: string) {
