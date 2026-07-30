@@ -8,6 +8,7 @@ import {
 } from "@/server/features/gsc/services/GscService";
 import { resolveDateRange } from "@/server/features/gsc/searchAnalytics";
 import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
+import { fetchValidatingEveryHop } from "@/server/lib/audit/url-policy";
 import {
   buildCannibalizationRows,
   buildLinkOpportunities,
@@ -119,14 +120,27 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
       error: string | null;
     };
     try {
-      const response = await fetch(data.sourceUrl, {
-        headers: {
-          "User-Agent": "FlyRocketSEO-Audit/1.0",
-          Accept: "text/html,application/xhtml+xml",
+      // Every hop is re-validated against the crawl URL policy, and every hop
+      // must stay on the source's own host.
+      //
+      // This used to be `fetch(..., { redirect: "follow" })` behind a check on
+      // the SUBMITTED hostname only. An authenticated project member could
+      // therefore submit a page they control that answers
+      // `302 Location: http://127.0.0.1:8787/…`, and the Worker would make that
+      // request itself — straight past the private-address protections in
+      // url-policy.ts. Following redirects means letting a remote server pick
+      // our next request, so it cannot be delegated to fetch().
+      const response = await fetchValidatingEveryHop(
+        data.sourceUrl,
+        {
+          headers: {
+            "User-Agent": "FlyRocketSEO-Audit/1.0",
+            Accept: "text/html,application/xhtml+xml",
+          },
+          signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
         },
-        redirect: "follow",
-        signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
-      });
+        { sameHostAs: source.hostname },
+      );
       if (!response.ok) {
         result = {
           linksToTarget: false,

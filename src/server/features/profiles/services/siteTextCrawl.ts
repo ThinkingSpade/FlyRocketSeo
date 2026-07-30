@@ -1,4 +1,5 @@
 import * as cheerio from "cheerio";
+import { fetchValidatingEveryHop } from "@/server/lib/audit/url-policy";
 
 /**
  * A tiny, hard-capped read of a site's own words.
@@ -72,11 +73,19 @@ function pickInternalLinks($: cheerio.CheerioAPI, origin: string): string[] {
 
 async function fetchHtml(url: string): Promise<string | null> {
   try {
-    const response = await fetch(url, {
-      redirect: "follow",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "user-agent": "FlyRocketSEO/1.0 (+profile-draft)" },
-    });
+    // Validated per hop. This built https://${domain} straight from user input
+    // and followed redirects with NO url-policy check at all, so a domain of
+    // "127.0.0.1:8787" -- or any page redirecting there -- had the Worker fetch
+    // it. Every hop stays on the crawled host, which is what internal-link
+    // crawling wants anyway.
+    const response = await fetchValidatingEveryHop(
+      url,
+      {
+        signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
+        headers: { "user-agent": "FlyRocketSEO/1.0 (+profile-draft)" },
+      },
+      { sameHostAs: new URL(url).hostname },
+    );
     if (!response.ok) return null;
     const type = response.headers.get("content-type") ?? "";
     if (!type.includes("html")) return null;

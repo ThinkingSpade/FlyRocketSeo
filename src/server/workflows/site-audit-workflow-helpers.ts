@@ -1,5 +1,6 @@
 import type { StepPageResult } from "@/server/lib/audit/types";
 import { isSameOrigin, normalizeUrl } from "@/server/lib/audit/url-utils";
+import { fetchValidatingEveryHop } from "@/server/lib/audit/url-policy";
 
 // Cap the HTML we hand to cheerio. A pathologically large document can exhaust
 // the Worker CPU limit during parsing and take the whole crawl batch down with
@@ -13,14 +14,21 @@ export async function crawlPage(
   const startTime = Date.now();
 
   try {
-    const response = await fetch(url, {
-      headers: {
-        "User-Agent": "FlyRocketSEO-Audit/1.0",
-        Accept: "text/html,application/xhtml+xml",
+    // The same-origin check below used to run AFTER the fetch, so a crawled page
+    // redirecting to a private address had already been requested by the time we
+    // discarded it -- enough to probe internal services. Hops are now validated
+    // before each request instead of audited after.
+    const response = await fetchValidatingEveryHop(
+      url,
+      {
+        headers: {
+          "User-Agent": "FlyRocketSEO-Audit/1.0",
+          Accept: "text/html,application/xhtml+xml",
+        },
+        signal: AbortSignal.timeout(15_000),
       },
-      redirect: "follow",
-      signal: AbortSignal.timeout(15_000),
-    });
+      { sameHostAs: new URL(crawlOrigin).hostname },
+    );
 
     const responseTimeMs = Date.now() - startTime;
     const statusCode = response.status;
