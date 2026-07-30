@@ -18,12 +18,15 @@ import type { BacklinksPageProps } from "./backlinksPageTypes";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
 import {
   buildBacklinksAuthorizationKey,
+  selectActiveBacklinksFilters,
+} from "./backlinksAuthorizationKey";
+import {
   navigateToBacklinksSearch,
   useBacklinksPageData,
   useBacklinksTargetPrefill,
 } from "./useBacklinksPageData";
 import { useBacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
-import { useBacklinksFilters } from "./useBacklinksFilters";
+import { useBacklinksRunAuthorization } from "./useBacklinksRunAuthorization";
 import { useBacklinksSearchHistory } from "@/client/hooks/useBacklinksSearchHistory";
 import type {
   BacklinksSearchTabInput,
@@ -34,7 +37,6 @@ import {
   BACKLINKS_DEFAULT_SORT,
   DEFAULT_BACKLINKS_PAGE_SIZE,
 } from "@/types/schemas/backlinks";
-import { useAuthorizedRun } from "@/client/lib/useMeteredQuery";
 
 const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -64,13 +66,30 @@ export function BacklinksPage({
   searchState,
   navigate,
 }: BacklinksPageProps) {
-  const filters = useBacklinksFilters(projectId);
-  const currentSearchKey = buildBacklinksAuthorizationKey(
+  const handlePageChange = useCallback(
+    (nextPage: number) => {
+      navigate({
+        search: (prev) => ({
+          ...prev,
+          page: nextPage === 1 ? undefined : nextPage,
+        }),
+        replace: true,
+      });
+    },
+    [navigate],
+  );
+  const goToFirstPage = useCallback(
+    () => handlePageChange(1),
+    [handlePageChange],
+  );
+
+  // Filters and authorization arrive together because the key is built from the
+  // filters and the filter handler needs the authorization -- see the hook.
+  const { filters, run } = useBacklinksRunAuthorization({
     projectId,
     searchState,
-    filters,
-  );
-  const run = useAuthorizedRun(currentSearchKey);
+    goToFirstPage,
+  });
   const searchAuthorized = run.authorized;
 
   // Sort lives in the URL so sort changes and the page reset commit in one
@@ -98,19 +117,6 @@ export function BacklinksPage({
       });
     },
     [navigate, sorting],
-  );
-
-  const handlePageChange = useCallback(
-    (nextPage: number) => {
-      navigate({
-        search: (prev) => ({
-          ...prev,
-          page: nextPage === 1 ? undefined : nextPage,
-        }),
-        replace: true,
-      });
-    },
-    [navigate],
   );
 
   const handlePageSizeChange = useCallback(
@@ -283,7 +289,11 @@ export function BacklinksPage({
         order: undefined,
       };
       run.authorize(
-        buildBacklinksAuthorizationKey(projectId, nextSearchState, filters),
+        buildBacklinksAuthorizationKey(
+          projectId,
+          nextSearchState,
+          selectActiveBacklinksFilters(nextSearchState.tab, filters),
+        ),
       );
       searchTabs.openTab(toBacklinksTabInput(values));
       navigateToBacklinksSearch(navigate, values);

@@ -30,10 +30,7 @@ import {
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import { getPersistedBacklinksSearchScope } from "./backlinksSearchScope";
-import {
-  createMeteredRunKey,
-  useMeteredQuery,
-} from "@/client/lib/useMeteredQuery";
+import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useLastRunInput } from "@/client/features/insights/useLastRunInput";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
@@ -131,34 +128,6 @@ function toSort<T extends string>(
     : undefined;
   if (!field) return fallback;
   return { field, order: orderParam ?? "desc" };
-}
-
-export function buildBacklinksAuthorizationKey(
-  projectId: string,
-  searchState: BacklinksSearchState,
-  filters: BacklinksFiltersState,
-): string {
-  const activeFilters =
-    searchState.tab === "backlinks"
-      ? toBacklinksFiltersPayload(filters.backlinks.values)
-      : searchState.tab === "domains"
-        ? toReferringDomainsFiltersPayload(filters.domains.values)
-        : searchState.tab === "pages"
-          ? toTopPagesFiltersPayload(filters.pages.values)
-          : toAnchorsFiltersPayload(filters.anchors.values);
-
-  return createMeteredRunKey(
-    projectId,
-    searchState.target,
-    searchState.scope,
-    searchState.tab,
-    searchState.page,
-    searchState.pageSize,
-    searchState.sort,
-    searchState.order,
-    searchState.view,
-    activeFilters,
-  );
 }
 
 export function useBacklinksPageData({
