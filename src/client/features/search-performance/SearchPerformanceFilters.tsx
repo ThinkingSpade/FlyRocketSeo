@@ -33,13 +33,11 @@ const DEVICE_OPTIONS = GSC_DEVICES.map((value) => ({
   label: DEVICE_LABELS[value],
 }));
 
-export function isDateRange(
-  value: string,
-): value is SearchPerformanceDateRange {
+function isDateRange(value: string): value is SearchPerformanceDateRange {
   return SEARCH_PERFORMANCE_RANGES.some((option) => option === value);
 }
 
-export function isDevice(value: string): value is SearchPerformanceDevice {
+function isDevice(value: string): value is SearchPerformanceDevice {
   return GSC_DEVICES.some((option) => option === value);
 }
 
