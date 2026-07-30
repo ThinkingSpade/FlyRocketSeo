@@ -118,10 +118,17 @@ export function buildOpportunities(input: {
     });
   }
 
-  const opportunities: Opportunity[] = [];
+  // Only the striking-distance and CTR signals get merged. They describe the
+  // same impressions reaching the top three, so summing them double-counts.
+  // Consolidation is a DIFFERENT task on the same page -- merging it away lost
+  // the "consolidate" kind, which drives both the badge and the row's CTA, and
+  // sent the user to "Build brief" for work that is actually about deleting or
+  // redirecting a competing URL.
+  const overlapping: Opportunity[] = [];
+  const standalone: Opportunity[] = [];
 
   for (const row of input.strikingDistance) {
-    opportunities.push({
+    overlapping.push({
       kind: "quick-win",
       query: row.query,
       page: row.page,
@@ -133,7 +140,7 @@ export function buildOpportunities(input: {
   }
 
   for (const row of input.ctrOpportunities) {
-    opportunities.push({
+    overlapping.push({
       kind: "ctr",
       query: row.query,
       page: row.page,
@@ -147,7 +154,7 @@ export function buildOpportunities(input: {
   for (const row of input.cannibalization) {
     const winner = row.pages.find((page) => page.isWinner) ?? row.pages[0];
     if (!winner) continue;
-    opportunities.push({
+    standalone.push({
       kind: "consolidate",
       query: row.query,
       page: winner.page,
@@ -165,9 +172,9 @@ export function buildOpportunities(input: {
     });
   }
 
-  for (const candidate of opportunities) merge(candidate);
+  for (const candidate of overlapping) merge(candidate);
 
-  return Array.from(byTarget.values())
+  return [...byTarget.values(), ...standalone]
     .filter(
       (item) => item.clicksAtStake >= 1 && item.impressions >= MIN_IMPRESSIONS,
     )

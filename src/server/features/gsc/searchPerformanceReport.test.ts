@@ -143,6 +143,25 @@ describe("buildStrikingDistanceRows", () => {
     expect(rows[0].impressions).toBe(1000);
   });
 
+  it("keeps a substantial in-band page even when a bigger page ranks far worse", () => {
+    // Adversarial review caught this as a regression I introduced. Collapsing
+    // each query to its impression LEADER before applying the band check threw
+    // away real work: /coffee holds 40% of the query's impressions at position
+    // 8 -- squarely a striking-distance opportunity -- but /blog is larger and
+    // ranks 35th, so the query was dropped entirely.
+    //
+    // Filtering out noise pages and THEN looking for an in-band candidate closes
+    // both failure modes at once.
+    const rows = buildStrikingDistanceRows([
+      pageRow("commercial coffee", "https://x.com/blog", 35, 600),
+      pageRow("commercial coffee", "https://x.com/coffee", 8, 400),
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].page).toBe("https://x.com/coffee");
+    expect(rows[0].position).toBe(8);
+  });
+
   it("still drops a query the leading page already ranks near the top for", () => {
     // Ownership decides which page represents the query; the band filter then
     // applies to THAT page. A query whose traffic-carrying page ranks #2 is not

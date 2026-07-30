@@ -43,9 +43,15 @@ const QUERY_TOTALS_FETCH_LIMIT = 2500;
 // dimensions:["date"] returns one row per day; the longest range is ~92 days.
 const DAILY_ROW_LIMIT = 200;
 const COUNTRY_ROW_LIMIT = 25;
-// Rows per export request. GSC allows 25000 per call, but the binding limit is
-// Worker CPU: parsing a 25000-row payload alone costs ~9ms of a 10ms budget.
-const EXPORT_PAGE_SIZE = 1000;
+// Rows per export request. Deliberately EQUAL to the ceiling, so an export is
+// exactly one request.
+//
+// This started at 1000, which meant five paginated requests -- and GSC gives
+// click-tied rows an arbitrary order across separate requests, so offset
+// pagination could return a row twice and skip another. A duplicated row in a
+// spreadsheet the user is about to make decisions from is worse than a smaller
+// export. One request cannot straddle a tie.
+const EXPORT_PAGE_SIZE = GSC_ANALYTICS_ROW_CEILING;
 // Total rows an export will examine. Beyond this the file is truncated and says
 // so, rather than claiming to be the full dataset — GSC orders rows by clicks
 // descending, so a silent cut drops the least-clicked rows without a trace.
@@ -57,23 +63,21 @@ type GscPull = {
 };
 
 /**
- * Whether a report is a complete picture or a sample of one.
+ * How complete one GSC pull was.
  *
- * Every list here derives from a pull Search Console returns ordered by clicks
- * and does not promise is complete. Without this flag the UI cannot tell "you
- * have no striking-distance queries" from "none appeared in the rows we read",
- * and it asserted the former.
+ * Per-pull rather than combined. An earlier version ORed the flags of several
+ * differently sized pulls while reporting only one pull's row count, so the UI
+ * could say Search Console "returned 700 query-and-page rows and stopped there"
+ * when that pull had finished early and a different, larger pull was the one
+ * that hit its limit. A flag and a count that describe different requests cannot
+ * produce an honest sentence.
  *
- * `truncated` covers ALL pulls, because any incomplete input is enough to make
- * an absence claim unsafe. `rowsExamined` reports the FIRST pull only — pass the
- * pull whose absence claims the UI will make, since a count from a differently
- * sized pull would misdescribe what was actually searched.
+ * Consumers must read the entry for the pull their claim actually rests on.
  */
-function describeSampling(primary: GscPull, ...others: GscPull[]) {
+function describePull(pull: GscPull) {
   return {
-    truncated:
-      pullWasTruncated(primary) || others.some((p) => pullWasTruncated(p)),
-    rowsExamined: primary.rows.length,
+    truncated: pullWasTruncated(pull),
+    rowsExamined: pull.rows.length,
   };
 }
 
@@ -180,7 +184,12 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
         queryTotals: buildPropertyQueryTotals(queryTotalsPull.rows),
         queryPages: toQueryPageRows(queryPages.rows),
         countries: toDimensionRows(countries.rows),
-        sampling: describeSampling(queryPages, queryTotalsPull),
+        // Named per pull, so each consumer branches on the source its own
+        // claim rests on rather than on an unrelated request's shortfall.
+        sampling: {
+          queryPages: describePull(queryPages),
+          queryTotals: describePull(queryTotalsPull),
+        },
       };
     } catch (error) {
       return toGscUnavailable(error, {
@@ -340,7 +349,10 @@ export const getContentPerformance = createServerFn({ method: "POST" })
         // That matters more here than elsewhere: comparing two separately
         // sampled populations can manufacture apparent movement between periods
         // when the complete data did not change at all.
-        sampling: describeSampling(current, previous),
+        sampling: {
+          current: describePull(current),
+          previous: describePull(previous),
+        },
       };
     } catch (error) {
       return toGscUnavailable(error, {

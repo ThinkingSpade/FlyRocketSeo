@@ -185,3 +185,32 @@ describe("pullWasTruncated", () => {
     expect(pullWasTruncated({ rows: [], request: {} })).toBe(true);
   });
 });
+
+describe("fetchAllRows guards", () => {
+  it("rejects a zero rowLimit instead of looping forever", async () => {
+    // `0 < ceiling` stays true while nothing is ever collected, so the original
+    // loop would request zero rows indefinitely.
+    const query = alwaysReturns(0);
+
+    await expect(
+      fetchAllRows(query, { ...BASE, rowLimit: 0 }, 5000),
+    ).rejects.toThrow(/rowLimit must be a positive integer/);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("rejects a non-positive ceiling", async () => {
+    await expect(fetchAllRows(alwaysReturns(10), BASE, 0)).rejects.toThrow(
+      /ceiling must be a positive integer/,
+    );
+  });
+
+  it("clips a provider that returns more rows than requested", async () => {
+    // The ceiling is a CPU budget, so overshooting it is not a harmless surplus.
+    const query = alwaysReturns(6000);
+
+    const result = await fetchAllRows(query, BASE, 5000);
+
+    expect(result.rows).toHaveLength(5000);
+    expect(result.truncated).toBe(true);
+  });
+});

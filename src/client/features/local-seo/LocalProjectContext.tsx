@@ -110,7 +110,9 @@ export function LocalGscContext({
     : [];
   // Both lists are filtered out of a capped Search Console pull, so an empty
   // list means "none among the rows we read", not "none exist".
-  const sampled = context.report?.sampling.truncated ?? false;
+  const sampled =
+    (context.report?.sampling.queryTotals.truncated ?? false) ||
+    (context.report?.sampling.queryPages.truncated ?? false);
   return (
     <aside className="border-t border-base-300 pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
       <div className="flex items-baseline justify-between gap-2">

@@ -96,7 +96,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
   // Either GSC source being capped makes an absence claim unsafe here, since
   // this list is assembled from both.
   const sampled =
-    (report?.connected ? report.sampling.truncated : false) ||
+    (report?.connected ? report.sampling.queryPages.truncated : false) ||
     (linkInsights?.connected ? linkInsights.truncated : false);
 
   const totalClicksAtStake = opportunities.reduce(

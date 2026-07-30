@@ -171,6 +171,40 @@ describe("buildOpportunities overlap", () => {
     expect(merged.detail).toMatch(/under-clicked/i);
   });
 
+  it("keeps consolidation separate from a quick win on the same page", () => {
+    // Adversarial review caught this: merging by query+page swallowed the
+    // consolidation row, and `kind` drives the badge AND the row's CTA. The user
+    // was sent to "Build brief" for work that is actually about redirecting a
+    // competing URL. Signal overlap is not task identity.
+    const opportunities = buildOpportunities({
+      strikingDistance: [
+        {
+          query: "widgets",
+          page: "https://x.com/widgets",
+          impressions: 600,
+          position: 8,
+        },
+      ],
+      ctrOpportunities: [],
+      cannibalization: [
+        {
+          query: "widgets",
+          totalImpressions: 1000,
+          splitShare: 0.4,
+          pages: [
+            { page: "https://x.com/widgets", isWinner: true },
+            { page: "https://x.com/widgets-2", isWinner: false },
+          ],
+        },
+      ],
+    });
+
+    expect(opportunities.map((item) => item.kind).toSorted()).toEqual([
+      "consolidate",
+      "quick-win",
+    ]);
+  });
+
   it("keeps separate rows for the same query on different pages", () => {
     const opportunities = buildOpportunities({
       strikingDistance: [shared],

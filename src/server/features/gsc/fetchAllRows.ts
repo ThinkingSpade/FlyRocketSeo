@@ -88,11 +88,22 @@ export async function fetchAllRows<T extends PaginableRequest>(
   request: T,
   ceiling: number,
 ): Promise<GscRowResult> {
-  const pageSize = Math.min(
-    request.rowLimit ?? ceiling,
-    ceiling,
-    GSC_MAX_ROWS_PER_REQUEST,
-  );
+  // A zero or negative ceiling has no honest answer, and a zero page size would
+  // request nothing forever: `0 < ceiling` stays true while `collected` never
+  // grows. Fail loudly rather than hang a request.
+  if (!Number.isInteger(ceiling) || ceiling < 1) {
+    throw new Error(
+      `fetchAllRows: ceiling must be a positive integer, got ${ceiling}`,
+    );
+  }
+  const requested = request.rowLimit ?? ceiling;
+  if (!Number.isInteger(requested) || requested < 1) {
+    throw new Error(
+      `fetchAllRows: rowLimit must be a positive integer, got ${requested}`,
+    );
+  }
+
+  const pageSize = Math.min(requested, ceiling, GSC_MAX_ROWS_PER_REQUEST);
   const collected: GscSearchAnalyticsRow[] = [];
 
   while (collected.length < ceiling) {
@@ -105,7 +116,10 @@ export async function fetchAllRows<T extends PaginableRequest>(
       ...(collected.length > 0 ? { startRow: collected.length } : {}),
     } as T);
 
-    collected.push(...page);
+    // Clip rather than trust: a provider returning more than it was asked for
+    // would otherwise blow through the ceiling this function exists to enforce,
+    // and the ceiling is a CPU budget, not a preference.
+    collected.push(...(page.length > wanted ? page.slice(0, wanted) : page));
 
     if (page.length < wanted) {
       return {

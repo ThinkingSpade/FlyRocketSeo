@@ -1,7 +1,7 @@
 import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
 import {
   attributePagesToQueries,
-  representativePageForQuery,
+  meaningfulPages,
 } from "@/server/features/gsc/gscAggregation";
 
 /**
@@ -110,19 +110,25 @@ export function toDimensionRows(
 /** Reduce `["query","page"]` rows to one striking-distance row per query.
  *
  *  GSC returns a row per page that ranks for a query, so a query fans out across
- *  every page it appears on, and we have to pick one page to represent it.
+ *  every page it appears on and we have to pick one page to represent it. Two
+ *  ways to get that wrong, and this function has now made both mistakes:
  *
- *  That page is the one carrying the impressions, NOT the one with the lowest
- *  average position. This used to take the minimum position, which meant a page
- *  with a single impression at position 1.0 beat a page with a thousand
- *  impressions at position 8.0 — so the query was judged already-ranking and
- *  dropped from striking distance, hiding the real opportunity on the page that
- *  actually gets seen. Google defines no metric equal to MIN(page average
- *  position): position is averaged over impressions per row, so a minimum across
- *  separately averaged rows reconstructs nothing.
+ *  1. MIN across ALL page rows — the original. A page with a single impression
+ *     at position 1.0 beat a page with a thousand impressions at 8.0, so the
+ *     query looked already-ranking and was dropped.
+ *  2. Collapsing to the impression leader BEFORE checking the band — the fix
+ *     that over-corrected. A page holding 40% of a query's impressions at
+ *     position 8 is exactly this feature's subject, but it got discarded because
+ *     a larger page ranked 35th.
  *
- *  Queries no single page owns are kept, represented by their leading page. Result
- *  is sorted by impressions. */
+ *  The reconciliation: the original RULE was right and its INPUT was wrong. Take
+ *  the best-positioned page among the ones that carry meaningful impressions.
+ *
+ *  That keeps the reasoning the feature was built on — if the site already ranks
+ *  above the band for a query, improving a secondary page will not move traffic,
+ *  so it is not an opportunity — while refusing to let a one-impression fluke
+ *  stand in for "the site already ranks". Position is still never summed or
+ *  re-averaged across rows; only compared. */
 export function buildStrikingDistanceRows(
   rows: GscSearchAnalyticsRow[],
   limit: number = STRIKING_DISTANCE_ROW_LIMIT,
@@ -131,24 +137,30 @@ export function buildStrikingDistanceRows(
   const representative: StrikingDistanceRow[] = [];
 
   for (const [query, pages] of attribution) {
-    const { page, position } = representativePageForQuery(pages);
-    const leader = pages.find((candidate) => candidate.page === page);
-    if (!leader) continue;
+    const candidates = meaningfulPages(pages);
+    const best = candidates.reduce((leader, page) =>
+      page.position < leader.position ||
+      (page.position === leader.position &&
+        page.impressions > leader.impressions)
+        ? page
+        : leader,
+    );
+    if (
+      best.position < STRIKING_DISTANCE_MIN_POSITION ||
+      best.position > STRIKING_DISTANCE_MAX_POSITION
+    ) {
+      continue;
+    }
     representative.push({
       query,
-      page,
-      clicks: leader.clicks,
-      impressions: leader.impressions,
-      position,
+      page: best.page,
+      clicks: best.clicks,
+      impressions: best.impressions,
+      position: best.position,
     });
   }
 
   return representative
-    .filter(
-      (row) =>
-        row.position >= STRIKING_DISTANCE_MIN_POSITION &&
-        row.position <= STRIKING_DISTANCE_MAX_POSITION,
-    )
     .toSorted((a, b) => b.impressions - a.impressions)
     .slice(0, limit);
 }

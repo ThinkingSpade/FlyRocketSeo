@@ -130,6 +130,35 @@ export function attributePagesToQueries(
 const PAGE_OWNERSHIP_THRESHOLD = 0.6;
 
 /**
+ * Share below which a page row is noise rather than a candidate.
+ *
+ * GSC reports a row for any URL that surfaced even once, so a query's page list
+ * routinely contains near-zero appearances. Those must not drive decisions — a
+ * page averaging position 1.0 off ONE impression is not evidence the site ranks
+ * first — but they also must not be the only thing consulted.
+ */
+const MEANINGFUL_PAGE_SHARE = 0.05;
+
+/**
+ * The pages of a query that are worth reasoning about.
+ *
+ * Filtering before choosing, rather than collapsing to a single winner first, is
+ * what keeps BOTH failure modes closed: the fluke page cannot represent the
+ * query, and a substantial secondary page is still visible to whatever decision
+ * comes next. Collapsing first hid real opportunities — a page with 40% of a
+ * query's impressions at position 8 was discarded because a larger page ranked
+ * 35th.
+ */
+export function meaningfulPages(pages: PageAttribution[]): PageAttribution[] {
+  const meaningful = pages.filter(
+    (page) => page.shareOfQueryPageImpressions >= MEANINGFUL_PAGE_SHARE,
+  );
+  // Never return nothing: a query whose pages are all tiny still has a leader,
+  // and dropping it entirely would lose the query rather than de-weight it.
+  return meaningful.length > 0 ? meaningful : pages.slice(0, 1);
+}
+
+/**
  * Pick the URL that actually represents a query.
  *
  * Explicitly NOT the minimum position. GSC averages position over impressions

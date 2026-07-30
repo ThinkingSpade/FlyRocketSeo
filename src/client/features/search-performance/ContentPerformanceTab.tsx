@@ -165,18 +165,18 @@ export function ContentPerformanceTab({
             page can leave the sample without leaving the site. Comparing two
             differently-composed samples can show movement the real data does not
             have — say so rather than presenting the delta as fact. */}
-        {connected && data.sampling.truncated ? (
+        {connected && data.sampling.current.truncated ? (
           <p className="mt-2 text-xs text-base-content/50">
             Each period is capped to the top{" "}
-            {data.sampling.rowsExamined.toLocaleString()} pages by clicks, and
-            the two periods can contain different pages. Treat the comparison as
-            directional.
+            {data.sampling.current.rowsExamined.toLocaleString()} pages by
+            clicks, and the two periods can contain different pages. Treat the
+            comparison as directional.
           </p>
         ) : null}
 
         {filteredGroups.length === 0 ? (
           <p className="mt-4 text-sm text-base-content/60">
-            {connected && data.sampling.truncated
+            {connected && data.sampling.current.truncated
               ? `No ${trendFilter === "all" ? "" : trendFilter} content groups among the pages returned for this period.`
               : `No ${trendFilter === "all" ? "" : trendFilter} content groups in this period.`}
           </p>

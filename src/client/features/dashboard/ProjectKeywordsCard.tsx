@@ -133,7 +133,7 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
       >
         <CardEmpty>
           <p>
-            {report.sampling.truncated
+            {report.sampling.queryTotals.truncated
               ? "No ranking queries among the rows Search Console returned for this period. It caps how many come back, so this isn't every query you rank for."
               : "No search queries yet in this period — once Google shows your pages, the keywords you rank for land here."}
           </p>
@@ -163,7 +163,7 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
           rows={rankingNow}
           metric="clicks"
           emptyLabel={
-            report.sampling.truncated
+            report.sampling.queryTotals.truncated
               ? "No clicked queries among the rows returned for this period."
               : "No clicked queries in this period yet."
           }
@@ -175,7 +175,7 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
           rows={opportunities}
           metric="impressions"
           emptyLabel={
-            report.sampling.truncated
+            report.sampling.queryTotals.truncated
               ? "No near-miss queries among the rows returned — the ones we got are already top 3 or far off."
               : "No near-miss queries — everything is already top 3 or far off."
           }
