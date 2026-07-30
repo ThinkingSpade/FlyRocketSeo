@@ -8,6 +8,11 @@ import {
   useSelectionAnchor,
 } from "@/client/components/table/AppDataTable";
 import {
+  resolveQueryState,
+  type QuerySamplingEvidence,
+} from "@/client/components/state/queryState";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import {
   TableBulkActionBar,
   TableBulkActionButton,
 } from "@/client/components/table/TableBulkActionBar";
@@ -232,16 +237,16 @@ export function DimensionTable({
     withSorting: true,
     initialState: { sorting: [{ id: "clicks", desc: true }] },
   });
+  // No `empty` fallback: the zero-row state is owned by the QueryStateBoundary
+  // around the call site in SearchPerformancePage, which is the only place that
+  // knows whether the pull behind these rows actually ran to completion. A
+  // second empty message here would drift from that one, which is how the
+  // pre-boundary code ended up claiming an absence it had not established.
   return (
     <AppDataTable
       table={table}
       className="table table-zebra table-sm"
       wrapperClassName="overflow-x-auto"
-      empty={
-        <p className="p-6 text-sm text-base-content/60">
-          No data for this period yet. Search Console data trails by a few days.
-        </p>
-      }
     />
   );
 }
@@ -249,13 +254,14 @@ export function DimensionTable({
 export function StrikingDistanceTable({
   projectId,
   rows,
-  sampled = false,
+  sampling,
 }: {
   projectId: string;
   rows: Report["strikingDistance"];
-  /** The upstream GSC pull hit its row limit, so an empty result means "none in
-   *  what we read", not "none exist". */
-  sampled?: boolean;
+  /** How complete the pull these rows were derived from was. Evidence rather
+   *  than a `sampled` boolean, so "none in this period" can only be printed
+   *  once completeness is proven. */
+  sampling: readonly QuerySamplingEvidence[];
 }) {
   const queryClient = useQueryClient();
   const anchorRef = useSelectionAnchor();
@@ -321,18 +327,24 @@ export function StrikingDistanceTable({
     },
   });
 
-  if (rows.length === 0) {
-    return (
-      <p className="p-6 text-sm text-base-content/60">
-        {sampled
-          ? "No striking-distance queries among the ones Search Console returned. It sends them ordered by clicks and caps how many come back, so a query ranking 5 to 20 could be sitting outside that."
-          : "No striking-distance queries in this period. These are queries ranking at positions 5 to 20, where an improvement is most likely to move traffic."}
-      </p>
-    );
-  }
+  // Lifecycle belongs to the parent's report query; only the emptiness is this
+  // component's to judge.
+  const state = resolveQueryState({
+    isPending: false,
+    isError: false,
+    connected: true,
+    rowCount: rows.length,
+    sampling,
+  });
 
   return (
-    <>
+    <QueryStateBoundary
+      state={state}
+      loading={null}
+      errorMessage=""
+      emptyTitle="No striking-distance queries in this period"
+      emptyBody="These are queries ranking at positions 5 to 20, where an improvement is most likely to move traffic."
+    >
       <div className="p-4">
         <p className="mb-3 text-sm text-base-content/60">
           Queries ranking at positions 5 to 20, sorted by impressions. Improve
@@ -382,6 +394,6 @@ export function StrikingDistanceTable({
           </div>
         }
       />
-    </>
+    </QueryStateBoundary>
   );
 }

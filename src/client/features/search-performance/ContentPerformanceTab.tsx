@@ -2,6 +2,9 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Layers, Loader2, TrendingDown, TrendingUp } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { resolveQueryState } from "@/client/components/state/queryState";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getContentPerformance } from "@/serverFunctions/searchPerformance";
 import type {
   SearchPerformanceDateRange,
@@ -96,111 +99,164 @@ export function ContentPerformanceTab({
     return true;
   });
 
-  if (contentQuery.isPending) {
-    return (
-      <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-        <Loader2 className="size-4 animate-spin" /> Loading content performance…
-      </div>
-    );
-  }
+  // Lifecycle for the tab as a whole. Before this, `isError` was never checked
+  // and a failed read fell into the `!connected` branch, so a Google outage
+  // rendered as "Connect Search Console" — telling the user to fix a connection
+  // that was never broken.
+  const tabState = resolveQueryState({
+    isPending: contentQuery.isPending,
+    isError: contentQuery.isError,
+    connected: data?.connected,
+    // One response object, not a row set: zero pages in the period is still a
+    // valid answer and belongs in the tiles below, not in an empty state.
+    rowCount: connected && buckets ? 1 : 0,
+  });
 
-  if (!connected || !buckets) {
-    return (
-      <div className="p-4 text-sm text-base-content/60">
-        Connect Search Console to see how your pages and content groups are
-        performing.
-      </div>
-    );
-  }
+  // The content-group list gets its own state because its emptiness rests on
+  // BOTH period pulls: `growing`/`decaying` are computed from a delta, so a
+  // capped previous period can hide a group just as easily as a capped current
+  // one. The old copy only ever checked `current`.
+  const groupsState = resolveQueryState({
+    isPending: false,
+    isError: false,
+    connected: true,
+    rowCount: filteredGroups.length,
+    filtered: trendFilter !== "all",
+    sampling: connected
+      ? [
+          {
+            label: "The current-period Search Console page pull",
+            truncated: data.sampling.current.truncated,
+            rowsExamined: data.sampling.current.rowsExamined,
+          },
+          {
+            label: "The previous-period Search Console page pull",
+            truncated: data.sampling.previous.truncated,
+            rowsExamined: data.sampling.previous.rowsExamined,
+          },
+        ]
+      : [],
+  });
+  const periodsAreSampled =
+    connected &&
+    (data.sampling.current.truncated || data.sampling.previous.truncated);
 
   return (
-    <div className="space-y-3 p-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {BUCKET_TILES.map((tile) => (
-          <div
-            key={tile.key}
-            className="rounded-lg border border-base-300 bg-base-100 p-3"
-          >
-            <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
-              {tile.label}
-            </div>
-            <div className="mt-1 flex items-baseline gap-2">
-              <span className="text-xl font-semibold tabular-nums">
-                {buckets[tile.key].toLocaleString()}
-              </span>
-              <span className="text-xs text-base-content/50">pages</span>
-            </div>
-            <DeltaText value={deltas?.[tile.key] ?? null} />
-          </div>
-        ))}
-      </div>
-
-      <div className="rounded-lg border border-base-300 bg-base-100 p-4">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-            <InsightIcon icon={Layers} tone="primary" />
-            Content groups
-          </h3>
-          <div className="join">
-            {(["all", "growing", "decaying"] as const).map((filter) => (
-              <button
-                key={filter}
-                type="button"
-                className={`btn btn-xs join-item capitalize ${
-                  trendFilter === filter ? "btn-active" : "btn-ghost"
-                }`}
-                onClick={() => setTrendFilter(filter)}
+    <QueryStateBoundary
+      state={tabState}
+      loading={
+        <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
+          <Loader2 className="size-4 animate-spin" /> Loading content
+          performance…
+        </div>
+      }
+      errorMessage={getStandardErrorMessage(contentQuery.error)}
+      notConnected={
+        <div className="p-4 text-sm text-base-content/60">
+          Connect Search Console to see how your pages and content groups are
+          performing.
+        </div>
+      }
+      emptyTitle="No page data came back for this period"
+      emptyBody="Search Console answered without page rows. Try a wider date range."
+    >
+      {/* The boundary has already ruled out every other state; this only
+          narrows the types it cannot narrow for us. */}
+      {buckets ? (
+        <div className="space-y-3 p-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+            {BUCKET_TILES.map((tile) => (
+              <div
+                key={tile.key}
+                className="rounded-lg border border-base-300 bg-base-100 p-3"
               >
-                {filter}
-              </button>
+                <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+                  {tile.label}
+                </div>
+                <div className="mt-1 flex items-baseline gap-2">
+                  <span className="text-xl font-semibold tabular-nums">
+                    {buckets[tile.key].toLocaleString()}
+                  </span>
+                  <span className="text-xs text-base-content/50">pages</span>
+                </div>
+                <DeltaText value={deltas?.[tile.key] ?? null} />
+              </div>
             ))}
           </div>
-        </div>
-        <p className="mt-0.5 text-xs text-base-content/50">
-          Your pages grouped by what they are, compared with the previous period
-          — so you can see which kind of content is winning.
-        </p>
 
-        {/* Both periods are separately capped to their top pages by clicks, so a
-            page can leave the sample without leaving the site. Comparing two
-            differently-composed samples can show movement the real data does not
-            have — say so rather than presenting the delta as fact. */}
-        {connected && data.sampling.current.truncated ? (
-          <p className="mt-2 text-xs text-base-content/50">
-            Each period is capped to the top{" "}
-            {data.sampling.current.rowsExamined.toLocaleString()} pages by
-            clicks, and the two periods can contain different pages. Treat the
-            comparison as directional.
-          </p>
-        ) : null}
-
-        {filteredGroups.length === 0 ? (
-          <p className="mt-4 text-sm text-base-content/60">
-            {connected && data.sampling.current.truncated
-              ? `No ${trendFilter === "all" ? "" : trendFilter} content groups among the pages returned for this period.`
-              : `No ${trendFilter === "all" ? "" : trendFilter} content groups in this period.`}
-          </p>
-        ) : (
-          <div className="mt-2 overflow-x-auto">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Group</th>
-                  <th className="text-right">Pages</th>
-                  <th className="text-right">Clicks</th>
-                  <th className="text-right">Impressions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredGroups.map((group) => (
-                  <ContentGroupRowView key={group.key} group={group} />
+          <div className="rounded-lg border border-base-300 bg-base-100 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <h3 className="flex items-center gap-1.5 text-sm font-semibold">
+                <InsightIcon icon={Layers} tone="primary" />
+                Content groups
+              </h3>
+              <div className="join">
+                {(["all", "growing", "decaying"] as const).map((filter) => (
+                  <button
+                    key={filter}
+                    type="button"
+                    className={`btn btn-xs join-item capitalize ${
+                      trendFilter === filter ? "btn-active" : "btn-ghost"
+                    }`}
+                    onClick={() => setTrendFilter(filter)}
+                  >
+                    {filter}
+                  </button>
                 ))}
-              </tbody>
-            </table>
+              </div>
+            </div>
+            <p className="mt-0.5 text-xs text-base-content/50">
+              Your pages grouped by what they are, compared with the previous
+              period — so you can see which kind of content is winning.
+            </p>
+
+            <QueryStateBoundary
+              state={groupsState}
+              loading={null}
+              errorMessage=""
+              emptyTitle="No content groups in this period"
+              emptyBody="Groups appear once Search Console reports pages whose URLs fall into recognisable sections."
+              filteredTitle={`No ${trendFilter} content groups in this period`}
+              filteredBody={
+                trendFilter === "growing"
+                  ? "Nothing gained clicks against the previous period. Clear the filter to see the rest."
+                  : "Nothing lost clicks against the previous period. Clear the filter to see the rest."
+              }
+            >
+              {/* Row counts and completeness are the boundary's job; this
+                  sentence is about a different fact — that a delta between two
+                  independently sampled populations can show movement the whole
+                  data set does not have. It is only true when a pull was
+                  actually capped, so it stays conditional. */}
+              {periodsAreSampled ? (
+                <p className="mt-2 text-xs text-base-content/50">
+                  The two periods are capped separately, so they can contain
+                  different pages and a page can leave the sample without
+                  leaving the site. Treat the comparison as directional.
+                </p>
+              ) : null}
+              <div className="mt-2 overflow-x-auto">
+                <table className="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Group</th>
+                      <th className="text-right">Pages</th>
+                      <th className="text-right">Clicks</th>
+                      <th className="text-right">Impressions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredGroups.map((group) => (
+                      <ContentGroupRowView key={group.key} group={group} />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </QueryStateBoundary>
           </div>
-        )}
-      </div>
-    </div>
+        </div>
+      ) : null}
+    </QueryStateBoundary>
   );
 }
 
