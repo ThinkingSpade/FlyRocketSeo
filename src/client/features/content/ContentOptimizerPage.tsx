@@ -371,7 +371,10 @@ export function ContentOptimizerPage({
       refetchOnWindowFocus: false,
       refetchOnReconnect: false,
       refetchOnMount: false,
-      retry: 1,
+      // No retry: this query spends money. react-query's retry doubles the
+      // server function invocations, and each one can reach the metered provider
+      // independently, so a transient failure could be billed twice per click.
+      retry: 0,
     })),
   });
   const analysisByUrl = new Map<string, CompetitorAnalysis>();

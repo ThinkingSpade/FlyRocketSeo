@@ -17,10 +17,39 @@ const API_BASE = "https://api.dataforseo.com";
 const MAX_DATAFORSEO_ERROR_PAYLOAD_LENGTH = 1600;
 // Safety ceiling on any live call (Lighthouse is the slowest, ~tens of seconds).
 const DATAFORSEO_REQUEST_TIMEOUT_MS = 60_000;
-// Retry idempotent reads on transient 5xx. Total attempts = retries + 1; the
-// shared request-timeout signal still caps overall wall time.
-const DATAFORSEO_MAX_RETRIES = 2;
+// Retry budget for READS only. Total attempts = retries + 1; the shared
+// request-timeout signal still caps overall wall time.
+export const DATAFORSEO_MAX_RETRIES = 2;
 const DATAFORSEO_RETRY_BACKOFF_MS = 250;
+
+/**
+ * Should this failed DataForSEO request be replayed?
+ *
+ * Only GETs. This code previously retried any 5xx twice while its own comment
+ * called the operation "an idempotent read" — but it never checked the method,
+ * and DataForSEO's `live` and `task_post` endpoints are POSTs that bill per
+ * request. A 5xx does not tell us whether the provider already did the work and
+ * charged for it, so replaying one can pay two or three times for a single user
+ * action. Combined with the Lighthouse layer's own attempts this reached nine
+ * HTTP calls for one strategy.
+ *
+ * Reads (`task_get`) are GETs, cost nothing to repeat, and are the only case a
+ * transient 5xx is worth riding out.
+ *
+ * Exported so the money rule is directly testable rather than buried in a fetch
+ * closure — it had no test at all before.
+ */
+export function shouldRetryDataforseoRequest(request: {
+  status: number;
+  method?: string;
+  attempt: number;
+}): boolean {
+  if (request.attempt >= DATAFORSEO_MAX_RETRIES) return false;
+  if (request.status < 500) return false;
+  // Absent method defaults to NOT retrying. fetch() would treat it as a GET, but
+  // guessing wrong here costs real money, so the safe default wins.
+  return request.method?.toUpperCase() === "GET";
+}
 
 /**
  * Translates a DataForSEO HTTP/task failure into a product-specific AppError
@@ -80,8 +109,15 @@ function createAuthenticatedFetch(classify?: DataforseoErrorClassifier) {
       const response = await fetch(url, { ...init, headers, signal });
       if (response.ok) return response;
 
-      // Transient upstream 5xx on an idempotent read -> back off and retry.
-      if (response.status >= 500 && attempt < DATAFORSEO_MAX_RETRIES) {
+      // Transient upstream 5xx on a READ -> back off and retry. A POST is
+      // billable and is never replayed; see shouldRetryDataforseoRequest.
+      if (
+        shouldRetryDataforseoRequest({
+          status: response.status,
+          method: init?.method,
+          attempt,
+        })
+      ) {
         await new Promise((resolve) =>
           setTimeout(resolve, DATAFORSEO_RETRY_BACKOFF_MS * (attempt + 1)),
         );

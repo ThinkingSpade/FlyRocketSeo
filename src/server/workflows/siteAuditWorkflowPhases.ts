@@ -18,6 +18,21 @@ import { runCrawlPhase } from "@/server/workflows/siteAuditWorkflowCrawl";
 import { pgStep } from "@/server/workflows/pgStep";
 
 const LIGHTHOUSE_URL_BATCH_SIZE = 10;
+/**
+ * Never replay a step that has already spent money.
+ *
+ * A Lighthouse batch is 10 URLs x 2 strategies = 20 billed DataForSEO calls. The
+ * step ran with no config, so Cloudflare's default retry policy applied: if the
+ * provider calls all succeeded and something afterwards failed -- an R2 upload,
+ * step persistence -- the whole batch replayed and re-bought all 20 audits.
+ *
+ * Matches SINGLE_ATTEMPT_STEP_CONFIG in siteAuditWorkflowFallback.ts, which
+ * documents the same rule for the same reason. A failed batch forfeits only its
+ * own pages; the audit records them as failed and moves on.
+ */
+const SINGLE_ATTEMPT_STEP_CONFIG = {
+  retries: { limit: 0, delay: "1 second" as const },
+};
 
 // Workflows rejects step outputs over 1MiB; keep the sitemap seed list well
 // under that. The crawl visits at most maxPages URLs, so extra seeds are moot.
@@ -244,33 +259,37 @@ async function runLighthouseBatch(params: {
     projectId,
     auditId,
   } = params;
-  return step.do(`lighthouse-batch-${lighthouseBatchIndex}`, async () => {
-    const perUrlResults = await Promise.all(
-      batch.map(async ({ url, pageId }) => {
-        const [mobileResult, desktopResult] = await Promise.all([
-          fetchAndStoreLighthouseResult({
-            url,
-            pageId,
-            strategy: "mobile",
-            billingCustomer,
-            projectId,
-            auditId,
-          }),
-          fetchAndStoreLighthouseResult({
-            url,
-            pageId,
-            strategy: "desktop",
-            billingCustomer,
-            projectId,
-            auditId,
-          }),
-        ]);
-        return [mobileResult, desktopResult];
-      }),
-    );
+  return step.do(
+    `lighthouse-batch-${lighthouseBatchIndex}`,
+    SINGLE_ATTEMPT_STEP_CONFIG,
+    async () => {
+      const perUrlResults = await Promise.all(
+        batch.map(async ({ url, pageId }) => {
+          const [mobileResult, desktopResult] = await Promise.all([
+            fetchAndStoreLighthouseResult({
+              url,
+              pageId,
+              strategy: "mobile",
+              billingCustomer,
+              projectId,
+              auditId,
+            }),
+            fetchAndStoreLighthouseResult({
+              url,
+              pageId,
+              strategy: "desktop",
+              billingCustomer,
+              projectId,
+              auditId,
+            }),
+          ]);
+          return [mobileResult, desktopResult];
+        }),
+      );
 
-    return perUrlResults.flat();
-  });
+      return perUrlResults.flat();
+    },
+  );
 }
 
 async function finalizeAudit(args: {

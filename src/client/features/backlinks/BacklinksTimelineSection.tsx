@@ -62,7 +62,10 @@ export function BacklinksTimelineSection({
     enabled: target.trim() !== "",
     queryKey: ["backlinks-timeline", projectId, target],
     queryFn: () => getBacklinksTimeline({ data: { projectId, target } }),
-    retry: 1,
+    // No retry: this query spends money. react-query's retry doubles the server
+    // function invocations, and each one can reach the metered provider
+    // independently, so a transient failure could be billed twice for one click.
+    retry: 0,
   });
 
   const { containerRef, width: chartWidth } = useChartWidth();

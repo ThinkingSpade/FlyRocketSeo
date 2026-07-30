@@ -23,15 +23,20 @@ async function fetchLighthouseResult(
   let lastError: Error | null = null;
   const dataforseo = createDataforseoClient(billingCustomer);
 
-  for (let attempt = 0; attempt < 3; attempt++) {
-    try {
-      if (attempt > 0) {
-        // Exponential backoff: 2s, 4s
-        await new Promise((resolve) =>
-          setTimeout(resolve, 2000 * Math.pow(2, attempt - 1)),
-        );
-      }
+  // ONE attempt. `lighthouse.live` is a billed POST: a failure gives us no way
+  // to know whether DataForSEO already ran the audit and charged for it, so a
+  // retry can buy the same audit twice.
+  //
+  // This loop used to run three times, and the transport layer beneath it
+  // retried any 5xx twice on top, so a single strategy could issue up to nine
+  // billable HTTP calls. The transport no longer retries POSTs at all; this
+  // layer must not reintroduce it. A failed page is recorded as failed --
+  // AuditRepository persists errorMessage with null scores -- which is the
+  // honest outcome and costs nothing.
+  const MAX_LIGHTHOUSE_ATTEMPTS = 1;
 
+  for (let attempt = 0; attempt < MAX_LIGHTHOUSE_ATTEMPTS; attempt++) {
+    try {
       const data = await dataforseo.lighthouse.live({ url, strategy });
 
       return {
@@ -53,17 +58,14 @@ async function fetchLighthouseResult(
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
       console.warn(
-        `Lighthouse attempt ${attempt + 1} failed for ${url}:`,
+        `Lighthouse attempt ${attempt + 1} of ${MAX_LIGHTHOUSE_ATTEMPTS} failed for ${url}:`,
         lastError.message,
       );
     }
   }
 
-  // All retries exhausted — return null scores
-  console.error(
-    `Lighthouse failed after 3 attempts for ${url}:`,
-    lastError?.message,
-  );
+  // Not retried on purpose (see above) — record the failure and move on.
+  console.error(`Lighthouse failed for ${url}:`, lastError?.message);
   return {
     result: {
       url,

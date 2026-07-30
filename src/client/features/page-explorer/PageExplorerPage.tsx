@@ -134,7 +134,10 @@ export function PageExplorerPage({
       analyzeContentCompetitor({
         data: { projectId, url: runInput?.url ?? "" },
       }),
-    retry: 1,
+    // No retry: this query spends money. react-query's retry doubles the server
+    // function invocations, and each one can reach the metered provider
+    // independently, so a transient failure could be billed twice for one click.
+    retry: 0,
   });
   const snapshot = snapshotQuery.data ?? null;
 
