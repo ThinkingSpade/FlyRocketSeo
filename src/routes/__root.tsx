@@ -30,11 +30,28 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { Toaster } from "sonner";
 import { queryClient } from "@/client/tanstack-db";
 import { getActiveOrganizationId } from "@/lib/auth-session";
-import { getClientRuntimeConfig } from "@/serverFunctions/config";
 import { useEmailVerificationBypassed } from "@/client/features/auth/useEmailVerificationBypassed";
 
 export const Route = createRootRoute({
-  loader: () => getClientRuntimeConfig(),
+  // No loader. It used to be `() => getClientRuntimeConfig()`, and that one line
+  // took production down.
+  //
+  // Every server function runs through `globalServerFunctionMiddleware`
+  // (start.ts), which includes `ensureUserMiddleware` — so the ROOT loader, on
+  // every route including /sign-in, demanded hosted auth config and a session.
+  // Two consequences:
+  //
+  //   * an anonymous request threw UNAUTHENTICATED and the route 500'd;
+  //   * the SPA-shell prerender, which renders "/" inside a build container with
+  //     no Worker secrets, threw AUTH_CONFIG_MISSING, wrote no shell, and
+  //     Cloudflare shipped a build where every page route fell through to the
+  //     cold Worker and returned 500.
+  //
+  // Removing it costs nothing, because the value was never acted upon. It fed
+  // `initialData` tagged `source: "prerender"`, and `isResolved` is false while
+  // that is the source — so every consumer already waited for the live refetch
+  // that `ClientRuntimeConfigBootstrap` forces on mount. The loader bought a
+  // placeholder nobody read, at the price of making first paint require auth.
   head: () => ({
     meta: [
       {
