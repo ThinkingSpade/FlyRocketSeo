@@ -16,6 +16,10 @@ import {
   TrendRangeToggle,
   useChartWidth,
 } from "./RankTrackingTrendChart";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
 
 const BUCKETS = [
   { key: "top3", label: "Top 3", color: "#16a34a" },
@@ -121,14 +125,14 @@ export function RankTrackingOverview({
                   scale="time"
                   domain={["dataMin", "dataMax"]}
                   tickFormatter={formatDateTick}
-                  tick={{ fontSize: 10, fill: "#888" }}
+                  tick={CHART_AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
                   minTickGap={32}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 10, fill: "#888" }}
+                  tick={CHART_AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
                   width={28}
@@ -151,7 +155,7 @@ export function RankTrackingOverview({
                     );
                     return <DistributionTooltip label={label} byKey={byKey} />;
                   }}
-                  cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+                  cursor={CHART_CURSOR_LINE}
                 />
                 {BUCKETS.map((b) => (
                   <Area

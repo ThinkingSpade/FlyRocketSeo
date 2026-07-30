@@ -54,6 +54,10 @@ import {
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildTrendsVerdict } from "@/client/features/insights/verdicts/keywords";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -618,7 +622,7 @@ function TrendsChart({
                   year: "2-digit",
                 })
               }
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               minTickGap={40}
@@ -626,7 +630,7 @@ function TrendsChart({
             <YAxis
               domain={[0, 100]}
               allowDecimals={false}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               width={32}
@@ -670,7 +674,7 @@ function TrendsChart({
                   </div>
                 );
               }}
-              cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+              cursor={CHART_CURSOR_LINE}
             />
             {keywords.map((keyword, index) => (
               <Line

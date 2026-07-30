@@ -10,6 +10,7 @@ import {
 } from "recharts";
 import { formatCount } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { CHART_AXIS_TICK_SM } from "@/client/components/chart/chartTheme";
 
 type Props = {
   result: BrandLookupResult;
@@ -47,12 +48,12 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
           />
           <XAxis
             dataKey="label"
-            tick={{ fontSize: 11, fill: "#888" }}
+            tick={CHART_AXIS_TICK_SM}
             tickLine={false}
             axisLine={false}
           />
           <YAxis
-            tick={{ fontSize: 11, fill: "#888" }}
+            tick={CHART_AXIS_TICK_SM}
             tickLine={false}
             axisLine={false}
             allowDecimals={false}

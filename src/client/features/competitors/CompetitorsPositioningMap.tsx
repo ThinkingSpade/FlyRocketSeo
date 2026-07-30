@@ -18,6 +18,7 @@ import type { CompetitorRow } from "@/server/features/competitors/services/Compe
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { domainOverviewResultSchema } from "@/types/schemas/domain";
+import { CHART_AXIS_TICK } from "@/client/components/chart/chartTheme";
 
 // Series palette shared with the trends charts.
 const DOT_COLORS = [
@@ -164,7 +165,7 @@ export function CompetitorsPositioningMap({
                 dataKey="keywords"
                 name="Organic keywords"
                 tickFormatter={formatCompact}
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
               />
@@ -173,7 +174,7 @@ export function CompetitorsPositioningMap({
                 dataKey="traffic"
                 name="Organic traffic"
                 tickFormatter={formatCompact}
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 width={44}

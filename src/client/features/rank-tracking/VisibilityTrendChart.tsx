@@ -13,6 +13,10 @@ import { InsightIcon } from "@/client/components/InsightTile";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 import { useChartWidth } from "./RankTrackingTrendChart";
 import { computeVisibilityTrend } from "./visibilityTrend";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
 
 type ChartRow = {
   label: string;
@@ -117,7 +121,7 @@ export function VisibilityTrendChart({
             />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               minTickGap={24}
@@ -125,13 +129,13 @@ export function VisibilityTrendChart({
             <YAxis
               domain={[0, 100]}
               tickFormatter={(value: number) => `${value}%`}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               width={38}
             />
             <Tooltip
-              cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+              cursor={CHART_CURSOR_LINE}
               content={(props: TooltipContentProps<number, string>) => {
                 const candidates = (props.payload ?? []).map(
                   (entry: { payload?: unknown }) => entry.payload,
