@@ -20,12 +20,21 @@ function toPath(url: string): string {
 /** Queries ranking well but clicked far below the benchmark for their
  *  position — each row is a title/meta rewrite candidate, sized by the
  *  clicks it's leaving on the table. */
-export function CtrOpportunitiesTable({ rows }: { rows: CtrRow[] }) {
+export function CtrOpportunitiesTable({
+  rows,
+  sampled = false,
+}: {
+  rows: CtrRow[];
+  /** The upstream GSC pull hit its row limit, so "none found" cannot be stated
+   *  as a property-wide all-clear. */
+  sampled?: boolean;
+}) {
   if (rows.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-base-content/60">
-        No CTR laggards found — every well-ranking query is earning a healthy
-        share of clicks.
+        {sampled
+          ? "No CTR laggards among the queries Search Console returned — those are earning a healthy share of clicks. It caps how many rows come back, so this isn't every query you rank for."
+          : "No CTR laggards found — every well-ranking query is earning a healthy share of clicks."}
       </div>
     );
   }

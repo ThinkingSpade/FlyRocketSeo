@@ -41,6 +41,35 @@ const EXPORT_PAGE_SIZE = 1000;
 // descending, so a silent cut drops the least-clicked rows without a trace.
 const EXPORT_ROW_CEILING = GSC_ANALYTICS_ROW_CEILING;
 
+type GscPull = {
+  rows: unknown[];
+  request: { rowLimit?: number };
+};
+
+function hitItsLimit(pull: GscPull): boolean {
+  return pull.rows.length >= (pull.request.rowLimit ?? 0);
+}
+
+/**
+ * Whether a report is a complete picture or a sample of one.
+ *
+ * Every list here derives from a pull Search Console returns ordered by clicks
+ * and does not promise is complete. Without this flag the UI cannot tell "you
+ * have no striking-distance queries" from "none appeared in the rows we read",
+ * and it asserted the former.
+ *
+ * `truncated` covers ALL pulls, because any incomplete input is enough to make
+ * an absence claim unsafe. `rowsExamined` reports the FIRST pull only — pass the
+ * pull whose absence claims the UI will make, since a count from a differently
+ * sized pull would misdescribe what was actually searched.
+ */
+function describeSampling(primary: GscPull, ...others: GscPull[]) {
+  return {
+    truncated: hitItsLimit(primary) || others.some(hitItsLimit),
+    rowsExamined: primary.rows.length,
+  };
+}
+
 /** Build GSC filter groups shared by every call. Device applies everywhere;
  *  country applies everywhere except the country breakdown itself (so the
  *  dropdown keeps every option visible while one country is selected). */
@@ -144,6 +173,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
         queryTotals: buildPropertyQueryTotals(queryTotalsPull.rows),
         queryPages: toQueryPageRows(queryPages.rows),
         countries: toDimensionRows(countries.rows),
+        sampling: describeSampling(queryPages, queryTotalsPull),
       };
     } catch (error) {
       return toGscUnavailable(error, {
@@ -299,6 +329,11 @@ export const getContentPerformance = createServerFn({ method: "POST" })
         range: { startDate, endDate },
         current: toContentPages(current.rows),
         previous: toContentPages(previous.rows),
+        // Both periods are independently truncated to the top pages by clicks.
+        // That matters more here than elsewhere: comparing two separately
+        // sampled populations can manufacture apparent movement between periods
+        // when the complete data did not change at all.
+        sampling: describeSampling(current, previous),
       };
     } catch (error) {
       return toGscUnavailable(error, {

@@ -103,7 +103,11 @@ function topicGap(signals: FreeSignals): SeedSuggestion[] {
     )
     .map((row) => ({
       value: row.query,
-      hint: `${compactNumber(row.impressions)} impr · best page ranks #${Math.round(row.position)}`,
+      // "best page ranks #N" was true of the old page-summed totals, where
+      // position was the minimum across a query's pages. These rows now carry
+      // Google's own property-level average position for the query, so naming a
+      // page would attribute it to a URL this row does not identify.
+      hint: `${compactNumber(row.impressions)} impr · ranks #${Math.round(row.position)}`,
       weight: row.impressions,
     }));
 }

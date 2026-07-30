@@ -93,6 +93,12 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     [auditQuery.data],
   );
 
+  // Either GSC source being capped makes an absence claim unsafe here, since
+  // this list is assembled from both.
+  const sampled =
+    (report?.connected ? report.sampling.truncated : false) ||
+    (linkInsights?.connected ? linkInsights.truncated : false);
+
   const totalClicksAtStake = opportunities.reduce(
     (sum, item) => sum + item.clicksAtStake,
     0,
@@ -139,7 +145,11 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           value={
             opportunitySourcesFailed ? "—" : totalClicksAtStake.toLocaleString()
           }
-          hint="Estimated monthly, if all are fixed"
+          hint={
+            sampled
+              ? "Estimated monthly, if everything listed here is fixed"
+              : "Estimated monthly, if all are fixed"
+          }
           tone="success"
         />
         <InsightTile
@@ -165,6 +175,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           <p className="-mt-1 text-xs text-base-content/50">
             Each row estimates the extra monthly clicks a successful fix would
             earn, so the highest-value work sits at the top.
+            {sampled
+              ? " Search Console caps how many rows it returns, ordered by clicks, so this ranks what we could read rather than everything you rank for."
+              : ""}
           </p>
 
           {reportQuery.isError || linkInsightsQuery.isError ? (
@@ -205,8 +218,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             </div>
           ) : opportunities.length === 0 ? (
             <div className="rounded-lg border border-dashed border-base-300 p-6 text-center text-sm text-base-content/60">
-              No keyword opportunities right now — nothing is sitting just off
-              page one with meaningful demand.
+              {sampled
+                ? "No keyword opportunities in the rows Search Console returned. It sends them ordered by clicks and caps the pull, so something off page one with real demand could be outside it."
+                : "No keyword opportunities right now — nothing is sitting just off page one with meaningful demand."}
             </div>
           ) : (
             <div className="overflow-x-auto">

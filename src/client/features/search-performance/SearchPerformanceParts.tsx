@@ -249,9 +249,13 @@ export function DimensionTable({
 export function StrikingDistanceTable({
   projectId,
   rows,
+  sampled = false,
 }: {
   projectId: string;
   rows: Report["strikingDistance"];
+  /** The upstream GSC pull hit its row limit, so an empty result means "none in
+   *  what we read", not "none exist". */
+  sampled?: boolean;
 }) {
   const queryClient = useQueryClient();
   const anchorRef = useSelectionAnchor();
@@ -320,9 +324,9 @@ export function StrikingDistanceTable({
   if (rows.length === 0) {
     return (
       <p className="p-6 text-sm text-base-content/60">
-        No striking-distance queries in this period. These are queries ranking
-        at positions 5 to 20, where an improvement is most likely to move
-        traffic.
+        {sampled
+          ? "No striking-distance queries among the ones Search Console returned. It sends them ordered by clicks and caps how many come back, so a query ranking 5 to 20 could be sitting outside that."
+          : "No striking-distance queries in this period. These are queries ranking at positions 5 to 20, where an improvement is most likely to move traffic."}
       </p>
     );
   }

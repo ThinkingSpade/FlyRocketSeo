@@ -141,7 +141,7 @@ describe("buildSuggestions", () => {
   });
 
   describe("topic-gap", () => {
-    it("surfaces queries with impressions whose best page ranks past the first page", () => {
+    it("surfaces queries with impressions that rank past the first page", () => {
       const signals: FreeSignals = {
         ...EMPTY,
         queryTotals: [
@@ -152,7 +152,7 @@ describe("buildSuggestions", () => {
       };
 
       expect(buildSuggestions(signals, "topic-gap")).toEqual([
-        { value: "gap", hint: "700 impr · best page ranks #34", weight: 700 },
+        { value: "gap", hint: "700 impr · ranks #34", weight: 700 },
       ]);
     });
 
@@ -168,7 +168,7 @@ describe("buildSuggestions", () => {
         expect(buildSuggestions(signals, "topic-gap")).toEqual([
           {
             value: "gap21",
-            hint: "500 impr · best page ranks #21",
+            hint: "500 impr · ranks #21",
             weight: 500,
           },
         ]);

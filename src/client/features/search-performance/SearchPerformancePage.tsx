@@ -326,13 +326,31 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 </div>
               </div>
 
+              {/* One notice for the whole panel rather than a "(sampled)" tag
+                  on every count. The counts themselves are honest -- they are
+                  what we found -- but the reader needs to know once that the
+                  input was capped, since Search Console orders rows by clicks
+                  and drops the long tail first. */}
+              {report.sampling.truncated ? (
+                <p className="border-b border-base-300 px-4 py-2 text-xs text-base-content/50">
+                  Search Console returned{" "}
+                  {report.sampling.rowsExamined.toLocaleString()} query-and-page
+                  rows and stopped there, ordered by clicks. Counts below are
+                  what we found in those rows, not your whole property.
+                </p>
+              ) : null}
+
               {tab === "striking" ? (
                 <StrikingDistanceTable
                   projectId={projectId}
                   rows={report.strikingDistance}
+                  sampled={report.sampling.truncated}
                 />
               ) : tab === "ctr" ? (
-                <CtrOpportunitiesTable rows={report.ctrOpportunities} />
+                <CtrOpportunitiesTable
+                  rows={report.ctrOpportunities}
+                  sampled={report.sampling.truncated}
+                />
               ) : tab === "content" ? (
                 <ContentPerformanceTab
                   projectId={projectId}
