@@ -18,7 +18,11 @@ export async function crawlPage(
     // redirecting to a private address had already been requested by the time we
     // discarded it -- enough to probe internal services. Hops are now validated
     // before each request instead of audited after.
-    const response = await fetchValidatingEveryHop(
+    const {
+      response,
+      finalUrl: fetchedUrl,
+      redirected,
+    } = await fetchValidatingEveryHop(
       url,
       {
         headers: {
@@ -27,16 +31,23 @@ export async function crawlPage(
         },
         signal: AbortSignal.timeout(15_000),
       },
-      { sameHostAs: new URL(crawlOrigin).hostname },
+      // The crawler's OWN origin rule, not a bare hostname match: apex and www
+      // are equivalent here, so pinning to the exact hostname broke the ordinary
+      // www -> apex canonical redirect and could end an audit with one failed
+      // page. isSameOrigin also checks protocol and effective port, which a
+      // hostname comparison ignores.
+      { allowHop: (hop) => isSameOrigin(hop.toString(), crawlOrigin) },
     );
 
     const responseTimeMs = Date.now() - startTime;
     const statusCode = response.status;
-    const finalUrl = normalizeUrl(response.url) ?? response.url;
+    const finalUrl = normalizeUrl(fetchedUrl) ?? fetchedUrl;
     if (!isSameOrigin(finalUrl, crawlOrigin)) return null;
 
-    const redirectUrl =
-      response.redirected && response.url !== url ? response.url : null;
+    // `response.redirected` is always false now: each hop is an independent
+    // manual fetch, so the final response was never itself redirected. Reading
+    // it would have silently dropped every redirectUrl the audit records.
+    const redirectUrl = redirected && fetchedUrl !== url ? fetchedUrl : null;
     const contentType = response.headers.get("content-type") ?? "";
     if (!contentType.includes("text/html")) {
       return emptyPageResult(finalUrl, statusCode, redirectUrl, responseTimeMs);

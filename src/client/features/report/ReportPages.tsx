@@ -98,12 +98,15 @@ export function ReportPages({
     lostBacklinks: backlinks?.summary.lostBacklinks ?? null,
     latestAuditAgeDays: daysSince(latestAudit?.startedAt),
     latestAuditFailed: latestAudit == null,
-    // Either GSC source being capped makes the all-clear unsafe: striking
-    // distance comes from the query x page pull, cannibalization and link
-    // opportunities from link insights.
-    gscSampled:
-      (gsc?.sampling.queryPages.truncated ?? false) ||
-      (insights?.truncated ?? false),
+    // MISSING counts as incomplete, not as "nothing found". A failed or
+    // disconnected GSC request leaves `gsc`/`insights` null, their counts fall
+    // to zero, and every recommendation branch above goes quiet -- which
+    // previously produced a confident all-clear built on data we never received.
+    gscIncomplete:
+      gsc == null ||
+      insights == null ||
+      gsc.sampling.queryPages.truncated ||
+      insights.truncated,
   });
 
   /** Renders just the requested sections, so one chapter can span pages. */

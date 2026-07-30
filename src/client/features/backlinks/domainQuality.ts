@@ -94,18 +94,31 @@ export function computeDomainQuality(
  * totalCount at 1,000 and 100 rows visible, the unseen 900 can invert either
  * verdict, so the page cannot speak for the profile.
  */
+/**
+ * Reports the observed DR distribution and stops there.
+ *
+ * Two things it deliberately no longer claims:
+ *
+ * - **How much weight the links pass.** DR describes the referring domain's own
+ *   backlink profile, not the placement, follow status or outbound-link dilution
+ *   of the specific link pointing here. A DR 29 domain can send a followed
+ *   editorial link from a page with few outbound links; "passes little weight"
+ *   is not derivable from DR.
+ * - **Whether the mix is normal or unusual.** That needs a comparison set for
+ *   this niche, which we do not have.
+ */
 function describeQuality(strongShare: number, strongDomains: number): string {
   const percent = Math.round(strongShare * 100);
   if (strongDomains === 0) {
-    return "None of the referring domains on this page reach DR 30 — the links shown here pass little weight.";
+    return "None of the referring domains on this page reach DR 30.";
   }
   if (strongShare < 0.15) {
-    return `Only ${percent}% of these referring domains reach DR 30. The ones on this page are mostly long-tail sites that pass little weight.`;
+    return `${percent}% of the referring domains on this page reach DR 30; the rest sit below it.`;
   }
   if (strongShare < 0.4) {
-    return `${percent}% of these referring domains reach DR 30 — a normal mix of a few strong links and a long tail.`;
+    return `${percent}% of the referring domains on this page reach DR 30, the rest below.`;
   }
-  return `${percent}% of the referring domains on this page reach DR 30, which is unusually strong.`;
+  return `${percent}% of the referring domains on this page reach DR 30.`;
 }
 
 function median(values: number[]): number {

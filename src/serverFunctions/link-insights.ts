@@ -9,6 +9,7 @@ import {
 import { resolveDateRange } from "@/server/features/gsc/searchAnalytics";
 import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
 import { fetchValidatingEveryHop } from "@/server/lib/audit/url-policy";
+import { isSameOrigin } from "@/server/lib/audit/url-utils";
 import {
   buildCannibalizationRows,
   buildLinkOpportunities,
@@ -130,7 +131,7 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
       // request itself — straight past the private-address protections in
       // url-policy.ts. Following redirects means letting a remote server pick
       // our next request, so it cannot be delegated to fetch().
-      const response = await fetchValidatingEveryHop(
+      const { response } = await fetchValidatingEveryHop(
         data.sourceUrl,
         {
           headers: {
@@ -139,7 +140,7 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
           },
           signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
         },
-        { sameHostAs: source.hostname },
+        { allowHop: (hop) => isSameOrigin(hop.toString(), source.origin) },
       );
       if (!response.ok) {
         result = {

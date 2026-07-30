@@ -18,12 +18,12 @@ const SEVERITY_BADGE: Record<
   high: {
     label: "High",
     className: "badge-error",
-    hint: "Clicks split nearly evenly on a high-impression query — consolidate first",
+    hint: "Clicks are spread nearly evenly across these pages on a high-impression query — investigate this one first",
   },
   medium: {
     label: "Medium",
     className: "badge-warning",
-    hint: "A meaningful share of traffic goes to the losing page",
+    hint: "A meaningful share of traffic goes to pages other than the leading one",
   },
   low: {
     label: "Low",
@@ -141,10 +141,10 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                 </span>
               </span>
               <span className="text-xs text-base-content/50 tabular-nums">
-                {Math.round(row.splitShare * 100)}% of traffic off the leader ·{" "}
-                {row.totalImpressions.toLocaleString()} impressions ·{" "}
-                {row.totalClicks.toLocaleString()} clicks · {row.pages.length}{" "}
-                competing pages
+                {Math.round(row.splitShare * 100)}% of traffic outside the
+                leading page · {row.totalImpressions.toLocaleString()}{" "}
+                impressions · {row.totalClicks.toLocaleString()} clicks ·{" "}
+                {row.pages.length} ranking pages
               </span>
             </div>
 
@@ -174,9 +174,9 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                           {page.isWinner ? (
                             <span
                               className="badge badge-success badge-sm gap-1"
-                              title="Best position — consolidate toward this page"
+                              title="Leading page for this query — the likely consolidation target if these really do compete"
                             >
-                              <Trophy className="size-3" /> winner
+                              <Trophy className="size-3" /> leading
                             </span>
                           ) : null}
                         </span>

@@ -132,37 +132,62 @@ function pacificCalendarDate(instant: Date): Date {
  * period.
  *
  * Month-named ranges keep calendar-month arithmetic — "3 months" means three
- * months back, not 90 days — so they are not adjusted.
+ * months back, not 90 days — but they are inclusive too, so they subtract from
+ * the day AFTER the end and step back one day. Subtracting from the end date
+ * itself yielded one extra day: "last 12 months" ending 2026-05-31 started
+ * 2025-05-31, which is 366 inclusive dates.
  */
+/**
+ * Step back whole calendar months, clamping to the target month's last day.
+ *
+ * Raw `setUTCMonth` OVERFLOWS: asking for 31 February rolls forward into March.
+ * That silently moved "last 3 months" from 2026-05-31 to a 2026-03-03 start,
+ * dropping March 1-2, and shifted the 16-month floor on any month-end day.
+ */
+function monthsBefore(date: Date, months: number): Date {
+  const year = date.getUTCFullYear();
+  const month = date.getUTCMonth() - months;
+  // Day 0 of the following month is the last day of the target month, which
+  // gives the clamp with no calendar table or leap-year special case.
+  const lastDayOfTarget = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  return new Date(
+    Date.UTC(year, month, Math.min(date.getUTCDate(), lastDayOfTarget)),
+  );
+}
+
+function subtractMonths(end: Date, months: number): Date {
+  // Work from an exclusive end (end + 1 day) so the resulting range is
+  // inclusive. Subtracting from the end date itself yielded one extra day:
+  // "last 12 months" ending 2026-05-31 started 2025-05-31, or 366 dates.
+  const exclusiveEnd = new Date(end);
+  exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
+  return monthsBefore(exclusiveEnd, months);
+}
+
 function subtractRange(end: Date, range: GscDateRange): Date {
   const d = new Date(end);
   switch (range) {
     case "last_7_days":
       d.setUTCDate(d.getUTCDate() - 6);
-      break;
+      return d;
     case "last_28_days":
       d.setUTCDate(d.getUTCDate() - 27);
-      break;
+      return d;
     case "last_3_months":
-      d.setUTCMonth(d.getUTCMonth() - 3);
-      break;
+      return subtractMonths(end, 3);
     case "last_6_months":
-      d.setUTCMonth(d.getUTCMonth() - 6);
-      break;
+      return subtractMonths(end, 6);
     case "last_12_months":
-      d.setUTCMonth(d.getUTCMonth() - 12);
-      break;
+      return subtractMonths(end, 12);
     case "last_16_months":
-      d.setUTCMonth(d.getUTCMonth() - 16);
-      break;
+      return subtractMonths(end, 16);
   }
-  return d;
 }
 
 function sixteenMonthFloor(today: Date): string {
-  const d = new Date(today);
-  d.setUTCMonth(d.getUTCMonth() - 16);
-  return formatDate(d);
+  // A boundary, not an inclusive range start, so no exclusive-end adjustment —
+  // but it still needs the clamp, or the floor jumps a day on month-end dates.
+  return formatDate(monthsBefore(today, 16));
 }
 
 /** Resolve a convenience `dateRange` or explicit start/end into GSC dates.

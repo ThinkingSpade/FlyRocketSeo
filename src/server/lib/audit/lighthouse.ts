@@ -105,13 +105,32 @@ export async function fetchAndStoreLighthouseResult(input: {
   }
 
   const key = `site-audit/${input.projectId}/${input.auditId}/${input.pageId}-${input.strategy}.json`;
-  const uploaded = await putTextToR2(key, fetched.payloadJson);
 
-  return {
-    ...fetched.result,
-    r2Key: uploaded.key,
-    payloadSizeBytes: uploaded.sizeBytes,
-  };
+  // Storage failure must not discard the scores we just PAID for.
+  //
+  // This used to throw straight out. Combined with the surrounding workflow step
+  // now having zero retries -- so a paid batch can never be replayed -- one
+  // transient R2 503 would reject the whole Promise.all and fail the entire
+  // audit, after all 20 provider calls had already been billed. Two separate
+  // concerns got conflated: the PROVIDER call must not be replayed because it
+  // costs money, but storing its output is free and independently recoverable.
+  //
+  // The scores are returned either way; only the raw payload link is lost, and
+  // that payload is a detail view, not the audit result.
+  try {
+    const uploaded = await putTextToR2(key, fetched.payloadJson);
+    return {
+      ...fetched.result,
+      r2Key: uploaded.key,
+      payloadSizeBytes: uploaded.sizeBytes,
+    };
+  } catch (error) {
+    console.error(
+      `Lighthouse payload upload failed for ${input.url} (${input.strategy}); keeping the scores:`,
+      error instanceof Error ? error.message : String(error),
+    );
+    return fetched.result;
+  }
 }
 
 /**

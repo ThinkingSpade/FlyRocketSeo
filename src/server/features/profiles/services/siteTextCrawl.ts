@@ -1,5 +1,6 @@
 import * as cheerio from "cheerio";
 import { fetchValidatingEveryHop } from "@/server/lib/audit/url-policy";
+import { isSameOrigin } from "@/server/lib/audit/url-utils";
 
 /**
  * A tiny, hard-capped read of a site's own words.
@@ -78,13 +79,13 @@ async function fetchHtml(url: string): Promise<string | null> {
     // "127.0.0.1:8787" -- or any page redirecting there -- had the Worker fetch
     // it. Every hop stays on the crawled host, which is what internal-link
     // crawling wants anyway.
-    const response = await fetchValidatingEveryHop(
+    const { response } = await fetchValidatingEveryHop(
       url,
       {
         signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
         headers: { "user-agent": "FlyRocketSEO/1.0 (+profile-draft)" },
       },
-      { sameHostAs: new URL(url).hostname },
+      { allowHop: (hop) => isSameOrigin(hop.toString(), new URL(url).origin) },
     );
     if (!response.ok) return null;
     const type = response.headers.get("content-type") ?? "";

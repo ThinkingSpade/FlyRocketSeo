@@ -187,3 +187,38 @@ describe("row ceiling", () => {
     expect(GSC_ANALYTICS_ROW_CEILING).toBeGreaterThan(GSC_MCP_ROW_CEILING);
   });
 });
+
+describe("month-named ranges", () => {
+  it("does not overflow a month-end start date into the next month", () => {
+    // Adversarial review: at 2026-06-03 noon PDT the lagged end is 2026-05-31.
+    // setUTCMonth(February) tried to keep day 31 and rolled forward to March 3,
+    // so "Last 3 months" silently began on the 3rd and dropped March 1-2.
+    const window = resolveDateRange(
+      { dateRange: "last_3_months" },
+      new Date("2026-06-03T19:00:00Z"),
+    );
+
+    expect(window.endDate).toBe("2026-05-31");
+    expect(window.startDate).toBe("2026-03-01");
+  });
+
+  it("clamps the 16-month floor instead of overflowing a month end", () => {
+    // 2026-03-31 in Pacific; minus 16 months is November 2024, which has no
+    // 31st. Raw setUTCMonth rolled that forward to 2024-12-01.
+    const { startDate } = resolveDateRange(
+      { startDate: "2000-01-01", endDate: "2026-03-31" },
+      new Date("2026-04-01T00:30:00Z"),
+    );
+    expect(startDate).toBe("2024-11-30");
+  });
+
+  it("spans whole months inclusively, not one day extra", () => {
+    const window = resolveDateRange(
+      { dateRange: "last_12_months" },
+      new Date("2026-06-03T19:00:00Z"),
+    );
+    expect(window.endDate).toBe("2026-05-31");
+    // 12 inclusive months ending 2026-05-31 starts 2025-06-01, not 2025-05-31.
+    expect(window.startDate).toBe("2025-06-01");
+  });
+});

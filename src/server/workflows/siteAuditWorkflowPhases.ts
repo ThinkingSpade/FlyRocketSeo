@@ -27,8 +27,14 @@ const LIGHTHOUSE_URL_BATCH_SIZE = 10;
  * step persistence -- the whole batch replayed and re-bought all 20 audits.
  *
  * Matches SINGLE_ATTEMPT_STEP_CONFIG in siteAuditWorkflowFallback.ts, which
- * documents the same rule for the same reason. A failed batch forfeits only its
- * own pages; the audit records them as failed and moves on.
+ * documents the same rule for the same reason.
+ *
+ * For this to be safe the step must not THROW on recoverable failures, or
+ * zero-retry turns them terminal. `fetchAndStoreLighthouseResult` therefore
+ * converts both provider failures and R2 upload failures into result rows: the
+ * paid call is what must never be replayed, while storing its output is free and
+ * independently recoverable. A page that fails is recorded as failed and the
+ * audit continues.
  */
 const SINGLE_ATTEMPT_STEP_CONFIG = {
   retries: { limit: 0, delay: "1 second" as const },

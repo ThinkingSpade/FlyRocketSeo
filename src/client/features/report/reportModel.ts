@@ -53,12 +53,18 @@ type RecommendationInput = {
   lostBacklinks: number | null;
   latestAuditAgeDays: number | null;
   latestAuditFailed: boolean;
-  /** A Search Console pull behind the counts above hit its row limit.
+  /** A Search Console source behind the counts above was capped, missing,
+   *  disconnected or failed.
    *
    *  This report goes to a client, so its all-clear is the highest-stakes
-   *  absence claim in the product: "no urgent issues detected" from a capped
-   *  sample is a statement someone may act on for a month. */
-  gscSampled?: boolean;
+   *  absence claim in the product: "no urgent issues detected" from incomplete
+   *  input is a statement someone may act on for a month.
+   *
+   *  Covers ABSENT as well as capped, which an earlier version did not: a failed
+   *  or disconnected GSC request became null, its counts became zero, and the
+   *  report cheerfully declared all clear on data it never received. Missing data
+   *  is not the same as data showing nothing. */
+  gscIncomplete?: boolean;
 };
 
 /** Turn the report's findings into the "what we do next" bullets clients
@@ -78,7 +84,11 @@ export function buildRecommendations(input: RecommendationInput): string[] {
   }
   if (input.cannibalizationCount > 0) {
     recommendations.push(
-      `${input.cannibalizationCount} keywords have multiple pages competing against each other. Consolidating each onto one page stops the ranking split.`,
+      // Same correction as the Cannibalization page: query x page rows show
+      // several URLs ranking, not that they competed in one result set. This
+      // sentence goes to a client and recommends deleting or merging pages, so
+      // it says "check" rather than asserting the cause.
+      `${input.cannibalizationCount} keywords have more than one of your pages ranking. Worth checking each — where the pages really do compete, consolidating onto one stops the split.`,
     );
   }
   if (
@@ -101,8 +111,8 @@ export function buildRecommendations(input: RecommendationInput): string[] {
   }
   if (recommendations.length === 0) {
     recommendations.push(
-      input.gscSampled
-        ? "Nothing urgent surfaced in the Search Console data we could retrieve — it returns queries ordered by clicks and caps the pull, so keep publishing against the content plan and monitoring rankings."
+      input.gscIncomplete
+        ? "Nothing urgent surfaced in the Search Console data available for this period, and that data was incomplete — so treat this as no findings rather than an all-clear, and keep publishing against the content plan."
         : "No urgent issues detected — keep publishing against the content plan and monitoring rankings.",
     );
   }

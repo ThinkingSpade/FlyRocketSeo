@@ -210,6 +210,19 @@ async function assertRequestableUrl(parsed: URL): Promise<void> {
 /** Redirect chains longer than this are refused rather than followed. */
 const MAX_REDIRECT_HOPS = 5;
 
+type HopValidatedFetch = {
+  response: Response;
+  /** The URL the returned response actually came from. */
+  finalUrl: string;
+  /** Whether any redirect was followed to get there.
+   *
+   *  Callers cannot use `response.redirected`: each hop is an independent
+   *  `redirect: "manual"` fetch, so the final response was never itself
+   *  redirected and that flag is always false. Anything recording redirect
+   *  information must read this instead. */
+  redirected: boolean;
+};
+
 /**
  * Fetch a URL, re-validating the policy at every redirect hop.
  *
@@ -217,26 +230,32 @@ const MAX_REDIRECT_HOPS = 5;
  * the remote server, which is exactly the wrong party to trust with which
  * address our Worker connects to.
  *
- * `sameHostAs`, when given, additionally requires every hop to stay on that
- * host. An endpoint that only ever needs to read one site should not become a
- * general-purpose proxy because someone set up an open redirect on it.
+ * `allowHop`, when given, must also accept every hop. It is a PREDICATE rather
+ * than a hostname so callers supply their own origin rule — this module owns
+ * SSRF policy and deliberately does not also own crawl-origin semantics. A raw
+ * hostname comparison was both too strict and too loose: it rejected the
+ * ordinary `www` -> apex canonical redirect, and it ignored protocol and port,
+ * so a redirect to `http://same-host:8080/admin` sailed through. The Workers
+ * runtime can make subrequests to custom ports, which makes that a live hole
+ * rather than a theoretical one.
  *
  * `fetchImpl` is injectable so the hop checks are testable without a network.
  */
 export async function fetchValidatingEveryHop(
   startUrl: string,
   init: RequestInit,
-  options: { sameHostAs?: string; fetchImpl?: typeof fetch } = {},
-): Promise<Response> {
+  options: {
+    allowHop?: (url: URL) => boolean;
+    fetchImpl?: typeof fetch;
+  } = {},
+): Promise<HopValidatedFetch> {
   const doFetch = options.fetchImpl ?? fetch;
   let current = new URL(startUrl);
+  let redirected = false;
 
   for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
     await assertRequestableUrl(current);
-    if (
-      options.sameHostAs !== undefined &&
-      normalizeHost(current.hostname) !== normalizeHost(options.sameHostAs)
-    ) {
+    if (options.allowHop && !options.allowHop(current)) {
       throw new AppError("CRAWL_TARGET_BLOCKED");
     }
 
@@ -244,17 +263,20 @@ export async function fetchValidatingEveryHop(
 
     const location = response.headers.get("location");
     const isRedirect = response.status >= 300 && response.status < 400;
-    if (!isRedirect || !location) return response;
+    if (!isRedirect || !location) {
+      return { response, finalUrl: current.toString(), redirected };
+    }
 
     let next: URL;
     try {
-      // Relative Locations are legal and common, so resolve against the hop we
-      // just made rather than the original URL.
+      // Relative and protocol-relative Locations are legal and common, so
+      // resolve against the hop we just made rather than the original URL.
       next = new URL(location, current);
     } catch {
       throw new AppError("CRAWL_TARGET_BLOCKED");
     }
     current = next;
+    redirected = true;
   }
 
   // Ran out of hops: refuse rather than return a half-followed chain.
