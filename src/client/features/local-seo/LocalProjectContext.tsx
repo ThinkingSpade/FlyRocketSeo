@@ -108,6 +108,9 @@ export function LocalGscContext({
         context.cachedBusiness?.profile.region,
       ])
     : [];
+  // Both lists are filtered out of a capped Search Console pull, so an empty
+  // list means "none among the rows we read", not "none exist".
+  const sampled = context.report?.sampling.truncated ?? false;
   return (
     <aside className="border-t border-base-300 pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
       <div className="flex items-baseline justify-between gap-2">
@@ -134,8 +137,9 @@ export function LocalGscContext({
         </p>
       ) : brandedQueries.length === 0 && localPages.length === 0 ? (
         <p className="mt-2 text-xs text-base-content/55">
-          No clearly branded or local-intent results appeared in the last 28
-          days yet.
+          {sampled
+            ? "No clearly branded or local-intent results among the rows Search Console returned for the last 28 days."
+            : "No clearly branded or local-intent results appeared in the last 28 days yet."}
         </p>
       ) : (
         <div className="mt-2 grid gap-3 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2">
@@ -145,7 +149,11 @@ export function LocalGscContext({
               label: row.query,
               metric: `${Math.round(row.impressions).toLocaleString()} impr.`,
             }))}
-            empty="No branded queries found."
+            empty={
+              sampled
+                ? "None among the returned queries."
+                : "No branded queries found."
+            }
           />
           <ContextList
             title="Local landing pages"
@@ -153,7 +161,11 @@ export function LocalGscContext({
               label: pageLabel(row.page),
               metric: `${Math.round(row.impressions).toLocaleString()} impr.`,
             }))}
-            empty="No local landing pages found."
+            empty={
+              sampled
+                ? "None among the returned pages."
+                : "No local landing pages found."
+            }
           />
         </div>
       )}

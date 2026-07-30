@@ -82,7 +82,7 @@ describe("buildAuditVerdict", () => {
     expect(verdict.tone).toBe("good");
     expect(verdict.actions).toEqual([]);
     expect(verdict.read).toBe(
-      "This crawl found 1 issue type, but none of them touch your highest-traffic pages -- nothing urgent to fix there.",
+      "This crawl found 1 issue type, but none of them touch the 2 pages earning the most clicks. Pages below those were not checked against traffic.",
     );
   });
 
@@ -112,7 +112,7 @@ describe("buildAuditVerdict", () => {
     });
 
     expect(verdict.read).toBe(
-      "This crawl found 2 issue types, but none of them touch your highest-traffic pages -- nothing urgent to fix there.",
+      "This crawl found 2 issue types, but none of them touch the 1 page earning the most clicks. Pages below those were not checked against traffic.",
     );
   });
 
@@ -149,12 +149,13 @@ describe("buildAuditVerdict", () => {
 
     expect(verdict.tone).toBe("mixed");
     expect(verdict.read).toBe(
-      '"Missing meta description" affects 1 of your highest-traffic pages.',
+      '"Missing meta description" affects 1 of the 2 pages earning the most clicks.',
     );
     expect(verdict.actions).toEqual([
       {
         label: 'Fix "Missing meta description" on 1 high-traffic page',
-        evidence: "Affects 1 of your top-clicked pages (6 affected sitewide)",
+        evidence:
+          "Affects 1 of the 2 top-clicked pages (6 affected across the crawl)",
         weight: 61,
       },
     ]);
@@ -202,17 +203,19 @@ describe("buildAuditVerdict", () => {
     expect(verdict.actions).toEqual([
       {
         label: 'Fix "Missing title tag" on 1 high-traffic page',
-        evidence: "Affects 1 of your top-clicked pages (4 affected sitewide)",
+        evidence:
+          "Affects 1 of the 3 top-clicked pages (4 affected across the crawl)",
         weight: 101,
       },
       {
         label: 'Fix "Missing H1 heading" on 2 high-traffic pages',
-        evidence: "Affects 2 of your top-clicked pages (10 affected sitewide)",
+        evidence:
+          "Affects 2 of the 3 top-clicked pages (10 affected across the crawl)",
         weight: 62,
       },
     ]);
     expect(verdict.read).toBe(
-      '"Missing title tag" affects 1 of your highest-traffic pages, alongside 1 other issue type touching traffic-earning pages.',
+      '"Missing title tag" affects 1 of the 3 pages earning the most clicks, alongside 1 other issue type touching traffic-earning pages.',
     );
   });
 

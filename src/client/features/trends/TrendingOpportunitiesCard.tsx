@@ -133,8 +133,8 @@ function Shell({ children }: { children: React.ReactNode }) {
             one before it — the signal that exists for keywords Google Trends is
             too coarse to see. Impressions track how often <em>your</em> result
             was shown, so they move when your rankings move, not only when the
-            market does. Covers the whole property; the location above applies
-            to the Trends chart, not to this list.
+            market does. Not filtered by location — the picker above applies to
+            the Trends chart, not to this list.
           </p>
         </div>
         {children}

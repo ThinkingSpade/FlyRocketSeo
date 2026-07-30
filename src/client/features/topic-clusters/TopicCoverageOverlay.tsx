@@ -72,7 +72,9 @@ export function CoverageTag({ coverage }: { coverage: TopicCoverage }) {
       title={
         coverage.pages.length > 0
           ? coverage.pages.join("\n")
-          : "No matching Search Console landing page in the last 28 days"
+          : // Coverage is matched against a clicks-ordered, capped pull, so a
+            // "missing" topic may simply rank below where the pull stopped.
+            "No matching landing page among the Search Console rows retrieved for the last 28 days"
       }
     >
       {COVERAGE_LABELS[coverage.status]} · {coverage.pageCount}{" "}
