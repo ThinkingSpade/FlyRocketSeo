@@ -138,7 +138,14 @@ export function buildDomainVerdict(input: DomainVerdictInput): Verdict {
 
   if (pageOneShare >= BROAD_PAGE_ONE_SHARE) {
     return {
-      read: `${pluralize(pageOneCount, "keyword")} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a broad enough base that no single ranking loss should sink this domain's traffic.`,
+      // Describes RANKING BREADTH and stops there. The old ending -- "a broad
+      // enough base that no single ranking loss should sink this domain's
+      // traffic" -- is a claim about traffic concentration, and the input holds
+      // only keyword counts per position band plus one aggregate traffic total.
+      // 30% of keywords on page one is compatible with one of them carrying 99%
+      // of the traffic, so breadth of rankings says nothing about resilience.
+      // Answering that needs per-keyword traffic estimates.
+      read: `${pluralize(pageOneCount, "keyword")} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a broad ranking base. Which of them actually carry the traffic needs the per-keyword breakdown.`,
       tone: "good",
       actions: [],
     };

@@ -85,18 +85,27 @@ export function computeDomainQuality(
   };
 }
 
+/**
+ * Every sentence here is about the rows ON THIS PAGE, because that is all the
+ * input is — one page of referring domains, not the profile.
+ *
+ * Two branches used to widen to the whole profile ("this profile is built almost
+ * entirely from low-authority sites", "an unusually strong profile"). With
+ * totalCount at 1,000 and 100 rows visible, the unseen 900 can invert either
+ * verdict, so the page cannot speak for the profile.
+ */
 function describeQuality(strongShare: number, strongDomains: number): string {
   const percent = Math.round(strongShare * 100);
   if (strongDomains === 0) {
-    return "None of the referring domains on this page reach DR 30 — this profile is built almost entirely from low-authority sites.";
+    return "None of the referring domains on this page reach DR 30 — the links shown here pass little weight.";
   }
   if (strongShare < 0.15) {
-    return `Only ${percent}% of these referring domains reach DR 30. The count is being carried by long-tail sites that pass little weight.`;
+    return `Only ${percent}% of these referring domains reach DR 30. The ones on this page are mostly long-tail sites that pass little weight.`;
   }
   if (strongShare < 0.4) {
     return `${percent}% of these referring domains reach DR 30 — a normal mix of a few strong links and a long tail.`;
   }
-  return `${percent}% of these referring domains reach DR 30, which is an unusually strong profile.`;
+  return `${percent}% of the referring domains on this page reach DR 30, which is unusually strong.`;
 }
 
 function median(values: number[]): number {

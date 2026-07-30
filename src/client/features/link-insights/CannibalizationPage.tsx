@@ -47,11 +47,19 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
           <Split className="size-5" />
           Cannibalization
         </h1>
+        {/* States what the data shows, then what it might mean — in that order.
+            The request dimensions are query and page only, so we observe that
+            several of your URLs rank for one query. Whether they COMPETE, and
+            whether clicks are being split as a result, needs device, country,
+            date and same-SERP coexistence that we never asked for. Asserting the
+            cause led straight to "consolidate these", which is destructive
+            advice to give on an inference. */}
         <p className="text-sm text-base-content/60">
-          Queries where two or more of your pages compete against each other,
-          splitting clicks and rankings. Consolidate content into the winner, or
-          differentiate the losers onto different keywords — and point internal
-          links at the page that should win.
+          Queries where two or more of your pages both rank. That often means
+          they compete and split clicks — worth consolidating into one, or
+          differentiating onto separate keywords — but Search Console
+          doesn&rsquo;t show whether they appeared in the same results, so check
+          before merging anything.
         </p>
       </div>
 

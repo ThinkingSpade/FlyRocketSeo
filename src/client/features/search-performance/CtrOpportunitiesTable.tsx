@@ -78,9 +78,15 @@ export function CtrOpportunitiesTable({
           ))}
         </tbody>
       </table>
+      {/* Kept as guidance, softened from a diagnosis. Search Console reports
+          clicks, impressions and position — never WHY someone didn't click. A
+          featured snippet answering the query, brand preference, or a title that
+          already matches intent all produce this same row, and rewriting the
+          title fixes none of them. So: investigate first. */}
       <p className="border-t border-base-300 px-4 py-2 text-xs text-base-content/50">
-        These rank fine but under-earn clicks — rewrite the title and meta
-        description to match the query's intent.
+        These rank well but earn fewer clicks than usual for their position.
+        Check the live results first — a snippet or ad block may be absorbing
+        them — then consider rewriting the title and meta to match intent.
       </p>
     </div>
   );

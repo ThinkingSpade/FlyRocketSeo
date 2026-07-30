@@ -64,7 +64,13 @@ function describeExposure(nofollowShare: number): {
   if (nofollowShare >= NOFOLLOW_HEAVY_SHARE) {
     return {
       verdict: "nofollow-heavy",
-      note: `${percent}% of referring domains send at least one nofollow link. Some of those domains also send dofollow links, but the headline count still overstates how much authority reaches this site.`,
+      // Stops at what the provider measured. The old ending -- "the headline
+      // count still overstates how much authority reaches this site" -- does not
+      // follow: if every one of those domains ALSO sends a followed link, which
+      // this field cannot rule out, then every domain passes authority and the
+      // headline count overstates nothing. Judging that needs followed-only or
+      // link-level data we do not have here.
+      note: `${percent}% of referring domains send at least one nofollow link. This field counts domains touched by nofollow, not nofollow-only domains, so it does not say how many pass no authority — check the link-level view before concluding.`,
     };
   }
   if (nofollowShare <= SUSPICIOUSLY_CLEAN_SHARE) {

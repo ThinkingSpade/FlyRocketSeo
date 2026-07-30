@@ -147,7 +147,8 @@ export function buildOpportunities(input: {
       position: row.position,
       impressions: row.impressions,
       clicksAtStake: Math.round(row.missedClicks),
-      detail: "Ranks well but under-clicked — rewrite the title and meta",
+      detail:
+        "Ranks well but under-clicked — check the live results, then the title and meta",
     });
   }
 
