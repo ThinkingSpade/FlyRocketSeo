@@ -3,7 +3,10 @@ import type {
   GscSearchAnalyticsRequest,
   GscSearchAnalyticsRow,
 } from "@/server/lib/gscClient";
-import { fetchAllRows } from "@/server/features/gsc/fetchAllRows";
+import {
+  fetchAllRows,
+  pullWasTruncated,
+} from "@/server/features/gsc/fetchAllRows";
 
 const BASE: Omit<GscSearchAnalyticsRequest, "startRow"> = {
   startDate: "2026-01-01",
@@ -145,5 +148,40 @@ describe("fetchAllRows", () => {
       expect(request.startDate).toBe("2026-01-01");
       expect(request.endDate).toBe("2026-01-28");
     }
+  });
+});
+
+describe("pullWasTruncated", () => {
+  it("is true when the pull came back exactly full", () => {
+    expect(
+      pullWasTruncated({ rows: rows(1000), request: { rowLimit: 1000 } }),
+    ).toBe(true);
+  });
+
+  it("is false when the pull came back short", () => {
+    expect(
+      pullWasTruncated({ rows: rows(999), request: { rowLimit: 1000 } }),
+    ).toBe(false);
+  });
+
+  it("uses the applied limit, so a clamped request is still detected", () => {
+    // The original defect: a caller asked for 5000 and the builder clamped to
+    // 1000, but truncation was tested against 5000 -- so a pull that was plainly
+    // cut short reported itself complete. Passing the request AS SENT is what
+    // makes this detectable, so the 1000 rows below are correctly truncated even
+    // though 1000 was never what the caller wanted.
+    const asSent = { rows: rows(1000), request: { rowLimit: 1000 } };
+    const asRequested = 5000;
+
+    expect(pullWasTruncated(asSent)).toBe(true);
+    expect(asSent.rows.length).toBeLessThan(asRequested);
+  });
+
+  it("assumes truncation when no limit was recorded", () => {
+    // Deliberately conservative: with no applied limit we cannot establish
+    // completeness, and over-claiming absence is the failure mode that matters.
+    // In practice buildSearchAnalyticsRequest always sets rowLimit, so this is a
+    // guard rather than a live path.
+    expect(pullWasTruncated({ rows: [], request: {} })).toBe(true);
   });
 });

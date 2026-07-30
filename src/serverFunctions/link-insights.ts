@@ -7,6 +7,7 @@ import {
   isExpectedGrantFailure,
 } from "@/server/features/gsc/services/GscService";
 import { resolveDateRange } from "@/server/features/gsc/searchAnalytics";
+import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
 import {
   buildCannibalizationRows,
   buildLinkOpportunities,
@@ -66,7 +67,7 @@ export const getLinkInsights = createServerFn({ method: "POST" })
         // Without this the UI could not tell "your site is fine" from "we
         // didn't look past row 1000", and it said the former.
         rowsExamined: result.rows.length,
-        truncated: result.rows.length >= (result.request.rowLimit ?? 0),
+        truncated: pullWasTruncated(result),
       };
     } catch (error) {
       if (

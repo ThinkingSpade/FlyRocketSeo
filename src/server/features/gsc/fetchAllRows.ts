@@ -41,6 +41,22 @@ type QueryFn<T extends PaginableRequest> = (
 ) => Promise<GscSearchAnalyticsRow[]>;
 
 /**
+ * Did this pull come back full, meaning there may be more we did not see?
+ *
+ * The single definition of truncation for callers that issue one request rather
+ * than going through `fetchAllRows`. Compare against the limit the request
+ * ACTUALLY applied — `request.rowLimit` after clamping — never the limit the
+ * caller asked for. Those two diverged silently for every analytics path, which
+ * is why truncation went undetected in the first place.
+ */
+export function pullWasTruncated(pull: {
+  rows: unknown[];
+  request: { rowLimit?: number };
+}): boolean {
+  return pull.rows.length >= (pull.request.rowLimit ?? 0);
+}
+
+/**
  * Fetch up to `ceiling` rows and report whether the ceiling cut the pull short.
  *
  * Typically this makes exactly ONE request: the ceiling is smaller than the

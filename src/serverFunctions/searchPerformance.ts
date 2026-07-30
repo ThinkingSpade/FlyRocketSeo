@@ -8,7 +8,10 @@ import {
   resolveDateRange,
   type GscPerformanceFilter,
 } from "@/server/features/gsc/searchAnalytics";
-import { fetchAllRows } from "@/server/features/gsc/fetchAllRows";
+import {
+  fetchAllRows,
+  pullWasTruncated,
+} from "@/server/features/gsc/fetchAllRows";
 import { buildPropertyQueryTotals } from "@/server/features/gsc/gscAggregation";
 import {
   buildCtrOpportunityRows,
@@ -46,10 +49,6 @@ type GscPull = {
   request: { rowLimit?: number };
 };
 
-function hitItsLimit(pull: GscPull): boolean {
-  return pull.rows.length >= (pull.request.rowLimit ?? 0);
-}
-
 /**
  * Whether a report is a complete picture or a sample of one.
  *
@@ -65,7 +64,8 @@ function hitItsLimit(pull: GscPull): boolean {
  */
 function describeSampling(primary: GscPull, ...others: GscPull[]) {
   return {
-    truncated: hitItsLimit(primary) || others.some(hitItsLimit),
+    truncated:
+      pullWasTruncated(primary) || others.some((p) => pullWasTruncated(p)),
     rowsExamined: primary.rows.length,
   };
 }
