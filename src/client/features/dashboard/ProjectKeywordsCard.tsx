@@ -155,6 +155,18 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
         <Tile label="Close to page 1" value={summary.closeToPageOne} />
       </div>
 
+      {/* These tiles count the queries carried in the report, which is a slice of
+          the pull rather than the property. Without this the numbers plateau
+          silently and read as a total. */}
+      {report.sampling.queryTotals.truncated ? (
+        <p className="mt-2 text-xs text-base-content/50">
+          Counted across the{" "}
+          {report.sampling.queryTotals.rowsExamined.toLocaleString()} queries
+          Search Console returned, ordered by clicks — not every query you rank
+          for.
+        </p>
+      ) : null}
+
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <QueryList
           title="Ranking now"

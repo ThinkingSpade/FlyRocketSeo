@@ -43,8 +43,20 @@ type PageAttribution = {
   shareOfQueryPageImpressions: number;
 };
 
-/** Rows returned by default, matching the cap the previous implementation used
- *  so consumers see the same list length. */
+/**
+ * Rows carried in the report by default.
+ *
+ * A DISPLAY slice, not a count of anything. Every consumer slices further (six
+ * dashboard rows, five suggestions, five branded examples), so this exists to
+ * bound the response payload and its serialization CPU — which is spent on the
+ * same invocation as parsing, already measured near half the Workers Free
+ * budget for this endpoint.
+ *
+ * Consequence to respect: `queryTotals.length` therefore plateaus at this value
+ * and must never be rendered as a total. Use
+ * `sampling.queryTotals.rowsExamined` for how many queries were actually
+ * returned.
+ */
 const QUERY_TOTALS_ROW_LIMIT = 500;
 
 /**
