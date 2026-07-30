@@ -2,10 +2,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { KeyRound, Target, TrendingUp } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { resolveQueryState } from "@/client/components/state/queryState";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
-  CardEmpty,
-  CardError,
   CardTilesSkeleton,
   DashboardCard,
   formatCount,
@@ -102,45 +103,35 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
   });
   const report = reportQuery.data;
 
-  if (reportQuery.isError) {
-    return (
-      <DashboardCard icon={KeyRound} title="Your keywords">
-        <CardError error={reportQuery.error} />
-      </DashboardCard>
-    );
-  }
-  if (reportQuery.isPending) {
-    return (
-      <DashboardCard icon={KeyRound} title="Your keywords">
-        <CardTilesSkeleton />
-      </DashboardCard>
-    );
-  }
-  // Not connected is already covered by the search-performance card above.
-  if (!report?.connected) return null;
-
-  const queries = report.queryTotals;
+  const connected = report?.connected === true;
+  const queries = connected ? report.queryTotals : [];
   const summary = summarizeProjectKeywords(queries);
   const rankingNow = selectRankingNow(queries);
   const opportunities = selectOpportunities(queries);
 
-  if (summary.ranking === 0) {
-    return (
-      <DashboardCard
-        icon={KeyRound}
-        title="Your keywords · last 28 days"
-        headerLink={gscLink}
-      >
-        <CardEmpty>
-          <p>
-            {report.sampling.queryTotals.truncated
-              ? "No ranking queries among the rows Search Console returned for this period. It caps how many come back, so this isn't every query you rank for."
-              : "No search queries yet in this period — once Google shows your pages, the keywords you rank for land here."}
-          </p>
-        </CardEmpty>
-      </DashboardCard>
-    );
-  }
+  const state = resolveQueryState({
+    isPending: reportQuery.isPending,
+    isError: reportQuery.isError,
+    connected: report?.connected,
+    rowCount: summary.ranking,
+    // The count is of queries found in ONE capped pull. Without this evidence a
+    // zero reads as "you rank for nothing", when it can only support "nothing in
+    // the rows Search Console returned, ordered by clicks".
+    sampling: connected
+      ? [
+          {
+            label: "The Search Console query pull",
+            truncated: report.sampling.queryTotals.truncated,
+            rowsExamined: report.sampling.queryTotals.rowsExamined,
+          },
+        ]
+      : undefined,
+  });
+
+  // Renders nothing at all when disconnected: the Search Performance card
+  // directly above owns that state, and two connect prompts stacked on one
+  // dashboard read as two separate problems.
+  if (state.kind === "not-connected") return null;
 
   return (
     <DashboardCard
@@ -148,55 +139,51 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
       title="Your keywords · last 28 days"
       headerLink={gscLink}
     >
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <Tile label="Ranking queries" value={summary.ranking} />
-        <Tile label="Top 3" value={summary.top3} />
-        <Tile label="Top 10" value={summary.top10} />
-        <Tile label="Close to page 1" value={summary.closeToPageOne} />
-      </div>
+      <QueryStateBoundary
+        state={state}
+        loading={<CardTilesSkeleton />}
+        errorMessage={getStandardErrorMessage(reportQuery.error)}
+        emptyTitle="No search queries yet in this period"
+        emptyBody="Once Google shows your pages, the keywords you rank for land here."
+      >
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          <Tile label="Ranking queries" value={summary.ranking} />
+          <Tile label="Top 3" value={summary.top3} />
+          <Tile label="Top 10" value={summary.top10} />
+          <Tile label="Close to page 1" value={summary.closeToPageOne} />
+        </div>
 
-      {/* These tiles count the queries carried in the report, which is a slice of
-          the pull rather than the property. Without this the numbers plateau
-          silently and read as a total. */}
-      {report.sampling.queryTotals.truncated ? (
-        <p className="mt-2 text-xs text-base-content/50">
-          Counted across the{" "}
-          {report.sampling.queryTotals.rowsExamined.toLocaleString()} queries
-          Search Console returned, ordered by clicks — not every query you rank
-          for.
-        </p>
-      ) : null}
+        <div className="mt-3 grid gap-3 lg:grid-cols-2">
+          <QueryList
+            title="Ranking now"
+            hint="What's already earning — position, clicks, impressions."
+            icon={TrendingUp}
+            rows={rankingNow}
+            metric="clicks"
+            emptyLabel={
+              connected && report.sampling.queryTotals.truncated
+                ? "No clicked queries among the rows returned for this period."
+                : "No clicked queries in this period yet."
+            }
+          />
+          <QueryList
+            title="Could be targeting"
+            hint="Positions 4–20 with real demand — the closest wins."
+            icon={Target}
+            rows={opportunities}
+            metric="impressions"
+            emptyLabel={
+              connected && report.sampling.queryTotals.truncated
+                ? "No near-miss queries among the rows returned — the ones we got are already top 3 or far off."
+                : "No near-miss queries — everything is already top 3 or far off."
+            }
+          />
+        </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-2">
-        <QueryList
-          title="Ranking now"
-          hint="What's already earning — position, clicks, impressions."
-          icon={TrendingUp}
-          rows={rankingNow}
-          metric="clicks"
-          emptyLabel={
-            report.sampling.queryTotals.truncated
-              ? "No clicked queries among the rows returned for this period."
-              : "No clicked queries in this period yet."
-          }
-        />
-        <QueryList
-          title="Could be targeting"
-          hint="Positions 4–20 with real demand — the closest wins."
-          icon={Target}
-          rows={opportunities}
-          metric="impressions"
-          emptyLabel={
-            report.sampling.queryTotals.truncated
-              ? "No near-miss queries among the rows returned — the ones we got are already top 3 or far off."
-              : "No near-miss queries — everything is already top 3 or far off."
-          }
-        />
-      </div>
-
-      <Link {...gscLink} className="btn btn-ghost btn-sm mt-3">
-        See all queries
-      </Link>
+        <Link {...gscLink} className="btn btn-ghost btn-sm mt-3">
+          See all queries
+        </Link>
+      </QueryStateBoundary>
     </DashboardCard>
   );
 }
