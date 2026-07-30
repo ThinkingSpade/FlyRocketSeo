@@ -13,17 +13,29 @@ import { countActiveFilters } from "./brandLookupFiltering";
 // between incompatible metric scales.
 const STORAGE_KEY_PREFIX = "brand-lookup-filters-v3:";
 
+// Namespaced per project: these filters hold project-specific text (prompt and
+// URL substrings), so a global key let one client's filter hide another
+// client's rows. The route remount cannot fix that — `localStorage` outlives
+// the component.
+function storageKey(projectId: string, tab: string): string {
+  return `${STORAGE_KEY_PREFIX}${projectId}:${tab}`;
+}
+
 type FilterValues = Record<string, string>;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function loadFromStorage<T extends FilterValues>(tab: string, fallback: T): T {
+function loadFromStorage<T extends FilterValues>(
+  projectId: string,
+  tab: string,
+  fallback: T,
+): T {
   const fallbackClone = { ...fallback };
 
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tab}`);
+    const raw = localStorage.getItem(storageKey(projectId, tab));
     if (!raw) return fallbackClone;
 
     const parsed: unknown = JSON.parse(raw);
@@ -43,24 +55,28 @@ function loadFromStorage<T extends FilterValues>(tab: string, fallback: T): T {
   }
 }
 
-function saveToStorage(tab: string, values: FilterValues) {
+function saveToStorage(projectId: string, tab: string, values: FilterValues) {
   try {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tab}`, JSON.stringify(values));
+    localStorage.setItem(storageKey(projectId, tab), JSON.stringify(values));
   } catch {
     // storage full - silently ignore
   }
 }
 
-function useTabFilters<T extends FilterValues>(tab: string, emptyValues: T) {
+function useTabFilters<T extends FilterValues>(
+  projectId: string,
+  tab: string,
+  emptyValues: T,
+) {
   const [defaultValues] = useState<T>(() =>
-    loadFromStorage(tab, { ...emptyValues }),
+    loadFromStorage(projectId, tab, { ...emptyValues }),
   );
   const form = useForm({ defaultValues });
   const values = useStore(form.store, (state) => state.values);
 
   useEffect(() => {
-    saveToStorage(tab, values);
-  }, [tab, values]);
+    saveToStorage(projectId, tab, values);
+  }, [projectId, tab, values]);
 
   const reset = useCallback(() => {
     form.reset({ ...emptyValues }, { keepDefaultValues: true });
@@ -74,14 +90,16 @@ function useTabFilters<T extends FilterValues>(tab: string, emptyValues: T) {
   };
 }
 
-export function useBrandLookupFilters() {
+export function useBrandLookupFilters(projectId: string) {
   const [showFilters, setShowFilters] = useState(false);
 
   const pages = useTabFilters<TopPagesFilterValues>(
+    projectId,
     "pages",
     EMPTY_TOP_PAGES_FILTERS,
   );
   const queries = useTabFilters<QueriesFilterValues>(
+    projectId,
     "queries",
     EMPTY_QUERIES_FILTERS,
   );

@@ -166,7 +166,7 @@ export function useKeywordResearchController(
     filtersForm,
     values: filterValues,
     resetFilters: resetFilterFields,
-  } = useLocalKeywordFilters();
+  } = useLocalKeywordFilters(input.projectId);
   // Keyword Magic-style group slice; lives beside the form filters so exports,
   // pagination, and the mobile list all see the same filtered rows.
   const [groupTerm, setGroupTerm] = useState<string | null>(null);
