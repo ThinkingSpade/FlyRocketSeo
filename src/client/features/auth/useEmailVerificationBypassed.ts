@@ -1,5 +1,4 @@
 import { useQuery } from "@tanstack/react-query";
-import { useLoaderData } from "@tanstack/react-router";
 import {
   isEmailVerificationBypassed,
   isHostedClientAuthMode,
@@ -8,12 +7,6 @@ import { getClientRuntimeConfig } from "@/serverFunctions/config";
 
 const CLIENT_RUNTIME_CONFIG_QUERY_KEY = ["client-runtime-config"] as const;
 const CLIENT_RUNTIME_CONFIG_STALE_TIME = 5 * 60 * 1000;
-
-type ClientRuntimeConfig = {
-  emailVerificationBypassed: boolean;
-  aiExplainAvailable: boolean;
-  gbpWriteAvailable: boolean;
-};
 
 type ClientRuntimeConfigQueryData = {
   emailVerificationBypassed: boolean;
@@ -36,22 +29,15 @@ function useClientRuntimeConfigQuery({
 }: {
   refreshOnMount?: boolean;
 } = {}) {
-  // Optional, because the app boots two different ways and only one of them
-  // has loader data at first render. A normal SSR response carries the root
-  // loader result; the prerendered SPA shell is a STATIC file with no
-  // request-time data in it, so `useLoaderData` is undefined until the loader
-  // resolves in the browser. Reading through it unguarded threw
-  // "Cannot read properties of undefined (reading 'emailVerificationBypassed')"
-  // on every cold production load — caught by the error boundary and recovered
-  // from, so the page still rendered, but it cost a wasted render pass and
-  // filled the console on the way in.
+  // No prerendered hint any more: the root route has no loader, because
+  // fetching one made first paint depend on hosted auth config and took
+  // production down (see __root.tsx). Nothing is lost -- the value was tagged
+  // `source: "prerender"`, and `isResolved` is false while that is the source,
+  // so no consumer ever acted on it before the live refetch below replaced it.
   //
-  // `false` is the safe first-paint default for all three: every consumer treats
-  // a prerendered value as a hint and refuses to act on it until `isResolved`,
-  // so an under-reporting placeholder gates features closed rather than open.
-  const prerenderedConfig: ClientRuntimeConfig | undefined = useLoaderData({
-    from: "__root__",
-  });
+  // `false` for all three is the safe direction rather than an arbitrary one:
+  // an under-reporting placeholder gates features closed, so a cold load cannot
+  // briefly bypass email verification.
   const isHostedMode = isHostedClientAuthMode();
   const runtimeConfigQuery = useQuery<ClientRuntimeConfigQueryData>({
     queryKey: CLIENT_RUNTIME_CONFIG_QUERY_KEY,
@@ -60,10 +46,9 @@ function useClientRuntimeConfigQuery({
       source: "runtime",
     }),
     initialData: {
-      emailVerificationBypassed:
-        prerenderedConfig?.emailVerificationBypassed ?? false,
-      aiExplainAvailable: prerenderedConfig?.aiExplainAvailable ?? false,
-      gbpWriteAvailable: prerenderedConfig?.gbpWriteAvailable ?? false,
+      emailVerificationBypassed: false,
+      aiExplainAvailable: false,
+      gbpWriteAvailable: false,
       source: "prerender",
     },
     // The prerendered value is only a first-paint hint. Mark it stale so the
