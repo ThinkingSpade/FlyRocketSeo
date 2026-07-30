@@ -102,14 +102,46 @@ function formatDate(date: Date): string {
   return date.toISOString().slice(0, 10);
 }
 
+/**
+ * The calendar date in Pacific Time for a given instant, as a UTC-midnight Date
+ * so every later step is plain calendar arithmetic.
+ *
+ * Google interprets Search Analytics `startDate` and `endDate` in Pacific Time
+ * ("All dates are in Pacific Time Zone (PT)"). Deriving them from UTC meant that
+ * for the seven or eight hours between Pacific midnight and UTC midnight, every
+ * convenience range was a day ahead of the calendar Google was using.
+ */
+function pacificCalendarDate(instant: Date): Date {
+  // en-CA renders as YYYY-MM-DD, which is the format GSC wants anyway.
+  const pacific = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Los_Angeles",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(instant);
+  return new Date(`${pacific}T00:00:00Z`);
+}
+
+/**
+ * Start date for a named range ending inclusively at `end`.
+ *
+ * Day-named ranges subtract N-1, not N: both endpoints are included, so
+ * subtracting a full 28 produced 29 dates for "last 28 days" and 8 for "last 7
+ * days". Every headline period comparison was built on a window one day longer
+ * than its own label, which also shifted its weekday mix against the previous
+ * period.
+ *
+ * Month-named ranges keep calendar-month arithmetic — "3 months" means three
+ * months back, not 90 days — so they are not adjusted.
+ */
 function subtractRange(end: Date, range: GscDateRange): Date {
   const d = new Date(end);
   switch (range) {
     case "last_7_days":
-      d.setUTCDate(d.getUTCDate() - 7);
+      d.setUTCDate(d.getUTCDate() - 6);
       break;
     case "last_28_days":
-      d.setUTCDate(d.getUTCDate() - 28);
+      d.setUTCDate(d.getUTCDate() - 27);
       break;
     case "last_3_months":
       d.setUTCMonth(d.getUTCMonth() - 3);
@@ -134,11 +166,15 @@ function sixteenMonthFloor(today: Date): string {
 }
 
 /** Resolve a convenience `dateRange` or explicit start/end into GSC dates.
- *  `today` is injectable for deterministic tests. */
+ *
+ *  `now` is injectable for deterministic tests. It is an INSTANT, converted to
+ *  the Pacific calendar date immediately, because that is the calendar Google
+ *  reads these dates against. */
 export function resolveDateRange(
   input: Pick<GscPerformanceInput, "dateRange" | "startDate" | "endDate">,
-  today: Date = new Date(),
+  now: Date = new Date(),
 ): { startDate: string; endDate: string } {
+  const today = pacificCalendarDate(now);
   const floor = sixteenMonthFloor(today);
 
   if (input.startDate && input.endDate) {

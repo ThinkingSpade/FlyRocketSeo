@@ -8,19 +8,51 @@ import {
 
 const TODAY = new Date("2026-05-28T00:00:00Z");
 
+/** Inclusive day count between two YYYY-MM-DD dates, the way GSC counts them:
+ *  both endpoints are included in the range. */
+function inclusiveDays(startDate: string, endDate: string): number {
+  const day = 24 * 60 * 60 * 1000;
+  const start = Date.parse(`${startDate}T00:00:00Z`);
+  const end = Date.parse(`${endDate}T00:00:00Z`);
+  return (end - start) / day + 1;
+}
+
 describe("resolveDateRange", () => {
   it("ends convenience ranges 3 days back for GSC data lag", () => {
+    // TODAY is 2026-05-28T00:00:00Z, which is still 2026-05-27 in Pacific Time —
+    // and Google interprets startDate/endDate in Pacific. So "today" is the 27th
+    // and the lagged end is the 24th, not the 25th.
     const { endDate } = resolveDateRange({ dateRange: "last_28_days" }, TODAY);
-    expect(endDate).toBe("2026-05-25");
+    expect(endDate).toBe("2026-05-24");
   });
 
-  it("computes a 28-day window from the lagged end", () => {
-    const { startDate, endDate } = resolveDateRange(
-      { dateRange: "last_28_days" },
-      TODAY,
+  it("makes a range named N days span exactly N days", () => {
+    // This replaces an assertion that pinned the off-by-one as correct: it
+    // expected 2026-04-27 to 2026-05-25, which is 29 inclusive dates for a range
+    // called "last 28 days". Counting the window means the bug cannot come back
+    // dressed as a different literal.
+    const window = resolveDateRange({ dateRange: "last_28_days" }, TODAY);
+    expect(inclusiveDays(window.startDate, window.endDate)).toBe(28);
+
+    const week = resolveDateRange({ dateRange: "last_7_days" }, TODAY);
+    expect(inclusiveDays(week.startDate, week.endDate)).toBe(7);
+  });
+
+  it("resolves 'today' in Pacific Time, not UTC", () => {
+    // 07:00Z is midnight PDT on the same calendar day; 06:00Z is still the
+    // previous Pacific day. A UTC-based implementation returns the same range
+    // for both and is silently a day out for part of every day.
+    const afterPacificMidnight = resolveDateRange(
+      { dateRange: "last_7_days" },
+      new Date("2026-05-28T07:30:00Z"),
     );
-    expect(startDate).toBe("2026-04-27");
-    expect(endDate).toBe("2026-05-25");
+    const beforePacificMidnight = resolveDateRange(
+      { dateRange: "last_7_days" },
+      new Date("2026-05-28T06:30:00Z"),
+    );
+
+    expect(afterPacificMidnight.endDate).toBe("2026-05-25");
+    expect(beforePacificMidnight.endDate).toBe("2026-05-24");
   });
 
   it("clamps the start to the 16-month floor", () => {
@@ -28,8 +60,9 @@ describe("resolveDateRange", () => {
       { dateRange: "last_16_months" },
       TODAY,
     );
-    // end (2026-05-25) - 16 months = 2025-01-25, but floor is today - 16 months.
-    expect(startDate).toBe("2025-01-28");
+    // The floor is today - 16 months, and "today" is the PACIFIC date for the
+    // injected instant (2026-05-27, not the UTC 2026-05-28).
+    expect(startDate).toBe("2025-01-27");
   });
 
   it("passes explicit dates through, clamping start to the floor", () => {
@@ -37,7 +70,7 @@ describe("resolveDateRange", () => {
       { startDate: "2020-01-01", endDate: "2026-05-01" },
       TODAY,
     );
-    expect(startDate).toBe("2025-01-28"); // clamped
+    expect(startDate).toBe("2025-01-27"); // clamped to the Pacific-derived floor
     expect(endDate).toBe("2026-05-01");
   });
 
