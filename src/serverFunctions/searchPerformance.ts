@@ -31,7 +31,14 @@ import {
 // query x page fan-out needs more rows to find the 5..20 band.
 const STRIKING_DISTANCE_FETCH_LIMIT = 1000;
 // Property-aggregated query rows for demand totals. One key per row rather than
-// two, so cheaper to parse than the query x page pull of the same size.
+// two, so cheaper to parse than a query x page pull of the same size.
+//
+// This is the FIFTH concurrent pull in getSearchPerformanceReport, so it was
+// measured rather than assumed safe: all five payloads together
+// (200 + 200 + 1000 + 2500 + 25 rows, 0.32 MB) parse and aggregate in ~3.0ms
+// median on a dev machine, inside the 10ms Workers Free CPU budget. Raising this
+// or adding a sixth pull needs a fresh measurement -- parse cost, not
+// aggregation, is what grows.
 const QUERY_TOTALS_FETCH_LIMIT = 2500;
 // dimensions:["date"] returns one row per day; the longest range is ~92 days.
 const DAILY_ROW_LIMIT = 200;
