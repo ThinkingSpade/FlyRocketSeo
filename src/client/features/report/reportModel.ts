@@ -53,6 +53,12 @@ type RecommendationInput = {
   lostBacklinks: number | null;
   latestAuditAgeDays: number | null;
   latestAuditFailed: boolean;
+  /** A Search Console pull behind the counts above hit its row limit.
+   *
+   *  This report goes to a client, so its all-clear is the highest-stakes
+   *  absence claim in the product: "no urgent issues detected" from a capped
+   *  sample is a statement someone may act on for a month. */
+  gscSampled?: boolean;
 };
 
 /** Turn the report's findings into the "what we do next" bullets clients
@@ -95,7 +101,9 @@ export function buildRecommendations(input: RecommendationInput): string[] {
   }
   if (recommendations.length === 0) {
     recommendations.push(
-      "No urgent issues detected — keep publishing against the content plan and monitoring rankings.",
+      input.gscSampled
+        ? "Nothing urgent surfaced in the Search Console data we could retrieve — it returns queries ordered by clicks and caps the pull, so keep publishing against the content plan and monitoring rankings."
+        : "No urgent issues detected — keep publishing against the content plan and monitoring rankings.",
     );
   }
   return recommendations;

@@ -98,6 +98,12 @@ export function ReportPages({
     lostBacklinks: backlinks?.summary.lostBacklinks ?? null,
     latestAuditAgeDays: daysSince(latestAudit?.startedAt),
     latestAuditFailed: latestAudit == null,
+    // Either GSC source being capped makes the all-clear unsafe: striking
+    // distance comes from the query x page pull, cannibalization and link
+    // opportunities from link insights.
+    gscSampled:
+      (gsc?.sampling.queryPages.truncated ?? false) ||
+      (insights?.truncated ?? false),
   });
 
   /** Renders just the requested sections, so one chapter can span pages. */

@@ -57,6 +57,14 @@ import { SEARCH_PERFORMANCE_RANGES } from "@/types/schemas/search-performance";
  * routing, auth, D1 and serialization. Workers Free allows 10 ms per
  * invocation. Raising this needs a fresh measurement, not optimism.
  *
+ * KNOWN LIMITATION, from adversarial review: row count is a PROXY for CPU, not a
+ * bound on it. The figures above use realistic key lengths (~0.6-1.7 MB for the
+ * three payloads). A pathological property whose queries are ~200 chars and page
+ * URLs ~1500 chars produces 5.8 MB at the same 2,500 rows, measuring 6.97 ms
+ * median and 11.30 ms worst -- over budget. That shape is implausible across
+ * 2,500 rows but not impossible, and if this endpoint ever throws Cloudflare
+ * error 1102, payload size is the first thing to check, not row count.
+ *
  * The query x page pull has much higher cardinality over the same query set,
  * so its shortfall is handled separately: a missing page row is never treated
  * as proof that no page ranks (see `page`'s own comment).
