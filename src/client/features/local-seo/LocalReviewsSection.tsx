@@ -7,6 +7,13 @@ import {
   startBusinessReviews,
 } from "@/serverFunctions/local-seo";
 import { ReviewAnalyticsCards } from "./ReviewAnalyticsCards";
+import {
+  clearReviewsTask,
+  loadReviewsTask,
+  REVIEWS_STALL_AFTER_MS,
+  saveReviewsTask,
+  type StoredReviewsTask,
+} from "./reviewsTaskStore";
 
 export function LocalReviewsSection({
   projectId,
@@ -25,11 +32,24 @@ export function LocalReviewsSection({
     reviews: Array<{ ownerAnswer: string | null }> | undefined,
   ) => void;
 }) {
-  const [taskId, setTaskId] = useState<string | null>(null);
+  // Restored from storage on mount, so an unmount does not orphan a crawl the
+  // user already paid for. See reviewsTaskStore for why this is persisted
+  // rather than held by a parent.
+  const [task, setTask] = useState<StoredReviewsTask | null>(() =>
+    loadReviewsTask(projectId, keyword),
+  );
+  const taskId = task?.taskId ?? null;
 
   const startMutation = useMutation({
     mutationFn: () => startBusinessReviews({ data: { projectId, keyword } }),
-    onSuccess: (result) => setTaskId(result.taskId),
+    onSuccess: (result) => {
+      const started: StoredReviewsTask = {
+        taskId: result.taskId,
+        startedAt: Date.now(),
+      };
+      setTask(started);
+      saveReviewsTask(projectId, keyword, started);
+    },
   });
 
   const resultQuery = useQuery({
@@ -42,6 +62,22 @@ export function LocalReviewsSection({
   });
 
   const outcome = resultQuery.data;
+
+  // A failed task's id is worth nothing on a later visit, so it does not earn a
+  // place in storage. A completed one stays: reading it back is a free
+  // `task_get`, which is how returning to this page shows the reviews again
+  // instead of offering to buy them a second time.
+  useEffect(() => {
+    if (outcome?.status === "failed") clearReviewsTask(projectId, keyword);
+  }, [outcome?.status, projectId, keyword]);
+
+  // Past the stall cutoff we stop treating a pending task as live. Without this
+  // a crawl that never finishes leaves the button stuck on "Crawling reviews…"
+  // with no way to start another.
+  const stalled =
+    task != null &&
+    (!outcome || outcome.status === "pending") &&
+    Date.now() - task.startedAt > REVIEWS_STALL_AFTER_MS;
   const loadedReviews =
     outcome?.status === "completed" ? outcome.items : undefined;
 
@@ -55,14 +91,16 @@ export function LocalReviewsSection({
 
   const isWorking =
     startMutation.isPending ||
-    (taskId != null && (!outcome || outcome.status === "pending"));
+    (taskId != null && !stalled && (!outcome || outcome.status === "pending"));
   const errorMessage = startMutation.isError
     ? getStandardErrorMessage(startMutation.error)
     : resultQuery.isError
       ? getStandardErrorMessage(resultQuery.error)
       : outcome?.status === "failed"
         ? outcome.message
-        : null;
+        : stalled
+          ? "The last reviews crawl never finished. Fetching again will start a new one."
+          : null;
 
   return (
     <>
@@ -78,7 +116,8 @@ export function LocalReviewsSection({
               type="button"
               className="btn btn-sm btn-outline gap-1.5"
               onClick={() => {
-                setTaskId(null);
+                setTask(null);
+                clearReviewsTask(projectId, keyword);
                 startMutation.mutate();
               }}
               disabled={isWorking}
