@@ -36,6 +36,7 @@ import {
   buildPromptStarters,
   domainStem,
 } from "@/client/features/search-performance/projectGscInsights";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type PromptExplorerFormValues = {
   prompt: string;
@@ -250,82 +251,80 @@ function PromptExplorerPageInner({
   };
 
   return (
-    <div className="px-4 py-4 pb-24 overflow-auto md:px-6 md:py-6 md:pb-8">
-      <div className="mx-auto max-w-7xl space-y-4">
-        <div>
-          <h1 className="text-2xl font-semibold">Prompt Explorer</h1>
-          <p className="text-sm text-base-content/70">
-            Ask any prompt across ChatGPT, Claude, Gemini, and Perplexity
-            side-by-side.
-          </p>
-        </div>
-
-        {planGate.isFreePlan ? (
-          <AiSearchPaidPlanGate
-            feature="Prompt Explorer"
-            description="Ask one prompt across ChatGPT, Claude, Gemini, and Perplexity at the same time and compare their answers — including which sources each model cites."
-            bullets={PROMPT_EXPLORER_BULLETS}
-          />
-        ) : (
-          <>
-            <PromptExplorerForm
-              form={form}
-              onPromptChange={(value) => updateForm("prompt", value)}
-              onHighlightBrandChange={(value) => {
-                brandWasEdited.current = true;
-                updateForm("highlightBrand", value);
-              }}
-              onModelsChange={(value) => updateForm("models", value)}
-              onWebSearchChange={(value) => updateForm("webSearch", value)}
-              onCountryChange={(value) =>
-                updateForm("webSearchCountryCode", value)
-              }
-              onSubmit={handleSubmit}
-              isLoading={isLoading}
-              validationError={validationError}
-              promptStarters={promptStarters}
-            />
-
-            {errorMessage ? (
-              <div
-                role="alert"
-                className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
-              >
-                <AlertCircle className="mt-0.5 size-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            ) : null}
-
-            {isLoading ? (
-              <PromptExplorerLoadingState modelCount={form.models.length} />
-            ) : resultData ? (
-              <>
-                <div>
-                  <Link
-                    from="/p/$projectId/prompt-explorer"
-                    to="/p/$projectId/prompt-explorer"
-                    params={{ projectId }}
-                    search={{}}
-                    replace
-                    className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
-                  >
-                    <ArrowLeft className="size-4" />
-                    Recent searches
-                  </Link>
-                </div>
-                <PromptExplorerResults result={resultData} />
-              </>
-            ) : !errorMessage ? (
-              <PromptExplorerHistorySection
-                projectId={projectId}
-                history={history}
-                historyLoaded={historyLoaded}
-                onRemoveHistoryItem={removeHistoryItem}
-              />
-            ) : null}
-          </>
-        )}
+    <AppPageShell>
+      <div>
+        <h1 className="text-2xl font-semibold">Prompt Explorer</h1>
+        <p className="text-sm text-base-content/70">
+          Ask any prompt across ChatGPT, Claude, Gemini, and Perplexity
+          side-by-side.
+        </p>
       </div>
-    </div>
+
+      {planGate.isFreePlan ? (
+        <AiSearchPaidPlanGate
+          feature="Prompt Explorer"
+          description="Ask one prompt across ChatGPT, Claude, Gemini, and Perplexity at the same time and compare their answers — including which sources each model cites."
+          bullets={PROMPT_EXPLORER_BULLETS}
+        />
+      ) : (
+        <>
+          <PromptExplorerForm
+            form={form}
+            onPromptChange={(value) => updateForm("prompt", value)}
+            onHighlightBrandChange={(value) => {
+              brandWasEdited.current = true;
+              updateForm("highlightBrand", value);
+            }}
+            onModelsChange={(value) => updateForm("models", value)}
+            onWebSearchChange={(value) => updateForm("webSearch", value)}
+            onCountryChange={(value) =>
+              updateForm("webSearchCountryCode", value)
+            }
+            onSubmit={handleSubmit}
+            isLoading={isLoading}
+            validationError={validationError}
+            promptStarters={promptStarters}
+          />
+
+          {errorMessage ? (
+            <div
+              role="alert"
+              className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
+            >
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <span>{errorMessage}</span>
+            </div>
+          ) : null}
+
+          {isLoading ? (
+            <PromptExplorerLoadingState modelCount={form.models.length} />
+          ) : resultData ? (
+            <>
+              <div>
+                <Link
+                  from="/p/$projectId/prompt-explorer"
+                  to="/p/$projectId/prompt-explorer"
+                  params={{ projectId }}
+                  search={{}}
+                  replace
+                  className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+                >
+                  <ArrowLeft className="size-4" />
+                  Recent searches
+                </Link>
+              </div>
+              <PromptExplorerResults result={resultData} />
+            </>
+          ) : !errorMessage ? (
+            <PromptExplorerHistorySection
+              projectId={projectId}
+              history={history}
+              historyLoaded={historyLoaded}
+              onRemoveHistoryItem={removeHistoryItem}
+            />
+          ) : null}
+        </>
+      )}
+    </AppPageShell>
   );
 }

@@ -48,6 +48,7 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -408,7 +409,7 @@ export function ContentOptimizerPage({
     .slice(0, 30);
 
   return (
-    <div className="mx-auto flex w-full max-w-6xl flex-col gap-4 p-4">
+    <AppPageShell>
       <ContentOptimizerHeading scope={targetAreaScope} />
       <TargetAreaBanner projectId={projectId} />
 
@@ -759,7 +760,7 @@ export function ContentOptimizerPage({
           </p>
         </>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }
 
@@ -767,8 +768,8 @@ function ContentOptimizerHeading({ scope }: { scope: TargetAreaScope }) {
   return (
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <NotebookPen className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <NotebookPen className="size-6" />
           Content Optimizer
         </h1>
         <p className="text-sm text-base-content/60">

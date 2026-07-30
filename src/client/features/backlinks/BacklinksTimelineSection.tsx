@@ -14,6 +14,10 @@ import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import { getBacklinksTimeline } from "@/serverFunctions/backlinks";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_BAR,
+} from "@/client/components/chart/chartTheme";
 
 type TimelineRow = {
   label: string;
@@ -127,13 +131,13 @@ export function BacklinksTimelineSection({
               />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
               />
               <YAxis
                 yAxisId="delta"
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 width={34}
@@ -142,14 +146,14 @@ export function BacklinksTimelineSection({
               <YAxis
                 yAxisId="total"
                 orientation="right"
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 width={40}
                 allowDecimals={false}
               />
               <Tooltip
-                cursor={{ fill: "rgba(150,150,150,0.08)" }}
+                cursor={CHART_CURSOR_BAR}
                 content={(props: TooltipContentProps<number, string>) => {
                   const candidates = (props.payload ?? []).map(
                     (entry: { payload?: unknown }) => entry.payload,

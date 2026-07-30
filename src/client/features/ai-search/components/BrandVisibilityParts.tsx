@@ -16,6 +16,7 @@ import {
   YAxis,
 } from "recharts";
 import { formatCount } from "@/client/features/ai-search/platformLabels";
+import { CHART_AXIS_TICK_SM } from "@/client/components/chart/chartTheme";
 
 /**
  * Presentational pieces for the project-centric AI Visibility panel. Pure props
@@ -176,12 +177,12 @@ export function VisibilityTrendChart({ series }: { series: TrendPointView[] }) {
             />
             <XAxis
               dataKey="label"
-              tick={{ fontSize: 11, fill: "#888" }}
+              tick={CHART_AXIS_TICK_SM}
               tickLine={false}
               axisLine={false}
             />
             <YAxis
-              tick={{ fontSize: 11, fill: "#888" }}
+              tick={CHART_AXIS_TICK_SM}
               tickLine={false}
               axisLine={false}
               allowDecimals={false}

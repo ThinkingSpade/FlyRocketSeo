@@ -24,6 +24,10 @@ import {
   computeScorecards,
 } from "./rankTrackingScorecards";
 import { computeAveragePositionTrend } from "./visibilityTrend";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
 
 type ChartRow = { label: string; averagePosition: number };
 
@@ -215,7 +219,7 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
               />
               <XAxis
                 dataKey="label"
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 minTickGap={24}
@@ -223,14 +227,14 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
               <YAxis
                 reversed
                 domain={["auto", "auto"]}
-                tick={{ fontSize: 10, fill: "#888" }}
+                tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
                 width={30}
                 allowDecimals={false}
               />
               <Tooltip
-                cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+                cursor={CHART_CURSOR_LINE}
                 content={(props: TooltipContentProps<number, string>) => {
                   const candidates = (props.payload ?? []).map(
                     (entry: { payload?: unknown }) => entry.payload,

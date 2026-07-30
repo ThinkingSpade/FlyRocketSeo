@@ -9,6 +9,10 @@ import {
   YAxis,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
 
 export interface TrendSeries {
   /** key into each data row holding the position value (1 = best, serpDepth = bottom band) */
@@ -98,7 +102,7 @@ export function RankTrendChart({
               scale="time"
               domain={["dataMin", "dataMax"]}
               tickFormatter={formatDateTick}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               minTickGap={32}
@@ -107,7 +111,7 @@ export function RankTrendChart({
               reversed
               domain={[1, serpDepth]}
               allowDecimals={false}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               width={32}
@@ -128,7 +132,7 @@ export function RankTrendChart({
                 );
                 return renderTooltip(label, entries);
               }}
-              cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+              cursor={CHART_CURSOR_LINE}
             />
             {series.map((s) => (
               <Line

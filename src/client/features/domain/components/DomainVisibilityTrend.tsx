@@ -14,6 +14,10 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
 
 /** Narrowed shape of a recharts tooltip payload entry (typed `any` upstream). */
 interface RechartsPayloadEntry {
@@ -144,14 +148,14 @@ export function DomainVisibilityTrend({
                 <XAxis
                   dataKey="date"
                   tickFormatter={formatMonth}
-                  tick={{ fontSize: 10, fill: "#888" }}
+                  tick={CHART_AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
                   minTickGap={32}
                 />
                 <YAxis
                   allowDecimals={false}
-                  tick={{ fontSize: 10, fill: "#888" }}
+                  tick={CHART_AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
                   width={44}
@@ -179,7 +183,7 @@ export function DomainVisibilityTrend({
                       </div>
                     );
                   }}
-                  cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+                  cursor={CHART_CURSOR_LINE}
                 />
                 <Area
                   type="monotone"

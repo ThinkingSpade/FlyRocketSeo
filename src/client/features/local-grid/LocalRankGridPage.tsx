@@ -35,6 +35,7 @@ import {
   useAuthorizedRun,
   withMeteredRunNonce,
 } from "@/client/lib/useMeteredQuery";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 const GRID_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -296,10 +297,10 @@ export function LocalRankGridPage({
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div>
-        <h1 className="flex items-center gap-2 text-xl font-semibold">
-          <Grid3x3 className="size-5" />
+        <h1 className="flex items-center gap-2 text-2xl font-semibold">
+          <Grid3x3 className="size-6" />
           Local Rank Grid
         </h1>
         <p className="text-sm text-base-content/60">
@@ -502,6 +503,6 @@ export function LocalRankGridPage({
           </div>
         </div>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }

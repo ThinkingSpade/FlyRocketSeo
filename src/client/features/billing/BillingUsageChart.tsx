@@ -6,6 +6,10 @@ import {
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_BAR,
+} from "@/client/components/chart/chartTheme";
 
 const BILLING_USAGE_FEATURE_IDS: string[] = [
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
@@ -80,22 +84,19 @@ export function BillingUsageChart() {
             <XAxis
               dataKey="date"
               tickFormatter={formatShortDate}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               minTickGap={40}
             />
             <YAxis
               tickFormatter={formatUsdAxis}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               width={44}
             />
-            <Tooltip
-              content={<UsageTooltip />}
-              cursor={{ fill: "rgba(150,150,150,0.1)" }}
-            />
+            <Tooltip content={<UsageTooltip />} cursor={CHART_CURSOR_BAR} />
             <Bar
               dataKey="credits"
               fill="#7c3aed"

@@ -68,6 +68,7 @@ import {
   parseRestoredSerpRunGeo,
   type SerpRunGeo,
 } from "@/client/features/serp/serpRunGeo";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -619,11 +620,11 @@ export function SerpOverviewPage({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <ListOrdered className="size-5" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+            <ListOrdered className="size-6" />
             SERP Overview
           </h1>
           <p className="text-sm text-base-content/60">
@@ -804,7 +805,7 @@ export function SerpOverviewPage({
           <span className="loading loading-spinner loading-md" />
         </div>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }
 

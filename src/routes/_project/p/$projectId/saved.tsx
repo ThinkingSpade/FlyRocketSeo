@@ -46,6 +46,7 @@ import {
   updateSavedKeywordTags,
 } from "@/serverFunctions/keywords";
 import type { SavedKeywordTag } from "@/types/keywords";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 export const Route = createFileRoute("/_project/p/$projectId/saved")({
   component: SavedKeywordsPage,
@@ -260,7 +261,7 @@ function SavedKeywordsPage() {
 
   return (
     <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
-      <div className="mx-auto max-w-6xl space-y-4">
+      <AppPageShell>
         <SavedKeywordsHeader
           totalCount={totalCount}
           exporting={exporter.exporting}
@@ -398,7 +399,7 @@ function SavedKeywordsPage() {
             onClose={() => setShowTrackModal(false)}
           />
         ) : null}
-      </div>
+      </AppPageShell>
     </div>
   );
 }

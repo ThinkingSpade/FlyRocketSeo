@@ -54,6 +54,11 @@ import {
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildTrendsVerdict } from "@/client/features/insights/verdicts/keywords";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+} from "@/client/components/chart/chartTheme";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -359,11 +364,11 @@ export function TrendsPage({
   );
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <Activity className="size-5" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+            <Activity className="size-6" />
             Keyword Trends
           </h1>
           <p className="text-sm text-base-content/60">
@@ -541,7 +546,7 @@ export function TrendsPage({
           />
         </div>
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }
 
@@ -618,7 +623,7 @@ function TrendsChart({
                   year: "2-digit",
                 })
               }
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               minTickGap={40}
@@ -626,7 +631,7 @@ function TrendsChart({
             <YAxis
               domain={[0, 100]}
               allowDecimals={false}
-              tick={{ fontSize: 10, fill: "#888" }}
+              tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
               width={32}
@@ -670,7 +675,7 @@ function TrendsChart({
                   </div>
                 );
               }}
-              cursor={{ stroke: "rgba(150,150,150,0.3)" }}
+              cursor={CHART_CURSOR_LINE}
             />
             {keywords.map((keyword, index) => (
               <Line

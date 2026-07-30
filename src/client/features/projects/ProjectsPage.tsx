@@ -162,7 +162,7 @@ export function ProjectsPage() {
       <div className="mx-auto w-full max-w-7xl space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">Portfolio</h1>
+            <h1 className="text-2xl font-semibold">Portfolio</h1>
             <p className="mt-1 text-sm text-base-content/60">
               Compare every project using free Search Console data and saved
               audit, ranking, and analysis history.

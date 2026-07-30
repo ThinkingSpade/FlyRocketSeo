@@ -30,6 +30,7 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
+import { AppPageShell } from "@/client/components/AppPageShell";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -235,11 +236,11 @@ export function TopicClustersPage({
     : null;
 
   return (
-    <div className="mx-auto flex w-full max-w-screen-2xl flex-col gap-3 p-4">
+    <AppPageShell>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h1 className="flex items-center gap-2 text-xl font-semibold">
-            <Network className="size-5" />
+          <h1 className="flex items-center gap-2 text-2xl font-semibold">
+            <Network className="size-6" />
             Topic Clusters
           </h1>
           <p className="text-sm text-base-content/60">
@@ -440,6 +441,6 @@ export function TopicClustersPage({
           confirmedAreaLabel={effectiveConfirmedAreaLabel}
         />
       ) : null}
-    </div>
+    </AppPageShell>
   );
 }
