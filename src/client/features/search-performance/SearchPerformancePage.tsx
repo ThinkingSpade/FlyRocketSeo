@@ -5,11 +5,20 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Download, Loader2, Sheet } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
+import {
+  resolveQueryState,
+  type QuerySamplingEvidence,
+} from "@/client/components/state/queryState";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
+import {
+  ALL,
+  SearchPerformanceFilters,
+  type DeviceFilter,
+} from "@/client/features/search-performance/SearchPerformanceFilters";
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
 import {
   DimensionTable,
@@ -31,45 +40,12 @@ import {
   getSearchPerformanceTable,
 } from "@/serverFunctions/searchPerformance";
 import {
-  GSC_DEVICES,
   SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
   SEARCH_PERFORMANCE_PAGE_SIZES,
-  SEARCH_PERFORMANCE_RANGES,
   type SearchPerformanceDateRange,
   type SearchPerformanceDevice,
   type SearchPerformanceTableDimension,
 } from "@/types/schemas/search-performance";
-
-const RANGE_LABELS: Record<SearchPerformanceDateRange, string> = {
-  last_7_days: "Last 7 days",
-  last_28_days: "Last 28 days",
-  last_3_months: "Last 3 months",
-};
-const RANGE_OPTIONS = SEARCH_PERFORMANCE_RANGES.map((value) => ({
-  value,
-  label: RANGE_LABELS[value],
-}));
-
-const DEVICE_LABELS: Record<SearchPerformanceDevice, string> = {
-  DESKTOP: "Desktop",
-  MOBILE: "Mobile",
-  TABLET: "Tablet",
-};
-const DEVICE_OPTIONS = GSC_DEVICES.map((value) => ({
-  value,
-  label: DEVICE_LABELS[value],
-}));
-
-// Sentinel for "no filter" in the selects; never sent to the server.
-const ALL = "ALL";
-
-function isDateRange(value: string): value is SearchPerformanceDateRange {
-  return SEARCH_PERFORMANCE_RANGES.some((option) => option === value);
-}
-
-function isDevice(value: string): value is SearchPerformanceDevice {
-  return GSC_DEVICES.some((option) => option === value);
-}
 
 function tabDimension(tab: Tab): SearchPerformanceTableDimension {
   return tab === "pages" ? "page" : "query";
@@ -84,7 +60,7 @@ type FilterInput = {
 // The server filter payload: drop device/country when set to the "ALL" sentinel.
 function buildFilterInput(
   range: SearchPerformanceDateRange,
-  device: SearchPerformanceDevice | typeof ALL,
+  device: DeviceFilter,
   country: string,
 ): FilterInput {
   return {
@@ -119,13 +95,31 @@ function tableQueryOptions(
   });
 }
 
+/**
+ * Completeness evidence for the one pull that feeds striking distance and CTR
+ * opportunities.
+ *
+ * Both are derived from `report.queryPages`, so both stand or fall on the same
+ * pull, and both must name it identically — the boundary de-duplicates its
+ * notices by `label`.
+ */
+function queryPageEvidence(report: {
+  sampling: { queryPages: { truncated: boolean; rowsExamined: number } };
+}): readonly QuerySamplingEvidence[] {
+  return [
+    {
+      label: "The Search Console query-and-page pull",
+      truncated: report.sampling.queryPages.truncated,
+      rowsExamined: report.sampling.queryPages.rowsExamined,
+    },
+  ];
+}
+
 export function SearchPerformancePage({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [range, setRange] =
     useState<SearchPerformanceDateRange>("last_28_days");
-  const [device, setDevice] = useState<SearchPerformanceDevice | typeof ALL>(
-    ALL,
-  );
+  const [device, setDevice] = useState<DeviceFilter>(ALL);
   const [country, setCountry] = useState<string>(ALL);
   const [tab, setTab] = useState<Tab>("striking");
   const [page, setPage] = useState(1);
@@ -162,6 +156,35 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
   const tableData = tableQuery.data;
   const tableRows = tableData?.connected ? tableData.rows : [];
   const hasNextPage = tableData?.connected ? tableData.hasNextPage : false;
+
+  const reportState = resolveQueryState({
+    isPending: reportQuery.isPending,
+    isError: reportQuery.isError,
+    connected: report?.connected,
+    // The report itself is one object, not a row set: "connected" is the whole
+    // of it being present. Zero clicks in the period is a valid report, not an
+    // empty one, so metric totals must not be counted here.
+    rowCount: report?.connected ? 1 : 0,
+  });
+
+  const tableState = resolveQueryState({
+    isPending: tableQuery.isPending,
+    isError: tableQuery.isError,
+    connected: tableData?.connected,
+    rowCount: tableRows.length,
+    // A paginated pull is a WINDOW, not a capped read: rows past this page stay
+    // reachable through the control below it, so hitting the page size is a page
+    // boundary rather than a truncation. That is what makes a zero-row page a
+    // real absence here, where the same zero on the striking-distance tab is
+    // not -- that pull is capped and its tail is unreadable.
+    sampling: [
+      {
+        label: `The Search Console ${dimension} pull`,
+        truncated: false,
+        rowsExamined: tableRows.length,
+      },
+    ],
+  });
 
   // Warm the Queries tab (first page) as soon as the report connects so the tab
   // opens instantly instead of showing a spinner. Free first-party GSC data.
@@ -216,193 +239,144 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
           </p>
         </div>
 
-        {reportQuery.isPending ? (
-          <SearchPerformanceLoadingState />
-        ) : reportQuery.isError ? (
-          <div className="alert alert-error">
-            <span className="text-sm">
-              {getStandardErrorMessage(reportQuery.error)}
-            </span>
-          </div>
-        ) : !report?.connected ? (
-          <div className="max-w-2xl">
-            <SearchConsoleConnectionCard
-              projectId={projectId}
-              failureReason={accessFailureReason}
-            />
-          </div>
-        ) : (
-          <>
-            <TotalsCards report={report} />
-            <BrandedSplitCard
-              projectId={projectId}
-              queryTotals={report.queryTotals}
-            />
-            <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
-              <div className="flex flex-col gap-3 border-b border-base-300 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-                <div role="tablist" className="tabs tabs-border w-fit">
-                  <TabButton
-                    active={tab === "striking"}
-                    onClick={() => setTab("striking")}
-                    label={`Striking distance (${report.strikingDistance.length})`}
-                  />
-                  <TabButton
-                    active={tab === "ctr"}
-                    onClick={() => setTab("ctr")}
-                    label={`CTR opportunities (${report.ctrOpportunities.length})`}
-                  />
-                  <TabButton
-                    active={tab === "content"}
-                    onClick={() => setTab("content")}
-                    label="Content"
-                  />
-                  <TabButton
-                    active={tab === "queries"}
-                    onClick={() => setTab("queries")}
-                    label="Queries"
-                  />
-                  <TabButton
-                    active={tab === "pages"}
-                    onClick={() => setTab("pages")}
-                    label="Pages"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {reportQuery.isFetching && !reportQuery.isPending ? (
-                    <Loader2 className="size-4 animate-spin text-base-content/40" />
-                  ) : null}
-                  <select
-                    className="select select-bordered select-sm w-36"
-                    value={device}
-                    onChange={(event) => {
-                      setDevice(
-                        isDevice(event.target.value) ? event.target.value : ALL,
-                      );
-                    }}
-                    aria-label="Device filter"
-                  >
-                    <option value={ALL}>All devices</option>
-                    {DEVICE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="select select-bordered select-sm w-36"
-                    value={country}
-                    onChange={(event) => setCountry(event.target.value)}
-                    aria-label="Country filter"
-                  >
-                    <option value={ALL}>All countries</option>
-                    {report.countries.map((row) => (
-                      <option key={row.key} value={row.key}>
-                        {row.key.toUpperCase()}
-                      </option>
-                    ))}
-                  </select>
-                  <select
-                    className="select select-bordered select-sm w-36"
-                    value={range}
-                    onChange={(event) => {
-                      if (isDateRange(event.target.value)) {
-                        setRange(event.target.value);
-                      }
-                    }}
-                    aria-label="Date range"
-                  >
-                    {RANGE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <TableExportMenu
-                    buttonClassName="btn btn-ghost btn-sm gap-1"
-                    actions={[
-                      {
-                        label: "Export to Sheets",
-                        icon: <Sheet className="size-4" />,
-                        onClick: () => void handleExport("sheets"),
-                      },
-                      {
-                        label: "Download CSV",
-                        icon: <Download className="size-4" />,
-                        onClick: () => void handleExport("csv"),
-                      },
-                    ]}
-                  />
-                </div>
-              </div>
-
-              {/* One notice for the whole panel rather than a "(sampled)" tag
-                  on every count. The counts themselves are honest -- they are
-                  what we found -- but the reader needs to know once that the
-                  input was capped, since Search Console orders rows by clicks
-                  and drops the long tail first. */}
-              {report.sampling.queryPages.truncated ? (
-                <p className="border-b border-base-300 px-4 py-2 text-xs text-base-content/50">
-                  Search Console returned{" "}
-                  {report.sampling.queryPages.rowsExamined.toLocaleString()}{" "}
-                  query-and-page rows and stopped there, ordered by clicks.
-                  Counts below are what we found in those rows, not your whole
-                  property.
-                </p>
-              ) : null}
-
-              {tab === "striking" ? (
-                <StrikingDistanceTable
-                  projectId={projectId}
-                  rows={report.strikingDistance}
-                  sampled={report.sampling.queryPages.truncated}
-                />
-              ) : tab === "ctr" ? (
-                <CtrOpportunitiesTable
-                  rows={report.ctrOpportunities}
-                  sampled={report.sampling.queryPages.truncated}
-                />
-              ) : tab === "content" ? (
-                <ContentPerformanceTab
-                  projectId={projectId}
-                  dateRange={range}
-                  device={device === ALL ? undefined : device}
-                  country={country === ALL ? undefined : country}
-                />
-              ) : tableQuery.isPending ? (
-                <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-                  <Loader2 className="size-4 animate-spin" /> Loading…
-                </div>
-              ) : tableQuery.isError ? (
-                <div className="p-4">
-                  <div className="alert alert-error">
-                    <span className="text-sm">
-                      {getStandardErrorMessage(tableQuery.error)}
-                    </span>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="p-4">
-                    <DimensionTable
-                      rows={tableRows}
-                      keyLabel={tab === "queries" ? "Query" : "Page"}
+        <QueryStateBoundary
+          state={reportState}
+          loading={<SearchPerformanceLoadingState />}
+          errorMessage={getStandardErrorMessage(reportQuery.error)}
+          notConnected={
+            <div className="max-w-2xl">
+              <SearchConsoleConnectionCard
+                projectId={projectId}
+                failureReason={accessFailureReason}
+              />
+            </div>
+          }
+          // Reachable only if the report resolves without an error and without
+          // telling us whether it connected. Nothing was read, so nothing about
+          // the property can be claimed.
+          emptyTitle="No report came back"
+          emptyBody="Search Console answered without data for this range. Try a different date range, or retry in a moment."
+        >
+          {report?.connected ? (
+            <>
+              <TotalsCards report={report} />
+              <BrandedSplitCard
+                projectId={projectId}
+                queryTotals={report.queryTotals}
+              />
+              <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
+                <div className="flex flex-col gap-3 border-b border-base-300 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
+                  <div role="tablist" className="tabs tabs-border w-fit">
+                    <TabButton
+                      active={tab === "striking"}
+                      onClick={() => setTab("striking")}
+                      label={`Striking distance (${report.strikingDistance.length})`}
+                    />
+                    <TabButton
+                      active={tab === "ctr"}
+                      onClick={() => setTab("ctr")}
+                      label={`CTR opportunities (${report.ctrOpportunities.length})`}
+                    />
+                    <TabButton
+                      active={tab === "content"}
+                      onClick={() => setTab("content")}
+                      label="Content"
+                    />
+                    <TabButton
+                      active={tab === "queries"}
+                      onClick={() => setTab("queries")}
+                      label="Queries"
+                    />
+                    <TabButton
+                      active={tab === "pages"}
+                      onClick={() => setTab("pages")}
+                      label="Pages"
                     />
                   </div>
-                  <TablePagination
-                    page={page}
-                    pageSize={pageSize}
-                    pageSizes={SEARCH_PERFORMANCE_PAGE_SIZES}
-                    totalCount={null}
-                    hasNextPage={hasNextPage}
-                    isLoading={tableQuery.isFetching}
-                    onPageChange={setPage}
-                    onPageSizeChange={setPageSize}
+                  <SearchPerformanceFilters
+                    device={device}
+                    onDeviceChange={setDevice}
+                    country={country}
+                    onCountryChange={setCountry}
+                    countryKeys={report.countries.map((row) => row.key)}
+                    range={range}
+                    onRangeChange={setRange}
+                    refreshing={
+                      reportQuery.isFetching && !reportQuery.isPending
+                    }
+                    onExport={(target) => void handleExport(target)}
                   />
-                </>
-              )}
-            </div>
-          </>
-        )}
+                </div>
+
+                {/* No panel-wide sampling notice. There used to be one here, but
+                  it described `report.sampling.queryPages` while sitting above
+                  every tab -- including Queries and Pages, which are served by a
+                  different request entirely. A completeness caveat attached to
+                  data it does not describe is worse than none, so each tab now
+                  carries the evidence for its own pull. */}
+
+                {tab === "striking" ? (
+                  <StrikingDistanceTable
+                    projectId={projectId}
+                    rows={report.strikingDistance}
+                    sampling={queryPageEvidence(report)}
+                  />
+                ) : tab === "ctr" ? (
+                  <CtrOpportunitiesTable
+                    rows={report.ctrOpportunities}
+                    sampling={queryPageEvidence(report)}
+                  />
+                ) : tab === "content" ? (
+                  <ContentPerformanceTab
+                    projectId={projectId}
+                    dateRange={range}
+                    device={device === ALL ? undefined : device}
+                    country={country === ALL ? undefined : country}
+                  />
+                ) : (
+                  <QueryStateBoundary
+                    state={tableState}
+                    loading={
+                      <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
+                        <Loader2 className="size-4 animate-spin" /> Loading…
+                      </div>
+                    }
+                    errorMessage={getStandardErrorMessage(tableQuery.error)}
+                    // Access can be revoked between the report call and this one.
+                    // Before, that rendered as "no data for this period", which
+                    // reports an absence caused by never having read anything.
+                    notConnected={
+                      <p className="p-6 text-sm text-base-content/60">
+                        Search Console stopped answering for this property, so
+                        these rows could not be read. Reconnect from the banner
+                        above.
+                      </p>
+                    }
+                    emptyTitle={`No ${tab === "queries" ? "queries" : "pages"} for this period`}
+                    emptyBody="Search Console data trails live traffic by two to three days, so a very recent range can be empty while the site is fine."
+                  >
+                    <div className="p-4">
+                      <DimensionTable
+                        rows={tableRows}
+                        keyLabel={tab === "queries" ? "Query" : "Page"}
+                      />
+                    </div>
+                    <TablePagination
+                      page={page}
+                      pageSize={pageSize}
+                      pageSizes={SEARCH_PERFORMANCE_PAGE_SIZES}
+                      totalCount={null}
+                      hasNextPage={hasNextPage}
+                      isLoading={tableQuery.isFetching}
+                      onPageChange={setPage}
+                      onPageSizeChange={setPageSize}
+                    />
+                  </QueryStateBoundary>
+                )}
+              </div>
+            </>
+          ) : null}
+        </QueryStateBoundary>
       </div>
     </div>
   );
