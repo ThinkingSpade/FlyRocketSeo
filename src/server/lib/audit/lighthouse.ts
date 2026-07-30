@@ -14,6 +14,10 @@ type LighthouseFetchResult = {
   payloadJson: string | null;
 };
 
+/** Uploading the payload is FREE, so unlike the provider call it is safe to
+ *  retry -- and it sits inside a workflow step that will never be replayed. */
+const MAX_PAYLOAD_UPLOAD_ATTEMPTS = 3;
+
 async function fetchLighthouseResult(
   url: string,
   pageId: string,
@@ -106,31 +110,45 @@ export async function fetchAndStoreLighthouseResult(input: {
 
   const key = `site-audit/${input.projectId}/${input.auditId}/${input.pageId}-${input.strategy}.json`;
 
-  // Storage failure must not discard the scores we just PAID for.
+  // Storage failure must not discard the scores we just PAID for -- but it must
+  // not be swallowed either.
   //
-  // This used to throw straight out. Combined with the surrounding workflow step
-  // now having zero retries -- so a paid batch can never be replayed -- one
-  // transient R2 503 would reject the whole Promise.all and fail the entire
-  // audit, after all 20 provider calls had already been billed. Two separate
-  // concerns got conflated: the PROVIDER call must not be replayed because it
-  // costs money, but storing its output is free and independently recoverable.
+  // Throwing here used to fail the ENTIRE audit: the surrounding workflow step
+  // has zero retries (so a paid batch can never be replayed), and one transient
+  // R2 503 rejected the whole Promise.all after all 20 provider calls were
+  // billed. The provider call must not be replayed because it costs money;
+  // uploading its output is FREE, so that is the part worth retrying.
   //
-  // The scores are returned either way; only the raw payload link is lost, and
-  // that payload is a detail view, not the audit result.
-  try {
-    const uploaded = await putTextToR2(key, fetched.payloadJson);
-    return {
-      ...fetched.result,
-      r2Key: uploaded.key,
-      payloadSizeBytes: uploaded.sizeBytes,
-    };
-  } catch (error) {
-    console.error(
-      `Lighthouse payload upload failed for ${input.url} (${input.strategy}); keeping the scores:`,
-      error instanceof Error ? error.message : String(error),
-    );
-    return fetched.result;
+  // Retry the upload here, inside the non-replayable step. If every attempt
+  // fails the scores are still returned, because they are the audit result and
+  // the payload is only the detail view behind "View issues".
+  //
+  // Residual gap, deliberately not fixed here: a row with scores and no `r2Key`
+  // is indistinguishable in the database from an older row that never had a
+  // payload, so the failure is visible only in logs. Making it visible in the UI
+  // needs a `payloadStatus` column and a migration -- worth doing, out of scope
+  // for this branch.
+  let lastUploadError: unknown = null;
+  for (let attempt = 0; attempt < MAX_PAYLOAD_UPLOAD_ATTEMPTS; attempt++) {
+    try {
+      const uploaded = await putTextToR2(key, fetched.payloadJson);
+      return {
+        ...fetched.result,
+        r2Key: uploaded.key,
+        payloadSizeBytes: uploaded.sizeBytes,
+      };
+    } catch (error) {
+      lastUploadError = error;
+    }
   }
+
+  console.error(
+    `Lighthouse payload upload failed ${MAX_PAYLOAD_UPLOAD_ATTEMPTS}x for ${input.url} (${input.strategy}) in audit ${input.auditId}; keeping the scores, losing the payload:`,
+    lastUploadError instanceof Error
+      ? lastUploadError.message
+      : String(lastUploadError),
+  );
+  return fetched.result;
 }
 
 /**

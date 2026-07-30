@@ -45,11 +45,28 @@ function getEffectivePort(parsed: URL): string {
   return parsed.protocol === "https:" ? "443" : "80";
 }
 
+/** Strip at most ONE leading `www.`, so equivalence is a canonical comparison
+ *  rather than a pair of prefix tests. */
+function withoutWwwPrefix(host: string): string {
+  return host.startsWith("www.") ? host.slice(4) : host;
+}
+
+/**
+ * Are these the same site, treating apex and `www` as one?
+ *
+ * Canonicalizes both sides instead of testing `a === "www." + b` in each
+ * direction. Those prefix tests gave a `www.` origin THREE accepted hosts: with
+ * `b = www.example.com`, the host `www.www.example.com` satisfied
+ * `a === "www." + b` — an unrelated hostname that a redirect could reach and the
+ * crawler would treat as inside the audit boundary. Now `www.www.example.com`
+ * canonicalizes to `www.example.com`, which is not `example.com`, and is
+ * correctly rejected.
+ */
 function areEquivalentHostnames(a: string, b: string): boolean {
   const hostA = a.toLowerCase();
   const hostB = b.toLowerCase();
   if (hostA === hostB) return true;
-  return hostA === `www.${hostB}` || hostB === `www.${hostA}`;
+  return withoutWwwPrefix(hostA) === withoutWwwPrefix(hostB);
 }
 
 /**

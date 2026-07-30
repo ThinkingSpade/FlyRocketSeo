@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildOpportunities,
   buildTechnicalIssues,
+  isSourceUnavailable,
   quickWinClicks,
   quickWinHint,
   type Opportunity,
@@ -289,5 +290,35 @@ describe("buildTechnicalIssues", () => {
   it("does not flag word count zero as thin (uncrawled body)", () => {
     const issues = buildTechnicalIssues([auditPage({ wordCount: 0 })]);
     expect(issues.some((issue) => issue.key === "thin")).toBe(false);
+  });
+});
+
+describe("isSourceUnavailable", () => {
+  const ok = { isError: false, isPending: false };
+
+  it("treats a disconnected source as unavailable, not as zero", () => {
+    // Found by loading the page with GSC unconfigured: the tiles showed a
+    // confident "0 opportunities / 0 clicks at stake". A disconnected Search
+    // Console is not an error -- the server function SUCCEEDS with
+    // { connected: false } -- so an isError-only guard never fired.
+    expect(isSourceUnavailable(ok, { connected: false })).toBe(true);
+  });
+
+  it("treats a failed source as unavailable", () => {
+    expect(
+      isSourceUnavailable({ isError: true, isPending: false }, undefined),
+    ).toBe(true);
+  });
+
+  it("treats a pending source as unavailable", () => {
+    // "—" settling into a number beats "0" correcting itself upward.
+    expect(
+      isSourceUnavailable({ isError: false, isPending: true }, undefined),
+    ).toBe(true);
+  });
+
+  it("does not flag a connected source that simply found nothing", () => {
+    // Genuine zero must stay reportable as zero.
+    expect(isSourceUnavailable(ok, { connected: true })).toBe(false);
   });
 });

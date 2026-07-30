@@ -303,6 +303,10 @@ export function useClientReportData(projectId: string) {
     gsc: gscQuery.data?.connected ? gscQuery.data : null,
     gscPending: gscQuery.isLoading,
     insights: insightsQuery.data?.connected ? insightsQuery.data : null,
+    // Exposed so the report can tell "still loading" from "settled and
+    // missing". Both leave the data null, but only the second justifies saying
+    // the input was incomplete -- and this report gets printed.
+    insightsPending: insightsQuery.isLoading,
     backlinks: matchingBacklinksRun?.result.overview ?? null,
     domainOverview: matchingDomainRun?.result ?? null,
     domainSnapshotMissing: hasDomain && matchingDomainRun == null,

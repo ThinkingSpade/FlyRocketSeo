@@ -205,3 +205,84 @@ describe("fetchValidatingEveryHop", () => {
     });
   });
 });
+
+describe("fetchValidatingEveryHop transport security", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function scripted(...steps: Array<{ status: number; location?: string }>) {
+    let call = 0;
+    return vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => {
+      const step = steps[Math.min(call++, steps.length - 1)];
+      return new Response(null, {
+        status: step.status,
+        headers: step.location ? { location: step.location } : {},
+      });
+    });
+  }
+
+  it("refuses an https-to-http downgrade later in the chain", async () => {
+    // Adversarial review: every hop was compared to the ORIGINAL http origin, so
+    // once the chain upgraded to https a hop back to http still matched and was
+    // followed. Three requests went out; only two should.
+    const fetchImpl = scripted(
+      { status: 301, location: "https://example.com/b" },
+      { status: 302, location: "http://example.com/c" },
+      { status: 200 },
+    );
+
+    await expect(
+      fetchValidatingEveryHop(
+        "http://example.com/a",
+        {},
+        {
+          fetchImpl,
+          allowHop: (u) => isSameOrigin(u.toString(), "http://example.com"),
+        },
+      ),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("still allows the ordinary http-to-https upgrade", async () => {
+    const fetchImpl = scripted(
+      { status: 301, location: "https://example.com/b" },
+      { status: 200 },
+    );
+
+    const { response } = await fetchValidatingEveryHop(
+      "http://example.com/a",
+      {},
+      {
+        fetchImpl,
+        allowHop: (u) => isSameOrigin(u.toString(), "http://example.com"),
+      },
+    );
+
+    expect(response.status).toBe(200);
+  });
+});
+
+describe("hostname equivalence", () => {
+  it("does not treat www.www.host as equivalent to www.host", () => {
+    // The prefix tests gave a www. origin three accepted hosts, so a redirect to
+    // www.www.example.com counted as inside the audit boundary.
+    expect(
+      isSameOrigin("https://www.www.example.com/x", "https://www.example.com"),
+    ).toBe(false);
+  });
+
+  it("still treats www and apex as the same site", () => {
+    expect(
+      isSameOrigin("https://example.com/x", "https://www.example.com"),
+    ).toBe(true);
+    expect(
+      isSameOrigin("https://www.example.com/x", "https://example.com"),
+    ).toBe(true);
+  });
+});

@@ -252,8 +252,20 @@ export async function fetchValidatingEveryHop(
   const doFetch = options.fetchImpl ?? fetch;
   let current = new URL(startUrl);
   let redirected = false;
+  let reachedHttps = current.protocol === "https:";
 
   for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
+    // Once the chain is on HTTPS it stays there. Callers compare each hop
+    // against the ORIGINAL origin, so for a chain starting on http an eventual
+    // hop back to http still matched and the downgrade went unnoticed:
+    // http -> https -> http was followed in full. Transport security is a
+    // property of the chain, not of any single hop, so it is enforced here
+    // rather than left to each caller's origin rule.
+    if (reachedHttps && current.protocol !== "https:") {
+      throw new AppError("CRAWL_TARGET_BLOCKED");
+    }
+    reachedHttps = reachedHttps || current.protocol === "https:";
+
     await assertRequestableUrl(current);
     if (options.allowHop && !options.allowHop(current)) {
       throw new AppError("CRAWL_TARGET_BLOCKED");

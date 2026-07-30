@@ -102,11 +102,19 @@ export function ReportPages({
     // disconnected GSC request leaves `gsc`/`insights` null, their counts fall
     // to zero, and every recommendation branch above goes quiet -- which
     // previously produced a confident all-clear built on data we never received.
+    //
+    // But PENDING is excluded. Loading also leaves them null, and this page can
+    // be printed mid-load: saying "that data was incomplete" about a request
+    // still in flight is its own false claim, frozen into a PDF. While loading,
+    // neither sentence is emitted.
+    gscPending: data.gscPending || data.insightsPending,
     gscIncomplete:
-      gsc == null ||
-      insights == null ||
-      gsc.sampling.queryPages.truncated ||
-      insights.truncated,
+      !data.gscPending &&
+      !data.insightsPending &&
+      (gsc == null ||
+        insights == null ||
+        gsc.sampling.queryPages.truncated ||
+        insights.truncated),
   });
 
   /** Renders just the requested sections, so one chapter can span pages. */

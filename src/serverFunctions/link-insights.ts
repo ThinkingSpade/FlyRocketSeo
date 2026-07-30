@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { AppError } from "@/server/lib/errors";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import {
   GscNotConnectedError,
@@ -93,13 +94,31 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const source = new URL(data.sourceUrl);
     const target = new URL(data.targetUrl);
-    // Internal-link checks are within-site by definition; refusing cross-host
-    // input also keeps this endpoint from being a generic proxy.
-    if (
-      source.hostname.replace(/^www\./, "") !==
-      target.hostname.replace(/^www\./, "")
-    ) {
-      throw new Error("Source and target must be on the same site.");
+
+    // Both URLs must belong to THIS PROJECT, not merely to each other.
+    //
+    // Matching source against target only is self-authorizing: a member of any
+    // project could pass two URLs on an unrelated public site and use the
+    // `mentionsPhrase` result as an oracle against it, varying `phrase` to
+    // bypass the cache. That is a general-purpose proxy, which the previous
+    // comment claimed this check prevented. The boundary has to come from the
+    // project, so it is derived from `context.project.domain`.
+    const projectDomain = context.project.domain?.trim();
+    if (!projectDomain) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Set this project's domain before checking link presence.",
+      );
+    }
+    const projectOrigin = `https://${projectDomain.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}`;
+
+    for (const url of [source, target]) {
+      if (!isSameOrigin(url.toString(), projectOrigin)) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Source and target must both be on this project's own site.",
+        );
+      }
     }
 
     const cacheKey = await buildCacheKey("link-presence", {
@@ -121,8 +140,8 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
       error: string | null;
     };
     try {
-      // Every hop is re-validated against the crawl URL policy, and every hop
-      // must stay on the source's own host.
+      // Every hop is re-validated against the crawl URL policy AND pinned to the
+      // project's own origin.
       //
       // This used to be `fetch(..., { redirect: "follow" })` behind a check on
       // the SUBMITTED hostname only. An authenticated project member could
@@ -131,6 +150,10 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
       // request itself — straight past the private-address protections in
       // url-policy.ts. Following redirects means letting a remote server pick
       // our next request, so it cannot be delegated to fetch().
+      //
+      // Pinning to `projectOrigin` rather than `source.origin` matters: the
+      // source is user input, so using its own origin as the boundary let the
+      // submitter define what counted as in-bounds.
       const { response } = await fetchValidatingEveryHop(
         data.sourceUrl,
         {
@@ -140,7 +163,7 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
           },
           signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
         },
-        { allowHop: (hop) => isSameOrigin(hop.toString(), source.origin) },
+        { allowHop: (hop) => isSameOrigin(hop.toString(), projectOrigin) },
       );
       if (!response.ok) {
         result = {

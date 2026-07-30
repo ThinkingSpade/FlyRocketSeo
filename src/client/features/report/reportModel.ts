@@ -65,6 +65,13 @@ type RecommendationInput = {
    *  report cheerfully declared all clear on data it never received. Missing data
    *  is not the same as data showing nothing. */
   gscIncomplete?: boolean;
+  /** A free Search Console query is still in flight.
+   *
+   *  A THIRD state, distinct from complete and from incomplete. Loading leaves
+   *  the same nulls behind as a failure, and this page can be printed mid-load,
+   *  so neither "no urgent issues detected" nor "that data was incomplete" is
+   *  true yet -- one over-claims, the other invents a failure. */
+  gscPending?: boolean;
 };
 
 /** Turn the report's findings into the "what we do next" bullets clients
@@ -111,9 +118,11 @@ export function buildRecommendations(input: RecommendationInput): string[] {
   }
   if (recommendations.length === 0) {
     recommendations.push(
-      input.gscIncomplete
-        ? "Nothing urgent surfaced in the Search Console data available for this period, and that data was incomplete — so treat this as no findings rather than an all-clear, and keep publishing against the content plan."
-        : "No urgent issues detected — keep publishing against the content plan and monitoring rankings.",
+      input.gscPending
+        ? "Search Console data is still loading — recommendations will fill in once it arrives."
+        : input.gscIncomplete
+          ? "Nothing urgent surfaced in the Search Console data available for this period, and that data was incomplete — so treat this as no findings rather than an all-clear, and keep publishing against the content plan."
+          : "No urgent issues detected — keep publishing against the content plan and monitoring rankings.",
     );
   }
   return recommendations;

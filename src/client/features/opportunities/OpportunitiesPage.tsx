@@ -19,6 +19,7 @@ import { toPath } from "@/client/features/link-insights/useLinkInsights";
 import {
   buildOpportunities,
   buildTechnicalIssues,
+  isSourceUnavailable,
   quickWinHint,
   type Opportunity,
   type OpportunityKind,
@@ -107,8 +108,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     (sum, issue) => sum + issue.pageCount,
     0,
   );
-  const opportunitySourcesFailed =
-    reportQuery.isError || linkInsightsQuery.isError;
+  const sourcesUnavailable =
+    isSourceUnavailable(reportQuery, report) ||
+    isSourceUnavailable(linkInsightsQuery, linkInsights);
   const technicalSourcesFailed = historyQuery.isError || auditQuery.isError;
 
   return (
@@ -129,22 +131,16 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
         <InsightTile
           icon={Lightbulb}
           label="Opportunities"
-          value={opportunitySourcesFailed ? "—" : opportunities.length}
-          // Suppressed alongside the count when a source failed: the hint is
-          // derived from the opportunities we managed to load, so showing
-          // "3 quick wins" beside a "—" would state a figure the run did not
-          // actually establish.
-          hint={
-            opportunitySourcesFailed ? undefined : quickWinHint(opportunities)
-          }
+          value={sourcesUnavailable ? "—" : opportunities.length}
+          // Hint goes too: "3 quick wins" beside a "—" would state a figure the
+          // run never established.
+          hint={sourcesUnavailable ? undefined : quickWinHint(opportunities)}
           tone="primary"
         />
         <InsightTile
           icon={ArrowUpRight}
           label="Clicks at stake"
-          value={
-            opportunitySourcesFailed ? "—" : totalClicksAtStake.toLocaleString()
-          }
+          value={sourcesUnavailable ? "—" : totalClicksAtStake.toLocaleString()}
           hint={
             sampled
               ? "Estimated monthly, if everything listed here is fixed"

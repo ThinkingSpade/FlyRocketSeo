@@ -315,3 +315,21 @@ export function buildTechnicalIssues(pages: AuditPageRow[]): TechnicalIssue[] {
       return rank[a.severity] - rank[b.severity] || b.pageCount - a.pageCount;
     });
 }
+
+/**
+ * Is a GSC-derived source MISSING rather than empty?
+ *
+ * A disconnected Search Console is not an error -- the server function succeeds
+ * with { connected: false } -- so an isError-only check let the Opportunities
+ * tiles render a confident "0 opportunities / 0 clicks at stake" for a project
+ * with no Search Console data at all. Zero is a finding; absent data is not.
+ *
+ * Pending counts as unavailable too: "--" settling into a number reads better
+ * than "0" correcting itself upward.
+ */
+export function isSourceUnavailable(
+  query: { isError: boolean; isPending: boolean },
+  data: { connected: boolean } | undefined,
+): boolean {
+  return query.isError || query.isPending || data?.connected === false;
+}

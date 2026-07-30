@@ -23,12 +23,12 @@ const SEVERITY_BADGE: Record<
   medium: {
     label: "Medium",
     className: "badge-warning",
-    hint: "A meaningful share of traffic goes to pages other than the leading one",
+    hint: "A meaningful share of clicks goes to pages other than the top-clicked one",
   },
   low: {
     label: "Low",
     className: "badge-ghost",
-    hint: "One page clearly leads — keep an eye on it",
+    hint: "One page takes almost all the clicks — keep an eye on it",
   },
 };
 
@@ -141,8 +141,8 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                 </span>
               </span>
               <span className="text-xs text-base-content/50 tabular-nums">
-                {Math.round(row.splitShare * 100)}% of traffic outside the
-                leading page · {row.totalImpressions.toLocaleString()}{" "}
+                {Math.round(row.splitShare * 100)}% of clicks outside the
+                top-clicked page · {row.totalImpressions.toLocaleString()}{" "}
                 impressions · {row.totalClicks.toLocaleString()} clicks ·{" "}
                 {row.pages.length} ranking pages
               </span>
@@ -174,9 +174,9 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                           {page.isWinner ? (
                             <span
                               className="badge badge-success badge-sm gap-1"
-                              title="Leading page for this query — the likely consolidation target if these really do compete"
+                              title="Best-RANKING page for this query, and so the likely consolidation target if these really do compete. Not necessarily the page earning the most clicks."
                             >
-                              <Trophy className="size-3" /> leading
+                              <Trophy className="size-3" /> best rank
                             </span>
                           ) : null}
                         </span>
