@@ -48,7 +48,7 @@ export function CitationTabsCard({
   const [pagesSort, setPagesSort] = useState<SortingState>(DEFAULT_PAGES_SORT);
   const [queriesSort, setQueriesSort] =
     useState<SortingState>(DEFAULT_QUERIES_SORT);
-  const filters = useBrandLookupFilters();
+  const filters = useBrandLookupFilters(projectId);
 
   // The platform column only earns its place when a tab actually spans >1
   // platform; otherwise it repeats one value on every row.

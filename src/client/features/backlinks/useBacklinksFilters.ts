@@ -13,7 +13,19 @@ import {
   type TopPagesFilterValues,
 } from "./backlinksFilterTypes";
 
+/**
+ * Namespaced per project.
+ *
+ * These filters hold project-specific text (anchor and URL substrings, domain
+ * names), so a global key let one client's filter silently hide another
+ * client's rows. The route remount cannot help here — `localStorage` outlives
+ * the component — so the project is part of the key.
+ */
 const STORAGE_KEY_PREFIX = "backlinks-filters:";
+
+function storageKey(projectId: string, tab: string): string {
+  return `${STORAGE_KEY_PREFIX}${projectId}:${tab}`;
+}
 
 type FilterValues = Record<string, string>;
 
@@ -21,11 +33,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-function loadFromStorage<T extends FilterValues>(tab: string, fallback: T): T {
+function loadFromStorage<T extends FilterValues>(
+  projectId: string,
+  tab: string,
+  fallback: T,
+): T {
   const fallbackClone = { ...fallback };
 
   try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${tab}`);
+    const raw = localStorage.getItem(storageKey(projectId, tab));
     if (!raw) return fallbackClone;
 
     const parsed: unknown = JSON.parse(raw);
@@ -52,9 +68,9 @@ function loadFromStorage<T extends FilterValues>(tab: string, fallback: T): T {
   }
 }
 
-function saveToStorage(tab: string, values: FilterValues) {
+function saveToStorage(projectId: string, tab: string, values: FilterValues) {
   try {
-    localStorage.setItem(`${STORAGE_KEY_PREFIX}${tab}`, JSON.stringify(values));
+    localStorage.setItem(storageKey(projectId, tab), JSON.stringify(values));
   } catch {
     // storage full - silently ignore
   }
@@ -64,17 +80,21 @@ function saveToStorage(tab: string, values: FilterValues) {
  * Holds the *applied* filters for one tab. Draft edits live inside the filter
  * panel; values here are what the server queries use, persisted per tab.
  */
-function useTabFilters<T extends FilterValues>(tab: string, emptyValues: T) {
+function useTabFilters<T extends FilterValues>(
+  projectId: string,
+  tab: string,
+  emptyValues: T,
+) {
   const [values, setValues] = useState<T>(() =>
-    loadFromStorage(tab, { ...emptyValues }),
+    loadFromStorage(projectId, tab, { ...emptyValues }),
   );
 
   const apply = useCallback(
     (next: T) => {
       setValues(next);
-      saveToStorage(tab, next);
+      saveToStorage(projectId, tab, next);
     },
-    [tab],
+    [projectId, tab],
   );
 
   const reset = useCallback(() => {
@@ -89,22 +109,26 @@ function useTabFilters<T extends FilterValues>(tab: string, emptyValues: T) {
   };
 }
 
-export function useBacklinksFilters() {
+export function useBacklinksFilters(projectId: string) {
   const [showFilters, setShowFilters] = useState(false);
 
   const backlinks = useTabFilters<BacklinksTabFilterValues>(
+    projectId,
     "backlinks",
     EMPTY_BACKLINKS_FILTERS,
   );
   const domains = useTabFilters<ReferringDomainsFilterValues>(
+    projectId,
     "domains",
     EMPTY_REFERRING_DOMAINS_FILTERS,
   );
   const pages = useTabFilters<TopPagesFilterValues>(
+    projectId,
     "pages",
     EMPTY_TOP_PAGES_FILTERS,
   );
   const anchors = useTabFilters<AnchorsFilterValues>(
+    projectId,
     "anchors",
     EMPTY_ANCHORS_FILTERS,
   );

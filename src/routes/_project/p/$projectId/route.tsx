@@ -88,7 +88,37 @@ function ProjectLayout() {
       projectId={projectId}
       banner={authGate.isHostedMode ? <FreePlanBanner /> : undefined}
     >
-      <Outlet />
+      {/* Keyed by project, so switching projects remounts the page subtree.
+       *
+       * This router does NOT remount a route component when only a path param
+       * changes: `@tanstack/react-router` keys the match only when `remountDeps`
+       * or `defaultRemountDeps` is configured, and neither is set here or in
+       * `router.tsx`. So `/p/A/keywords` -> `/p/B/keywords` keeps every
+       * `useState` in the Keywords tree alive across the switch.
+       *
+       * The worst consequence is a MONEY bug, not just stale UI. Keyword
+       * Research holds `authorizedResearchInput` / `authorizedGeo` /
+       * `researchRunNonce` to remember that the user authorized a paid run.
+       * Those survive the switch, the controller rebuilds the request with the
+       * NEW projectId, and because an authorization is still present it fires a
+       * fresh metered request for project B using project A's keyword, location
+       * and target area — with no click. An open Save-Keywords dialog is the
+       * same shape: A's selected keywords, saved under B.
+       *
+       * Fixed at the boundary rather than per component. A reset effect in each
+       * component only covers the instances someone remembered, and silently
+       * fails for the next one added; an audit of this found 18 of them. A
+       * project switch IS a context change, so discarding view state is the
+       * intended behaviour here, not collateral damage.
+       *
+       * The global shell stays mounted — this keys the Outlet, not the layout —
+       * so the sidebar and banner do not flash.
+       *
+       * It does NOT fix state held OUTSIDE React: three `localStorage` filter
+       * stores are global despite holding project-specific terms, and those need
+       * their keys namespaced separately.
+       */}
+      <Outlet key={projectId} />
     </AuthenticatedAppLayout>
   );
 }

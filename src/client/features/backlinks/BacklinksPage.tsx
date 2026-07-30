@@ -64,7 +64,7 @@ export function BacklinksPage({
   searchState,
   navigate,
 }: BacklinksPageProps) {
-  const filters = useBacklinksFilters();
+  const filters = useBacklinksFilters(projectId);
   const currentSearchKey = buildBacklinksAuthorizationKey(
     projectId,
     searchState,
