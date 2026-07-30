@@ -16,10 +16,7 @@ import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
-import {
-  buildBacklinksAuthorizationKey,
-  selectActiveBacklinksFilters,
-} from "./backlinksAuthorizationKey";
+import { buildBacklinksAuthorizationKey } from "./backlinksAuthorizationKey";
 import {
   navigateToBacklinksSearch,
   useBacklinksPageData,
@@ -79,17 +76,9 @@ export function BacklinksPage({
     },
     [navigate],
   );
-  const goToFirstPage = useCallback(
-    () => handlePageChange(1),
-    [handlePageChange],
-  );
-
-  // Filters and authorization arrive together because the key is built from the
-  // filters and the filter handler needs the authorization -- see the hook.
   const { filters, run } = useBacklinksRunAuthorization({
     projectId,
     searchState,
-    goToFirstPage,
   });
   const searchAuthorized = run.authorized;
 
@@ -289,20 +278,13 @@ export function BacklinksPage({
         sort: undefined,
         order: undefined,
       };
-      run.authorize(
-        buildBacklinksAuthorizationKey(
-          projectId,
-          nextSearchState,
-          selectActiveBacklinksFilters(nextSearchState.tab, filters),
-        ),
-      );
+      run.authorize(buildBacklinksAuthorizationKey(projectId, nextSearchState));
       searchTabs.openTab(toBacklinksTabInput(values));
       navigateToBacklinksSearch(navigate, values);
       addSearch({ target: values.target, scope: values.scope });
     },
     [
       addSearch,
-      filters,
       navigate,
       projectId,
       run,

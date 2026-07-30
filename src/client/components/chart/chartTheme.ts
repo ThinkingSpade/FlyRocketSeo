@@ -11,6 +11,17 @@
  * class does not: the browser resolves `var(--color-base-content)` per theme at
  * paint time, the same value the rest of the UI derives its text colour from.
  *
+ * That is a browser behaviour rather than a type, so it was checked against real
+ * rendered charts (Rank Tracking, on seeded local data). All 22 axis ticks carry
+ * `fill="var(--color-base-content)"` and `fill-opacity="0.6"` as attributes, and
+ * resolve to `rgb(23,32,51)` under `flyrocketseo` and `rgb(234,240,250)` under
+ * `flyrocketseo-dark`. No literal colour survives anywhere in the tick output.
+ *
+ * The hover cursor tokens below are the same mechanism on `stroke`/`fill` — both
+ * are in Recharts' `svgPropertiesNoEvents` allow-list alongside `fill` — but the
+ * hover state itself was not observed, because triggering it needs a compositing
+ * browser rather than synthetic events.
+ *
  * Kept as plain objects rather than a hook. These are constants; a hook would
  * imply they can change per render and invite subscribing to something.
  */
