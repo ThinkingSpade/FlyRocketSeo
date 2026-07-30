@@ -1,17 +1,6 @@
 import { describe, expect, it } from "vitest";
-import {
-  EMPTY_ANCHORS_FILTERS,
-  EMPTY_BACKLINKS_FILTERS,
-  EMPTY_REFERRING_DOMAINS_FILTERS,
-  EMPTY_TOP_PAGES_FILTERS,
-  toBacklinksFiltersPayload,
-  toReferringDomainsFiltersPayload,
-} from "./backlinksFilterTypes";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
-import {
-  buildBacklinksAuthorizationKey,
-  selectActiveBacklinksFilters,
-} from "./backlinksAuthorizationKey";
+import { buildBacklinksAuthorizationKey } from "./backlinksAuthorizationKey";
 
 const SEARCH: BacklinksSearchState = {
   target: "example.com",
@@ -21,140 +10,113 @@ const SEARCH: BacklinksSearchState = {
   pageSize: 50,
 };
 
-/** The key builder reads only the applied values, so that is all this supplies. */
-function filtersState(
-  overrides: Partial<{
-    backlinks: typeof EMPTY_BACKLINKS_FILTERS;
-    domains: typeof EMPTY_REFERRING_DOMAINS_FILTERS;
-    pages: typeof EMPTY_TOP_PAGES_FILTERS;
-    anchors: typeof EMPTY_ANCHORS_FILTERS;
-  }> = {},
-) {
-  return {
-    backlinks: { values: overrides.backlinks ?? EMPTY_BACKLINKS_FILTERS },
-    domains: { values: overrides.domains ?? EMPTY_REFERRING_DOMAINS_FILTERS },
-    pages: { values: overrides.pages ?? EMPTY_TOP_PAGES_FILTERS },
-    anchors: { values: overrides.anchors ?? EMPTY_ANCHORS_FILTERS },
-  };
+/**
+ * Builds a variant through a typed value rather than an object literal.
+ *
+ * Deliberate: the key builder takes `Pick<BacklinksSearchState, "target" |
+ * "scope">`, so passing a literal with `page` in it is a COMPILE error — the
+ * type already forbids keying on a slice. These tests guard the runtime value
+ * behind that, for the day someone widens the parameter.
+ */
+function withSlice(
+  overrides: Partial<BacklinksSearchState>,
+): BacklinksSearchState {
+  return { ...SEARCH, ...overrides };
 }
 
-describe("backlinks authorization key", () => {
-  it("changes when the active tab's filters change", () => {
-    const unfiltered = buildBacklinksAuthorizationKey(
-      "proj",
-      SEARCH,
-      selectActiveBacklinksFilters("backlinks", filtersState()),
+/**
+ * The key is the RUN, not the slice.
+ *
+ * Each of these used to produce a different key, and `useAuthorizedRun` is
+ * strict equality — so every one of them de-authorized the run mid-session and
+ * blanked a table the user had already paid for. Listed individually rather
+ * than looped, so a failure names the control that broke.
+ */
+describe("a slice change keeps the run authorized", () => {
+  const base = buildBacklinksAuthorizationKey("proj", SEARCH);
+
+  it("paging", () => {
+    expect(buildBacklinksAuthorizationKey("proj", withSlice({ page: 2 }))).toBe(
+      base,
     );
-    const filtered = buildBacklinksAuthorizationKey(
-      "proj",
-      SEARCH,
-      selectActiveBacklinksFilters(
-        "backlinks",
-        filtersState({
-          backlinks: { ...EMPTY_BACKLINKS_FILTERS, include: "pricing" },
+  });
+
+  it("page size", () => {
+    expect(
+      buildBacklinksAuthorizationKey("proj", withSlice({ pageSize: 100 })),
+    ).toBe(base);
+  });
+
+  it("sorting", () => {
+    expect(
+      buildBacklinksAuthorizationKey(
+        "proj",
+        withSlice({
+          sort: "domain_rank",
+          order: "asc",
         }),
       ),
-    );
-    // This inequality is the whole reason Apply has to re-authorize: a filtered
-    // DataForSEO call is a different billed request, so the unfiltered
-    // authorization must not cover it.
-    expect(filtered).not.toBe(unfiltered);
+    ).toBe(base);
   });
 
-  it("ignores filters belonging to other tabs", () => {
-    const base = buildBacklinksAuthorizationKey(
-      "proj",
-      SEARCH,
-      selectActiveBacklinksFilters("backlinks", filtersState()),
-    );
-    const otherTabFiltered = buildBacklinksAuthorizationKey(
-      "proj",
-      SEARCH,
-      selectActiveBacklinksFilters(
-        "backlinks",
-        filtersState({
-          anchors: { ...EMPTY_ANCHORS_FILTERS, include: "brand" },
+  it("switching result tab", () => {
+    expect(
+      buildBacklinksAuthorizationKey("proj", withSlice({ tab: "anchors" })),
+    ).toBe(base);
+  });
+
+  it("switching view", () => {
+    expect(
+      buildBacklinksAuthorizationKey("proj", withSlice({ view: "all" })),
+    ).toBe(base);
+  });
+});
+
+/**
+ * The other half of the contract, and why this is not simply "authorize
+ * everything": a different target is a different purchase, so it has to fall
+ * back to unauthorized and wait for a click.
+ */
+describe("a different run needs its own authorization", () => {
+  const base = buildBacklinksAuthorizationKey("proj", SEARCH);
+
+  it("a different target", () => {
+    expect(
+      buildBacklinksAuthorizationKey(
+        "proj",
+        withSlice({
+          target: "other.com",
         }),
       ),
-    );
-    expect(otherTabFiltered).toBe(base);
+    ).not.toBe(base);
   });
 
-  it("selects each tab's own payload", () => {
-    const state = filtersState({
-      backlinks: { ...EMPTY_BACKLINKS_FILTERS, include: "from-backlinks-tab" },
-      domains: {
-        ...EMPTY_REFERRING_DOMAINS_FILTERS,
-        include: "from-domains-tab",
-      },
-    });
-    expect(selectActiveBacklinksFilters("backlinks", state)).toEqual(
-      toBacklinksFiltersPayload({
-        ...EMPTY_BACKLINKS_FILTERS,
-        include: "from-backlinks-tab",
+  it("a different scope for the same target", () => {
+    expect(
+      buildBacklinksAuthorizationKey("proj", withSlice({ scope: "page" })),
+    ).not.toBe(base);
+  });
+
+  it("a different project", () => {
+    expect(buildBacklinksAuthorizationKey("other-proj", SEARCH)).not.toBe(base);
+  });
+});
+
+describe("key shape", () => {
+  // The key is compared with `===`, so anything unstable in it de-authorizes on
+  // a re-render with no visible cause.
+  it("is stable across identical inputs", () => {
+    expect(buildBacklinksAuthorizationKey("proj", withSlice({}))).toBe(
+      buildBacklinksAuthorizationKey("proj", withSlice({})),
+    );
+  });
+
+  it("reads only target and scope from the search state", () => {
+    expect(
+      buildBacklinksAuthorizationKey("proj", {
+        target: "example.com",
+        scope: "domain",
       }),
-    );
-    expect(selectActiveBacklinksFilters("domains", state)).toEqual(
-      toReferringDomainsFiltersPayload({
-        ...EMPTY_REFERRING_DOMAINS_FILTERS,
-        include: "from-domains-tab",
-      }),
-    );
-  });
-
-  /**
-   * The invariant the Apply fix rests on.
-   *
-   * Apply authorizes using the payload it was just handed, because the hook's
-   * state is still one render behind. That only works if the key built that way
-   * is byte-identical to the key the page computes on the next render, once the
-   * state has settled. If someone adds a field to the key and forgets the Apply
-   * path, this fails instead of silently de-authorizing the run again.
-   */
-  it("builds the same key from a handed-in payload as from settled state", () => {
-    const applied = { ...EMPTY_BACKLINKS_FILTERS, minDomainRank: "40" };
-
-    const authorizedAtApplyTime = buildBacklinksAuthorizationKey(
-      "proj",
-      { ...SEARCH, tab: "backlinks", page: 1 },
-      toBacklinksFiltersPayload(applied),
-    );
-    const currentAfterStateSettles = buildBacklinksAuthorizationKey(
-      "proj",
-      { ...SEARCH, tab: "backlinks", page: 1 },
-      selectActiveBacklinksFilters(
-        "backlinks",
-        filtersState({ backlinks: applied }),
-      ),
-    );
-
-    expect(authorizedAtApplyTime).toBe(currentAfterStateSettles);
-  });
-
-  /**
-   * Documents a REAL remaining defect rather than asserting desired behaviour.
-   *
-   * `page` is part of the authorization key, and no paging handler
-   * re-authorizes, so clicking through to page 2 leaves the run unauthorized and
-   * its metered queries disabled. Same for pageSize, sort, order, view and tab.
-   *
-   * This is deliberately not "fixed" by authorizing on paging: every authorize
-   * bumps `runNonce`, which is part of the query key, so doing that would make
-   * navigating back to page 1 re-fetch — and re-pay for — a page already
-   * fetched. The fix is to decide what a single consent actually covers, which
-   * is a pricing decision, not a refactor.
-   */
-  it("still treats a page change as a different authorization (known defect)", () => {
-    const pageOne = buildBacklinksAuthorizationKey(
-      "proj",
-      { ...SEARCH, page: 1 },
-      selectActiveBacklinksFilters("backlinks", filtersState()),
-    );
-    const pageTwo = buildBacklinksAuthorizationKey(
-      "proj",
-      { ...SEARCH, page: 2 },
-      selectActiveBacklinksFilters("backlinks", filtersState()),
-    );
-    expect(pageTwo).not.toBe(pageOne);
+    ).toBe(buildBacklinksAuthorizationKey("proj", SEARCH));
   });
 });
