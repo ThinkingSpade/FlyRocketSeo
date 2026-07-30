@@ -18,7 +18,7 @@ import {
   GSC_DEFAULT_ROW_LIMIT,
   GSC_DIMENSIONS,
   GSC_FILTER_OPERATORS,
-  GSC_MAX_ROW_LIMIT,
+  GSC_MCP_ROW_CEILING,
   GSC_SEARCH_TYPES,
   type GscPerformanceInput,
 } from "@/server/features/gsc/searchAnalytics";
@@ -159,7 +159,7 @@ const perfInputSchema = {
     .number()
     .int()
     .min(1)
-    .max(GSC_MAX_ROW_LIMIT)
+    .max(GSC_MCP_ROW_CEILING)
     .optional()
     .describe(
       "Rows per call (default 1000, max 1000). GSC sorts by clicks desc and can't filter by position — filter 'striking distance' positions client-side, and paginate with startRow when hasMore is true.",

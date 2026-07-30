@@ -138,7 +138,14 @@ export function buildDomainVerdict(input: DomainVerdictInput): Verdict {
 
   if (pageOneShare >= BROAD_PAGE_ONE_SHARE) {
     return {
-      read: `${pluralize(pageOneCount, "keyword")} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a broad enough base that no single ranking loss should sink this domain's traffic.`,
+      // Describes RANKING BREADTH and stops there. The old ending -- "a broad
+      // enough base that no single ranking loss should sink this domain's
+      // traffic" -- is a claim about traffic concentration, and the input holds
+      // only keyword counts per position band plus one aggregate traffic total.
+      // 30% of keywords on page one is compatible with one of them carrying 99%
+      // of the traffic, so breadth of rankings says nothing about resilience.
+      // Answering that needs per-keyword traffic estimates.
+      read: `${pluralize(pageOneCount, "keyword")} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a broad ranking base. Which of them actually carry the traffic needs the per-keyword breakdown.`,
       tone: "good",
       actions: [],
     };
@@ -155,14 +162,19 @@ export function buildDomainVerdict(input: DomainVerdictInput): Verdict {
       (action): action is NonNullable<typeof action> => action != null,
     );
     return {
-      read: `${pageOneLabel} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- whatever traffic this domain earns concentrates in that thin slice, with the rest of its ${formatCount(bucketTotal)} ranked keywords unlikely to be contributing much.`,
+      // Ranking breadth only, like the broad branch above. The old wording
+      // asserted that traffic "concentrates in that thin slice" -- a
+      // concentration claim from position-band COUNTS, which cannot support it.
+      // With zero page-one keywords the "slice" is empty, and the sentence still
+      // claimed traffic was concentrated in it.
+      read: `${pageOneLabel} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a thin ranking base, with most of its keywords sitting where they earn little. Which keywords carry the traffic needs the per-keyword breakdown.`,
       tone: "bad",
       actions,
     };
   }
 
   return {
-    read: `${pluralize(pageOneCount, "keyword")} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a moderate base, not yet wide enough to call this domain's traffic resilient to losing any one ranking.`,
+    read: `${pluralize(pageOneCount, "keyword")} of ${input.domain}'s ${formatCount(bucketTotal)} ranked keywords (${pageOnePct}%) reach page one -- a moderate ranking base. Whether that makes its traffic resilient depends on which keywords carry it, which needs the per-keyword breakdown.`,
     tone: "mixed",
     // Only the "push" lever here, not "protect": with a moderate (not
     // fragile) base, urging defense of the few page-one keywords would

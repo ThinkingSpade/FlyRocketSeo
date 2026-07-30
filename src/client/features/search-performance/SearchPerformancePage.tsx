@@ -191,6 +191,15 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
         data: { projectId, dimension, ...filterInput },
       });
       exportDimensionRows(dimension, data.rows, report.range, target);
+      // The server knows the export was cut short; before this the client threw
+      // that away and handed over a file that looked complete. A spreadsheet
+      // outlives the screen it came from, so the warning has to reach the person
+      // who exported it.
+      if (data.truncated) {
+        toast.warning(
+          `Exported the first ${data.rowsExamined.toLocaleString()} ${dimension} rows by clicks. Search Console caps the pull, so lower-click rows are not in this file.`,
+        );
+      }
     } catch (error) {
       toast.error(getStandardErrorMessage(error, "Export failed"));
     }
@@ -326,13 +335,32 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 </div>
               </div>
 
+              {/* One notice for the whole panel rather than a "(sampled)" tag
+                  on every count. The counts themselves are honest -- they are
+                  what we found -- but the reader needs to know once that the
+                  input was capped, since Search Console orders rows by clicks
+                  and drops the long tail first. */}
+              {report.sampling.queryPages.truncated ? (
+                <p className="border-b border-base-300 px-4 py-2 text-xs text-base-content/50">
+                  Search Console returned{" "}
+                  {report.sampling.queryPages.rowsExamined.toLocaleString()}{" "}
+                  query-and-page rows and stopped there, ordered by clicks.
+                  Counts below are what we found in those rows, not your whole
+                  property.
+                </p>
+              ) : null}
+
               {tab === "striking" ? (
                 <StrikingDistanceTable
                   projectId={projectId}
                   rows={report.strikingDistance}
+                  sampled={report.sampling.queryPages.truncated}
                 />
               ) : tab === "ctr" ? (
-                <CtrOpportunitiesTable rows={report.ctrOpportunities} />
+                <CtrOpportunitiesTable
+                  rows={report.ctrOpportunities}
+                  sampled={report.sampling.queryPages.truncated}
+                />
               ) : tab === "content" ? (
                 <ContentPerformanceTab
                   projectId={projectId}

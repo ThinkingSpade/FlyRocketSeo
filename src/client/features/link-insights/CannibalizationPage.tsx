@@ -18,17 +18,17 @@ const SEVERITY_BADGE: Record<
   high: {
     label: "High",
     className: "badge-error",
-    hint: "Clicks split nearly evenly on a high-impression query — consolidate first",
+    hint: "Clicks are spread nearly evenly across these pages on a high-impression query — investigate this one first",
   },
   medium: {
     label: "Medium",
     className: "badge-warning",
-    hint: "A meaningful share of traffic goes to the losing page",
+    hint: "A meaningful share of clicks goes to pages other than the top-clicked one",
   },
   low: {
     label: "Low",
     className: "badge-ghost",
-    hint: "One page clearly leads — keep an eye on it",
+    hint: "One page takes almost all the clicks — keep an eye on it",
   },
 };
 
@@ -47,11 +47,19 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
           <Split className="size-5" />
           Cannibalization
         </h1>
+        {/* States what the data shows, then what it might mean — in that order.
+            The request dimensions are query and page only, so we observe that
+            several of your URLs rank for one query. Whether they COMPETE, and
+            whether clicks are being split as a result, needs device, country,
+            date and same-SERP coexistence that we never asked for. Asserting the
+            cause led straight to "consolidate these", which is destructive
+            advice to give on an inference. */}
         <p className="text-sm text-base-content/60">
-          Queries where two or more of your pages compete against each other,
-          splitting clicks and rankings. Consolidate content into the winner, or
-          differentiate the losers onto different keywords — and point internal
-          links at the page that should win.
+          Queries where two or more of your pages both rank. That often means
+          they compete and split clicks — worth consolidating into one, or
+          differentiating onto separate keywords — but Search Console
+          doesn&rsquo;t show whether they appeared in the same results, so check
+          before merging anything.
         </p>
       </div>
 
@@ -89,11 +97,27 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       {data?.connected && rows.length === 0 ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
-            <p className="font-medium">No cannibalization detected</p>
-            <p className="max-w-md text-sm text-base-content/60">
-              No query currently has two of your pages splitting meaningful
-              impressions — that&rsquo;s a healthy site.
-            </p>
+            {data.truncated ? (
+              <>
+                <p className="font-medium">
+                  None found in the queries we could check
+                </p>
+                <p className="max-w-md text-sm text-base-content/60">
+                  Search Console returned {data.rowsExamined.toLocaleString()}{" "}
+                  query-and-page rows, ordered by clicks, and capped the pull
+                  there. No overlap among those — but this isn&rsquo;t your
+                  whole site, so it isn&rsquo;t an all-clear.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">No cannibalization detected</p>
+                <p className="max-w-md text-sm text-base-content/60">
+                  No query currently has two of your pages splitting meaningful
+                  impressions — that&rsquo;s a healthy site.
+                </p>
+              </>
+            )}
           </div>
         </div>
       ) : null}
@@ -117,10 +141,10 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                 </span>
               </span>
               <span className="text-xs text-base-content/50 tabular-nums">
-                {Math.round(row.splitShare * 100)}% of traffic off the leader ·{" "}
-                {row.totalImpressions.toLocaleString()} impressions ·{" "}
-                {row.totalClicks.toLocaleString()} clicks · {row.pages.length}{" "}
-                competing pages
+                {Math.round(row.splitShare * 100)}% of clicks outside the
+                top-clicked page · {row.totalImpressions.toLocaleString()}{" "}
+                impressions · {row.totalClicks.toLocaleString()} clicks ·{" "}
+                {row.pages.length} ranking pages
               </span>
             </div>
 
@@ -150,9 +174,9 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                           {page.isWinner ? (
                             <span
                               className="badge badge-success badge-sm gap-1"
-                              title="Best position — consolidate toward this page"
+                              title="Best-RANKING page for this query, and so the likely consolidation target if these really do compete. Not necessarily the page earning the most clicks."
                             >
-                              <Trophy className="size-3" /> winner
+                              <Trophy className="size-3" /> best rank
                             </span>
                           ) : null}
                         </span>

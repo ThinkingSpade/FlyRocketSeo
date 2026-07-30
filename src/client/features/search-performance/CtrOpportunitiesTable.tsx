@@ -20,12 +20,21 @@ function toPath(url: string): string {
 /** Queries ranking well but clicked far below the benchmark for their
  *  position — each row is a title/meta rewrite candidate, sized by the
  *  clicks it's leaving on the table. */
-export function CtrOpportunitiesTable({ rows }: { rows: CtrRow[] }) {
+export function CtrOpportunitiesTable({
+  rows,
+  sampled = false,
+}: {
+  rows: CtrRow[];
+  /** The upstream GSC pull hit its row limit, so "none found" cannot be stated
+   *  as a property-wide all-clear. */
+  sampled?: boolean;
+}) {
   if (rows.length === 0) {
     return (
       <div className="p-8 text-center text-sm text-base-content/60">
-        No CTR laggards found — every well-ranking query is earning a healthy
-        share of clicks.
+        {sampled
+          ? "No CTR laggards among the queries Search Console returned — those are earning a healthy share of clicks. It caps how many rows come back, so this isn't every query you rank for."
+          : "No CTR laggards found — every well-ranking query is earning a healthy share of clicks."}
       </div>
     );
   }
@@ -69,9 +78,15 @@ export function CtrOpportunitiesTable({ rows }: { rows: CtrRow[] }) {
           ))}
         </tbody>
       </table>
+      {/* Kept as guidance, softened from a diagnosis. Search Console reports
+          clicks, impressions and position — never WHY someone didn't click. A
+          featured snippet answering the query, brand preference, or a title that
+          already matches intent all produce this same row, and rewriting the
+          title fixes none of them. So: investigate first. */}
       <p className="border-t border-base-300 px-4 py-2 text-xs text-base-content/50">
-        These rank fine but under-earn clicks — rewrite the title and meta
-        description to match the query's intent.
+        These rank well but earn fewer clicks than usual for their position.
+        Check the live results first — a snippet or ad block may be absorbing
+        them — then consider rewriting the title and meta to match intent.
       </p>
     </div>
   );

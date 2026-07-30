@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { AppError } from "@/server/lib/errors";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import {
   GscNotConnectedError,
@@ -7,6 +8,9 @@ import {
   isExpectedGrantFailure,
 } from "@/server/features/gsc/services/GscService";
 import { resolveDateRange } from "@/server/features/gsc/searchAnalytics";
+import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
+import { fetchValidatingEveryHop } from "@/server/lib/audit/url-policy";
+import { isSameOrigin } from "@/server/lib/audit/url-utils";
 import {
   buildCannibalizationRows,
   buildLinkOpportunities,
@@ -47,7 +51,7 @@ export const getLinkInsights = createServerFn({ method: "POST" })
     });
 
     try {
-      const result = await GscService.getPerformance({
+      const result = await GscService.getAnalyticsPerformance({
         projectId: context.projectId,
         startDate,
         endDate,
@@ -61,6 +65,12 @@ export const getLinkInsights = createServerFn({ method: "POST" })
         range: { startDate, endDate },
         opportunities: buildLinkOpportunities(result.rows),
         cannibalization: buildCannibalizationRows(result.rows),
+        // Both lists are conclusions about what ISN'T there, drawn from a
+        // clicks-ordered pull that Search Console does not promise is complete.
+        // Without this the UI could not tell "your site is fine" from "we
+        // didn't look past row 1000", and it said the former.
+        rowsExamined: result.rows.length,
+        truncated: pullWasTruncated(result),
       };
     } catch (error) {
       if (
@@ -84,13 +94,31 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const source = new URL(data.sourceUrl);
     const target = new URL(data.targetUrl);
-    // Internal-link checks are within-site by definition; refusing cross-host
-    // input also keeps this endpoint from being a generic proxy.
-    if (
-      source.hostname.replace(/^www\./, "") !==
-      target.hostname.replace(/^www\./, "")
-    ) {
-      throw new Error("Source and target must be on the same site.");
+
+    // Both URLs must belong to THIS PROJECT, not merely to each other.
+    //
+    // Matching source against target only is self-authorizing: a member of any
+    // project could pass two URLs on an unrelated public site and use the
+    // `mentionsPhrase` result as an oracle against it, varying `phrase` to
+    // bypass the cache. That is a general-purpose proxy, which the previous
+    // comment claimed this check prevented. The boundary has to come from the
+    // project, so it is derived from `context.project.domain`.
+    const projectDomain = context.project.domain?.trim();
+    if (!projectDomain) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Set this project's domain before checking link presence.",
+      );
+    }
+    const projectOrigin = `https://${projectDomain.replace(/^https?:\/\//, "").replace(/\/.*$/, "")}`;
+
+    for (const url of [source, target]) {
+      if (!isSameOrigin(url.toString(), projectOrigin)) {
+        throw new AppError(
+          "VALIDATION_ERROR",
+          "Source and target must both be on this project's own site.",
+        );
+      }
     }
 
     const cacheKey = await buildCacheKey("link-presence", {
@@ -112,14 +140,31 @@ export const checkLinkPresence = createServerFn({ method: "POST" })
       error: string | null;
     };
     try {
-      const response = await fetch(data.sourceUrl, {
-        headers: {
-          "User-Agent": "FlyRocketSEO-Audit/1.0",
-          Accept: "text/html,application/xhtml+xml",
+      // Every hop is re-validated against the crawl URL policy AND pinned to the
+      // project's own origin.
+      //
+      // This used to be `fetch(..., { redirect: "follow" })` behind a check on
+      // the SUBMITTED hostname only. An authenticated project member could
+      // therefore submit a page they control that answers
+      // `302 Location: http://127.0.0.1:8787/…`, and the Worker would make that
+      // request itself — straight past the private-address protections in
+      // url-policy.ts. Following redirects means letting a remote server pick
+      // our next request, so it cannot be delegated to fetch().
+      //
+      // Pinning to `projectOrigin` rather than `source.origin` matters: the
+      // source is user input, so using its own origin as the boundary let the
+      // submitter define what counted as in-bounds.
+      const { response } = await fetchValidatingEveryHop(
+        data.sourceUrl,
+        {
+          headers: {
+            "User-Agent": "FlyRocketSEO-Audit/1.0",
+            Accept: "text/html,application/xhtml+xml",
+          },
+          signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
         },
-        redirect: "follow",
-        signal: AbortSignal.timeout(PAGE_FETCH_TIMEOUT_MS),
-      });
+        { allowHop: (hop) => isSameOrigin(hop.toString(), projectOrigin) },
+      );
       if (!response.ok) {
         result = {
           linksToTarget: false,

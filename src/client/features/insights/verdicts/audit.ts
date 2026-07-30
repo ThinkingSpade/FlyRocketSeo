@@ -107,7 +107,11 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
       // Subject is "this crawl", not the issue count, so the verb never has
       // to agree with a number that might be 1 -- "this crawl found 1 issue
       // type" and "...found 2 issue types" are both correct as written.
-      read: `This crawl found ${pluralize(input.issues.length, "issue type")}, but none of them touch your highest-traffic pages -- nothing urgent to fix there.`,
+      // Scope has to be explicit here. `topPagePaths` is at most the 20
+      // top-clicked pages Search Console returned, so "none touch your
+      // highest-traffic pages" is an all-clear over a 20-page check -- issues on
+      // page 21 downward were never compared at all.
+      read: `This crawl found ${pluralize(input.issues.length, "issue type")}, but none of them touch the ${pluralize(input.topPagePaths.length, "page")} earning the most clicks. Pages below those were not checked against traffic.`,
       tone: "good",
       actions: [],
     };
@@ -126,13 +130,15 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
     // "pages" stays plural regardless of N (unlike "N high-traffic page(s)"
     // above, which conjugates with N) -- written out rather than pluralize()
     // to avoid singularizing the group noun itself.
-    evidence: `Affects ${entry.hitCount} of your top-clicked pages (${entry.issue.pageCount} affected sitewide)`,
+    // "sitewide" was wrong too: `pageCount` counts pages in THIS CRAWL, which
+    // is not the whole site unless the crawl was exhaustive.
+    evidence: `Affects ${entry.hitCount} of the ${input.topPagePaths.length} top-clicked pages (${entry.issue.pageCount} affected across the crawl)`,
     weight: SEVERITY_WEIGHT[entry.issue.severity] + entry.hitCount,
   }));
 
   const lead = top[0];
   const others = ranked.length - 1;
-  const read = `"${lead.issue.label}" affects ${lead.hitCount} of your highest-traffic pages${
+  const read = `"${lead.issue.label}" affects ${lead.hitCount} of the ${input.topPagePaths.length} pages earning the most clicks${
     others > 0
       ? `, alongside ${pluralize(others, "other issue type")} touching traffic-earning pages`
       : ""

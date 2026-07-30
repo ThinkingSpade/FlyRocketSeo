@@ -124,8 +124,8 @@ async function loadGscTotals(
     ]);
     return {
       status: "connected" as const,
-      current: sumSearchTotals(current),
-      previous: sumSearchTotals(previous),
+      current: sumSearchTotals(current.rows),
+      previous: sumSearchTotals(previous.rows),
     };
   } catch (error) {
     console.warn("[portfolio] Search Console summary unavailable", {

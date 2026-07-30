@@ -1,4 +1,8 @@
 import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
+import {
+  attributePagesToQueries,
+  meaningfulPages,
+} from "@/server/features/gsc/gscAggregation";
 
 /**
  * Pure shaping helpers for the Search Performance page. Kept separate from the
@@ -64,52 +68,6 @@ export function sumSearchTotals(
   };
 }
 
-type QueryTotalsRow = {
-  query: string;
-  clicks: number;
-  impressions: number;
-  /** Best (lowest) position across the pages ranking for this query. */
-  position: number;
-};
-
-const QUERY_TOTALS_ROW_LIMIT = 500;
-
-/**
- * Aggregate query×page rows into per-query totals (top rows by clicks, then
- * impressions). Position is the site's BEST page for the query — the honest
- * answer to "where do I rank for this", since a query fans out across every
- * page that surfaced for it. Feeds the branded split and the dashboard's
- * ranking/opportunity lists.
- */
-export function buildQueryTotals(
-  rows: GscSearchAnalyticsRow[],
-): QueryTotalsRow[] {
-  const byQuery = new Map<
-    string,
-    { clicks: number; impressions: number; position: number }
-  >();
-  for (const row of rows) {
-    const query = row.keys?.[0];
-    if (!query) continue;
-    const entry = byQuery.get(query);
-    if (!entry) {
-      byQuery.set(query, {
-        clicks: row.clicks,
-        impressions: row.impressions,
-        position: row.position,
-      });
-      continue;
-    }
-    entry.clicks += row.clicks;
-    entry.impressions += row.impressions;
-    if (row.position < entry.position) entry.position = row.position;
-  }
-  return [...byQuery.entries()]
-    .map(([query, totals]) => ({ query, ...totals }))
-    .toSorted((a, b) => b.clicks - a.clicks || b.impressions - a.impressions)
-    .slice(0, QUERY_TOTALS_ROW_LIMIT);
-}
-
 /** Preserve the already-fetched query×page relationship for zero-cost
  * project coverage overlays in other tabs. */
 export function toQueryPageRows(rows: GscSearchAnalyticsRow[]): QueryPageRow[] {
@@ -152,45 +110,57 @@ export function toDimensionRows(
 /** Reduce `["query","page"]` rows to one striking-distance row per query.
  *
  *  GSC returns a row per page that ranks for a query, so a query fans out across
- *  every page it appears on. A query only belongs in "striking distance" when
- *  the site's BEST-ranking page for it sits in the 5..20 band — if any page
- *  already ranks above position 5, the site effectively ranks near the top and
- *  improving a secondary page won't move traffic. So we collapse each query to
- *  its top page (lowest average position; ties broken by impressions) and keep
- *  it only when that top page is in band. Result is sorted by impressions. */
+ *  every page it appears on and we have to pick one page to represent it. Two
+ *  ways to get that wrong, and this function has now made both mistakes:
+ *
+ *  1. MIN across ALL page rows — the original. A page with a single impression
+ *     at position 1.0 beat a page with a thousand impressions at 8.0, so the
+ *     query looked already-ranking and was dropped.
+ *  2. Collapsing to the impression leader BEFORE checking the band — the fix
+ *     that over-corrected. A page holding 40% of a query's impressions at
+ *     position 8 is exactly this feature's subject, but it got discarded because
+ *     a larger page ranked 35th.
+ *
+ *  The reconciliation: the original RULE was right and its INPUT was wrong. Take
+ *  the best-positioned page among the ones that carry meaningful impressions.
+ *
+ *  That keeps the reasoning the feature was built on — if the site already ranks
+ *  above the band for a query, improving a secondary page will not move traffic,
+ *  so it is not an opportunity — while refusing to let a one-impression fluke
+ *  stand in for "the site already ranks". Position is still never summed or
+ *  re-averaged across rows; only compared. */
 export function buildStrikingDistanceRows(
   rows: GscSearchAnalyticsRow[],
   limit: number = STRIKING_DISTANCE_ROW_LIMIT,
 ): StrikingDistanceRow[] {
-  const topPageByQuery = new Map<string, StrikingDistanceRow>();
-  for (const row of rows) {
-    const query = row.keys?.[0];
-    const page = row.keys?.[1];
-    if (!query || !page) continue;
+  const attribution = attributePagesToQueries(rows);
+  const representative: StrikingDistanceRow[] = [];
 
-    const current = topPageByQuery.get(query);
-    const isBetter =
-      !current ||
-      row.position < current.position ||
-      (row.position === current.position &&
-        row.impressions > current.impressions);
-    if (!isBetter) continue;
-
-    topPageByQuery.set(query, {
+  for (const [query, pages] of attribution) {
+    const candidates = meaningfulPages(pages);
+    const best = candidates.reduce((leader, page) =>
+      page.position < leader.position ||
+      (page.position === leader.position &&
+        page.impressions > leader.impressions)
+        ? page
+        : leader,
+    );
+    if (
+      best.position < STRIKING_DISTANCE_MIN_POSITION ||
+      best.position > STRIKING_DISTANCE_MAX_POSITION
+    ) {
+      continue;
+    }
+    representative.push({
       query,
-      page,
-      clicks: row.clicks,
-      impressions: row.impressions,
-      position: row.position,
+      page: best.page,
+      clicks: best.clicks,
+      impressions: best.impressions,
+      position: best.position,
     });
   }
 
-  return Array.from(topPageByQuery.values())
-    .filter(
-      (row) =>
-        row.position >= STRIKING_DISTANCE_MIN_POSITION &&
-        row.position <= STRIKING_DISTANCE_MAX_POSITION,
-    )
+  return representative
     .toSorted((a, b) => b.impressions - a.impressions)
     .slice(0, limit);
 }

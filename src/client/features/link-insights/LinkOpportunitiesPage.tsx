@@ -131,11 +131,28 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
       {data?.connected && opportunities.length === 0 ? (
         <div className="card border border-dashed border-base-300">
           <div className="card-body items-center py-12 text-center">
-            <p className="font-medium">No opportunities right now</p>
-            <p className="max-w-md text-sm text-base-content/60">
-              This fills in once queries rank in positions 4–20 with more than
-              one of your pages appearing for them.
-            </p>
+            {data.truncated ? (
+              <>
+                <p className="font-medium">
+                  None in the queries we could check
+                </p>
+                <p className="max-w-md text-sm text-base-content/60">
+                  Search Console returned {data.rowsExamined.toLocaleString()}{" "}
+                  query-and-page rows, ordered by clicks, and stopped there.
+                  Nothing in positions 4–20 with more than one of your pages
+                  among them — though a quieter query further down could
+                  qualify.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="font-medium">No opportunities right now</p>
+                <p className="max-w-md text-sm text-base-content/60">
+                  This fills in once queries rank in positions 4–20 with more
+                  than one of your pages appearing for them.
+                </p>
+              </>
+            )}
           </div>
         </div>
       ) : null}

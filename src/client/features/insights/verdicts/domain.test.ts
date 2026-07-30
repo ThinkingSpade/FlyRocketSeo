@@ -108,7 +108,10 @@ describe("buildDomainVerdict", () => {
     expect(verdict.tone).toBe("good");
     expect(verdict.actions).toEqual([]);
     expect(verdict.read).toBe(
-      "35 keywords of example.com's 100 ranked keywords (35%) reach page one -- a broad enough base that no single ranking loss should sink this domain's traffic.",
+      // Reports ranking breadth only. Keyword counts per position band cannot
+      // establish traffic concentration -- 35% on page one is compatible with
+      // one keyword carrying nearly all the traffic.
+      "35 keywords of example.com's 100 ranked keywords (35%) reach page one -- a broad ranking base. Which of them actually carry the traffic needs the per-keyword breakdown.",
     );
   });
 
@@ -162,7 +165,7 @@ describe("buildDomainVerdict", () => {
 
     expect(verdict.tone).toBe("mixed");
     expect(verdict.read).toBe(
-      "10 keywords of example.com's 100 ranked keywords (10%) reach page one -- a moderate base, not yet wide enough to call this domain's traffic resilient to losing any one ranking.",
+      "10 keywords of example.com's 100 ranked keywords (10%) reach page one -- a moderate ranking base. Whether that makes its traffic resilient depends on which keywords carry it, which needs the per-keyword breakdown.",
     );
     expect(verdict.actions).toEqual([
       {
@@ -189,7 +192,7 @@ describe("buildDomainVerdict", () => {
 
     expect(verdict.tone).toBe("bad");
     expect(verdict.read).toBe(
-      "2 keywords of example.com's 100 ranked keywords (2%) reach page one -- whatever traffic this domain earns concentrates in that thin slice, with the rest of its 100 ranked keywords unlikely to be contributing much.",
+      "2 keywords of example.com's 100 ranked keywords (2%) reach page one -- a thin ranking base, with most of its keywords sitting where they earn little. Which keywords carry the traffic needs the per-keyword breakdown.",
     );
     expect(verdict.actions).toEqual([
       {

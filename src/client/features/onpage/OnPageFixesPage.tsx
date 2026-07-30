@@ -225,7 +225,9 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
             <p className="text-sm font-medium">No fixes found</p>
             <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/60">
               The latest audit was analyzed successfully and did not produce any
-              title, meta, heading, or alt-text fixes.
+              title, meta, heading, or alt-text fixes. Query-informed title
+              suggestions also depend on Search Console rows, which come back
+              capped, so a page ranking further down may still have one.
             </p>
           </div>
         ) : rows.length === 0 ? (

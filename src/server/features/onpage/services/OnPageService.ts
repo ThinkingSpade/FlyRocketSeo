@@ -90,7 +90,7 @@ async function loadQueriesByPage(projectId: string) {
     const { startDate, endDate } = resolveDateRange({
       dateRange: "last_28_days",
     });
-    const result = await GscService.getPerformance({
+    const result = await GscService.getAnalyticsPerformance({
       projectId,
       startDate,
       endDate,

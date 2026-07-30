@@ -44,6 +44,10 @@ const TARGET_MIN_POSITION = 4;
 const TARGET_MAX_POSITION = 20;
 const MAX_OPPORTUNITIES = 15;
 const MAX_SOURCES_PER_QUERY = 5;
+/** Impression share above which one page is treated as owning a query. Matches
+ *  the threshold in gscAggregation so "owns this query" means the same thing
+ *  wherever it is decided. */
+const PAGE_OWNERSHIP_THRESHOLD = 0.6;
 
 // A page only "competes" for a query when it has a meaningful share of the
 // query's impressions — tiny one-off impressions are noise, not cannibalization.
@@ -87,11 +91,18 @@ function groupByQuery(rows: QueryPageRow[]): Map<string, QueryPageRow[]> {
 }
 
 /**
- * Internal-link opportunities: for each query whose best page sits in the
+ * Internal-link opportunities: for each query whose leading page sits in the
  * striking-distance band, every OTHER page Google already associates with the
  * query is a candidate to add an internal link (anchor = the query) pointing at
- * the best page. Google's own query→page association beats naive text
- * matching for relevance.
+ * that page. Google's own query→page association beats naive text matching for
+ * relevance.
+ *
+ * The link target is the page that CARRIES the query's impressions, not the one
+ * with the lowest average position. Sorting by position picked link targets off
+ * a single-impression fluke: a page averaging 1.0 from one impression outranked
+ * the page averaging 8.0 from a thousand, so we would have pointed internal
+ * links at a URL nobody reaches. GSC averages position over impressions per row,
+ * so a minimum across separately averaged rows is not a rank at all.
  */
 export function buildLinkOpportunities(
   rows: GscSearchAnalyticsRow[],
@@ -100,12 +111,26 @@ export function buildLinkOpportunities(
 
   const opportunities: LinkOpportunity[] = [];
   for (const [query, pages] of byQuery) {
+    const totalImpressions = pages.reduce(
+      (sum, page) => sum + page.impressions,
+      0,
+    );
     const best = pages.toSorted(
-      (a, b) => a.position - b.position || b.impressions - a.impressions,
+      (a, b) => b.impressions - a.impressions || a.position - b.position,
     )[0];
     if (
       best.position < TARGET_MIN_POSITION ||
       best.position > TARGET_MAX_POSITION
+    ) {
+      continue;
+    }
+    // Where no page owns the query, the "target" is arbitrary and adding links
+    // toward it may be the wrong action -- consolidation could be. Skip rather
+    // than recommend confidently on a coin flip.
+    if (
+      totalImpressions > 0 &&
+      best.impressions / totalImpressions < PAGE_OWNERSHIP_THRESHOLD &&
+      pages.length > 1
     ) {
       continue;
     }

@@ -66,3 +66,63 @@ describe("buildRecommendations", () => {
     ).toContain("No urgent issues");
   });
 });
+
+describe("buildRecommendations completeness states", () => {
+  // A settled, complete, genuinely-empty run: the only case the confident
+  // all-clear is true.
+  const noFindings = {
+    strikingDistanceCount: 0,
+    cannibalizationCount: 0,
+    linkOpportunityCount: 0,
+    newBacklinks: 1,
+    lostBacklinks: 0,
+    latestAuditAgeDays: 3,
+    latestAuditFailed: false,
+  };
+
+  it("declares an all-clear only when the data was complete", () => {
+    const [only] = buildRecommendations(noFindings);
+    expect(only).toContain("No urgent issues detected");
+  });
+
+  it("refuses the all-clear when a source was incomplete", () => {
+    // Missing or capped GSC previously produced the confident sentence, because
+    // absent data made every finding count zero.
+    const [only] = buildRecommendations({ ...noFindings, gscIncomplete: true });
+    expect(only).not.toContain("No urgent issues detected");
+    expect(only).toContain("incomplete");
+  });
+
+  it("says loading rather than inventing a failure while pending", () => {
+    // This page can be PRINTED mid-load. Claiming the data "was incomplete"
+    // about a request still in flight is its own false statement, frozen into a
+    // PDF -- and the confident all-clear is worse.
+    const [only] = buildRecommendations({
+      ...noFindings,
+      gscPending: true,
+      gscIncomplete: false,
+    });
+    expect(only).toContain("still loading");
+    expect(only).not.toContain("No urgent issues detected");
+    expect(only).not.toContain("incomplete");
+  });
+
+  it("prefers the loading wording over the incomplete wording", () => {
+    const [only] = buildRecommendations({
+      ...noFindings,
+      gscPending: true,
+      gscIncomplete: true,
+    });
+    expect(only).toContain("still loading");
+  });
+
+  it("never replaces real findings with a completeness note", () => {
+    const recommendations = buildRecommendations({
+      ...noFindings,
+      strikingDistanceCount: 4,
+      gscPending: true,
+    });
+    expect(recommendations[0]).toContain("4 keywords");
+    expect(recommendations.join(" ")).not.toContain("still loading");
+  });
+});

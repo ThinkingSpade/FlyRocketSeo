@@ -61,9 +61,13 @@ describe("computeDomainQuality", () => {
     expect(computeDomainQuality(ranks([5, 8, 12]))?.note).toContain("None");
   });
 
-  it("calls a high-authority profile unusually strong", () => {
-    expect(computeDomainQuality(ranks([60, 70, 80]))?.note).toContain(
-      "unusually strong",
-    );
+  it("reports the distribution without judging it strong or normal", () => {
+    // "Unusually strong" needs a comparison set for this niche, which we do not
+    // have, and DR describes the referring domain's own profile rather than the
+    // weight of the link pointing here. The note states the share and stops.
+    const note = computeDomainQuality(ranks([60, 70, 80]))?.note ?? "";
+    expect(note).toContain("100%");
+    expect(note).not.toMatch(/unusually strong|little weight|normal mix/i);
+    expect(computeDomainQuality(ranks([60, 70, 80]))?.note).toContain("DR 30");
   });
 });

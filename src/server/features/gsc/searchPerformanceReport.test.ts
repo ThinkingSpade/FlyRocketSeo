@@ -1,76 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   buildCtrOpportunityRows,
-  buildQueryTotals,
   buildStrikingDistanceRows,
   previousPeriod,
   sumSearchTotals,
   toDimensionRows,
 } from "@/server/features/gsc/searchPerformanceReport";
-
-describe("buildQueryTotals", () => {
-  it("aggregates query x page rows per query, sorted by clicks", () => {
-    const totals = buildQueryTotals([
-      {
-        keys: ["vending dallas", "https://a/"],
-        clicks: 3,
-        impressions: 50,
-        ctr: 0.06,
-        position: 4,
-      },
-      {
-        keys: ["vending dallas", "https://b/"],
-        clicks: 2,
-        impressions: 30,
-        ctr: 0.07,
-        position: 6,
-      },
-      {
-        keys: ["delio vending", "https://a/"],
-        clicks: 10,
-        impressions: 40,
-        ctr: 0.25,
-        position: 1,
-      },
-      { clicks: 99, impressions: 99, ctr: 1, position: 1 },
-    ]);
-
-    expect(totals).toEqual([
-      { query: "delio vending", clicks: 10, impressions: 40, position: 1 },
-      { query: "vending dallas", clicks: 5, impressions: 80, position: 4 },
-    ]);
-  });
-
-  it("keeps the best page's position regardless of row order", () => {
-    const totals = buildQueryTotals([
-      {
-        keys: ["kw", "https://deep/"],
-        clicks: 0,
-        impressions: 10,
-        ctr: 0,
-        position: 40,
-      },
-      {
-        keys: ["kw", "https://best/"],
-        clicks: 1,
-        impressions: 5,
-        ctr: 0.2,
-        position: 7,
-      },
-      {
-        keys: ["kw", "https://mid/"],
-        clicks: 0,
-        impressions: 8,
-        ctr: 0,
-        position: 19,
-      },
-    ]);
-
-    expect(totals).toEqual([
-      { query: "kw", clicks: 1, impressions: 23, position: 7 },
-    ]);
-  });
-});
 
 describe("sumSearchTotals", () => {
   it("sums clicks/impressions and impression-weights position", () => {
@@ -178,7 +113,7 @@ describe("buildStrikingDistanceRows", () => {
     expect(rows).toHaveLength(0);
   });
 
-  it("collapses a query to its best-ranking page when that page is in band", () => {
+  it("collapses a query to the page carrying its impressions", () => {
     const rows = buildStrikingDistanceRows([
       pageRow("kw", "https://x.com/a", 14, 100),
       pageRow("kw", "https://x.com/b", 8, 500),
@@ -186,6 +121,57 @@ describe("buildStrikingDistanceRows", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].page).toBe("https://x.com/b");
     expect(rows[0].position).toBe(8);
+  });
+
+  it("does not let a one-impression page hide the opportunity on the page that gets seen", () => {
+    // The distinguishing case for impression-weighted representation, which the
+    // other cases in this suite cannot detect because their position-leader and
+    // impression-leader happen to be the same page.
+    //
+    // /fluke averages position 2.0 off a single impression; /real averages 8.0
+    // off a thousand. Taking MIN(position) judged the site already-ranking and
+    // dropped the query entirely, hiding a genuine striking-distance
+    // opportunity on the only page anyone actually sees.
+    const rows = buildStrikingDistanceRows([
+      pageRow("kw", "https://x.com/fluke", 2, 1),
+      pageRow("kw", "https://x.com/real", 8, 1000),
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].page).toBe("https://x.com/real");
+    expect(rows[0].position).toBe(8);
+    expect(rows[0].impressions).toBe(1000);
+  });
+
+  it("keeps a substantial in-band page even when a bigger page ranks far worse", () => {
+    // Adversarial review caught this as a regression I introduced. Collapsing
+    // each query to its impression LEADER before applying the band check threw
+    // away real work: /coffee holds 40% of the query's impressions at position
+    // 8 -- squarely a striking-distance opportunity -- but /blog is larger and
+    // ranks 35th, so the query was dropped entirely.
+    //
+    // Filtering out noise pages and THEN looking for an in-band candidate closes
+    // both failure modes at once.
+    const rows = buildStrikingDistanceRows([
+      pageRow("commercial coffee", "https://x.com/blog", 35, 600),
+      pageRow("commercial coffee", "https://x.com/coffee", 8, 400),
+    ]);
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].page).toBe("https://x.com/coffee");
+    expect(rows[0].position).toBe(8);
+  });
+
+  it("still drops a query the leading page already ranks near the top for", () => {
+    // Ownership decides which page represents the query; the band filter then
+    // applies to THAT page. A query whose traffic-carrying page ranks #2 is not
+    // a striking-distance opportunity.
+    const rows = buildStrikingDistanceRows([
+      pageRow("kw", "https://x.com/home", 2, 900),
+      pageRow("kw", "https://x.com/secondary", 8, 10),
+    ]);
+
+    expect(rows).toHaveLength(0);
   });
 });
 

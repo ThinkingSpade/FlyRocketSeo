@@ -133,8 +133,9 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
       >
         <CardEmpty>
           <p>
-            No search queries yet in this period — once Google shows your pages,
-            the keywords you rank for land here.
+            {report.sampling.queryTotals.truncated
+              ? "No ranking queries among the rows Search Console returned for this period. It caps how many come back, so this isn't every query you rank for."
+              : "No search queries yet in this period — once Google shows your pages, the keywords you rank for land here."}
           </p>
         </CardEmpty>
       </DashboardCard>
@@ -154,14 +155,30 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
         <Tile label="Close to page 1" value={summary.closeToPageOne} />
       </div>
 
+      {/* These tiles count the queries carried in the report, which is a slice of
+          the pull rather than the property. Without this the numbers plateau
+          silently and read as a total. */}
+      {report.sampling.queryTotals.truncated ? (
+        <p className="mt-2 text-xs text-base-content/50">
+          Counted across the{" "}
+          {report.sampling.queryTotals.rowsExamined.toLocaleString()} queries
+          Search Console returned, ordered by clicks — not every query you rank
+          for.
+        </p>
+      ) : null}
+
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <QueryList
           title="Ranking now"
-          hint="What's already earning — best position, clicks, impressions."
+          hint="What's already earning — position, clicks, impressions."
           icon={TrendingUp}
           rows={rankingNow}
           metric="clicks"
-          emptyLabel="No clicked queries in this period yet."
+          emptyLabel={
+            report.sampling.queryTotals.truncated
+              ? "No clicked queries among the rows returned for this period."
+              : "No clicked queries in this period yet."
+          }
         />
         <QueryList
           title="Could be targeting"
@@ -169,7 +186,11 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
           icon={Target}
           rows={opportunities}
           metric="impressions"
-          emptyLabel="No near-miss queries — everything is already top 3 or far off."
+          emptyLabel={
+            report.sampling.queryTotals.truncated
+              ? "No near-miss queries among the rows returned — the ones we got are already top 3 or far off."
+              : "No near-miss queries — everything is already top 3 or far off."
+          }
         />
       </div>
 

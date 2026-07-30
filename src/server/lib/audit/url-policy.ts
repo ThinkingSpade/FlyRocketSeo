@@ -186,6 +186,115 @@ async function hostnameResolvesToBlockedAddress(
   }
 }
 
+/**
+ * Throw unless this exact URL is safe for the Worker to request.
+ *
+ * Internal: shared by `normalizeAndValidateStartUrl` and
+ * `fetchValidatingEveryHop` so a redirect hop gets the identical check. Validating only the URL a user submitted is not enough: a
+ * remote server can answer `302 Location: http://127.0.0.1:8787/…` and, with
+ * `redirect: "follow"`, the Worker makes that request itself — walking straight
+ * past every protection in this file.
+ */
+async function assertRequestableUrl(parsed: URL): Promise<void> {
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new AppError("VALIDATION_ERROR");
+  }
+  if (isBlockedHost(parsed.hostname)) {
+    throw new AppError("CRAWL_TARGET_BLOCKED");
+  }
+  if (await hostnameResolvesToBlockedAddress(parsed.hostname)) {
+    throw new AppError("CRAWL_TARGET_BLOCKED");
+  }
+}
+
+/** Redirect chains longer than this are refused rather than followed. */
+const MAX_REDIRECT_HOPS = 5;
+
+type HopValidatedFetch = {
+  response: Response;
+  /** The URL the returned response actually came from. */
+  finalUrl: string;
+  /** Whether any redirect was followed to get there.
+   *
+   *  Callers cannot use `response.redirected`: each hop is an independent
+   *  `redirect: "manual"` fetch, so the final response was never itself
+   *  redirected and that flag is always false. Anything recording redirect
+   *  information must read this instead. */
+  redirected: boolean;
+};
+
+/**
+ * Fetch a URL, re-validating the policy at every redirect hop.
+ *
+ * Redirects are followed MANUALLY. `redirect: "follow"` hands the decision to
+ * the remote server, which is exactly the wrong party to trust with which
+ * address our Worker connects to.
+ *
+ * `allowHop`, when given, must also accept every hop. It is a PREDICATE rather
+ * than a hostname so callers supply their own origin rule — this module owns
+ * SSRF policy and deliberately does not also own crawl-origin semantics. A raw
+ * hostname comparison was both too strict and too loose: it rejected the
+ * ordinary `www` -> apex canonical redirect, and it ignored protocol and port,
+ * so a redirect to `http://same-host:8080/admin` sailed through. The Workers
+ * runtime can make subrequests to custom ports, which makes that a live hole
+ * rather than a theoretical one.
+ *
+ * `fetchImpl` is injectable so the hop checks are testable without a network.
+ */
+export async function fetchValidatingEveryHop(
+  startUrl: string,
+  init: RequestInit,
+  options: {
+    allowHop?: (url: URL) => boolean;
+    fetchImpl?: typeof fetch;
+  } = {},
+): Promise<HopValidatedFetch> {
+  const doFetch = options.fetchImpl ?? fetch;
+  let current = new URL(startUrl);
+  let redirected = false;
+  let reachedHttps = current.protocol === "https:";
+
+  for (let hop = 0; hop <= MAX_REDIRECT_HOPS; hop++) {
+    // Once the chain is on HTTPS it stays there. Callers compare each hop
+    // against the ORIGINAL origin, so for a chain starting on http an eventual
+    // hop back to http still matched and the downgrade went unnoticed:
+    // http -> https -> http was followed in full. Transport security is a
+    // property of the chain, not of any single hop, so it is enforced here
+    // rather than left to each caller's origin rule.
+    if (reachedHttps && current.protocol !== "https:") {
+      throw new AppError("CRAWL_TARGET_BLOCKED");
+    }
+    reachedHttps = reachedHttps || current.protocol === "https:";
+
+    await assertRequestableUrl(current);
+    if (options.allowHop && !options.allowHop(current)) {
+      throw new AppError("CRAWL_TARGET_BLOCKED");
+    }
+
+    const response = await doFetch(current, { ...init, redirect: "manual" });
+
+    const location = response.headers.get("location");
+    const isRedirect = response.status >= 300 && response.status < 400;
+    if (!isRedirect || !location) {
+      return { response, finalUrl: current.toString(), redirected };
+    }
+
+    let next: URL;
+    try {
+      // Relative and protocol-relative Locations are legal and common, so
+      // resolve against the hop we just made rather than the original URL.
+      next = new URL(location, current);
+    } catch {
+      throw new AppError("CRAWL_TARGET_BLOCKED");
+    }
+    current = next;
+    redirected = true;
+  }
+
+  // Ran out of hops: refuse rather than return a half-followed chain.
+  throw new AppError("CRAWL_TARGET_BLOCKED");
+}
+
 export async function normalizeAndValidateStartUrl(
   input: string,
 ): Promise<string> {

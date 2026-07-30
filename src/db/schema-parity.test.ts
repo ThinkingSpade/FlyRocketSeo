@@ -63,6 +63,40 @@ function columnsOf(table: Table): ColumnInfo[] {
   }));
 }
 
+/**
+ * Timestamp columns, and whether each side's default produces the SAME TEXT.
+ *
+ * `columnsOf` records `hasDefault` as a boolean, so the assertion named
+ * "(name, nullability, type, default, enum)" only ever checked that both sides
+ * HAVE a default — never what it produces. That is how the two backends came to
+ * store `2026-07-22 10:00:00` and `2026-07-22T10:00:00.000Z` in the same column
+ * while this suite stayed green, and why a string comparison written for one
+ * dialect silently returned the wrong rows on the other.
+ *
+ * The formats are NOT being unified here: doing that means rewriting live
+ * rank-tracking history in production. This records the divergence as a known,
+ * asserted fact so the next person comparing a timestamp finds out from a test
+ * rather than from a wrong number, and points them at `toStoredTimestamp`.
+ */
+function timestampDefaultShape(table: Table): Record<string, string> {
+  const shapes: Record<string, string> = {};
+  for (const col of Object.values(getTableColumns(table))) {
+    if (col.dataType !== "string" || !col.hasDefault) continue;
+    const rendered = JSON.stringify(col.default ?? null);
+    // Only the SQL-expression defaults matter here; literal string defaults
+    // (statuses, roles) are already covered by the column comparison.
+    if (
+      !rendered.includes("current_timestamp") &&
+      !rendered.includes("to_char")
+    )
+      continue;
+    shapes[col.name] = rendered.includes("to_char")
+      ? "iso8601"
+      : "sqlite-space";
+  }
+  return shapes;
+}
+
 function columnName(candidate: unknown): string | null {
   if (
     candidate &&
@@ -140,6 +174,19 @@ const sqliteAuthTables = tablesFrom(sqliteAuth);
 const pgAuthTables = tablesFrom(pgAuth);
 
 describe("schema parity: application tables", () => {
+  it("actually finds timestamp defaults to compare", () => {
+    // Guard against the per-table check below going vacuous. Most tables have no
+    // SQL-expression timestamp default, so `{} === {}` passes for them; if a
+    // refactor changed how defaults serialize, every table would pass while
+    // checking nothing. This asserts the detector still sees real columns.
+    const found = [...sqliteAppTables.values()].reduce(
+      (total, table) =>
+        total + Object.keys(timestampDefaultShape(table)).length,
+      0,
+    );
+    expect(found).toBeGreaterThan(10);
+  });
+
   it("define the same set of tables on both backends", () => {
     expect(sortStrings([...pgAppTables.keys()])).toEqual(
       sortStrings([...sqliteAppTables.keys()]),
@@ -156,6 +203,22 @@ describe("schema parity: application tables", () => {
         // text/text, boolean/boolean, serial/autoincrement match; a real type
         // mismatch is caught.
         expect(columnsOf(pgTable)).toEqual(columnsOf(sqliteTable));
+      });
+      it("documents that timestamp defaults produce different text per dialect", () => {
+        // Asserted, not aspirational: these two are KNOWN to differ, and the
+        // comparison above cannot see it because it records hasDefault as a
+        // boolean. If a future change unifies the formats this test fails and
+        // should become an equality assertion (and `toStoredTimestamp` can go).
+        const pg = timestampDefaultShape(pgTable);
+        const sqlite = timestampDefaultShape(sqliteTable);
+
+        expect(Object.keys(pg).toSorted()).toEqual(
+          Object.keys(sqlite).toSorted(),
+        );
+        for (const column of Object.keys(pg)) {
+          expect(pg[column]).toBe("iso8601");
+          expect(sqlite[column]).toBe("sqlite-space");
+        }
       });
       it("has matching primary key", () => {
         expect(primaryKeyColumns(pgTable, "pg")).toEqual(

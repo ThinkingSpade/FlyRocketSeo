@@ -195,16 +195,32 @@ export function createGscClient(opts: { userId: string }) {
       return data.siteEntry ?? [];
     },
 
-    /** Webmasters API `searchAnalytics.query`. siteUrl is used verbatim. */
+    /** Webmasters API `searchAnalytics.query`. siteUrl is used verbatim.
+     *
+     *  Returns `responseAggregationType` alongside the rows because it is not
+     *  cosmetic: with `aggregationType` unset or `"auto"`, Google decides, and a
+     *  response aggregated `byPage` counts each displayed URL separately while
+     *  `byProperty` counts the property once. Summing the wrong one inflates
+     *  every impression and click total derived from it, so callers that need
+     *  property-level demand have to be able to check what they actually got. */
     async querySearchAnalytics(
       siteUrl: string,
       body: GscSearchAnalyticsRequest,
-    ): Promise<GscSearchAnalyticsRow[]> {
-      const data = await request<{ rows?: GscSearchAnalyticsRow[] }>(
+    ): Promise<{
+      rows: GscSearchAnalyticsRow[];
+      responseAggregationType?: string;
+    }> {
+      const data = await request<{
+        rows?: GscSearchAnalyticsRow[];
+        responseAggregationType?: string;
+      }>(
         `${GSC_API_BASE}/sites/${encodeURIComponent(siteUrl)}/searchAnalytics/query`,
         { method: "POST", body },
       );
-      return data.rows ?? [];
+      return {
+        rows: data.rows ?? [],
+        responseAggregationType: data.responseAggregationType,
+      };
     },
 
     /** URL Inspection API `urlInspection.index.inspect`. This lives on a

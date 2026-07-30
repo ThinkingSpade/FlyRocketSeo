@@ -29,8 +29,11 @@ describe("computeNofollowExposure", () => {
     const exposure = computeNofollowExposure(100, 70);
     expect(exposure?.verdict).toBe("nofollow-heavy");
     expect(exposure?.note).toContain("70%");
-    // It must not claim the other 30 are the only ones passing authority.
-    expect(exposure?.note).toContain("also send dofollow");
+    // It must not infer how much authority reaches the site. The field counts
+    // domains TOUCHED by nofollow, and every one of them may also send a
+    // followed link, in which case nothing is overstated at all.
+    expect(exposure?.note).toContain("not nofollow-only");
+    expect(exposure?.note).not.toMatch(/overstates/i);
   });
 
   it("flags a profile with almost no nofollow links", () => {

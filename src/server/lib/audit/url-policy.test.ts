@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { AppError } from "@/server/lib/errors";
-import { normalizeAndValidateStartUrl } from "@/server/lib/audit/url-policy";
+import {
+  fetchValidatingEveryHop,
+  normalizeAndValidateStartUrl,
+} from "@/server/lib/audit/url-policy";
+import { isSameOrigin } from "@/server/lib/audit/url-utils";
 
 describe("normalizeAndValidateStartUrl", () => {
   beforeEach(() => {
@@ -46,5 +50,239 @@ describe("normalizeAndValidateStartUrl", () => {
     ).rejects.toMatchObject({
       code: "VALIDATION_ERROR",
     } satisfies Partial<AppError>);
+  });
+});
+
+describe("fetchValidatingEveryHop", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  /** A fetch stub that replays a scripted redirect chain. */
+  function chain(...steps: Array<{ status: number; location?: string }>) {
+    let call = 0;
+    return vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => {
+      const step = steps[Math.min(call++, steps.length - 1)];
+      return new Response(null, {
+        status: step.status,
+        headers: step.location ? { location: step.location } : {},
+      });
+    });
+  }
+
+  it("refuses a redirect into loopback", async () => {
+    // The actual hole: validation covered only the submitted URL, and
+    // redirect:"follow" then let the remote server choose our next request.
+    const fetchImpl = chain({
+      status: 302,
+      location: "http://127.0.0.1:8787/admin",
+    });
+
+    await expect(
+      fetchValidatingEveryHop("https://example.com/a", {}, { fetchImpl }),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+
+    // The blocked hop must never be requested.
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("refuses a redirect into a private range", async () => {
+    const fetchImpl = chain({ status: 301, location: "http://10.0.0.5/" });
+    await expect(
+      fetchValidatingEveryHop("https://example.com/a", {}, { fetchImpl }),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+  });
+
+  it("refuses a redirect the caller's origin rule rejects", async () => {
+    const fetchImpl = chain({
+      status: 302,
+      location: "https://attacker.example/x",
+    });
+    await expect(
+      fetchValidatingEveryHop(
+        "https://example.com/a",
+        {},
+        { fetchImpl, allowHop: (u) => u.hostname === "example.com" },
+      ),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+  });
+
+  it("refuses a redirect that only changes the port", async () => {
+    // Adversarial review: a hostname-only check let this through, and the
+    // Workers runtime can subrequest custom ports -- so a same-host redirect to
+    // :8080/admin turned the phrase check into a content oracle against another
+    // service on that machine.
+    const fetchImpl = chain({
+      status: 302,
+      location: "http://example.com:8080/admin",
+    });
+
+    await expect(
+      fetchValidatingEveryHop(
+        "https://example.com/a",
+        {},
+        {
+          fetchImpl,
+          allowHop: (u) => isSameOrigin(u.toString(), "https://example.com"),
+        },
+      ),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+    expect(fetchImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("follows the ordinary www to apex canonical redirect", async () => {
+    // The regression this predicate replaced: an exact-hostname pin rejected
+    // this, and an audit could finish with a single failed page.
+    const fetchImpl = chain(
+      { status: 301, location: "https://example.com/" },
+      { status: 200 },
+    );
+
+    const { response, redirected, finalUrl } = await fetchValidatingEveryHop(
+      "https://www.example.com/",
+      {},
+      {
+        fetchImpl,
+        allowHop: (u) => isSameOrigin(u.toString(), "https://www.example.com"),
+      },
+    );
+
+    expect(response.status).toBe(200);
+    expect(redirected).toBe(true);
+    expect(finalUrl).toBe("https://example.com/");
+  });
+
+  it("reports redirect metadata that response.redirected cannot", async () => {
+    // Each hop is a separate manual fetch, so the final response has
+    // redirected === false. Callers recording redirects must use ours.
+    const fetchImpl = chain(
+      { status: 301, location: "/final" },
+      { status: 200 },
+    );
+
+    const result = await fetchValidatingEveryHop(
+      "https://example.com/a",
+      {},
+      { fetchImpl },
+    );
+
+    expect(result.response.redirected).toBe(false);
+    expect(result.redirected).toBe(true);
+    expect(result.finalUrl).toBe("https://example.com/final");
+  });
+
+  it("follows a same-host redirect and returns the final response", async () => {
+    const fetchImpl = chain(
+      { status: 301, location: "/final" },
+      { status: 200 },
+    );
+
+    const { response } = await fetchValidatingEveryHop(
+      "https://example.com/a",
+      {},
+      { fetchImpl, allowHop: (u) => u.hostname === "example.com" },
+    );
+
+    expect(response.status).toBe(200);
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("refuses an endless redirect loop instead of following it", async () => {
+    const fetchImpl = chain({ status: 302, location: "https://example.com/a" });
+    await expect(
+      fetchValidatingEveryHop("https://example.com/a", {}, { fetchImpl }),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+  });
+
+  it("always requests with manual redirect handling", async () => {
+    const fetchImpl = chain({ status: 200 });
+    await fetchValidatingEveryHop("https://example.com/a", {}, { fetchImpl });
+    expect(fetchImpl.mock.calls[0]?.[1]).toMatchObject({
+      redirect: "manual",
+    });
+  });
+});
+
+describe("fetchValidatingEveryHop transport security", () => {
+  beforeEach(() => {
+    vi.stubGlobal("fetch", vi.fn());
+  });
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  function scripted(...steps: Array<{ status: number; location?: string }>) {
+    let call = 0;
+    return vi.fn(async (_url: RequestInfo | URL, _init?: RequestInit) => {
+      const step = steps[Math.min(call++, steps.length - 1)];
+      return new Response(null, {
+        status: step.status,
+        headers: step.location ? { location: step.location } : {},
+      });
+    });
+  }
+
+  it("refuses an https-to-http downgrade later in the chain", async () => {
+    // Adversarial review: every hop was compared to the ORIGINAL http origin, so
+    // once the chain upgraded to https a hop back to http still matched and was
+    // followed. Three requests went out; only two should.
+    const fetchImpl = scripted(
+      { status: 301, location: "https://example.com/b" },
+      { status: 302, location: "http://example.com/c" },
+      { status: 200 },
+    );
+
+    await expect(
+      fetchValidatingEveryHop(
+        "http://example.com/a",
+        {},
+        {
+          fetchImpl,
+          allowHop: (u) => isSameOrigin(u.toString(), "http://example.com"),
+        },
+      ),
+    ).rejects.toMatchObject({ code: "CRAWL_TARGET_BLOCKED" });
+
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+  });
+
+  it("still allows the ordinary http-to-https upgrade", async () => {
+    const fetchImpl = scripted(
+      { status: 301, location: "https://example.com/b" },
+      { status: 200 },
+    );
+
+    const { response } = await fetchValidatingEveryHop(
+      "http://example.com/a",
+      {},
+      {
+        fetchImpl,
+        allowHop: (u) => isSameOrigin(u.toString(), "http://example.com"),
+      },
+    );
+
+    expect(response.status).toBe(200);
+  });
+});
+
+describe("hostname equivalence", () => {
+  it("does not treat www.www.host as equivalent to www.host", () => {
+    // The prefix tests gave a www. origin three accepted hosts, so a redirect to
+    // www.www.example.com counted as inside the audit boundary.
+    expect(
+      isSameOrigin("https://www.www.example.com/x", "https://www.example.com"),
+    ).toBe(false);
+  });
+
+  it("still treats www and apex as the same site", () => {
+    expect(
+      isSameOrigin("https://example.com/x", "https://www.example.com"),
+    ).toBe(true);
+    expect(
+      isSameOrigin("https://www.example.com/x", "https://example.com"),
+    ).toBe(true);
   });
 });
