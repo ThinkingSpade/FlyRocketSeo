@@ -7,6 +7,8 @@ import {
   toPath,
   useLinkInsights,
 } from "@/client/features/link-insights/useLinkInsights";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { resolveQueryState } from "@/client/components/state/queryState";
 
 type PresenceResult = {
   linksToTarget: boolean;
@@ -128,31 +130,35 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
         </div>
       ) : null}
 
+      {/* Scoped to the empty case only: the dashed card and the rows are
+          siblings here, so wrapping the rows as children would change the page
+          layout. The boundary owns whether an absence may be CLAIMED -- with a
+          capped pull it replaces the confident sentence rather than appending a
+          caveat to it. */}
       {data?.connected && opportunities.length === 0 ? (
         <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
-            {data.truncated ? (
-              <>
-                <p className="font-medium">
-                  None in the queries we could check
-                </p>
-                <p className="max-w-md text-sm text-base-content/60">
-                  Search Console returned {data.rowsExamined.toLocaleString()}{" "}
-                  query-and-page rows, ordered by clicks, and stopped there.
-                  Nothing in positions 4–20 with more than one of your pages
-                  among them — though a quieter query further down could
-                  qualify.
-                </p>
-              </>
-            ) : (
-              <>
-                <p className="font-medium">No opportunities right now</p>
-                <p className="max-w-md text-sm text-base-content/60">
-                  This fills in once queries rank in positions 4–20 with more
-                  than one of your pages appearing for them.
-                </p>
-              </>
-            )}
+          <div className="card-body items-center py-6">
+            <QueryStateBoundary
+              state={resolveQueryState({
+                isPending: false,
+                isError: false,
+                connected: true,
+                rowCount: opportunities.length,
+                sampling: [
+                  {
+                    label: "The Search Console query-and-page pull",
+                    truncated: data.truncated,
+                    rowsExamined: data.rowsExamined,
+                  },
+                ],
+              })}
+              loading={null}
+              errorMessage="Link opportunities could not be loaded."
+              emptyTitle="No opportunities right now"
+              emptyBody="This fills in once queries rank in positions 4–20 with more than one of your pages appearing for them."
+            >
+              {null}
+            </QueryStateBoundary>
           </div>
         </div>
       ) : null}
