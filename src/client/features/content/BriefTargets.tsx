@@ -5,14 +5,24 @@ export function BriefTargets({
   analyzedCount,
   paaCount,
   analysesPending,
+  analysesFailed,
 }: {
   wordCounts: number[];
   h2Counts: number[];
   analyzedCount: number;
   paaCount: number;
   analysesPending: boolean;
+  /** How many per-page analyses failed. Separate from `analysesPending`, which
+   *  goes false when requests SETTLE — successfully or not. Without this a page
+   *  where every analysis failed reported "No data", which reads as "the top
+   *  pages have nothing to measure" rather than "we could not measure them". */
+  analysesFailed?: number;
 }) {
-  const pendingLabel = analysesPending ? "Analyzing top pages…" : "No data";
+  const pendingLabel = analysesPending
+    ? "Analyzing top pages…"
+    : (analysesFailed ?? 0) > 0
+      ? "Could not analyze the top pages"
+      : "No data";
   return (
     <div className="grid gap-3 sm:grid-cols-3">
       <div className="card border border-base-300 bg-base-100">
