@@ -10,7 +10,7 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("@/server/billing/autumn", () => ({
-  autumn: { check: mocks.autumnCheck },
+  getAutumn: () => Promise.resolve({ check: mocks.autumnCheck }),
 }));
 
 vi.mock("@/server/billing/config", () => ({

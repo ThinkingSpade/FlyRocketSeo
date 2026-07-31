@@ -1,4 +1,4 @@
-import { autumn } from "@/server/billing/autumn";
+import { getAutumn } from "@/server/billing/autumn";
 import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
@@ -12,6 +12,7 @@ import { z } from "zod";
 
 async function checkBalance(featureId: string, customerId: string) {
   try {
+    const autumn = await getAutumn();
     const result = await autumn.check({ customerId, featureId });
     return result.balance?.remaining ?? null;
   } catch {

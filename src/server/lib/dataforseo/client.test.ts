@@ -33,10 +33,7 @@ vi.mock("cloudflare:workers", () => ({
 }));
 
 vi.mock("@/server/billing/autumn", () => ({
-  autumn: {
-    check: checkMock,
-    track: trackMock,
-  },
+  getAutumn: () => Promise.resolve({ check: checkMock, track: trackMock }),
   AUTUMN_TRACK_RETRY_OPTIONS: {},
 }));
 

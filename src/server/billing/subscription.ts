@@ -9,7 +9,7 @@ import {
   roundUsdForBilling,
 } from "@/shared/billing";
 import type { CreditFeature } from "@/shared/billing-credit-features";
-import { autumn, AUTUMN_TRACK_RETRY_OPTIONS } from "@/server/billing/autumn";
+import { getAutumn, AUTUMN_TRACK_RETRY_OPTIONS } from "@/server/billing/autumn";
 import { isBillingEnabled } from "@/server/billing/config";
 import { captureServerEvent } from "@/server/lib/posthog";
 import { AppError } from "@/server/lib/errors";
@@ -30,6 +30,7 @@ export async function getOrCreateOrganizationCustomer(
     return { id: context.organizationId };
   }
 
+  const autumn = await getAutumn();
   const customer = await autumn.customers.getOrCreate({
     customerId: context.organizationId,
     email: context.userEmail,
@@ -50,6 +51,7 @@ export async function customerHasPaidPlan(customerId: string) {
     return true;
   }
 
+  const autumn = await getAutumn();
   const result = await autumn.check({
     customerId,
     featureId: AUTUMN_PAID_PLAN_FEATURE_ID,
@@ -63,6 +65,7 @@ export async function customerHasManagedAccess(customerId: string) {
     return true;
   }
 
+  const autumn = await getAutumn();
   const result = await autumn.check({
     customerId,
     featureId: AUTUMN_MANAGED_ACCESS_FEATURE_ID,
@@ -85,6 +88,7 @@ export async function getUsageCreditsRemaining(customerId: string): Promise<{
     };
   }
 
+  const autumn = await getAutumn();
   const [monthlyCheck, topupCheck] = await Promise.all([
     autumn.check({ customerId, featureId: AUTUMN_SEO_DATA_BALANCE_FEATURE_ID }),
     autumn.check({
@@ -145,6 +149,7 @@ export async function trackUsageCreditSpend(args: {
   );
   if (totalCostCredits <= 0) return;
 
+  const autumn = await getAutumn();
   const monthlyDeduct = Math.min(args.monthlyRemaining, totalCostCredits);
   const topupDeduct = totalCostCredits - monthlyDeduct;
 

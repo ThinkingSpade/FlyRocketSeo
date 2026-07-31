@@ -116,7 +116,6 @@
  */
 import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
-import { dataforseoGetJson } from "@/server/lib/dataforseo/core";
 import {
   buildGeoLocationRows,
   buildUsStateCodeMap,
@@ -187,6 +186,16 @@ async function fetchAndMapAllRows(): Promise<{
   rows: GeoLocationRow[];
   skipped: number;
 }> {
+  // Dynamic import for the same reason as US_STATES below, but the stakes are
+  // far higher here: a static import put the whole 1.54 MB DataForSEO SDK
+  // chunk into this module's graph, and this module is reached from
+  // `serverFunctions/geo.ts` — so every cheap `searchGeoLocations` /
+  // `getGeoLocationByCode` call was evaluating the entire SDK without ever
+  // contacting DataForSEO. Measured 2026-07-31: the Worker's isolate does not
+  // survive a server-function request, so that evaluation was paid on every
+  // single call rather than amortised. Seeding is a rare, explicitly-triggered
+  // operator action; it can afford to load the SDK at the point of use.
+  const { dataforseoGetJson } = await import("@/server/lib/dataforseo/core");
   const json = await dataforseoGetJson(LOCATIONS_PATH);
   const parsed = locationsEnvelopeSchema.safeParse(json);
   if (!parsed.success) {
