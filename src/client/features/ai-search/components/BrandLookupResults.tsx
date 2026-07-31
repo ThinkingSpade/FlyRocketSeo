@@ -34,21 +34,33 @@ export function BrandLookupResults({ result, projectId }: Props) {
         </div>
       );
     }
-    return (
-      <div className="space-y-3">
-        <div className="rounded-lg border border-info/30 bg-info/10 p-4 text-sm">
-          No AI mentions found for <strong>{result.resolvedTarget}</strong>.
+    // A platform can return a bundle while one of its sub-calls failed and was
+    // swallowed into an empty array. Those platforms are not in
+    // `erroredPlatforms` -- they look like successes that found nothing -- so
+    // without this the page states a confident absence built partly on data
+    // that was never read. "This brand has no AI presence" and "the calls that
+    // would have found it failed" are opposite conclusions to act on.
+    const incomplete = [
+      ...erroredPlatforms.map((p) => formatPlatformLabel(p.platform)),
+      ...result.partialPlatforms.map((platform) =>
+        formatPlatformLabel(platform),
+      ),
+    ];
+
+    if (incomplete.length > 0) {
+      return (
+        <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
+          No AI mentions found for <strong>{result.resolvedTarget}</strong> in
+          what came back — but {incomplete.join(" and ")}{" "}
+          {incomplete.length === 1 ? "did not answer" : "did not answer"} in
+          full, so this is not a confirmed absence. Try again shortly.
         </div>
-        {erroredPlatforms.length > 0 ? (
-          <p className="text-xs text-base-content/60">
-            Note:{" "}
-            {erroredPlatforms
-              .map((p) => formatPlatformLabel(p.platform))
-              .join(" and ")}{" "}
-            {erroredPlatforms.length === 1 ? "was" : "were"} unavailable — some
-            mentions may be missing.
-          </p>
-        ) : null}
+      );
+    }
+
+    return (
+      <div className="rounded-lg border border-info/30 bg-info/10 p-4 text-sm">
+        No AI mentions found for <strong>{result.resolvedTarget}</strong>.
       </div>
     );
   }
