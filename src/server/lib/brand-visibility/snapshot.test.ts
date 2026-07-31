@@ -14,6 +14,7 @@ function baseResult(
     resolvedTarget: "acme.com",
     fetchedAt: "2026-07-21T00:00:00.000Z",
     hasData: true,
+    partialPlatforms: [],
     totalMentions: 120,
     totalAiSearchVolume: 3400,
     perPlatform: [

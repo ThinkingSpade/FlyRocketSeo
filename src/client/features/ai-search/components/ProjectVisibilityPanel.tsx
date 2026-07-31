@@ -135,6 +135,15 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
             opportunities={history?.opportunities ?? []}
           />
         </div>
+      ) : historyQuery.isError ? (
+        // Before the first-run copy, always. A failed history read also leaves
+        // `latest` null, and telling someone with stored snapshots that they
+        // have never analyzed the domain invites them to pay for an analysis
+        // they already have.
+        <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-6 text-center text-sm text-base-content/70">
+          Past analyses for {domain} could not be loaded, so the trend is
+          unavailable. Any analyses you have run are still stored.
+        </div>
       ) : !analyzing ? (
         <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-6 text-center text-sm text-base-content/70">
           You haven&apos;t analyzed {domain} yet. Run your first analysis to

@@ -132,6 +132,12 @@ export function shapeResult(args: ShapeArgs): BrandLookupResult {
     resolvedTarget: args.detected.value,
     fetchedAt: new Date().toISOString(),
     hasData,
+    // Reported, not just used for the cache decision. A bundle that swallowed a
+    // rejected sub-call into an empty array is renderable but incomplete, and
+    // the UI must not turn that into "no mentions found".
+    partialPlatforms: successfulBundles
+      .filter((b) => !b.bundle.complete)
+      .map((b) => b.platform),
     totalMentions,
     totalAiSearchVolume,
     perPlatform,

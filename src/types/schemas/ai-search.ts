@@ -117,6 +117,22 @@ export const brandLookupResultSchema = z.object({
   resolvedTarget: z.string(),
   fetchedAt: z.string(),
   hasData: z.boolean(),
+  /**
+   * Platforms whose bundle came back with a failed sub-call swallowed into
+   * empty fallback data.
+   *
+   * The server already computed this to decide cacheability -- a partial result
+   * must not be frozen for 24h -- but then dropped it, so the client could not
+   * tell "this brand has no AI mentions" from "some of the calls that would
+   * have found them failed". Those are opposite conclusions about a business.
+   *
+   * Defaulted, not required: existing R2 cache entries predate this field, and
+   * a required field would fail safeParse on every one of them -- turning each
+   * cached lookup into a fresh PAID DataForSEO call. `[]` is also the correct
+   * value for them, because the server only ever cached a result when every
+   * sub-call succeeded (see `allSucceeded` in brandLookup.ts).
+   */
+  partialPlatforms: z.array(z.enum(["chat_gpt", "google"])).default([]),
   totalMentions: z.number().int().nonnegative().nullable(),
   totalAiSearchVolume: z.number().int().nonnegative().nullable(),
   perPlatform: z.array(brandPlatformBreakdownSchema),
