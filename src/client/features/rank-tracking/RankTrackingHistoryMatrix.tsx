@@ -10,10 +10,14 @@ import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 export function RankTrackingHistoryMatrix({
   cells,
   isLoading,
+  loadFailed = false,
   keywords,
 }: {
   cells: RankPositionMatrixCell[];
   isLoading: boolean;
+  /** The matrix request failed. Distinct from having no history: one means the
+   *  timeline could not be read, the other that it has not been built yet. */
+  loadFailed?: boolean;
   keywords: { trackingKeywordId: string; keyword: string }[];
 }) {
   const { runs, cellByKeyword } = useMemo(() => buildMatrix(cells), [cells]);
@@ -22,6 +26,18 @@ export function RankTrackingHistoryMatrix({
     return (
       <div className="flex items-center justify-center p-8">
         <Loader2 className="size-5 animate-spin text-base-content/50" />
+      </div>
+    );
+  }
+
+  // Before emptiness, always. A failed read has no runs either, and saying
+  // "No history yet. Run a check" would invite a paid check to fix a request
+  // that simply did not come back.
+  if (loadFailed) {
+    return (
+      <div className="rounded-xl border border-dashed border-base-300 p-10 text-center text-sm text-base-content/55">
+        The ranking history could not be loaded, so the timeline is unavailable.
+        Your existing checks are unaffected.
       </div>
     );
   }

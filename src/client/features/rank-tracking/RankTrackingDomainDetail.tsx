@@ -14,6 +14,8 @@ import { captureClientEvent } from "@/client/lib/posthog";
 import { FreePlanAlert } from "./FreePlanAlert";
 import { RankTrackingDetailHeader } from "./RankTrackingDetailHeader";
 import { RankTrackingOverview } from "./RankTrackingOverview";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { RankTrackingTable } from "./RankTrackingTable";
 import {
   countMatrixRuns,
@@ -95,7 +97,14 @@ export function RankTrackingDomainDetail({
   );
   const [viewMode, setViewMode] = useState<"table" | "history">("table");
 
-  const { data: resultsData, isLoading: resultsLoading } = useQuery({
+  const {
+    data: resultsData,
+    isLoading: resultsLoading,
+    isError: resultsError,
+    error: resultsErrorValue,
+    refetch: refetchResults,
+    isFetching: resultsFetching,
+  } = useQuery({
     queryKey: ["rankTrackingResults", projectId, config.id, comparePeriod],
     queryFn: () =>
       getLatestRankResults({
@@ -107,14 +116,23 @@ export function RankTrackingDomainDetail({
 
   // Also feeds the History toggle: the matrix view only earns its tab once
   // there are two checks to compare.
-  const { data: matrixCells, isLoading: matrixLoading } = useQuery({
+  const {
+    data: matrixCells,
+    isLoading: matrixLoading,
+    isError: matrixError,
+  } = useQuery({
     queryKey: ["rankPositionMatrix", projectId, config.id, activeDevice],
     queryFn: () =>
       getRankPositionMatrix({
         data: { projectId, configId: config.id, device: activeDevice },
       }),
   });
-  const historyAvailable = countMatrixRuns(matrixCells ?? []) >= 2;
+  // A failed matrix read used to make this false, which silently removed the
+  // History tab -- the evidence for hiding it was "the request did not come
+  // back", not "there is only one run". Keep the tab and let the view report
+  // its own failure rather than disappearing.
+  const historyAvailable =
+    matrixError || countMatrixRuns(matrixCells ?? []) >= 2;
 
   const { data: costEstimate } = useQuery({
     queryKey: ["rankTrackingCostEstimate", projectId, config.id],
@@ -337,12 +355,24 @@ export function RankTrackingDomainDetail({
               <RankTrackingHistoryMatrix
                 cells={matrixCells ?? []}
                 isLoading={matrixLoading}
+                loadFailed={matrixError}
                 keywords={filtered.map((r) => ({
                   trackingKeywordId: r.trackingKeywordId,
                   keyword: r.keyword,
                 }))}
               />
             </>
+          ) : resultsError ? (
+            // Without this the failed read fell through to `rows = []`, and the
+            // table announced 'No rank data yet. Click "Check Now" to run your
+            // first check.' -- a first-run message shown to someone whose
+            // rankings simply failed to load, and an invitation to spend on a
+            // check they do not need.
+            <InlineQueryError
+              message={getStandardErrorMessage(resultsErrorValue)}
+              onRetry={() => void refetchResults()}
+              retrying={resultsFetching}
+            />
           ) : (
             <RankTrackingTable
               key={defaultSortId}
