@@ -1,0 +1,47 @@
+diff --git a/dist/esm/createStartHandler.js b/dist/esm/createStartHandler.js
+index 34a160280fdb8fc522ca4448e52f0d246ebb60a6..1011023f7b51d25742bb8b79cd82568feca01f33 100644
+--- a/dist/esm/createStartHandler.js
++++ b/dist/esm/createStartHandler.js
+@@ -23,14 +23,26 @@ var getCachedBaseManifest = createCachedBaseManifestLoader(() => getStartManifes
+ var getProdBaseManifest = () => getCachedBaseManifest();
+ var getBaseManifest = process.env.TSS_DEV_SERVER === "true" ? getStartManifest : getProdBaseManifest;
+ var createEarlyHintsForRequest = process.env.TSS_DEV_SERVER === "true" ? () => void 0 : createEarlyHintsCollector;
++// PATCHED (FlyRocketSEO): the router entry is no longer loaded here.
++//
++// Upstream imported it in this Promise.all, i.e. on EVERY request, before the
++// handler knows whether the request is a page render or a `/_serverFn/*` call.
++// On Cloudflare Workers that is expensive: importing the router entry pulls the
++// generated route tree and every route definition (735 KB in this app), and a
++// server function never calls `getRouter()`. Measured on production
++// 2026-07-31, a cold isolate spent ~1650 ms of wall time inside the handler
++// against 48 ms of CPU -- module loading, not work.
++//
++// `routerEntry` had exactly one consumer, the `getRouter()` closure below, and
++// that closure is already async and already memoised via its own `router`
++// variable. So moving the import into it changes no behaviour: page renders,
++// server routes and router redirects still load it on first use.
+ async function loadEntries() {
+-	const [routerEntry, startEntry, pluginAdapters] = await Promise.all([
+-		import("#tanstack-router-entry"),
++	const [startEntry, pluginAdapters] = await Promise.all([
+ 		import("#tanstack-start-entry"),
+ 		import("#tanstack-start-plugin-adapters")
+ 	]);
+ 	return {
+-		routerEntry,
+ 		startEntry,
+ 		pluginAdapters
+ 	};
+@@ -242,7 +254,11 @@ function createStartHandler(cbOrOptions) {
+ 			const executedRequestMiddlewares = new Set(flattenedRequestMiddlewares);
+ 			const getRouter = async () => {
+ 				if (router) return router;
+-				router = await entries.routerEntry.getRouter();
++				// PATCHED (FlyRocketSEO): imported here rather than in
++				// `loadEntries()`, so only requests that actually need a router
++				// pay for the route tree. See the note on `loadEntries` above.
++				const routerEntry = await import("#tanstack-router-entry");
++				router = await routerEntry.getRouter();
+ 				let isShell = IS_SHELL_ENV;
+ 				if (IS_PRERENDERING && !isShell) isShell = request.headers.get(HEADERS.TSS_SHELL) === "true";
+ 				const history = createMemoryHistory({ initialEntries: [href] });
