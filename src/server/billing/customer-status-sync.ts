@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db";
 import { billingCustomerStatus } from "@/db/schema";
-import { autumn } from "@/server/billing/autumn";
+import { getAutumn } from "@/server/billing/autumn";
 import {
   deriveBillingCustomerStatusSnapshot,
   type BillingCustomerStatusSnapshot,
@@ -11,6 +11,7 @@ import { syncBillingStatusToLoops } from "./loops-sync";
 export async function syncAutumnCustomerStatus(customerId: string) {
   // getOrCreate is effectively a "get" here — a billing.updated webhook always
   // references an existing Autumn customer. The SDK returns the camelCase shape.
+  const autumn = await getAutumn();
   const customer = await autumn.customers.getOrCreate({ customerId });
   const snapshot = deriveBillingCustomerStatusSnapshot(customer);
   await upsertBillingCustomerStatus(snapshot);

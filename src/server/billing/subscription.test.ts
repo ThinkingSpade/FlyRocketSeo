@@ -16,13 +16,14 @@ const {
 }));
 
 vi.mock("@/server/billing/autumn", () => ({
-  autumn: {
-    check: checkMock,
-    customers: {
-      getOrCreate: getOrCreateMock,
-    },
-    track: trackMock,
-  },
+  getAutumn: () =>
+    Promise.resolve({
+      check: checkMock,
+      customers: {
+        getOrCreate: getOrCreateMock,
+      },
+      track: trackMock,
+    }),
   AUTUMN_TRACK_RETRY_OPTIONS: {},
 }));
 

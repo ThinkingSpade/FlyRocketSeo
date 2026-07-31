@@ -2,8 +2,6 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import { AppError } from "@/server/lib/errors";
-import { ProfileDraftService } from "@/server/features/profiles/services/ProfileDraftService";
-import { KeywordFitService } from "@/server/features/profiles/services/KeywordFitService";
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import {
   EMPTY_PROFILE,
@@ -26,6 +24,25 @@ import {
  * never receive one.
  */
 const projectScopedSchema = z.object({ projectId: z.string().min(1) });
+
+/**
+ * The two AI services are loaded at the point of use, not imported at the top.
+ *
+ * TanStack Start splits this file into one server-function provider chunk, so a
+ * static import made `getProjectProfile`/`saveProjectProfile` evaluate
+ * `ProfileDraftService` -> `siteTextCrawl` -> cheerio/parse5 (277 KB) before
+ * they could read a D1 row. That undoes this file's whole premise — see the
+ * header: these two are meant to touch D1 and nothing else.
+ *
+ * It matters more than a normal lazy-load because the Worker's isolate does not
+ * survive a server-function request (measured 2026-07-31), so the evaluation is
+ * paid on every call rather than once. `import()` results are module-cached, so
+ * the drafting endpoints pay it at most once per isolate, exactly as before.
+ */
+const loadProfileDraftService = () =>
+  import("@/server/features/profiles/services/ProfileDraftService").then(
+    (m) => m.ProfileDraftService,
+  );
 
 /**
  * This project's profile, or an empty one.
@@ -117,6 +134,7 @@ export const draftProjectProfile = createServerFn({ method: "POST" })
         "This project has no domain set, so there's no site to read. Add one in project settings, or fill the fields in yourself.",
       );
     }
+    const ProfileDraftService = await loadProfileDraftService();
     return ProfileDraftService.draftFromSite({ domain, topQueries: [] });
   });
 
@@ -141,6 +159,7 @@ export const generateSeedKeywords = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(generateSeedsSchema)
   .handler(async ({ data }) => {
+    const ProfileDraftService = await loadProfileDraftService();
     const seeds = await ProfileDraftService.generateSeeds({
       offer: data.offer,
       customer: data.customer,
@@ -172,6 +191,8 @@ export const refineKeywordFit = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(refineKeywordFitSchema)
   .handler(async ({ data, context }) => {
+    const { KeywordFitService } =
+      await import("@/server/features/profiles/services/KeywordFitService");
     return KeywordFitService.refine({
       projectId: context.projectId,
       keywords: data.keywords,
