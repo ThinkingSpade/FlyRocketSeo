@@ -379,14 +379,27 @@ export function ContentOptimizerPage({
     })),
   });
   const analysisByUrl = new Map<string, CompetitorAnalysis>();
+  // A FAILED per-URL analysis also has `data === undefined`, so without tracking
+  // it separately the row cells below could not tell "still fetching" from
+  // "this one is never coming" -- and showed loading dots forever.
+  const failedUrls = new Set<string>();
   competitorUrls.forEach((url, index) => {
-    const data = analysisQueries[index]?.data;
+    const query_ = analysisQueries[index];
+    const data = query_?.data;
     if (data !== undefined) analysisByUrl.set(url, data);
+    if (query_?.isError) failedUrls.add(url);
   });
   const loadedAnalyses = [...analysisByUrl.values()].filter(
     (analysis): analysis is NonNullable<CompetitorAnalysis> => analysis != null,
   );
   const analysesPending = analysisQueries.some((query_) => query_.isLoading);
+  // Counted so the headline cards can say the analyses failed rather than
+  // "No data". Once every request settles, `analysesPending` is false whether
+  // they succeeded or not, which is how a page of failures came to be reported
+  // as an absence of data.
+  const analysesFailed = analysisQueries.filter(
+    (query_) => query_.isError,
+  ).length;
 
   const wordCounts = loadedAnalyses
     .map((analysis) => analysis.wordCount)
@@ -610,6 +623,7 @@ export function ContentOptimizerPage({
             analyzedCount={loadedAnalyses.length}
             paaCount={brief.paaQuestions.length}
             analysesPending={analysesPending}
+            analysesFailed={analysesFailed}
           />
 
           {brief.terms.length > 0 ? (
@@ -696,6 +710,9 @@ export function ContentOptimizerPage({
                     const analysis = competitor.url
                       ? analysisByUrl.get(competitor.url)
                       : undefined;
+                    const analysisFailed = competitor.url
+                      ? failedUrls.has(competitor.url)
+                      : false;
                     return (
                       <tr key={`${competitor.rank}-${competitor.url}`}>
                         <td className="align-top tabular-nums">
@@ -715,7 +732,15 @@ export function ContentOptimizerPage({
                           </div>
                         </td>
                         <td className="text-right align-top tabular-nums">
-                          {competitorsAuthorized && analysis === undefined ? (
+                          {analysisFailed ? (
+                            <span
+                              className="text-base-content/40"
+                              title="This page could not be analyzed."
+                            >
+                              failed
+                            </span>
+                          ) : competitorsAuthorized &&
+                            analysis === undefined ? (
                             <span className="loading loading-dots loading-xs" />
                           ) : analysis?.wordCount != null ? (
                             analysis.wordCount.toLocaleString()
@@ -724,7 +749,15 @@ export function ContentOptimizerPage({
                           )}
                         </td>
                         <td className="text-right align-top tabular-nums">
-                          {competitorsAuthorized && analysis === undefined ? (
+                          {analysisFailed ? (
+                            <span
+                              className="text-base-content/40"
+                              title="This page could not be analyzed."
+                            >
+                              failed
+                            </span>
+                          ) : competitorsAuthorized &&
+                            analysis === undefined ? (
                             <span className="loading loading-dots loading-xs" />
                           ) : (
                             (analysis?.h2.length ?? "—")
