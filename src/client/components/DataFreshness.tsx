@@ -48,10 +48,26 @@ function formatRelativeTime(value: string | number | Date): string {
 }
 
 /**
- * Compact "Updated {relative} · Refresh" chip for metered, cached research
- * pages (Domain Overview, Competitors). Surfaces how old the DataForSEO-backed
- * data is and, when `onRefresh` is provided, offers a deliberate refetch that
- * may cost a live request. Renders nothing without a valid timestamp.
+ * Compact "Cached {relative} · Refresh" chip for metered research pages
+ * (Domain Overview, Competitors, Backlinks).
+ *
+ * It says "Cached", not "Updated", because that is what the number means. Every
+ * one of these surfaces reads a server-side R2 cache before it will spend, so
+ * the figures on screen are a stored answer with an age — not a live reading.
+ *
+ * That wording also explains a behaviour that otherwise looks broken: pressing
+ * Refresh inside the cache window returns the SAME data and the timestamp does
+ * not move. `fetchedAt` is stored inside the cached payload, so a cache hit
+ * replays the original time. Users could already see the timestamp sitting
+ * still; nothing told them why.
+ *
+ * Deliberately no specific window in the copy. The TTLs differ per surface —
+ * 6h for backlinks, 12h for domain overview and competitors, 24h for rank
+ * history — and they live in server constants. A number duplicated here would
+ * drift the first time one of them changed, and a confidently wrong "cached for
+ * 6 hours" is worse than an honest "cached".
+ *
+ * Renders nothing without a valid timestamp.
  */
 export function DataFreshness({
   fetchedAt,
@@ -68,7 +84,11 @@ export function DataFreshness({
       className={`flex items-center gap-1.5 text-xs text-base-content/60 ${className ?? ""}`}
     >
       <History className="size-3.5 shrink-0" />
-      <span>Updated {formatRelativeTime(date)}</span>
+      {/* The exact time on hover: "3 hours ago" is the right density for a chip,
+          but someone comparing two runs needs the real timestamp. */}
+      <span title={date.toLocaleString()}>
+        Cached {formatRelativeTime(date)}
+      </span>
       {onRefresh ? (
         <>
           <span aria-hidden="true">·</span>
@@ -77,8 +97,8 @@ export function DataFreshness({
             onClick={onRefresh}
             disabled={refreshing}
             className="btn btn-ghost btn-xs gap-1 px-1.5 text-base-content/60 hover:text-base-content"
-            title="Refresh this data — may use a DataForSEO request"
-            aria-label="Refresh data (may use a DataForSEO request)"
+            title="Check for newer data. Results are cached, so refreshing soon after a run returns the same figures and the time above will not change."
+            aria-label="Check for newer data. Results are cached, so refreshing soon after a run returns the same figures."
           >
             <RotateCw
               className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
