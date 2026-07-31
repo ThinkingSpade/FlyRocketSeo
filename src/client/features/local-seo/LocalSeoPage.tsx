@@ -29,6 +29,8 @@ import { GbpWriteSection } from "./GbpWriteSection";
 import { LocalReviewsSection } from "./LocalReviewsSection";
 import { CitationTrackerSection } from "@/client/features/citations/CitationTrackerSection";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { resolveQueryState } from "@/client/components/state/queryState";
+import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -95,12 +97,23 @@ export function LocalSeoPage({
       getBusinessProfile({ data: { projectId, keyword: runKeyword ?? "" } }),
   });
 
-  const errorMessage = profileQuery.isError
-    ? getStandardErrorMessage(profileQuery.error)
-    : null;
   const profile =
     profileQuery.data ??
     (runKeyword == null ? cachedBusiness?.profile : undefined);
+
+  const profileState = resolveQueryState({
+    // `isFetching`, not `isPending`. This query is disabled until a lookup is
+    // authorized, and a disabled react-query stays pending forever — so
+    // `isPending` would report "loading" on a page nobody has run yet. What
+    // matters here is a request in flight with nothing to show behind it.
+    isPending: profileQuery.isFetching && profile === undefined,
+    isError: profileQuery.isError,
+    // Presence of a RESPONSE, never `profile.found`. A provider that looked and
+    // found nothing is a successful answer, and it carries spelling/city
+    // guidance the caller renders below; treating it as empty would replace
+    // that advice with a generic shrug.
+    rowCount: profile === undefined ? 0 : 1,
+  });
   const profileKeyword = runKeyword ?? cachedBusiness?.keyword ?? businessGuess;
   // Google's own identifiers first (stable across re-lookups of the same
   // business), falling back to the lookup keyword only when neither is
@@ -201,10 +214,6 @@ export function LocalSeoPage({
         </div>
       </div>
 
-      {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
-      ) : null}
-
       {runKeyword == null && !profile ? (
         <AnalyzeDomainPrompt
           domain={projectDomain}
@@ -224,51 +233,71 @@ export function LocalSeoPage({
           }}
           isBusy={profileQuery.isFetching}
         />
-      ) : profile ? (
-        !profile.found ? (
-          <div className="card border border-base-300 bg-base-100">
-            <div className="card-body items-center py-12 text-sm text-base-content/60">
-              No Google Business Profile found for &ldquo;
-              {runKeyword ?? input}&rdquo;. Try adding the city or checking the
-              spelling.
+      ) : (
+        <QueryStateBoundary
+          state={profileState}
+          loading={
+            <div className="card border border-base-300 bg-base-100">
+              <div className="card-body items-center gap-2 py-12 text-sm text-base-content/60">
+                <span className="loading loading-spinner loading-md" />
+                Looking up the business profile…
+              </div>
             </div>
-          </div>
-        ) : (
-          <>
-            <ProfileCard profile={profile} />
-            {audit ? (
-              <GbpAuditCard audit={audit} projectId={projectId} />
-            ) : null}
-            <GbpWriteSection projectId={projectId} />
-            {profileKeyword ? (
-              <LocalReviewsSection
-                // Remounts on a new business so a stale taskId/reviews list
-                // from the previous lookup can never get silently attributed
-                // to this one -- both this section's own display and the
-                // audit's owner-response check depend on that not happening.
-                // handleReviewsLoaded tags what it stores with businessKey,
-                // which is the other half of that guarantee: see
-                // gbpReviewsScope.ts for why the remount alone isn't enough.
-                key={profileKeyword}
-                projectId={projectId}
-                keyword={profileKeyword}
-                onReviewsLoaded={handleReviewsLoaded}
-              />
-            ) : null}
-            <CitationTrackerSection
-              // Same remount-on-new-business reasoning as LocalReviewsSection
-              // above -- a stale authorized run for the previous business
-              // must never be silently reused for this one.
-              key={profileKeyword}
-              projectId={projectId}
-              businessName={profile.title ?? profileKeyword}
-              city={profile.city}
-              region={profile.region}
-              phone={profile.phone}
-            />
-          </>
-        )
-      ) : null}
+          }
+          errorMessage={getStandardErrorMessage(profileQuery.error)}
+          // Reachable only if the lookup resolves without returning a response
+          // object at all — distinct from the found-nothing case below, which is
+          // a successful answer.
+          emptyTitle="The lookup did not come back"
+          emptyBody="Nothing was returned for that search. Try running it again."
+        >
+          {profile ? (
+            !profile.found ? (
+              <div className="card border border-base-300 bg-base-100">
+                <div className="card-body items-center py-12 text-sm text-base-content/60">
+                  No Google Business Profile found for &ldquo;
+                  {runKeyword ?? input}&rdquo;. Try adding the city or checking
+                  the spelling.
+                </div>
+              </div>
+            ) : (
+              <>
+                <ProfileCard profile={profile} />
+                {audit ? (
+                  <GbpAuditCard audit={audit} projectId={projectId} />
+                ) : null}
+                <GbpWriteSection projectId={projectId} />
+                {profileKeyword ? (
+                  <LocalReviewsSection
+                    // Remounts on a new business so a stale taskId/reviews list
+                    // from the previous lookup can never get silently attributed
+                    // to this one -- both this section's own display and the
+                    // audit's owner-response check depend on that not happening.
+                    // handleReviewsLoaded tags what it stores with businessKey,
+                    // which is the other half of that guarantee: see
+                    // gbpReviewsScope.ts for why the remount alone isn't enough.
+                    key={profileKeyword}
+                    projectId={projectId}
+                    keyword={profileKeyword}
+                    onReviewsLoaded={handleReviewsLoaded}
+                  />
+                ) : null}
+                <CitationTrackerSection
+                  // Same remount-on-new-business reasoning as LocalReviewsSection
+                  // above -- a stale authorized run for the previous business
+                  // must never be silently reused for this one.
+                  key={profileKeyword}
+                  projectId={projectId}
+                  businessName={profile.title ?? profileKeyword}
+                  city={profile.city}
+                  region={profile.region}
+                  phone={profile.phone}
+                />
+              </>
+            )
+          ) : null}
+        </QueryStateBoundary>
+      )}
     </AppPageShell>
   );
 }
