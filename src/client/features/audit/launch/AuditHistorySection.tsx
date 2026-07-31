@@ -7,13 +7,36 @@ export function AuditHistorySection({
   projectId,
   history,
   isLoading,
+  loadFailed = false,
   onDelete,
 }: {
   projectId: string;
   history: Awaited<ReturnType<typeof getAuditHistory>>;
   isLoading: boolean;
+  /** The history request failed. Distinct from having no audits: one means
+   *  the list could not be read, the other that none have been run. */
+  loadFailed?: boolean;
   onDelete: (auditId: string) => void;
 }) {
+  // Before the empty state, always. A failed read also has zero rows, and
+  // "No audits yet" tells someone with a year of history that they have never
+  // run one -- then invites them to spend on a fresh audit to fix it.
+  if (loadFailed && history.length === 0) {
+    return (
+      <div className="flex items-center justify-center py-16">
+        <div className="space-y-2 text-center text-base-content/50">
+          <ScanSearch className="mx-auto size-12 opacity-30" />
+          <p className="text-sm font-medium">
+            Previous audits could not be loaded
+          </p>
+          <p className="text-sm">
+            Any audits you have run are still there — only this list failed.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (history.length === 0 && !isLoading) {
     return (
       <div className="flex items-center justify-center py-16">

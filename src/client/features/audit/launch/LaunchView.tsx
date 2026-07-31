@@ -62,6 +62,7 @@ function LaunchContent({
         projectId={projectId}
         history={controller.historyQuery.data ?? []}
         isLoading={controller.historyQuery.isLoading}
+        loadFailed={controller.historyQuery.isError}
         onDelete={controller.deleteAudit}
       />
     </AppPageShell>

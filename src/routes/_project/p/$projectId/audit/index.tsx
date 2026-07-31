@@ -17,6 +17,8 @@ import {
   HttpStatusBadge,
   StatusBadge,
 } from "@/client/features/audit/shared";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
   "/_project/p/$projectId/audit/",
@@ -169,6 +171,18 @@ function AuditDetail({
               </p>
             </div>
           </div>
+        )}
+
+        {/* A completed audit whose results fail to load used to render nothing
+            at all: the condition required `resultsQuery.data`, so a rejected
+            request produced a blank page under a "complete" header, with no
+            error and no way to retry. Re-reading a finished audit is free. */}
+        {isComplete && resultsQuery.isError && (
+          <InlineQueryError
+            message={getStandardErrorMessage(resultsQuery.error)}
+            onRetry={() => void resultsQuery.refetch()}
+            retrying={resultsQuery.isFetching}
+          />
         )}
 
         {isComplete && resultsQuery.data && (
