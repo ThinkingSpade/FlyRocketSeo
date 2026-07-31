@@ -8,7 +8,12 @@ WORKDIR /app
 
 RUN corepack enable && corepack prepare pnpm@10.30.1 --activate
 
+# `patches/` must come across with the manifests, not with the `COPY . .` below:
+# pnpm-workspace.yaml declares `patchedDependencies`, and `pnpm install` hashes
+# the patch file to verify it against the lockfile. Without it here the install
+# fails before any source is copied.
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+COPY patches/ ./patches/
 RUN pnpm install --frozen-lockfile
 
 COPY . .
