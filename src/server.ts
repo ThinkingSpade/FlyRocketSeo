@@ -1,7 +1,4 @@
-import {
-  createStartHandler,
-  defaultStreamHandler,
-} from "@tanstack/react-start/server";
+import { createStartHandler } from "@tanstack/react-start/server";
 import { routeAgentRequest } from "agents";
 import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve";
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
@@ -22,7 +19,23 @@ import {
   handleAutumnWebhookRequest,
 } from "@/server/billing/autumn-webhook";
 
-const appFetch = createStartHandler(defaultStreamHandler);
+// `defaultStreamHandler` is loaded at the point of use, not imported at the
+// top, because it is the only thing on this file's static graph that drags in
+// `react-dom/server` (~200 KB) — and it is needed ONLY when the Worker actually
+// renders a page. Server-function calls (`/_serverFn/*`), API routes and auth
+// never render React, yet they were paying to evaluate the renderer first.
+//
+// That matters here far more than it would on a long-lived server: measured
+// 2026-07-31, this Worker's isolate does not survive long, so the eager graph is
+// re-evaluated far more often than once. Page routes are served as a
+// prerendered static shell from the edge, so this path is rarer still.
+//
+// `import()` is module-cached, so a request that does render pays it once per
+// isolate, exactly as a static import did.
+const appFetch = createStartHandler(async (ctx) => {
+  const { defaultStreamHandler } = await import("@tanstack/react-start/server");
+  return defaultStreamHandler(ctx);
+});
 const flyRocketSeoOAuthProvider = createFlyRocketSeoOAuthProvider(appFetch);
 
 // Authorize an onboarding-chat connection in the Worker, before it reaches the
