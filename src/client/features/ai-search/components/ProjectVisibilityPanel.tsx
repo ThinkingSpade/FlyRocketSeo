@@ -1,3 +1,13 @@
+import {
+  meteredActionLabel,
+  meteredEstimateNote,
+} from "@/client/components/MeteredActionLabel";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { applyBillingMarkupUsd } from "@/shared/billing";
+import {
+  BRAND_LOOKUP_COMPETITOR_RAW_COST_USD,
+  BRAND_LOOKUP_RAW_COST_USD,
+} from "@/shared/analysis-costs";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Radar, RefreshCw } from "lucide-react";
@@ -24,6 +34,18 @@ import {
  * stored snapshots. Renders nothing when the project has no domain, so the tab
  * falls back to its ad-hoc search + recent-searches default.
  */
+
+// The project analysis runs the same Brand Lookup fan-out, so it costs what that
+// costs -- reuse the MEASURED constants rather than inventing a second figure.
+// Hosted customers pay the marked-up price; self-hosted users pay DataForSEO
+// directly, which is what `applyBillingMarkupUsd` is gated on.
+const BRAND_ANALYSIS_DISPLAYED_COST_USD = isHostedClientAuthMode()
+  ? applyBillingMarkupUsd(BRAND_LOOKUP_RAW_COST_USD)
+  : BRAND_LOOKUP_RAW_COST_USD;
+const BRAND_COMPETITOR_DISPLAYED_COST_USD = isHostedClientAuthMode()
+  ? applyBillingMarkupUsd(BRAND_LOOKUP_COMPETITOR_RAW_COST_USD)
+  : BRAND_LOOKUP_COMPETITOR_RAW_COST_USD;
+
 export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [competitorsInput, setCompetitorsInput] = useState("");
@@ -103,7 +125,11 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
           ) : (
             <RefreshCw className="size-4" />
           )}
-          {latest ? "Re-analyze" : `Analyze ${domain}`}
+          {meteredActionLabel(
+            latest ? "Re-analyze" : `Analyze ${domain}`,
+            { kind: "estimateUsd", usd: BRAND_ANALYSIS_DISPLAYED_COST_USD },
+            true,
+          )}
         </button>
       </div>
 
@@ -118,6 +144,21 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
           disabled={analyzing}
         />
       </label>
+
+      {/* The price lives here rather than on the button because the run is
+          server-cached: a repeat inside the window spends nothing, so quoting a
+          figure ON the control would overstate what pressing it costs. The
+          competitor line is conditional because those two extra cross-platform
+          calls only happen when the field has entries. */}
+      <p className="text-xs text-base-content/50">
+        {meteredEstimateNote(
+          { kind: "estimateUsd", usd: BRAND_ANALYSIS_DISPLAYED_COST_USD },
+          true,
+        )}
+        {parseCompetitorList(competitorsInput).length > 0
+          ? ` Plus ~$${BRAND_COMPETITOR_DISPLAYED_COST_USD.toFixed(2)} to compare competitors.`
+          : null}
+      </p>
 
       {historyQuery.isPending && Boolean(domain) ? (
         <div className="flex items-center gap-2 py-4 text-sm text-base-content/60">

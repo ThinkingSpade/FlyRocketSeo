@@ -1,3 +1,4 @@
+import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { useState, type ReactNode } from "react";
 import {
   ChevronDown,
@@ -120,7 +121,13 @@ export function MoreMenu({
             className={`size-3.5 ${metricsRefreshing ? "animate-spin" : ""}`}
           />
         }
-        label={metricsRefreshing ? "Refreshing..." : "Update keyword stats"}
+        label={
+          metricsRefreshing
+            ? "Refreshing..."
+            : meteredActionLabel("Update keyword stats", {
+                kind: "credits",
+              })
+        }
         description="Volume, difficulty & CPC — not rankings"
         onClick={onRefreshMetrics}
         disabled={metricsRefreshing || !hasData}

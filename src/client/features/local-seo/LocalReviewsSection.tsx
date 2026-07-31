@@ -6,6 +6,7 @@ import {
   getBusinessReviewsResult,
   startBusinessReviews,
 } from "@/serverFunctions/local-seo";
+import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { ReviewAnalyticsCards } from "./ReviewAnalyticsCards";
 import {
   clearReviewsTask,
@@ -128,7 +129,10 @@ export function LocalReviewsSection({
                   Crawling reviews…
                 </>
               ) : (
-                "Fetch reviews"
+                meteredActionLabel("Fetch reviews", {
+                  kind: "paidRequests",
+                  count: 1,
+                })
               )}
             </button>
           </div>

@@ -28,6 +28,7 @@ import { GbpAuditCard } from "./GbpAuditCard";
 import { GbpWriteSection } from "./GbpWriteSection";
 import { LocalReviewsSection } from "./LocalReviewsSection";
 import { CitationTrackerSection } from "@/client/features/citations/CitationTrackerSection";
+import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
@@ -207,7 +208,11 @@ export function LocalSeoPage({
               ) : (
                 <Search className="size-3.5" />
               )}
-              Look up
+              {meteredActionLabel(
+                "Look up",
+                { kind: "paidRequests", count: 1 },
+                true,
+              )}
             </button>
           </form>
           <LocalGscContext projectId={projectId} context={projectContext} />

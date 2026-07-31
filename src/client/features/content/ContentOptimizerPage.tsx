@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
 import { NotebookPen, Search } from "lucide-react";
+import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { BriefTargets, quantile } from "@/client/features/content/BriefTargets";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
 import { useContentBriefHistory } from "@/client/features/content/useContentBriefHistory";
@@ -186,7 +187,11 @@ function BuildBriefButton({
         ) : (
           <Search className="size-3.5" />
         )}
-        Build brief
+        {meteredActionLabel(
+          "Build brief",
+          { kind: "paidRequests", count: 4 },
+          true,
+        )}
       </button>
     </div>
   );
