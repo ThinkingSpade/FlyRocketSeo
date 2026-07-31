@@ -12,6 +12,53 @@ export const CACHE_TTL = {
 const CACHE_PREFIX = "dataforseo-cache/";
 
 /**
+ * Where a recorded analysis run keeps its own copy of the result.
+ *
+ * This prefix exists because the cache prefix above is NOT durable, contrary to
+ * what `getCachedRawIgnoringTtl` below used to assume. The bucket carries a
+ * lifecycle rule — `dataforseo-cache-expiry`, `prefix: dataforseo-cache/`,
+ * "expire objects after 7 days" — that HARD DELETES cached payloads. The code
+ * never deletes them, so the assumption looked safe from inside the repo, but
+ * Cloudflare does it at the bucket level.
+ *
+ * The consequence was that `analysis_runs` rows (which live forever in D1)
+ * pointed at objects that vanished after a week, so every run older than seven
+ * days restored as `null` and the tab silently showed its blank "never run
+ * this" state. Verified in production 2026-07-31: an 8-day-old page_explorer
+ * run's object was gone, a 2-day-old serp_overview run's object was present.
+ *
+ * Run payloads therefore get their own copy under this prefix, which must be
+ * covered by its own 90-day lifecycle rule rather than the 7-day one. Keep the
+ * two prefixes disjoint: the cache is for avoiding PAID re-fetches, this is for
+ * letting a user re-open something they already paid for.
+ */
+const RUN_PAYLOAD_PREFIX = "analysis-runs/";
+
+/**
+ * Store a recorded run's result under the durable prefix.
+ *
+ * Best effort, like the run record itself: history is secondary to the analysis
+ * the user already paid for, so a write failure is logged rather than thrown.
+ */
+export async function putRunPayload(
+  cacheKey: string,
+  rawJson: string,
+): Promise<void> {
+  try {
+    await env.R2.put(`${RUN_PAYLOAD_PREFIX}${cacheKey}`, rawJson);
+  } catch (error) {
+    console.error("r2-cache.putRunPayload failed:", error);
+  }
+}
+
+/** A recorded run's durable copy, or null when it was never written. */
+export async function getRunPayload(cacheKey: string): Promise<string | null> {
+  const obj = await env.R2.get(`${RUN_PAYLOAD_PREFIX}${cacheKey}`);
+  if (!obj) return null;
+  return obj.text();
+}
+
+/**
  * Build a deterministic cache key from an endpoint slug and input params.
  * Uses a SHA-256 digest for stability across runtimes.
  */

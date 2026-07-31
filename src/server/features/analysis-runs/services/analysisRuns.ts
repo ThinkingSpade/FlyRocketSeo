@@ -1,5 +1,9 @@
 import { AnalysisRunRepository } from "@/server/features/analysis-runs/repositories/AnalysisRunRepository";
-import { getCachedRawIgnoringTtl } from "@/server/lib/r2-cache";
+import {
+  getCachedRawIgnoringTtl,
+  getRunPayload,
+  putRunPayload,
+} from "@/server/lib/r2-cache";
 
 /**
  * Cross-tab analysis-run history: what was run, when, and how to get it back.
@@ -28,6 +32,25 @@ type RecordRunInput = {
  */
 async function record(input: RecordRunInput): Promise<void> {
   try {
+    // Take the run's OWN copy of the result before recording the row.
+    //
+    // The row used to point straight at the shared DataForSEO cache object,
+    // which the bucket's `dataforseo-cache-expiry` lifecycle rule hard-deletes
+    // after 7 days. D1 rows never expire, so every run older than a week became
+    // a dead link and the tab silently rendered its "never run this" empty
+    // state (measured in production 2026-07-31). Copying here is what makes the
+    // history outlive the cache — see RUN_PAYLOAD_PREFIX in r2-cache.ts.
+    //
+    // Reading through `getCachedRawIgnoringTtl` is deliberate: the caller has
+    // just written this key, and reading the stored text avoids re-serializing
+    // a payload whose exact bytes the restore path will parse. A miss here is
+    // survivable — the row is still recorded, and restore falls back to the
+    // cache object for as long as it lives.
+    const raw = await getCachedRawIgnoringTtl(input.cacheKey);
+    if (raw != null) {
+      await putRunPayload(input.cacheKey, raw);
+    }
+
     await AnalysisRunRepository.record({
       projectId: input.projectId,
       feature: input.feature,
@@ -71,7 +94,14 @@ async function hydrate(
 ): Promise<RestoredRun | null> {
   if (!row) return null;
 
-  const resultJson = await getCachedRawIgnoringTtl(row.cacheKey);
+  // The run's own durable copy first, then the shared cache object as a
+  // fallback. The fallback is what keeps runs recorded BEFORE this fix
+  // restorable for as long as their cache object survives; once every run has
+  // its own copy it becomes dead code, but removing it early would strand
+  // exactly the recent runs a user is most likely to want back.
+  const resultJson =
+    (await getRunPayload(row.cacheKey)) ??
+    (await getCachedRawIgnoringTtl(row.cacheKey));
   if (resultJson == null) return null;
 
   return {
