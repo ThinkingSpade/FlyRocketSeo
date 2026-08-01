@@ -108,6 +108,9 @@ async function getPageExplorer(
   // Page-level backlink profile; best-effort (a page with no backlink data is
   // normal, and a Backlinks API hiccup shouldn't sink the keyword view).
   let backlinks: PageExplorerResult["backlinks"] = null;
+  // Carried alongside `backlinks` so the UI can tell "this page has no backlink
+  // data" apart from "we failed to ask". Both used to render as two dashes.
+  let backlinksStatus: PageExplorerResult["backlinksStatus"] = "no-data";
   try {
     const summary = await dataforseo.backlinks.summary({ target: input.url });
     const parsed = summaryItemSchema.safeParse(summary);
@@ -117,9 +120,15 @@ async function getPageExplorer(
         backlinks: parsed.data.backlinks ?? null,
         referringDomains: parsed.data.referring_domains ?? null,
       };
+      backlinksStatus = "available";
+    } else {
+      // A response we cannot read is a failure to answer, not an answer of
+      // "none" — the user should not be told this page has no backlinks.
+      backlinksStatus = "error";
     }
   } catch (error) {
     console.warn("page-explorer backlinks summary failed:", error);
+    backlinksStatus = "error";
   }
 
   const result: PageExplorerResult = {
@@ -134,6 +143,7 @@ async function getPageExplorer(
       keywords.reduce((sum, item) => sum + (item.traffic ?? 0), 0),
     ),
     backlinks,
+    backlinksStatus,
     fetchedAt: new Date().toISOString(),
   };
 

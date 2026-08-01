@@ -361,6 +361,14 @@ export function CompetitorsPage({
           target={target}
           competitor={competitor}
           competitorRows={competitorRows}
+          competitorsState={{
+            isError: competitorsQuery.isError,
+            isFetching: competitorsQuery.isFetching,
+            // A restored past run is a real answer too, even though no live
+            // query ran for it.
+            hasResult:
+              competitorsQuery.data != null || restored?.result != null,
+          }}
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}
           onCompareCompetitor={(domain) => {

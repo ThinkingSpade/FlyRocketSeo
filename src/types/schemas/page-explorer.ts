@@ -45,5 +45,19 @@ export const pageExplorerSchema = z.object({
   totalKeywords: z.number().nullable(),
   estimatedTraffic: z.number(),
   backlinks: pageBacklinksSchema.nullable(),
+  /**
+   * Why `backlinks` is null, when it is.
+   *
+   * The backlink lookup is a separate best-effort subcall: a failure is caught
+   * and logged, `backlinks` stays null, and the parent result still succeeds.
+   * That is right — a Backlinks API hiccup should not sink the keyword view —
+   * but it meant a FAILED paid subcall and a page that genuinely has no
+   * backlink data both rendered as two dashes with no error anywhere.
+   *
+   * `.default("no-data")` is load-bearing: a required field would fail
+   * `safeParse` against every payload already cached under the old shape,
+   * which auto-restore drops silently, so old runs would stop restoring.
+   */
+  backlinksStatus: z.enum(["available", "no-data", "error"]).default("no-data"),
   fetchedAt: z.string(),
 });
