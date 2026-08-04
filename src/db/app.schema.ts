@@ -715,6 +715,79 @@ export const projectTargetAreas = sqliteTable(
   ],
 );
 
+// One row per city subdomain a project publishes (austin.example.com,
+// dallas.example.com, ...), for sites whose city pages live on their own
+// hostnames rather than paths. This is deliberately NOT "one project per
+// city": a 500-2,000-subdomain site is one property with many locations, and
+// modelling each as its own project would multiply every per-project cost
+// (metered analyses, the project switcher, the portfolio fan-out) by the city
+// count for no analytical gain.
+//
+// `locationCode` is the whole point of the table -- it pins each host to the
+// DataForSEO city code that `resolveGeo` already knows how to use, so a
+// per-city question can be asked with the right geography instead of the
+// project's national default. It is NULLABLE on purpose: a host whose city
+// could not be resolved MUST be visible as unresolved rather than silently
+// carry a wrong (or guessed) code, which is the same rule
+// `projectTargetAreas.confirmedAt` encodes for proposals.
+export const projectCitySites = sqliteTable(
+  "project_city_sites",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** Full lowercased hostname, e.g. "austin.example.com". */
+    host: text("host").notNull(),
+    /** The leading DNS label the city was derived FROM, e.g. "austin". Kept
+     * so a re-match after a geo_locations re-seed can rerun the same
+     * derivation without re-parsing the host string. */
+    subdomainLabel: text("subdomain_label").notNull(),
+    /** Bare resolved city name ("Austin"), NULL until a match is made. */
+    cityName: text("city_name"),
+    /** Two-letter state code of the matched city, e.g. "TX". */
+    stateCode: text("state_code"),
+    /** DataForSEO city location code. NULL = unresolved; never guessed. */
+    locationCode: integer("location_code"),
+    /** The matched city's metro, when it has one -- lets a caller roll several
+     * city hosts up to one DMA without a second lookup. */
+    parentMetroCode: integer("parent_metro_code"),
+    // "matched"    -- exactly one city resolved, locationCode is set.
+    // "ambiguous"  -- the name exists in several states and no state hint in
+    //                 the host picked one (there are six US cities called
+    //                 Dallas); locationCode stays NULL until a human picks.
+    // "unmatched"  -- no seeded city carries this name at all.
+    matchStatus: text("match_status", {
+      enum: ["matched", "ambiguous", "unmatched"],
+    }).notNull(),
+    /** How locationCode came to be set, so an operator's manual correction is
+     * never silently overwritten by a later automatic re-match. */
+    matchSource: text("match_source", {
+      enum: ["auto", "manual"],
+    })
+      .notNull()
+      .default("auto"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    // Re-importing the same list is the expected way to add newly launched
+    // cities, so "have I already got this host" must be a constraint rather
+    // than a read-then-write race across chunked import calls.
+    uniqueIndex("project_city_sites_project_host_idx").on(
+      table.projectId,
+      table.host,
+    ),
+    // The list view pages by host within a project; the status filter and the
+    // coverage counts both narrow on match_status first.
+    index("project_city_sites_project_status_idx").on(
+      table.projectId,
+      table.matchStatus,
+    ),
+  ],
+);
+
 // ============================================================================
 // Google Business Profile write tables
 // ============================================================================

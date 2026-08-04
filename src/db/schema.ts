@@ -71,6 +71,7 @@ export const {
   gscOauthConfig,
   geoLocations,
   projectTargetAreas,
+  projectCitySites,
   projectProfiles,
   keywordFitVerdicts,
   gbpConnections,

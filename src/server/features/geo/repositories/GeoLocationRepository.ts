@@ -10,7 +10,7 @@
  * — the grep that proves this boundary greps for their names, and a match
  * inside a comment describing the rule would be a confusing false positive.)
  */
-import { and, count as countFn, eq, inArray } from "drizzle-orm";
+import { and, count as countFn, eq, inArray, or } from "drizzle-orm";
 import { db } from "@/db";
 import { geoLocations } from "@/db/schema";
 import { buildNamePrefixWhere } from "./likePattern";
@@ -139,6 +139,17 @@ async function getByCode(
  */
 const QUERY_CHUNK_SIZE = 80;
 
+/** `geo_locations.type` for a city row, as DataForSEO spells it. */
+const CITY_LOCATION_TYPE = "City";
+
+/**
+ * Names per statement in `searchCitiesByNames`. Half of `QUERY_CHUNK_SIZE`
+ * because each name here is a LIKE pattern that can match SEVERAL rows (there
+ * are dozens of US cities called Springfield), so this bounds the ROWS coming
+ * back as well as the bound parameters going out.
+ */
+const NAME_QUERY_CHUNK_SIZE = 40;
+
 async function getByCodes(
   codes: readonly number[],
 ): Promise<GeoLocationSearchResult[]> {
@@ -162,9 +173,69 @@ async function getByCodes(
   return rows;
 }
 
+/**
+ * Every City row whose BARE name is one of `names` — the batch read the city
+ * subdomain importer needs, where one call has to resolve up to a chunk's
+ * worth of city names at once.
+ *
+ * Matched with a `<name>,%` prefix rather than a plain `<name>%` because the
+ * stored value is DataForSEO's full hierarchy ("Austin,Texas,United States"):
+ * the comma is what makes this an EXACT match on the city name instead of a
+ * prefix one, so "austin" cannot also drag in "Austinburg". Reuses
+ * `buildNamePrefixWhere` for the pattern itself rather than hand-rolling the
+ * LIKE — that helper carries the ESCAPE fix that once made every location
+ * search in production return zero rows (see likePattern.ts's own header).
+ *
+ * Deliberately UNLIMITED per chunk. Every other read here caps its rows, but
+ * a cap would be a correctness bug in this one: `matchCity` decides "exactly
+ * one city carries this name" by counting the rows it is handed, so silently
+ * dropping a second Springfield would turn an ambiguous host into a
+ * confidently WRONG location code. Bounding the number of NAMES per statement
+ * (below) is what keeps the result set small instead.
+ *
+ * Same charter as every other read in this file: D1 only, no metered provider,
+ * nothing written.
+ */
+async function searchCitiesByNames(input: {
+  names: readonly string[];
+  countryCode: number;
+}): Promise<GeoLocationSearchResult[]> {
+  if (input.names.length === 0) return [];
+
+  const rows: GeoLocationSearchResult[] = [];
+  // Each name is one more bound parameter on the statement, so this is capped
+  // for the same reason getByCodes' own chunking is.
+  for (let i = 0; i < input.names.length; i += NAME_QUERY_CHUNK_SIZE) {
+    const chunk = input.names.slice(i, i + NAME_QUERY_CHUNK_SIZE);
+    const nameMatches = chunk.map((name) =>
+      buildNamePrefixWhere(geoLocations.name, `${name},`),
+    );
+    const chunkRows = await db
+      .select({
+        code: geoLocations.code,
+        name: geoLocations.name,
+        type: geoLocations.type,
+        stateCode: geoLocations.stateCode,
+        countryCode: geoLocations.countryCode,
+        parentMetroCode: geoLocations.parentMetroCode,
+      })
+      .from(geoLocations)
+      .where(
+        and(
+          eq(geoLocations.countryCode, input.countryCode),
+          eq(geoLocations.type, CITY_LOCATION_TYPE),
+          or(...nameMatches),
+        ),
+      );
+    rows.push(...chunkRows);
+  }
+  return rows;
+}
+
 export const GeoLocationRepository = {
   search,
   count,
   getByCode,
   getByCodes,
+  searchCitiesByNames,
 } as const;

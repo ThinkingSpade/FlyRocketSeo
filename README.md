@@ -25,9 +25,19 @@ page explorer, topic clusters, domain overview, competitors, backlinks, AI
 visibility, prompt explorer, local SEO.
 
 **Your own site** — SEO opportunities (a ranked action plan), Google Search
-Console insights, link opportunities, cannibalization, local rank grid, rank
-tracking, saved keywords, site audit, on-page fixes, and a print-ready client
-report.
+Console insights, link opportunities, cannibalization, local rank grid, city
+sites, rank tracking, saved keywords, site audit, on-page fixes, and a
+print-ready client report.
+
+**City Sites** is for a site that publishes a subdomain per city
+(`austin.example.com`, `dallas.example.com`, ...). Paste the hostnames and each
+one is matched to its DataForSEO city location, so per-city work uses the right
+geography instead of the project's national default. It stays one project — a
+few thousand city subdomains are one property with many locations, not a few
+thousand properties. Importing, browsing and correcting the list is free; a
+hostname whose city is unclear is shown as such rather than pinned to a guess.
+Matching reads the `geo_locations` table, so run **Settings → Seed location
+data** first.
 
 Each project maps to one domain. Analyses are recorded per project, so a tab you
 have run before reopens showing that result instead of a blank form.

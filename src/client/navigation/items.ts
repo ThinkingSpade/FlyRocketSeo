@@ -2,6 +2,7 @@ import {
   Activity,
   Bookmark,
   Bot,
+  Building2,
   ClipboardCheck,
   FileSearch,
   FileText,
@@ -142,6 +143,11 @@ const projectNavItems = [
     label: "Local SEO",
     icon: MapPin,
   },
+  {
+    to: "/p/$projectId/city-sites" as const,
+    label: "City Sites",
+    icon: Building2,
+  },
 ] as const;
 
 const aiNavItem = linkOptions({
@@ -200,6 +206,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/links"),
         byPath("/p/$projectId/cannibalization"),
         byPath("/p/$projectId/local-grid"),
+        byPath("/p/$projectId/city-sites"),
         byPath("/p/$projectId/rank-tracking"),
         byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),

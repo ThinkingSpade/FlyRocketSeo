@@ -664,6 +664,45 @@ export const projectTargetAreas = pgTable(
   ],
 );
 
+// See src/db/app.schema.ts for why this table exists and why a city subdomain
+// is a row here rather than a project of its own -- kept structurally
+// identical (schema-parity.test.ts enforces it), with only the
+// dialect-specific timestamp default differing.
+export const projectCitySites = pgTable(
+  "project_city_sites",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    host: text("host").notNull(),
+    subdomainLabel: text("subdomain_label").notNull(),
+    cityName: text("city_name"),
+    stateCode: text("state_code"),
+    locationCode: integer("location_code"),
+    parentMetroCode: integer("parent_metro_code"),
+    matchStatus: text("match_status", {
+      enum: ["matched", "ambiguous", "unmatched"],
+    }).notNull(),
+    matchSource: text("match_source", {
+      enum: ["auto", "manual"],
+    })
+      .notNull()
+      .default("auto"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("project_city_sites_project_host_idx").on(
+      table.projectId,
+      table.host,
+    ),
+    index("project_city_sites_project_status_idx").on(
+      table.projectId,
+      table.matchStatus,
+    ),
+  ],
+);
+
 // ============================================================================
 // Google Business Profile write tables
 // ============================================================================
