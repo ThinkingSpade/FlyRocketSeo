@@ -79,6 +79,15 @@ const listCitySitesSchema = z.object({
   projectId: z.string().min(1),
   search: z.string().trim().max(120).optional(),
   matchStatus: z.enum(["matched", "ambiguous", "unmatched"]).optional(),
+  /**
+   * Restrict the page to exactly these hosts.
+   *
+   * How the client pages an ordering D1 cannot produce: clicks and impressions
+   * live in Search Console, so ordering by them happens against the
+   * performance map, and this fetches the rows for the resulting slice. Capped
+   * at one page's worth, which is all a slice ever is.
+   */
+  hosts: z.array(z.string().min(1).max(255)).max(200).optional(),
   page: z.number().int().min(1).default(1),
   // Bounded so one render can never ask for the whole registry at once.
   pageSize: z.number().int().min(10).max(200).default(50),
@@ -92,8 +101,40 @@ export const getCitySites = createServerFn({ method: "POST" })
       projectId: context.projectId,
       search: data.search,
       matchStatus: data.matchStatus,
+      hosts: data.hosts,
       page: data.page,
       pageSize: data.pageSize,
+    }),
+  );
+
+const citySitePerformanceSchema = z.object({
+  projectId: z.string().min(1),
+  dateRange: z
+    .enum(["last_7_days", "last_28_days", "last_3_months", "last_6_months"])
+    .default("last_28_days"),
+});
+
+/**
+ * Per-city Search Console performance.
+ *
+ * FREE, like everything else on this page: one first-party Search Console call
+ * on the user's own grant, aggregated by hostname. No metered provider is
+ * touched, and no per-city property has to exist — a Domain property already
+ * reports every subdomain, so one connection covers the whole registry.
+ *
+ * Deliberately a SEPARATE endpoint from `getCitySites` rather than a field on
+ * it. The registry is a local D1 read that should paint immediately; this one
+ * waits on Google. Folding them together would put every table render behind a
+ * network round trip, which is the waterfall this codebase has already removed
+ * from the dashboard once.
+ */
+export const getCitySitePerformance = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(citySitePerformanceSchema)
+  .handler(async ({ data, context }) =>
+    CitySiteService.getPerformance({
+      projectId: context.projectId,
+      dateRange: data.dateRange,
     }),
   );
 

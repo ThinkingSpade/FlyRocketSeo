@@ -32,7 +32,22 @@ import {
   type CitySiteRow,
 } from "@/server/features/city-sites/repositories/CitySiteRepository";
 import { GeoLocationRepository } from "@/server/features/geo/repositories/GeoLocationRepository";
+import {
+  GscService,
+  toGscUnavailable,
+} from "@/server/features/gsc/services/GscService";
+import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
+import {
+  GSC_ANALYTICS_ROW_CEILING,
+  resolveDateRange,
+  type GscDateRange,
+} from "@/server/features/gsc/searchAnalytics";
 import { AppError } from "@/server/lib/errors";
+import {
+  aggregateByHost,
+  sortHostsByPerformance,
+  type HostPerformance,
+} from "@/shared/city-subdomains/hostPerformance";
 import {
   lookupNamesFor,
   matchCity,
@@ -317,6 +332,7 @@ async function list(input: {
   projectId: string;
   search?: string;
   matchStatus?: CitySiteMatchStatus;
+  hosts?: string[];
   page: number;
   pageSize: number;
 }): Promise<CitySiteListResult> {
@@ -325,12 +341,106 @@ async function list(input: {
       projectId: input.projectId,
       search: input.search,
       matchStatus: input.matchStatus,
+      hosts: input.hosts,
       limit: input.pageSize,
       offset: (input.page - 1) * input.pageSize,
     }),
     CitySiteRepository.countsByStatus(input.projectId),
   ]);
   return { ...page, counts };
+}
+
+/**
+ * Backstop on the host set read for the intersection below. Well above the
+ * import ceiling, so a normal registry is always read whole.
+ */
+const CITY_SITE_HOST_SET_LIMIT = 10_000;
+
+type CitySitePerformance = {
+  connected: true;
+  range: { startDate: string; endDate: string };
+  /** City sites only — see getPerformance for why the apex is excluded. */
+  hosts: HostPerformance[];
+  totals: { clicks: number; impressions: number };
+  /** How many city sites Search Console reported anything for. */
+  citiesWithData: number;
+  /**
+   * True when the ceiling stopped the pull. GSC returns rows ordered by clicks
+   * descending, so a truncated pull has the BUSIEST cities and is missing the
+   * quiet tail — a city absent from `hosts` therefore means "not in the top
+   * rows we read", never "no traffic". The UI must say so rather than render a
+   * confident zero.
+   */
+  truncated: boolean;
+  rowsExamined: number;
+};
+
+/**
+ * Per-city Search Console performance, from one free Search Console call.
+ *
+ * The join needs no per-city setup because a Domain property
+ * (`sc-domain:example.com`) already reports every subdomain under one
+ * property, and the `page` dimension hands back full URLs — so the hostname in
+ * each row IS the city site. Connect one property and every city is covered,
+ * including ones launched later.
+ *
+ * A URL-prefix property (`https://example.com/`) covers only that one host, so
+ * this returns whatever that property can see and nothing more. That is a
+ * property-scope fact on Google's side, not something this code can widen.
+ *
+ * FREE. Search Console is a first-party API on the user's own grant; this is
+ * the same class of call the Search Performance tab already makes, and no
+ * metered provider is touched. Read at the analytics ceiling (5000 rows) which
+ * exists as a Worker CPU budget, not an API limit.
+ */
+async function getPerformance(input: {
+  projectId: string;
+  dateRange: GscDateRange;
+}): Promise<CitySitePerformance | { connected: false; reason: string }> {
+  try {
+    const range = resolveDateRange({ dateRange: input.dateRange });
+    const [pull, registryHosts] = await Promise.all([
+      GscService.getAnalyticsPerformance({
+        projectId: input.projectId,
+        startDate: range.startDate,
+        endDate: range.endDate,
+        dimensions: ["page"],
+        rowLimit: GSC_ANALYTICS_ROW_CEILING,
+      }),
+      CitySiteRepository.listAllHosts(
+        input.projectId,
+        CITY_SITE_HOST_SET_LIMIT,
+      ),
+    ]);
+
+    // Keep only hosts that are actually city sites. A Domain property reports
+    // the apex, `www` and any other subdomain alongside the cities, and
+    // folding those into a per-city total would inflate every headline figure
+    // with traffic that belongs to the main site.
+    const hosts = sortHostsByPerformance(
+      aggregateByHost(pull.rows).filter((host) => registryHosts.has(host.host)),
+    );
+    return {
+      connected: true,
+      range: { startDate: range.startDate, endDate: range.endDate },
+      hosts,
+      totals: hosts.reduce(
+        (sum, host) => ({
+          clicks: sum.clicks + host.clicks,
+          impressions: sum.impressions + host.impressions,
+        }),
+        { clicks: 0, impressions: 0 },
+      ),
+      citiesWithData: hosts.length,
+      truncated: pullWasTruncated(pull),
+      rowsExamined: pull.rows.length,
+    };
+  } catch (error) {
+    return toGscUnavailable(error, {
+      projectId: input.projectId,
+      surface: "citySitePerformance",
+    });
+  }
 }
 
 /**
@@ -379,6 +489,7 @@ export const CitySiteService = {
   previewImport,
   importChunk,
   list,
+  getPerformance,
   assignLocation,
   remove,
 } as const;

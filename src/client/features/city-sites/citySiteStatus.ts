@@ -40,6 +40,30 @@ export const CITY_SITE_STATUS_ORDER = [
 
 export const CITY_SITE_PAGE_SIZES = [25, 50, 100, 200] as const;
 
+/**
+ * How the list is ordered. "host" is the D1 ordering; "clicks" is the Search
+ * Console ordering, which the database cannot produce because the figure lives
+ * at Google — see CitySitesPage for how that page is assembled.
+ */
+export type CitySiteSort = "host" | "clicks";
+
+export type CitySiteDateRange =
+  | "last_7_days"
+  | "last_28_days"
+  | "last_3_months"
+  | "last_6_months";
+
+const DATE_RANGES: readonly CitySiteDateRange[] = [
+  "last_7_days",
+  "last_28_days",
+  "last_3_months",
+  "last_6_months",
+];
+
+export function toCitySiteDateRange(value: string): CitySiteDateRange {
+  return DATE_RANGES.find((range) => range === value) ?? "last_28_days";
+}
+
 export function parseCitySitePageSize(
   value: string,
 ): (typeof CITY_SITE_PAGE_SIZES)[number] {

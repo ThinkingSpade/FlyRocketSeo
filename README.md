@@ -39,6 +39,16 @@ hostname whose city is unclear is shown as such rather than pinned to a guess.
 Matching reads the `geo_locations` table, so run **Settings → Seed location
 data** first.
 
+Each city also shows its own Search Console clicks, impressions and average
+position, and the list can be ranked by clicks. That needs **one** connection,
+not one per city: connect a Search Console **domain property**
+(`sc-domain:example.com`), which covers the apex and every subdomain at once,
+so cities launched later report with no extra setup. A URL-prefix property
+(`https://example.com/`) only ever covers that single host. The rollup is one
+free first-party Search Console call — the same class of call the GSC Insights
+tab already makes — and it counts only hosts in the registry, so the main
+site's own traffic never inflates a per-city figure.
+
 Each project maps to one domain. Analyses are recorded per project, so a tab you
 have run before reopens showing that result instead of a blank form.
 

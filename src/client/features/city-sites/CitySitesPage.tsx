@@ -5,18 +5,15 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import {
-  ChevronLeft,
-  ChevronRight,
-  Loader2,
-  Plus,
-  Search,
-  Trash2,
-} from "lucide-react";
+import { Loader2, Plus, Search } from "lucide-react";
 import { toast } from "sonner";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { getCitySites, removeCitySites } from "@/serverFunctions/citySites";
+import {
+  getCitySitePerformance,
+  getCitySites,
+  removeCitySites,
+} from "@/serverFunctions/citySites";
 import type {
   CitySiteMatchStatus,
   CitySiteRow,
@@ -24,11 +21,18 @@ import type {
 import { CitySiteFixModal } from "./CitySiteFixModal";
 import { CitySiteImportModal } from "./CitySiteImportModal";
 import { CitySitesTable } from "./CitySitesTable";
+import { CitySitesBulkBar, CitySitesPagination } from "./CitySitesPagination";
+import {
+  CoverageCard,
+  EmptyState,
+  SearchConsoleSummary,
+} from "./CitySitesSummary";
 import {
   CITY_SITE_PAGE_SIZES,
   CITY_SITE_STATUS_META,
   CITY_SITE_STATUS_ORDER,
-  parseCitySitePageSize,
+  type CitySiteDateRange,
+  type CitySiteSort,
 } from "./citySiteStatus";
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -53,43 +57,113 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [showImport, setShowImport] = React.useState(false);
   const [fixTarget, setFixTarget] = React.useState<CitySiteRow | null>(null);
+  const [sort, setSort] = React.useState<CitySiteSort>("host");
+  const [dateRange, setDateRange] =
+    React.useState<CitySiteDateRange>("last_28_days");
 
   React.useEffect(() => {
     const timer = window.setTimeout(() => {
       setSearch(searchInput);
       setPage(1);
+      // Only the hostname ordering can honour a filter (see the list query),
+      // so searching returns to it rather than leaving a search box that
+      // appears to do nothing.
+      if (searchInput.trim()) setSort("host");
     }, SEARCH_DEBOUNCE_MS);
     return () => window.clearTimeout(timer);
   }, [searchInput]);
 
+  /**
+   * Search Console, on its own query rather than folded into the list.
+   *
+   * The registry is a local read that paints immediately; this one waits on
+   * Google. Keeping them separate means the table is usable while performance
+   * is still in flight, instead of every render sitting behind a round trip.
+   */
+  const performanceQuery = useQuery({
+    queryKey: ["citySitePerformance", projectId, dateRange],
+    queryFn: () => getCitySitePerformance({ data: { projectId, dateRange } }),
+    placeholderData: keepPreviousData,
+  });
+
+  const performance = performanceQuery.data;
+  const performanceConnected = performance?.connected === true;
+  const rankedHosts = React.useMemo(
+    () => (performance?.connected ? performance.hosts : []),
+    [performance],
+  );
+  const performanceByHost = React.useMemo(
+    () => new Map(rankedHosts.map((host) => [host.host, host])),
+    [rankedHosts],
+  );
+
+  // Ranked mode pages over the Search Console ordering, which D1 cannot
+  // produce — so the client slices the ranked host list and asks for exactly
+  // those rows. Falls back to no filter in host mode.
+  const isRanked = sort === "clicks" && performanceConnected;
+  const rankedSlice = React.useMemo(
+    () =>
+      isRanked
+        ? rankedHosts
+            .slice((page - 1) * pageSize, page * pageSize)
+            .map((host) => host.host)
+        : undefined,
+    [isRanked, rankedHosts, page, pageSize],
+  );
+
   const listQuery = useQuery({
-    queryKey: ["citySites", projectId, { search, status, page, pageSize }],
+    queryKey: [
+      "citySites",
+      projectId,
+      { search, status, page, pageSize, hosts: rankedSlice },
+    ],
     queryFn: () =>
       getCitySites({
         data: {
           projectId,
-          search: search.trim() || undefined,
-          matchStatus: status ?? undefined,
-          page,
+          // Ranked mode sends no search or status filter, and the notice above
+          // the table says so. Applying one on top of a client-built slice
+          // would silently return short pages against a total computed from
+          // the unfiltered ranking — a filter that appears to work and does
+          // not. Changing either filter switches back to Hostname instead.
+          search: isRanked ? undefined : search.trim() || undefined,
+          matchStatus: isRanked ? undefined : (status ?? undefined),
+          hosts: rankedSlice,
+          // A ranked page is already the exact row set; asking for page 2 of it
+          // would return nothing.
+          page: isRanked ? 1 : page,
           pageSize,
         },
       }),
     placeholderData: keepPreviousData,
   });
 
-  const rows = listQuery.data?.rows ?? [];
-  const totalCount = listQuery.data?.totalCount ?? 0;
   const counts = listQuery.data?.counts;
-  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const registryTotal = counts
     ? counts.matched + counts.ambiguous + counts.unmatched
     : 0;
+
+  // In ranked mode the server returns the slice in host order, so restore the
+  // Search Console ordering the slice was built from.
+  const rows = React.useMemo(() => {
+    const fetched = listQuery.data?.rows ?? [];
+    if (!rankedSlice) return fetched;
+    const byHost = new Map(fetched.map((row) => [row.host, row]));
+    return rankedSlice
+      .map((host) => byHost.get(host))
+      .filter((row): row is CitySiteRow => row !== undefined);
+  }, [listQuery.data, rankedSlice]);
+
+  const totalCount = isRanked
+    ? rankedHosts.length
+    : (listQuery.data?.totalCount ?? 0);
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   // A selection is only meaningful for rows still on screen; changing the
   // filter or page would otherwise leave invisible rows staged for deletion.
   React.useEffect(() => {
     setSelectedIds(new Set());
-  }, [search, status, page, pageSize]);
+  }, [search, status, page, pageSize, sort]);
 
   React.useEffect(() => {
     if (page > totalPages) setPage(totalPages);
@@ -157,6 +231,7 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
               onClick={() => {
                 setStatus(null);
                 setPage(1);
+                setSort("host");
               }}
             />
             {CITY_SITE_STATUS_ORDER.map((key) => (
@@ -168,11 +243,26 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
                 onClick={() => {
                   setStatus(status === key ? null : key);
                   setPage(1);
+                  // Same reason as the search box: the ranked ordering cannot
+                  // apply a status filter, so selecting one returns to the
+                  // ordering that can.
+                  setSort("host");
                 }}
               />
             ))}
           </div>
         ) : null}
+
+        <SearchConsoleSummary
+          performance={performance}
+          registryTotal={registryTotal}
+          loading={performanceQuery.isLoading}
+          dateRange={dateRange}
+          onDateRangeChange={(next) => {
+            setDateRange(next);
+            setPage(1);
+          }}
+        />
 
         <div className="mt-4 overflow-hidden rounded-lg border border-base-300 bg-base-100">
           <div className="flex flex-wrap items-center gap-3 border-b border-base-300 px-4 py-3">
@@ -186,10 +276,40 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
                 onChange={(event) => setSearchInput(event.target.value)}
               />
             </label>
+
+            {performanceConnected ? (
+              <label className="flex items-center gap-2 text-sm text-base-content/70">
+                <span className="whitespace-nowrap">Sort</span>
+                <select
+                  className="select select-bordered select-sm"
+                  value={sort}
+                  onChange={(event) => {
+                    setSort(
+                      event.target.value === "clicks" ? "clicks" : "host",
+                    );
+                    setPage(1);
+                  }}
+                >
+                  <option value="host">Hostname</option>
+                  <option value="clicks">Clicks</option>
+                </select>
+              </label>
+            ) : null}
+
             {listQuery.isFetching ? (
               <Loader2 className="size-4 animate-spin text-base-content/40" />
             ) : null}
           </div>
+
+          {isRanked ? (
+            <div className="border-b border-base-300 bg-base-200/40 px-4 py-2 text-xs text-base-content/60">
+              Ranked by clicks, so this lists only the{" "}
+              {rankedHosts.length.toLocaleString()} of{" "}
+              {registryTotal.toLocaleString()} city sites Search Console
+              reported in this period. Search and status filters do not apply to
+              this ordering — switch to Hostname to use them.
+            </div>
+          ) : null}
 
           {isEmptyRegistry ? (
             <EmptyState onImport={() => setShowImport(true)} />
@@ -200,6 +320,8 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
           ) : (
             <CitySitesTable
               rows={rows}
+              performanceByHost={performanceByHost}
+              performanceConnected={performanceConnected}
               selectedIds={selectedIds}
               onToggle={toggleRow}
               onToggleAll={toggleAll}
@@ -208,90 +330,27 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
           )}
 
           {totalCount > 0 ? (
-            <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <span className="text-sm tabular-nums text-base-content/70">
-                {(totalCount === 0
-                  ? 0
-                  : (page - 1) * pageSize + 1
-                ).toLocaleString()}
-                –{Math.min(totalCount, page * pageSize).toLocaleString()} of{" "}
-                {totalCount.toLocaleString()}
-              </span>
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 text-sm text-base-content/70">
-                  <span className="whitespace-nowrap">Rows per page</span>
-                  <select
-                    className="select select-bordered select-sm w-20"
-                    value={pageSize}
-                    onChange={(event) => {
-                      setPageSize(parseCitySitePageSize(event.target.value));
-                      setPage(1);
-                    }}
-                  >
-                    {CITY_SITE_PAGE_SIZES.map((size) => (
-                      <option key={size} value={size}>
-                        {size}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <div className="flex items-center gap-2">
-                  <span className="whitespace-nowrap text-sm tabular-nums text-base-content/70">
-                    Page {page.toLocaleString()} of{" "}
-                    {totalPages.toLocaleString()}
-                  </span>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm btn-square"
-                    disabled={page <= 1}
-                    onClick={() => setPage(page - 1)}
-                    aria-label="Previous page"
-                  >
-                    <ChevronLeft className="size-4" />
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-ghost btn-sm btn-square"
-                    disabled={page >= totalPages}
-                    onClick={() => setPage(page + 1)}
-                    aria-label="Next page"
-                  >
-                    <ChevronRight className="size-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <CitySitesPagination
+              page={page}
+              pageSize={pageSize}
+              totalCount={totalCount}
+              totalPages={totalPages}
+              onPageChange={setPage}
+              onPageSizeChange={(nextPageSize) => {
+                setPageSize(nextPageSize);
+                setPage(1);
+              }}
+            />
           ) : null}
         </div>
 
         {selectedIds.size > 0 ? (
-          <div className="fixed inset-x-0 bottom-0 z-20 flex items-center justify-center p-4">
-            <div className="flex items-center gap-3 rounded-full border border-base-300 bg-base-100 px-4 py-2 shadow-lg">
-              <span className="text-sm tabular-nums">
-                {selectedIds.size.toLocaleString()} selected
-              </span>
-              <button
-                type="button"
-                className="btn btn-ghost btn-sm"
-                onClick={() => setSelectedIds(new Set())}
-              >
-                Clear
-              </button>
-              <button
-                type="button"
-                className="btn btn-error btn-sm"
-                disabled={removeMutation.isPending}
-                onClick={() => removeMutation.mutate([...selectedIds])}
-              >
-                {removeMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
-                ) : (
-                  <Trash2 className="size-4" />
-                )}
-                Remove
-              </button>
-            </div>
-          </div>
+          <CitySitesBulkBar
+            selectedCount={selectedIds.size}
+            removing={removeMutation.isPending}
+            onClear={() => setSelectedIds(new Set())}
+            onRemove={() => removeMutation.mutate([...selectedIds])}
+          />
         ) : null}
 
         {showImport ? (
@@ -309,57 +368,6 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
           />
         ) : null}
       </AppPageShell>
-    </div>
-  );
-}
-
-function CoverageCard({
-  label,
-  value,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: number;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`rounded-lg border px-3 py-2 text-left transition-colors ${
-        active
-          ? "border-primary bg-primary/5"
-          : "border-base-300 bg-base-100 hover:border-base-content/25"
-      }`}
-    >
-      <div className="text-lg font-semibold tabular-nums">
-        {value.toLocaleString()}
-      </div>
-      <div className="text-xs text-base-content/60">{label}</div>
-    </button>
-  );
-}
-
-function EmptyState({ onImport }: { onImport: () => void }) {
-  return (
-    <div className="px-4 py-12 text-center">
-      <p className="text-sm font-medium">No city sites yet</p>
-      <p className="mx-auto mt-1 max-w-md text-sm text-base-content/55">
-        Paste your city subdomains and each one is matched to its location
-        automatically. Nothing is charged, and you see the matches before
-        anything is saved.
-      </p>
-      <button
-        type="button"
-        className="btn btn-primary btn-sm mt-4"
-        onClick={onImport}
-      >
-        <Plus className="size-4" />
-        Import subdomains
-      </button>
     </div>
   );
 }

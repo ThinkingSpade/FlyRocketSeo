@@ -68,10 +68,22 @@ function buildWhere(input: {
   projectId: string;
   search?: string;
   matchStatus?: CitySiteMatchStatus;
+  hosts?: readonly string[];
 }) {
   const conditions = [eq(projectCitySites.projectId, input.projectId)];
   if (input.matchStatus) {
     conditions.push(eq(projectCitySites.matchStatus, input.matchStatus));
+  }
+  if (input.hosts) {
+    // An explicit host set is how the caller pages through an ordering this
+    // table cannot produce — clicks live in Search Console, not in D1. An
+    // EMPTY set must therefore match nothing rather than being ignored, or a
+    // "no cities have traffic" page would silently render the whole registry.
+    conditions.push(
+      input.hosts.length > 0
+        ? inArray(projectCitySites.host, [...input.hosts])
+        : sql`1 = 0`,
+    );
   }
   const search = input.search?.trim().toLowerCase();
   if (search) {
@@ -106,6 +118,8 @@ async function listPage(input: {
   projectId: string;
   search?: string;
   matchStatus?: CitySiteMatchStatus;
+  /** Restrict to exactly these hosts; see buildWhere for why empty means none. */
+  hosts?: readonly string[];
   limit: number;
   offset: number;
 }): Promise<{ rows: CitySiteRow[]; totalCount: number }> {
@@ -143,6 +157,31 @@ async function countsByStatus(
   };
   for (const row of rows) counts[row.matchStatus] = row.value;
   return counts;
+}
+
+/**
+ * Every host this project holds, as a set.
+ *
+ * The one deliberately unpaginated read here, because its caller needs the
+ * whole set to answer a set question: Search Console reports every host under
+ * a Domain property — the apex, `www`, a staging subdomain — and only the ones
+ * in this table are city sites. Without the full set, those extra hosts would
+ * be counted into per-city totals.
+ *
+ * Cheap enough to justify the exception: one indexed column, one short string
+ * per row, at the scale this feature is built for. `limit` is a backstop
+ * against a pathological registry rather than an expected path.
+ */
+async function listAllHosts(
+  projectId: string,
+  limit: number,
+): Promise<Set<string>> {
+  const rows = await db
+    .select({ host: projectCitySites.host })
+    .from(projectCitySites)
+    .where(eq(projectCitySites.projectId, projectId))
+    .limit(limit);
+  return new Set(rows.map((row) => row.host));
 }
 
 /**
@@ -255,6 +294,7 @@ async function removeMany(
 export const CitySiteRepository = {
   listPage,
   countsByStatus,
+  listAllHosts,
   findExistingHosts,
   insertMany,
   setLocation,
