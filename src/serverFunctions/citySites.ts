@@ -4,6 +4,10 @@ import {
   CITY_SITE_IMPORT_MAX_HOSTS,
   CitySiteService,
 } from "@/server/features/city-sites/services/CitySiteService";
+import {
+  CityRankTrackingService,
+  MAX_CITY_RANK_SETUP,
+} from "@/server/features/city-sites/services/CityRankTrackingService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 
 /**
@@ -162,6 +166,73 @@ export const assignCitySiteLocation = createServerFn({ method: "POST" })
     });
     return { success: true };
   });
+
+const cityRankSettingsSchema = z.object({
+  projectId: z.string().min(1),
+  citySiteIds: z.array(z.string().min(1)).min(1).max(MAX_CITY_RANK_SETUP),
+  // One template line each; `{city}`/`{state}` are substituted per city.
+  templates: z.array(z.string().trim().min(1).max(200)).min(1).max(50),
+  devices: z.enum(["both", "desktop", "mobile"]),
+  // Matches createConfigSchema's own bounds, since these become real configs.
+  serpDepth: z.number().int().min(10).max(100).multipleOf(10),
+  interval: z.enum(["daily", "weekly", "monthly", "manual"]),
+});
+
+/**
+ * What bulk rank tracking WOULD create, and what it would cost per month.
+ *
+ * FREE and writes nothing. This is the disclosure step: the returned cost
+ * comes from the same estimator the billing guard charges against, so the
+ * figure someone approves is the figure they are billed.
+ */
+export const planCityRankTracking = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(cityRankSettingsSchema)
+  .handler(async ({ data, context }) =>
+    CityRankTrackingService.plan({
+      projectId: context.projectId,
+      citySiteIds: data.citySiteIds,
+      settings: {
+        templates: data.templates,
+        devices: data.devices,
+        serpDepth: data.serpDepth,
+        interval: data.interval,
+      },
+    }),
+  );
+
+const cityRankSetupSchema = cityRankSettingsSchema.extend({
+  offset: z.number().int().min(0).max(MAX_CITY_RANK_SETUP),
+});
+
+/**
+ * Creates rank tracking configs for one bounded slice of the plan.
+ *
+ * SPENDS NOTHING BY ITSELF — creating a config and attaching keywords calls no
+ * provider. What recurs is a config with a schedule, which the cron then runs;
+ * that is why `planCityRankTracking` exists and why the UI defaults the
+ * interval to manual. No check is triggered here, not even for a scheduled
+ * config: its first run happens on its schedule.
+ *
+ * Chunked and resumable for the same Free-plan reason the import is, and safe
+ * to re-run because an existing config is skipped rather than duplicated.
+ */
+export const setupCityRankTracking = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(cityRankSetupSchema)
+  .handler(async ({ data, context }) =>
+    CityRankTrackingService.setupChunk({
+      projectId: context.projectId,
+      citySiteIds: data.citySiteIds,
+      settings: {
+        templates: data.templates,
+        devices: data.devices,
+        serpDepth: data.serpDepth,
+        interval: data.interval,
+      },
+      offset: data.offset,
+    }),
+  );
 
 const removeCitySitesSchema = z.object({
   projectId: z.string().min(1),

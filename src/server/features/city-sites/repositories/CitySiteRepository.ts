@@ -160,6 +160,38 @@ async function countsByStatus(
 }
 
 /**
+ * Full rows for an explicit set of ids, project-scoped.
+ *
+ * Project-scoped rather than a bare id lookup so a foreign id simply returns
+ * nothing instead of leaking another project's registry — the same scoping
+ * every other read here applies.
+ */
+async function getByIds(
+  projectId: string,
+  ids: readonly string[],
+): Promise<CitySiteRow[]> {
+  if (ids.length === 0) return [];
+  const rows: CitySiteRow[] = [];
+  // Each id is a bound parameter; D1 caps them per statement.
+  const CHUNK = 80;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    const chunkRows = await db
+      .select(ROW_COLUMNS)
+      .from(projectCitySites)
+      .where(
+        and(
+          eq(projectCitySites.projectId, projectId),
+          inArray(projectCitySites.id, [...chunk]),
+        ),
+      )
+      .orderBy(asc(projectCitySites.host));
+    rows.push(...chunkRows);
+  }
+  return rows;
+}
+
+/**
  * Every host this project holds, as a set.
  *
  * The one deliberately unpaginated read here, because its caller needs the
@@ -294,6 +326,7 @@ async function removeMany(
 export const CitySiteRepository = {
   listPage,
   countsByStatus,
+  getByIds,
   listAllHosts,
   findExistingHosts,
   insertMany,

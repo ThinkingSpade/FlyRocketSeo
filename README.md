@@ -49,6 +49,15 @@ free first-party Search Console call — the same class of call the GSC Insights
 tab already makes — and it counts only hosts in the registry, so the main
 site's own traffic never inflates a per-city figure.
 
+Selected cities can also be set up for rank tracking in one action, each
+checked at its own location. Keywords are written once as a template —
+`plumber {city}` becomes `plumber austin` — and the setup screen shows the
+exact cost, from the same estimator the billing guard charges against, before
+anything is created. **This is the only part of City Sites that can spend
+money.** Creating the configs is free; a _scheduled_ config is what recurs, so
+the schedule defaults to manual and a recurring cost is always priced on screen
+first. No check is ever triggered at setup, not even for a scheduled config.
+
 Each project maps to one domain. Analyses are recorded per project, so a tab you
 have run before reopens showing that result instead of a blank form.
 

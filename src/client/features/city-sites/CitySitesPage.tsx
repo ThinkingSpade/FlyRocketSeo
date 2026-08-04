@@ -18,6 +18,7 @@ import type {
   CitySiteMatchStatus,
   CitySiteRow,
 } from "@/server/features/city-sites/repositories/CitySiteRepository";
+import { CityRankTrackingModal } from "./CityRankTrackingModal";
 import { CitySiteFixModal } from "./CitySiteFixModal";
 import { CitySiteImportModal } from "./CitySiteImportModal";
 import { CitySitesTable } from "./CitySitesTable";
@@ -57,6 +58,7 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
   const [selectedIds, setSelectedIds] = React.useState<Set<string>>(new Set());
   const [showImport, setShowImport] = React.useState(false);
   const [fixTarget, setFixTarget] = React.useState<CitySiteRow | null>(null);
+  const [showRankSetup, setShowRankSetup] = React.useState(false);
   const [sort, setSort] = React.useState<CitySiteSort>("host");
   const [dateRange, setDateRange] =
     React.useState<CitySiteDateRange>("last_28_days");
@@ -349,6 +351,7 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
             selectedCount={selectedIds.size}
             removing={removeMutation.isPending}
             onClear={() => setSelectedIds(new Set())}
+            onTrackRanks={() => setShowRankSetup(true)}
             onRemove={() => removeMutation.mutate([...selectedIds])}
           />
         ) : null}
@@ -357,6 +360,14 @@ export function CitySitesPage({ projectId }: { projectId: string }) {
           <CitySiteImportModal
             projectId={projectId}
             onClose={() => setShowImport(false)}
+          />
+        ) : null}
+
+        {showRankSetup ? (
+          <CityRankTrackingModal
+            projectId={projectId}
+            citySiteIds={[...selectedIds]}
+            onClose={() => setShowRankSetup(false)}
           />
         ) : null}
 

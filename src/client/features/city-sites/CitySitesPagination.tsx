@@ -1,4 +1,10 @@
-import { ChevronLeft, ChevronRight, Loader2, Trash2 } from "lucide-react";
+import {
+  ChevronLeft,
+  ChevronRight,
+  Loader2,
+  Trash2,
+  TrendingUp,
+} from "lucide-react";
 import { CITY_SITE_PAGE_SIZES, parseCitySitePageSize } from "./citySiteStatus";
 
 /**
@@ -84,11 +90,13 @@ export function CitySitesBulkBar({
   selectedCount,
   removing,
   onClear,
+  onTrackRanks,
   onRemove,
 }: {
   selectedCount: number;
   removing: boolean;
   onClear: () => void;
+  onTrackRanks: () => void;
   onRemove: () => void;
 }) {
   return (
@@ -103,6 +111,14 @@ export function CitySitesBulkBar({
           onClick={onClear}
         >
           Clear
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm"
+          onClick={onTrackRanks}
+        >
+          <TrendingUp className="size-4" />
+          Track ranks
         </button>
         <button
           type="button"
