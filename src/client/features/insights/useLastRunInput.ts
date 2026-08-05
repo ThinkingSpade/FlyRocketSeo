@@ -25,7 +25,10 @@ export function useLastRunInput(
   });
 
   return useMemo(() => {
-    const row = query.data;
+    // `restoreLatestRun` now reports WHY there is nothing, so an expired or
+    // missing run is distinguishable. This hook only wants a prefill value and
+    // has nothing useful to say about either, so both stay null.
+    const row = query.data?.status === "ready" ? query.data.run : null;
     if (!row) return null;
 
     let parsed: unknown;

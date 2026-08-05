@@ -47,6 +47,14 @@ export function useAutoRestoredRun<T>({
   runId?: string | null;
 }): {
   restored: AutoRestoredRun<T> | null;
+  /**
+   * Why `restored` is null. `expired` means the run happened but its stored
+   * result is gone; `unreadable` means it no longer matches this tab's schema.
+   * Both are worth saying out loud rather than showing a blank form.
+   */
+  outcome: "none" | "expired" | "unreadable" | "ready" | null;
+  /** The expired run's own label/date, so the message can name it. */
+  expired: { label: string; lastRanAt: string } | null;
   isRestoring: boolean;
   isError: boolean;
   isRetrying: boolean;
@@ -62,8 +70,29 @@ export function useAutoRestoredRun<T>({
     staleTime: 60_000,
   });
 
+  /**
+   * Why there is nothing to show, when there isn't.
+   *
+   * Every one of these used to collapse to `null`, which callers rendered as
+   * the tab's ordinary "you have never run this" empty state — so a run the
+   * user definitely performed simply vanished, with no error and nothing to
+   * act on. `expired` in particular is common rather than exotic: run payloads
+   * lived under a bucket prefix Cloudflare deletes after 7 days.
+   */
+  const outcome: "none" | "expired" | "unreadable" | "ready" | null =
+    useMemo(() => {
+      if (!query.data) return null;
+      if (query.data.status !== "ready") return query.data.status;
+      try {
+        const raw: unknown = JSON.parse(query.data.run.resultJson);
+        return schema.safeParse(raw).success ? "ready" : "unreadable";
+      } catch {
+        return "unreadable";
+      }
+    }, [query.data, schema]);
+
   const restored = useMemo(() => {
-    const row = query.data;
+    const row = query.data?.status === "ready" ? query.data.run : null;
     if (!row) return null;
 
     let raw: unknown;
@@ -74,7 +103,9 @@ export function useAutoRestoredRun<T>({
     }
 
     // A stored payload that no longer matches the schema is dropped rather than
-    // rendered — the tab just falls back to its empty state.
+    // rendered. Unlike before, this is now REPORTED through `outcome` above —
+    // silently swallowing it is what made a schema change look like "this tab
+    // has never been used".
     const parsed = schema.safeParse(raw);
     if (!parsed.success) return null;
 
@@ -100,6 +131,11 @@ export function useAutoRestoredRun<T>({
 
   return {
     restored,
+    outcome,
+    expired:
+      query.data?.status === "expired"
+        ? { label: query.data.label, lastRanAt: query.data.lastRanAt }
+        : null,
     isRestoring: enabled && query.isPending,
     isError: enabled && query.isError,
     isRetrying: enabled && query.isFetching,

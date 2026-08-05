@@ -34,6 +34,23 @@ export function RecentRunsList({
     staleTime: 60_000,
   });
 
+  // A failed history fetch is not an empty history. Hiding the section on
+  // error made a transport failure look like "you have only run this once".
+  if (query.isError) {
+    return (
+      <section className="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-xs text-base-content/60">
+        Couldn&rsquo;t load recent runs.{" "}
+        <button
+          type="button"
+          className="link"
+          onClick={() => void query.refetch()}
+        >
+          Retry
+        </button>
+      </section>
+    );
+  }
+
   const runs = query.data ?? [];
   if (runs.length < 2) return null;
 
@@ -70,7 +87,11 @@ export function RecentRunsList({
                       staleTime: 60_000,
                     })
                     .then((restored) => {
-                      if (restored == null) {
+                      // `restoreRun` now reports WHY rather than returning
+                      // null, so this checks the status. Anything that is not
+                      // a usable result marks the row expired, which is what
+                      // the old null check meant.
+                      if (restored.status !== "ready") {
                         setExpiredRunIds((current) => {
                           const next = new Set(current);
                           next.add(run.id);
@@ -80,7 +101,17 @@ export function RecentRunsList({
                       }
                       onSelect(run.id);
                     })
-                    .catch(() => undefined)
+                    .catch(() => {
+                      // A transport failure is not proof the run expired, but
+                      // it is proof we could not open it. Marking the row is
+                      // better than the previous silent no-op, which left the
+                      // button looking like it simply did nothing.
+                      setExpiredRunIds((current) => {
+                        const next = new Set(current);
+                        next.add(run.id);
+                        return next;
+                      });
+                    })
                     .finally(() => setCheckingRunId(null));
                 }}
                 className={`flex w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-base-200/60 ${
