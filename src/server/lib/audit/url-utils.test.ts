@@ -39,6 +39,47 @@ describe("isSameOrigin", () => {
       false,
     );
   });
+
+  /**
+   * A crawl boundary stops at the exact host, so a site that publishes a
+   * subdomain per city (austin.example.com, dallas.example.com, ...) is NOT
+   * covered by auditing the apex — each subdomain is its own audit target.
+   *
+   * Pinned in both directions because the rule is enforced by
+   * `withoutWwwPrefix`/`areEquivalentHostnames`, which already had to be
+   * rewritten once after a pair of prefix tests accidentally widened the
+   * boundary. A change there that started accepting subdomains would silently
+   * turn one project's audit into a crawl of thousands of hosts, and a change
+   * that stopped accepting `www` would silently halve an ordinary one.
+   */
+  it("does not follow the apex into a subdomain", () => {
+    expect(
+      isSameOrigin("https://austin.example.com/", "https://example.com"),
+    ).toBe(false);
+    expect(
+      isSameOrigin("https://blog.example.com/post", "https://www.example.com"),
+    ).toBe(false);
+  });
+
+  it("does not follow a subdomain back out to the apex or a sibling", () => {
+    expect(
+      isSameOrigin("https://example.com/", "https://austin.example.com"),
+    ).toBe(false);
+    expect(
+      isSameOrigin("https://dallas.example.com/", "https://austin.example.com"),
+    ).toBe(false);
+  });
+
+  it("still treats a subdomain's own www form as the same site", () => {
+    // The one equivalence that survives: austin.example.com is reachable as
+    // www.austin.example.com, and auditing one must cover the other.
+    expect(
+      isSameOrigin(
+        "https://www.austin.example.com/",
+        "https://austin.example.com",
+      ),
+    ).toBe(true);
+  });
 });
 
 describe("detectUrlTemplate", () => {

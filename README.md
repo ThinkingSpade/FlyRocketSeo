@@ -58,6 +58,13 @@ money.** Creating the configs is free; a _scheduled_ config is what recurs, so
 the schedule defaults to manual and a recurring cost is always priced on screen
 first. No check is ever triggered at setup, not even for a scheduled config.
 
+**Site Audit does not cross into subdomains.** A crawl boundary is the exact
+host (plus its `www` form), so auditing `example.com` never wanders into
+`austin.example.com` — which is what keeps one project's audit from becoming a
+crawl of thousands of hosts. The flip side is that city subdomains are not
+covered by the project's own audit; each is its own audit target, started by
+entering that hostname on the Site Audit tab.
+
 Each project maps to one domain. Analyses are recorded per project, so a tab you
 have run before reopens showing that result instead of a blank form.
 

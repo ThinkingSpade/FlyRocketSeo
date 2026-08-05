@@ -3,6 +3,7 @@ import {
   buildCtrOpportunityRows,
   buildStrikingDistanceRows,
   previousPeriod,
+  splitDailyRowsByPeriod,
   sumSearchTotals,
   toDimensionRows,
 } from "@/server/features/gsc/searchPerformanceReport";
@@ -230,5 +231,87 @@ describe("buildCtrOpportunityRows", () => {
     expect(rows).toHaveLength(1);
     expect(rows[0].query).toBe("big miss");
     expect(rows[0].missedClicks).toBe(140);
+  });
+});
+
+function dayRow(date: string, clicks: number) {
+  return {
+    keys: [date],
+    clicks,
+    impressions: clicks * 10,
+    ctr: 0.1,
+    position: 5,
+  };
+}
+
+describe("splitDailyRowsByPeriod", () => {
+  /**
+   * The property the single-request portfolio fetch rests on: the previous
+   * period ends the day before the current one starts, so one span covers both
+   * and every row lands in exactly one bucket.
+   */
+  it("splits a combined span into the two contiguous periods", () => {
+    const current = { startDate: "2026-06-01", endDate: "2026-06-28" };
+    const previous = previousPeriod(current.startDate, current.endDate);
+
+    const split = splitDailyRowsByPeriod(
+      [
+        dayRow(previous.startDate, 1),
+        dayRow(previous.endDate, 2),
+        dayRow(current.startDate, 3),
+        dayRow(current.endDate, 4),
+      ],
+      {
+        currentStartDate: current.startDate,
+        previousStartDate: previous.startDate,
+      },
+    );
+
+    expect(split.current.map((day) => day.clicks)).toEqual([3, 4]);
+    expect(split.previous.map((day) => day.clicks)).toEqual([1, 2]);
+  });
+
+  it("puts the boundary day in the current period, never both", () => {
+    const split = splitDailyRowsByPeriod([dayRow("2026-06-01", 7)], {
+      currentStartDate: "2026-06-01",
+      previousStartDate: "2026-05-04",
+    });
+
+    expect(split.current).toHaveLength(1);
+    expect(split.previous).toHaveLength(0);
+  });
+
+  it("drops rows before the requested span rather than miscounting them", () => {
+    const split = splitDailyRowsByPeriod([dayRow("2026-01-01", 9)], {
+      currentStartDate: "2026-06-01",
+      previousStartDate: "2026-05-04",
+    });
+
+    expect(split.current).toEqual([]);
+    expect(split.previous).toEqual([]);
+  });
+
+  it("drops a row with no date key", () => {
+    const split = splitDailyRowsByPeriod(
+      [{ keys: [], clicks: 5, impressions: 50, ctr: 0.1, position: 5 }],
+      { currentStartDate: "2026-06-01", previousStartDate: "2026-05-04" },
+    );
+
+    expect(split.current).toEqual([]);
+    expect(split.previous).toEqual([]);
+  });
+
+  it("totals each bucket the same as two separate requests would", () => {
+    const split = splitDailyRowsByPeriod(
+      [
+        dayRow("2026-05-10", 2),
+        dayRow("2026-06-02", 3),
+        dayRow("2026-06-03", 4),
+      ],
+      { currentStartDate: "2026-06-01", previousStartDate: "2026-05-04" },
+    );
+
+    expect(sumSearchTotals(split.current).clicks).toBe(7);
+    expect(sumSearchTotals(split.previous).clicks).toBe(2);
   });
 });

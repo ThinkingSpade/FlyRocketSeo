@@ -1,8 +1,15 @@
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  useMutation,
+  useQuery,
+  useQueryClient,
+} from "@tanstack/react-query";
 import {
   AlertCircle,
   BarChart3,
+  ChevronLeft,
+  ChevronRight,
   ClipboardCheck,
   FolderKanban,
   MousePointerClick,
@@ -29,7 +36,26 @@ const compactFormatter = new Intl.NumberFormat(undefined, {
   maximumFractionDigits: 1,
 });
 
-function PortfolioSummary({ projects }: { projects: PortfolioProject[] }) {
+/**
+ * Headline figures for the portfolio.
+ *
+ * Only "Total projects" can be stated for the whole organization — it comes
+ * from the server's own count. The other three are summed from the rows on
+ * screen, and the portfolio is paged (the page size is a Search Console
+ * subrequest budget, see PORTFOLIO_PAGE_SIZE_MAX), so once there is more than
+ * one page they describe THIS PAGE and say so. Summing a page and labelling it
+ * as the total would be a quietly wrong number on the most prominent row of
+ * the screen.
+ */
+function PortfolioSummary({
+  projects,
+  totalCount,
+  paginated,
+}: {
+  projects: PortfolioProject[];
+  totalCount: number;
+  paginated: boolean;
+}) {
   const summary = React.useMemo(() => {
     let connected = 0;
     let clicks = 0;
@@ -44,24 +70,25 @@ function PortfolioSummary({ projects }: { projects: PortfolioProject[] }) {
     return { connected, clicks, auditIssues };
   }, [projects]);
 
+  const scope = paginated ? " (this page)" : "";
   const items = [
     {
       label: "Total projects",
-      value: String(projects.length),
+      value: String(totalCount),
       icon: FolderKanban,
     },
     {
-      label: "GSC connected",
+      label: `GSC connected${scope}`,
       value: String(summary.connected),
       icon: Search,
     },
     {
-      label: "Clicks this period",
+      label: `Clicks this period${scope}`,
       value: compactFormatter.format(Math.round(summary.clicks)),
       icon: MousePointerClick,
     },
     {
-      label: "Projects with audit issues",
+      label: `Projects with audit issues${scope}`,
       value: String(summary.auditIssues),
       icon: ClipboardCheck,
     },
@@ -150,12 +177,18 @@ export function ProjectsPage() {
     setCurrentProjectId(getLastProjectId());
   }, []);
 
+  const [page, setPage] = React.useState(1);
+
   const portfolioQuery = useQuery({
-    queryKey: ["projects", "portfolio"],
-    queryFn: () => getProjectsPortfolio(),
+    queryKey: ["projects", "portfolio", page],
+    queryFn: () => getProjectsPortfolio({ data: { page } }),
     staleTime: 5 * 60 * 1000,
+    placeholderData: keepPreviousData,
   });
   const projects = portfolioQuery.data?.projects ?? [];
+  const pageSize = portfolioQuery.data?.pageSize ?? 1;
+  const totalCount = portfolioQuery.data?.totalCount ?? 0;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
 
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
@@ -187,7 +220,11 @@ export function ProjectsPage() {
           />
         ) : (
           <>
-            <PortfolioSummary projects={projects} />
+            <PortfolioSummary
+              projects={projects}
+              totalCount={totalCount}
+              paginated={totalPages > 1}
+            />
             <section className="space-y-3" aria-labelledby="projects-heading">
               <div className="flex flex-wrap items-end justify-between gap-2">
                 <div>
@@ -210,6 +247,15 @@ export function ProjectsPage() {
                 projects={projects}
                 currentProjectId={currentProjectId}
               />
+              {totalPages > 1 ? (
+                <PortfolioPagination
+                  page={page}
+                  totalPages={totalPages}
+                  totalCount={totalCount}
+                  busy={portfolioQuery.isFetching}
+                  onPageChange={setPage}
+                />
+              ) : null}
             </section>
           </>
         )}
@@ -220,6 +266,58 @@ export function ProjectsPage() {
       {creating ? (
         <CreateProjectModal onClose={() => setCreating(false)} />
       ) : null}
+    </div>
+  );
+}
+
+/**
+ * Paging for the portfolio.
+ *
+ * The page size is not a display preference — it is the Search Console
+ * subrequest budget one request can spend (see PORTFOLIO_PAGE_SIZE_MAX), which
+ * is why it is fixed by the server rather than offered as a control here.
+ */
+function PortfolioPagination({
+  page,
+  totalPages,
+  totalCount,
+  busy,
+  onPageChange,
+}: {
+  page: number;
+  totalPages: number;
+  totalCount: number;
+  busy: boolean;
+  onPageChange: (page: number) => void;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 rounded-lg border border-base-300 px-4 py-2">
+      <span className="text-sm tabular-nums text-base-content/70">
+        {totalCount.toLocaleString()} projects
+      </span>
+      <div className="flex items-center gap-2">
+        <span className="whitespace-nowrap text-sm tabular-nums text-base-content/70">
+          Page {page.toLocaleString()} of {totalPages.toLocaleString()}
+        </span>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm btn-square"
+          disabled={page <= 1 || busy}
+          onClick={() => onPageChange(page - 1)}
+          aria-label="Previous page"
+        >
+          <ChevronLeft className="size-4" />
+        </button>
+        <button
+          type="button"
+          className="btn btn-ghost btn-sm btn-square"
+          disabled={page >= totalPages || busy}
+          onClick={() => onPageChange(page + 1)}
+          aria-label="Next page"
+        >
+          <ChevronRight className="size-4" />
+        </button>
+      </div>
     </div>
   );
 }

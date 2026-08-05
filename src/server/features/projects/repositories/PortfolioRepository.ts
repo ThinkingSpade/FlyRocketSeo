@@ -12,6 +12,22 @@ import {
   rankTrackingKeywords,
 } from "@/db/schema";
 
+/**
+ * CALLER INVARIANT: every id list passed into this file must already be
+ * bounded.
+ *
+ * Each read below sends its ids as bound parameters in ONE statement, and D1
+ * caps bound parameters per statement — an unbounded list throws rather than
+ * returning a short answer. Nothing here chunks, because nothing needs to: the
+ * only caller is `getPortfolio`, which pages its project list at
+ * `PORTFOLIO_PAGE_SIZE_MAX`, and every other list here is derived from that one
+ * (at most one latest audit, one primary rank config and one latest run per
+ * project on the page).
+ *
+ * That page size is therefore load-bearing for more than layout. A future
+ * caller that reads every project at once has to chunk these itself or restore
+ * the failure this comment exists to prevent.
+ */
 async function listGscConnections(
   organizationId: string,
   projectIds: string[],

@@ -1,6 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { ProjectService } from "@/server/features/projects/services/ProjectService";
 import {
+  PORTFOLIO_PAGE_SIZE_DEFAULT,
+  PORTFOLIO_PAGE_SIZE_MAX,
+} from "@/server/features/projects/services/portfolio";
+import {
   requireAuthenticatedContext,
   requireProjectContext,
 } from "@/serverFunctions/middleware";
@@ -23,11 +27,30 @@ export const getProjects = createServerFn({ method: "POST" })
 /**
  * Cross-project portfolio using only free GSC requests and cached D1 audit,
  * rank-tracking, and analysis-run rows. No metered provider is touched.
+ *
+ * Paginated because the page size is a SUBREQUEST budget: each project on the
+ * page costs one Search Console request, against the Workers Free plan's
+ * 50-per-invocation ceiling that this path's D1 reads also draw from. See
+ * `PORTFOLIO_PAGE_SIZE_MAX`.
  */
+const portfolioPageSchema = z.object({
+  page: z.number().int().min(1).default(1),
+  pageSize: z
+    .number()
+    .int()
+    .min(1)
+    .max(PORTFOLIO_PAGE_SIZE_MAX)
+    .default(PORTFOLIO_PAGE_SIZE_DEFAULT),
+});
+
 export const getProjectsPortfolio = createServerFn({ method: "POST" })
   .middleware(requireAuthenticatedContext)
-  .handler(async ({ context }) =>
-    ProjectService.getPortfolio(context.organizationId),
+  .validator(portfolioPageSchema)
+  .handler(async ({ data, context }) =>
+    ProjectService.getPortfolio(context.organizationId, {
+      page: data.page,
+      pageSize: data.pageSize,
+    }),
   );
 
 export const createProject = createServerFn({ method: "POST" })
