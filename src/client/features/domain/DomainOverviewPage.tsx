@@ -762,6 +762,7 @@ export function DomainOverviewPage({
       </div>
 
       <DomainSearchCard
+        projectId={projectId}
         controlsForm={state.controlsForm}
         isLoading={state.isLoading}
         onSubmit={handleSearchSubmit}

@@ -21,6 +21,8 @@ import {
   getLanguageOptions,
 } from "@/client/features/keywords/locations";
 import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
+import { HostSuggestions } from "@/client/features/projects/HostSuggestions";
+import { useProjectHostOptions } from "@/client/features/projects/useProjectSubdomains";
 import type { TargetArea } from "@/shared/geo/types";
 import { resolveInitialConfigArea } from "./rankTrackingConfigArea";
 import { useConfigAreaLookup } from "./useConfigAreaLookup";
@@ -89,6 +91,8 @@ function CostEstimateSummary({
   );
 }
 
+const HOST_SUGGESTIONS_ID = "rank-tracking-domain-hosts";
+
 export function RankTrackingConfigModal({
   projectId,
   existingConfig,
@@ -98,6 +102,7 @@ export function RankTrackingConfigModal({
   onConfigCreated,
 }: Props) {
   const isEdit = !!existingConfig;
+  const hostOptions = useProjectHostOptions(projectId);
   const [step, setStep] = useState<"config" | "keywords">("config");
   const [domain, setDomain] = useState(existingConfig?.domain ?? "");
   const [devices, setDevices] = useState<"both" | "desktop" | "mobile">(
@@ -270,10 +275,15 @@ export function RankTrackingConfigModal({
             type="text"
             placeholder="example.com"
             className="w-full"
+            list={HOST_SUGGESTIONS_ID}
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             onBlur={handleDomainBlur}
           />
+          {/* Rank tracking keeps a domain per config, so tracking an estate
+              means adding each host separately. Suggesting the project's own
+              hosts is what keeps that from being recall-from-memory. */}
+          <HostSuggestions id={HOST_SUGGESTIONS_ID} hosts={hostOptions} />
         </div>
 
         <div className="form-control">
