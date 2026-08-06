@@ -550,3 +550,48 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
   transform: translate3d(0, 0, 0);
   transition-duration: 60ms;
 }
+
+/* Skeleton placeholders — restoring the base colour Kumo's reset removed.
+
+   Two libraries here define `.skeleton`. DaisyUI's paints a solid
+   `base-300` block and sweeps a lighter gradient across it. Kumo's paints
+   ONLY a gradient, with transparent stops at both ends and no background
+   colour, because it is designed to sit on top of a surface a component has
+   already coloured.
+
+   Kumo's wins, and not because of import order — DaisyUI ships its component
+   inside `@layer daisyui.l1.l2.l3`, and an UNLAYERED rule beats a layered one
+   no matter which came first. So adding Kumo silently turned every existing
+   skeleton in this app into a 5%-black sweep over nothing: technically
+   animating, visually absent.
+
+   That matters more than it sounds. The reason the reference dashboard reads
+   as loading smoothly is that each card shows a silhouette of the content
+   that is coming, at the size it will be, so nothing shifts when data lands.
+   An invisible placeholder gives up exactly that.
+
+   The fix is one declaration rather than a rename: restore a base colour, and
+   both libraries' sweeps then have something to sweep over. Unlayered here
+   too, so it applies to Kumo's own components as well as ours.
+
+   `--motion-duration-*` is deliberately NOT used for the shimmer. Those tokens
+   collapse to ~0 under prefers-reduced-motion, which for a looping shimmer
+   would mean a strobe rather than stillness; the media query below stops it
+   outright instead.
+
+   The dark selector is not redundant. Kumo's dark rule uses the `background`
+   SHORTHAND, which resets `background-color` back to transparent, and at
+   `[data-mode="dark"] .skeleton` it also outranks a bare `.skeleton` on
+   specificity. Matching that selector — later in the cascade, same weight — is
+   what makes the fix hold in both themes. Verified by reading the computed
+   background in each: the light-only version left dark still transparent. */
+.skeleton,
+[data-mode="dark"] .skeleton {
+  background-color: var(--color-base-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
