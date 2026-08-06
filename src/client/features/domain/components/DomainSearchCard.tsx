@@ -6,8 +6,11 @@ import { toSortMode } from "@/client/features/domain/utils";
 import type { DomainSortMode } from "@/client/features/domain/types";
 import { LABS_LOCATION_OPTIONS } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
+import { HostSuggestions } from "@/client/features/projects/HostSuggestions";
+import { useProjectHostOptions } from "@/client/features/projects/useProjectSubdomains";
 
 type Props = {
+  projectId: string;
   controlsForm: DomainOverviewControlsForm;
   isLoading: boolean;
   onSubmit: (event: FormEvent) => void;
@@ -15,13 +18,20 @@ type Props = {
   onLocationChange: (locationCode: number) => void;
 };
 
+const HOST_SUGGESTIONS_ID = "domain-overview-hosts";
+
 export function DomainSearchCard({
+  projectId,
   controlsForm,
   isLoading,
   onSubmit,
   onSortChange,
   onLocationChange,
 }: Props) {
+  // Looking up one subdomain's own numbers means typing its host, which is the
+  // exact thing an estate of hundreds makes impossible from memory.
+  const hostOptions = useProjectHostOptions(projectId);
+
   return (
     <div className="card bg-base-100 border border-base-300">
       <div className="card-body gap-4">
@@ -41,12 +51,17 @@ export function DomainSearchCard({
                   <input
                     className="grow min-w-0"
                     placeholder="Enter a domain"
+                    list={HOST_SUGGESTIONS_ID}
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-invalid={domainError ? true : undefined}
                     aria-describedby={
                       domainError ? "domain-input-error" : undefined
                     }
+                  />
+                  <HostSuggestions
+                    id={HOST_SUGGESTIONS_ID}
+                    hosts={hostOptions}
                   />
                 </label>
               );

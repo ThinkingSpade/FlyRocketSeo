@@ -56,6 +56,7 @@ function LaunchContent({
         launchForm={controller.launchForm}
         commitMaxPagesInput={controller.commitMaxPagesInput}
         maxPagesLimit={controller.maxPagesLimit}
+        projectId={projectId}
       />
 
       <AuditHistorySection

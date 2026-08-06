@@ -1,12 +1,16 @@
 import * as React from "react";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Globe, Loader2, RefreshCw, Search, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
+  projectSubdomainsQueryKey,
+  useProjectSubdomainsQuery,
+  type ProjectSubdomain,
+} from "@/client/features/projects/useProjectSubdomains";
+import {
   addProjectSubdomain,
   discoverProjectSubdomains,
-  getProjectSubdomains,
   removeProjectSubdomains,
   setProjectSubdomainsActive,
 } from "@/serverFunctions/projectSubdomains";
@@ -20,22 +24,17 @@ import {
  *  rows directly is faster than typing. */
 const FILTER_THRESHOLD = 8;
 
-type Subdomain = Awaited<
-  ReturnType<typeof getProjectSubdomains>
->["subdomains"][number];
-
 function formatMetric(value: number | null): string {
   return value === null ? "—" : value.toLocaleString();
 }
 
 export function ProjectSubdomainsSection({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
-  const queryKey = ["project-subdomains", projectId];
+  // Same key the Site Audit and Rank Tracking pickers read from, so every edit
+  // here refreshes what they offer instead of leaving them on a stale list.
+  const queryKey = projectSubdomainsQueryKey(projectId);
 
-  const subdomainsQuery = useQuery({
-    queryKey,
-    queryFn: () => getProjectSubdomains({ data: { projectId } }),
-  });
+  const subdomainsQuery = useProjectSubdomainsQuery(projectId);
 
   const [host, setHost] = React.useState("");
   const [filter, setFilter] = React.useState("");
@@ -326,7 +325,7 @@ function SubdomainTable({
   onSetActive,
   onRemove,
 }: {
-  subdomains: Subdomain[];
+  subdomains: ProjectSubdomain[];
   selected: ReadonlySet<string>;
   allVisibleSelected: boolean;
   disabled: boolean;
