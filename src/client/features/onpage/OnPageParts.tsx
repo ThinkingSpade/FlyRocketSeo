@@ -6,6 +6,7 @@ import {
   type OnPageElement,
   type PageGroup,
 } from "@/client/features/onpage/onPageModel";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 /** Short element tag shown on each suggestion row. */
 const ELEMENT_TAG: Record<OnPageElement, string> = {
@@ -188,7 +189,7 @@ export function PageGroupCard({
   );
 }
 
-/** The status filter as a daisyUI join. */
+/** Single-select status filter — a segmented control, not a button group. */
 export function StatusFilter({
   value,
   onChange,
@@ -205,20 +206,15 @@ export function StatusFilter({
     { key: "excluded", label: `Excluded (${counts.excluded})` },
   ];
   return (
-    <div className="join">
-      {options.map((option) => (
-        <button
-          key={option.key}
-          type="button"
-          className={`btn btn-xs join-item ${
-            value === option.key ? "btn-active" : "btn-ghost"
-          }`}
-          onClick={() => onChange(option.key)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedToggle
+      showLabels
+      items={options.map((option) => ({
+        value: option.key,
+        label: option.label,
+      }))}
+      value={value}
+      onChange={onChange}
+    />
   );
 }
 

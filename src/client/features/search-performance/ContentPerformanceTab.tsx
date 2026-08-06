@@ -16,6 +16,7 @@ import {
   buildPageBuckets,
   type ContentGroupRow,
 } from "./contentGroups";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 type TrendFilter = "all" | "growing" | "decaying";
 
@@ -190,20 +191,16 @@ export function ContentPerformanceTab({
                 <InsightIcon icon={Layers} tone="primary" />
                 Content groups
               </h3>
-              <div className="join">
-                {(["all", "growing", "decaying"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    className={`btn btn-xs join-item capitalize ${
-                      trendFilter === filter ? "btn-active" : "btn-ghost"
-                    }`}
-                    onClick={() => setTrendFilter(filter)}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
+              <SegmentedToggle
+                showLabels
+                items={[
+                  { value: "all", label: "All" },
+                  { value: "growing", label: "Growing" },
+                  { value: "decaying", label: "Decaying" },
+                ]}
+                value={trendFilter}
+                onChange={setTrendFilter}
+              />
             </div>
             <p className="mt-0.5 text-xs text-base-content/50">
               Your pages grouped by what they are, compared with the previous

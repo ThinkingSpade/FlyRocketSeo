@@ -3,18 +3,28 @@ import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 interface SegmentedToggleItem<T extends string> {
   value: T;
-  icon: ReactNode;
+  /** Optional. Text-only segments (a sort order, a status filter) pass none
+   *  and set `showLabels`; the icon groups this started as still pass one. */
+  icon?: ReactNode;
   label: string;
 }
 
 /**
- * A small icon toggle group, now rendered by Kumo's segmented Tabs.
+ * A small toggle group, rendered by Kumo's segmented Tabs.
  *
  * The props are deliberately unchanged from the hand-rolled DaisyUI version,
  * so every call site is untouched by the swap. What changes is what the user
  * sees: Base UI supplies real tab semantics and arrow-key navigation, which
  * the old row of <button>s never had, and the active state now slides between
  * segments instead of cutting.
+ *
+ * `icon` became optional so this could absorb the DaisyUI `join` groups too.
+ * Those turned out not to be one pattern: four of the five were single-select
+ * filters — a sort order, a status filter, a date range — which is exactly what
+ * a segmented control is, and one was a Previous/Next paginator, which is two
+ * independent actions wearing the same clothes. Only the first kind belongs
+ * here; grouping the paginator with them is what made `join` look like a
+ * component in the first place.
  *
  * Granular import (`@cloudflare/kumo/components/tabs`) rather than the package
  * root — Kumo's README recommends it for tree-shaking, and the root barrel
