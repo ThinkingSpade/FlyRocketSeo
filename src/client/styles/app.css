@@ -4,6 +4,17 @@
 
 @theme {
   --container-8xl: 88rem;
+
+  /* Easing curves. These are the single biggest contributor to motion reading
+     as "smooth" — a long, slow tail is what separates a premium feel from the
+     browser default `ease`, which decelerates too early and lands abruptly.
+     Registered here (not :root) so Tailwind generates `ease-out-soft` etc. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Overshoots slightly past the target before settling. Micro-interactions
+     only (a button press, a toggle) — never reveals, where it reads as a wobble. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 :root {
@@ -371,4 +382,91 @@ html[data-theme="flyrocketseo-dark"] .alert-success {
 
 html[data-theme="flyrocketseo-dark"] .alert-error {
   @apply border-error/60 bg-error/20;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion foundation
+   ---------------------------------------------------------------------------
+   Shared timing for entrance reveals, scroll reveals and hover states. Drive
+   everything from these tokens rather than per-component durations, so the
+   whole app accelerates and settles on one rhythm — inconsistent timing is
+   what makes a UI feel "janky" even when each individual animation is fine.
+
+   Reduced motion is handled ONCE, here, by collapsing the tokens. Every
+   consumer inherits it; no component needs its own media query, and none can
+   forget one. See src/client/hooks/useReveal.ts for the JS-side gate. */
+
+:root {
+  --motion-duration-fast: 150ms;
+  --motion-duration-base: 320ms;
+  --motion-duration-slow: 620ms;
+  /* How far a revealing element travels. Subtle beats dramatic: past ~24px the
+     eye tracks the movement instead of the content. */
+  --motion-rise-distance: 20px;
+  /* Gap between consecutive items in a staggered group. */
+  --motion-stagger-step: 70ms;
+  --motion-lift-distance: -2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 1ms;
+    --motion-duration-base: 1ms;
+    --motion-duration-slow: 1ms;
+    --motion-rise-distance: 0px;
+    --motion-stagger-step: 0ms;
+    --motion-lift-distance: 0px;
+  }
+}
+
+/* Scroll/entrance reveal.
+
+   The hidden state deliberately lives on `[data-reveal="hidden"]`, an attribute
+   only JavaScript ever sets — it is NOT the element's static state. If the
+   hidden state were plain CSS, then any path where the script does not run
+   (a JS error, an unsupported browser, a crawler that renders CSS but not JS)
+   would leave the content permanently invisible. On an SEO product that failure
+   mode is not acceptable, so the markup ships visible and JS opts into hiding
+   it a frame before the reveal. */
+[data-reveal] {
+  transition-property: opacity, transform;
+  transition-duration: var(--motion-duration-slow);
+  transition-timing-function: var(--ease-out-soft);
+  transition-delay: calc(var(--motion-index, 0) * var(--motion-stagger-step));
+  will-change: opacity, transform;
+}
+
+[data-reveal="hidden"] {
+  opacity: 0;
+  /* translate3d, not translateY: promotes to its own compositor layer, so the
+     reveal never triggers layout or paint on the main thread. */
+  transform: translate3d(0, var(--motion-rise-distance), 0);
+}
+
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  /* Release the compositor layer once the element has landed — a permanent
+     will-change on many elements costs memory and can blur text on some GPUs. */
+  will-change: auto;
+}
+
+/* Micro-interactions. `motion-lift` is the hover treatment for cards and other
+   clickable surfaces; pair it with the element's own shadow/border classes. */
+.motion-lift {
+  transition:
+    transform var(--motion-duration-fast) var(--ease-out-quart),
+    box-shadow var(--motion-duration-fast) var(--ease-out-quart),
+    border-color var(--motion-duration-fast) var(--ease-out-quart);
+}
+
+.motion-lift:hover {
+  transform: translate3d(0, var(--motion-lift-distance), 0);
+}
+
+/* Pressing should feel immediate — it confirms the click landed, so it snaps
+   back to neutral rather than easing out. */
+.motion-lift:active {
+  transform: translate3d(0, 0, 0);
+  transition-duration: 60ms;
 }

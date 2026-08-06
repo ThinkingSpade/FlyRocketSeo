@@ -25,6 +25,13 @@
     // design, not by accident -- same reasoning as the src/db/schema.ts
     // family above, applied to a public UI entry point instead of a barrel.
     "src/client/features/geo/GeoLocationSelect.tsx",
+    // Motion primitives. Complete and self-contained, but deliberately not yet
+    // applied to any page: the timing and distance still have to be tuned
+    // against the reference site this work is modelled on, and wiring them in
+    // with guessed values would mean redoing every call site. Same situation as
+    // GeoLocationSelect above -- no importer by design, not by accident.
+    "src/client/components/Reveal.tsx",
+    "src/client/hooks/useReveal.ts",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",
