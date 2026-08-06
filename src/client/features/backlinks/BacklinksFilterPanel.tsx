@@ -9,6 +9,10 @@ import {
   type BacklinksTabFilterValues,
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+
+/** Stands in for the filter model's empty-string "no filter" value. */
+const ALL_FILTER = "all";
 
 /**
  * Filters are applied explicitly (not per keystroke) because every change
@@ -236,22 +240,21 @@ function BacklinksToggleControls({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
           Link Type
         </p>
-        <div className="flex items-center gap-1">
-          {(["", "dofollow", "nofollow"] as const).map((value) => (
-            <button
-              key={value || "all"}
-              type="button"
-              className={`btn btn-xs ${draft.linkType === value ? "btn-soft" : "btn-ghost"}`}
-              onClick={() => setValue("linkType", value)}
-            >
-              {value === ""
-                ? "All"
-                : value === "dofollow"
-                  ? "Dofollow"
-                  : "Nofollow"}
-            </button>
-          ))}
-        </div>
+        {/* "All" is the empty string in the filter model, and Kumo's tabs key
+            on a non-empty value, so it travels as ALL_FILTER and is mapped back
+            on the way out rather than leaking a sentinel into the state. */}
+        <SegmentedToggle
+          showLabels
+          items={[
+            { value: ALL_FILTER, label: "All" },
+            { value: "dofollow", label: "Dofollow" },
+            { value: "nofollow", label: "Nofollow" },
+          ]}
+          value={draft.linkType === "" ? ALL_FILTER : draft.linkType}
+          onChange={(value) =>
+            setValue("linkType", value === ALL_FILTER ? "" : value)
+          }
+        />
       </div>
 
       {/* The "new links" and "lost links" feeds, as a narrowing of this list
@@ -261,18 +264,18 @@ function BacklinksToggleControls({
         <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
           Status
         </p>
-        <div className="flex items-center gap-1">
-          {(["", "new", "lost"] as const).map((value) => (
-            <button
-              key={value || "all"}
-              type="button"
-              className={`btn btn-xs ${draft.status === value ? "btn-soft" : "btn-ghost"}`}
-              onClick={() => setValue("status", value)}
-            >
-              {value === "" ? "All" : value === "new" ? "Won" : "Lost"}
-            </button>
-          ))}
-        </div>
+        <SegmentedToggle
+          showLabels
+          items={[
+            { value: ALL_FILTER, label: "All" },
+            { value: "new", label: "Won" },
+            { value: "lost", label: "Lost" },
+          ]}
+          value={draft.status === "" ? ALL_FILTER : draft.status}
+          onChange={(value) =>
+            setValue("status", value === ALL_FILTER ? "" : value)
+          }
+        />
       </div>
 
       <div className="space-y-1.5">

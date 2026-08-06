@@ -1,5 +1,6 @@
 import { Lightbulb } from "lucide-react";
 import type { SeedSuggestion } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * A suggestion as this component needs it: `SeedSuggestion` minus the
@@ -57,15 +58,16 @@ export function SuggestionChips({
           suggestion.value.trim().toLowerCase(),
         );
         return (
-          <button
+          <Button
             key={suggestion.value}
             type="button"
             disabled={disabled}
             onClick={() => onSelect(suggestion.value)}
             title={suggestion.hint}
-            className={`btn btn-xs h-auto min-h-0 gap-1 py-1 font-normal ${
-              active ? "btn-primary" : "btn-ghost border border-base-300"
-            }`}
+            size="xs"
+            variant={active ? "primary" : "outline"}
+            aria-pressed={active}
+            className="h-auto min-h-0 py-1 font-normal"
           >
             <span className="max-w-[14rem] truncate">{suggestion.value}</span>
             <span
@@ -77,7 +79,7 @@ export function SuggestionChips({
             >
               {suggestion.hint}
             </span>
-          </button>
+          </Button>
         );
       })}
     </div>

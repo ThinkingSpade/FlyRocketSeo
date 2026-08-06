@@ -3,6 +3,15 @@ import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterT
 import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBrandLookupFilters";
 import { Button } from "@cloudflare/kumo/components/button";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+
+/**
+ * Stands in for the filter model's empty-string "no filter" value.
+ *
+ * Kumo's tabs key on a non-empty string, so "All" travels as this sentinel and
+ * is mapped back to "" on the way out — the form state never sees it.
+ */
+const ALL_PLATFORMS = "all";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyForm = { Field: React.ComponentType<any> };
@@ -102,18 +111,18 @@ function PlatformToggle({ form }: { form: AnyForm }) {
           state: { value: string };
           handleChange: (v: string) => void;
         }) => (
-          <div className="flex flex-wrap items-center gap-1">
-            {(["", "chat_gpt", "google"] as const).map((value) => (
-              <button
-                key={value || "all"}
-                type="button"
-                className={`btn btn-xs ${field.state.value === value ? "btn-soft" : "btn-ghost"}`}
-                onClick={() => field.handleChange(value)}
-              >
-                {value === "" ? "All" : formatPlatformLabel(value)}
-              </button>
-            ))}
-          </div>
+          <SegmentedToggle
+            showLabels
+            items={[
+              { value: ALL_PLATFORMS, label: "All" },
+              { value: "chat_gpt", label: formatPlatformLabel("chat_gpt") },
+              { value: "google", label: formatPlatformLabel("google") },
+            ]}
+            value={field.state.value === "" ? ALL_PLATFORMS : field.state.value}
+            onChange={(value) =>
+              field.handleChange(value === ALL_PLATFORMS ? "" : value)
+            }
+          />
         )}
       </form.Field>
     </div>

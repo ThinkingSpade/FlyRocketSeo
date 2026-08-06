@@ -188,8 +188,10 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
   return (
     <div className="flex-1 flex flex-col min-w-0 border border-base-300 rounded-xl bg-base-100 overflow-hidden">
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-base-300">
-        <button
-          className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
+        <Button
+          size="sm"
+          variant={showFilters ? "secondary" : "ghost"}
+          aria-pressed={showFilters}
           onClick={() => controller.setShowFilters((current) => !current)}
           title="Toggle table filters"
         >
@@ -200,17 +202,17 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
               {activeFilterCount}
             </span>
           ) : null}
-        </button>
+        </Button>
         <span className="text-sm text-base-content/60">
           {keywordCountLabel}
         </span>
         <FitRefinementButton controller={controller} />
         {controller.wrongFitCount > 0 ? (
-          <button
+          <Button
             type="button"
-            className={`btn btn-ghost btn-sm gap-1.5 ${
-              controller.hideWrongFit ? "btn-active" : ""
-            }`}
+            size="sm"
+            variant={controller.hideWrongFit ? "secondary" : "ghost"}
+            aria-pressed={controller.hideWrongFit}
             onClick={() => controller.setHideWrongFit((current) => !current)}
             title={
               controller.hideWrongFit
@@ -223,7 +225,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
             <span className="text-base-content/50 tabular-nums">
               {controller.wrongFitCount}
             </span>
-          </button>
+          </Button>
         ) : null}
         {filteredRows.length > 0 ? (
           <span

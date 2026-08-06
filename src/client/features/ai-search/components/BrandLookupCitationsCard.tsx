@@ -26,6 +26,7 @@ import { useBrandLookupFilters } from "@/client/features/ai-search/useBrandLooku
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const DEFAULT_PAGES_SORT: SortingState = [{ id: "capturedVolume", desc: true }];
 const DEFAULT_QUERIES_SORT: SortingState = [
@@ -201,9 +202,11 @@ export function CitationTabsCard({
       </div>
 
       <div className="flex items-center gap-2 border-b border-base-300 px-4 py-2">
-        <button
+        <Button
           type="button"
-          className={`btn btn-ghost btn-sm gap-1.5 ${filters.showFilters ? "btn-active" : ""}`}
+          size="sm"
+          variant={filters.showFilters ? "secondary" : "ghost"}
+          aria-pressed={filters.showFilters}
           onClick={() => filters.setShowFilters((current) => !current)}
           title="Toggle table filters"
         >
@@ -214,7 +217,7 @@ export function CitationTabsCard({
               {currentFilterCount}
             </span>
           ) : null}
-        </button>
+        </Button>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-2 text-xs text-base-content/60">

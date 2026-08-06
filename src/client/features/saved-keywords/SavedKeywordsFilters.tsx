@@ -4,6 +4,7 @@ import { SavedKeywordsTagFilter } from "./SavedKeywordsTagFilter";
 import type { TagColorKey } from "@/shared/tag-colors";
 import type { SavedKeywordTagSummary } from "@/types/keywords";
 import type { SavedKeywordsFilterForm } from "./useSavedKeywordsFilters";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function SavedKeywordsFilters({
   filtersForm,
@@ -39,9 +40,11 @@ export function SavedKeywordsFilters({
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-4 py-2.5">
-        <button
+        <Button
           type="button"
-          className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
+          size="sm"
+          variant={showFilters ? "secondary" : "ghost"}
+          aria-pressed={showFilters}
           onClick={onToggleFilters}
           title="Toggle table filters"
         >
@@ -52,7 +55,7 @@ export function SavedKeywordsFilters({
               {activeFilterCount}
             </span>
           ) : null}
-        </button>
+        </Button>
         <SavedKeywordsTagFilter
           availableTags={availableTags}
           selectedTagIds={selectedTagIds}

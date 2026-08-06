@@ -109,30 +109,35 @@ function FixRowView({
           <span className="badge badge-outline badge-sm">AI</span>
         ) : null}
         <StatusPill status={row.status} />
-        <button
+        {/* Both are toggles, so the chosen state is `aria-pressed` rather
+            than a colour class. Kumo has no "success" variant; approving is
+            the affirmative action here, so it takes `primary`. */}
+        <Button
           type="button"
-          className={`btn btn-xs btn-circle ${
-            row.status === "approved" ? "btn-success" : "btn-ghost"
-          }`}
+          shape="circle"
+          size="xs"
+          variant={row.status === "approved" ? "primary" : "ghost"}
+          aria-pressed={row.status === "approved"}
           disabled={busy}
           onClick={onApprove}
           aria-label="Approve"
           title="Approve"
         >
           <Check className="size-3.5" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={`btn btn-xs btn-circle ${
-            row.status === "excluded" ? "btn-active" : "btn-ghost"
-          }`}
+          shape="circle"
+          size="xs"
+          variant={row.status === "excluded" ? "secondary" : "ghost"}
+          aria-pressed={row.status === "excluded"}
           disabled={busy}
           onClick={onExclude}
           aria-label="Exclude"
           title="Exclude"
         >
           <X className="size-3.5" />
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -13,6 +13,7 @@ import {
   resolveBacklinksSearchScope,
 } from "./backlinksSearchScope";
 import { Button } from "@cloudflare/kumo/components/button";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
 
@@ -201,28 +202,18 @@ export function BacklinksSearchCard({
             <div className="flex items-center gap-1">
               <form.Field name="scope">
                 {(field) => (
-                  <>
-                    <button
-                      type="button"
-                      className={`btn btn-xs ${field.state.value === "domain" ? "btn-soft" : "btn-ghost"}`}
-                      onClick={() => {
-                        setUserSelectedScope(true);
-                        field.handleChange("domain");
-                      }}
-                    >
-                      Site-wide
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-xs ${field.state.value === "page" ? "btn-soft" : "btn-ghost"}`}
-                      onClick={() => {
-                        setUserSelectedScope(true);
-                        field.handleChange("page");
-                      }}
-                    >
-                      Exact page
-                    </button>
-                  </>
+                  <SegmentedToggle
+                    showLabels
+                    items={[
+                      { value: "domain", label: "Site-wide" },
+                      { value: "page", label: "Exact page" },
+                    ]}
+                    value={field.state.value === "page" ? "page" : "domain"}
+                    onChange={(scope) => {
+                      setUserSelectedScope(true);
+                      field.handleChange(scope);
+                    }}
+                  />
                 )}
               </form.Field>
             </div>

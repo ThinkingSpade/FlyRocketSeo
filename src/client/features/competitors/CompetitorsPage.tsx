@@ -40,6 +40,7 @@ import {
 } from "./competitorsPageContent";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 type CompetitorsSearchState = {
   target: string;
@@ -235,16 +236,17 @@ export function CompetitorsPage({
           {tab === "gap" ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-base-content/60">Show</span>
-              {keywordGapModes.map((gapMode) => (
-                <button
-                  key={gapMode}
-                  type="button"
-                  className={`btn btn-xs ${mode === gapMode ? "btn-primary" : "btn-ghost"}`}
-                  onClick={() => updateSearch({ mode: gapMode, page: 1 })}
-                >
-                  {GAP_MODE_LABELS[gapMode]}
-                </button>
-              ))}
+              <SegmentedToggle
+                showLabels
+                items={keywordGapModes.map((gapMode) => ({
+                  value: gapMode,
+                  label: GAP_MODE_LABELS[gapMode],
+                }))}
+                value={mode}
+                onChange={(nextMode) =>
+                  updateSearch({ mode: nextMode, page: 1 })
+                }
+              />
             </div>
           ) : null}
         </div>
