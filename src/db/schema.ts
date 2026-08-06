@@ -43,6 +43,7 @@ const schema = runtimeSchema as unknown as AppSchema;
 export const {
   userOnboardingAnswers,
   projects,
+  projectSubdomains,
   savedKeywords,
   savedKeywordTags,
   savedKeywordTagAssignments,
