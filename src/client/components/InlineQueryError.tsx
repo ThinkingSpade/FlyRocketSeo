@@ -1,4 +1,5 @@
 import { AlertCircle, RefreshCw } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Inline error with a retry the user must press.
@@ -33,9 +34,10 @@ export function InlineQueryError({
       <AlertCircle className="size-4 shrink-0 text-base-content/45" />
       <span className="min-w-0 flex-1 text-base-content/70">{message}</span>
       {onRetry ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs gap-1"
+          variant="ghost"
+          size="xs"
           disabled={retrying}
           onClick={onRetry}
         >
@@ -43,7 +45,7 @@ export function InlineQueryError({
             className={`size-3.5 text-base-content/45 ${retrying ? "animate-spin" : ""}`}
           />
           {retryLabel}
-        </button>
+        </Button>
       ) : null}
     </div>
   );

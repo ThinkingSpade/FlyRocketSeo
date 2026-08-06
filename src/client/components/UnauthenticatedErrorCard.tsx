@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { getSignInHref, getSignInHrefForLocation } from "@/lib/auth-redirect";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type UnauthenticatedErrorCardProps = {
   message: string;
@@ -40,9 +41,9 @@ export function UnauthenticatedErrorCard({
         </p>
         {onRetry ? (
           <div className="card-actions justify-end">
-            <button className="btn btn-primary btn-sm" onClick={onRetry}>
+            <Button variant="primary" size="sm" onClick={onRetry}>
               Try Again
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   page: number;
@@ -71,24 +72,28 @@ export function TablePagination({
             {totalPages != null ? ` of ${totalPages.toLocaleString()}` : ""}
           </span>
           <div className="flex items-center gap-1">
-            <button
+            <Button
               type="button"
               aria-label="Previous page"
-              className="btn btn-ghost btn-sm btn-square"
+              variant="ghost"
+              size="sm"
+              shape="square"
               disabled={!canGoPrev || isLoading}
               onClick={() => onPageChange(page - 1)}
             >
               <ChevronLeft className="size-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
               aria-label="Next page"
-              className="btn btn-ghost btn-sm btn-square"
+              variant="ghost"
+              size="sm"
+              shape="square"
               disabled={!canGoNext || isLoading}
               onClick={() => onPageChange(page + 1)}
             >
               <ChevronRight className="size-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

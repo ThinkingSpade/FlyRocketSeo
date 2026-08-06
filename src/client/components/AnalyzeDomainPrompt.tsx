@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react";
 import { Search } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export type AnalyzePreviewItem = {
   icon: LucideIcon;
@@ -43,19 +44,19 @@ export function AnalyzeDomainPrompt({
         </div>
 
         <div>
-          <button
+          {/* `loading` replaces the hand-rolled spinner/icon swap AND the
+              separate `disabled` — Kumo's button disables interaction while
+              loading, so the two could no longer disagree. */}
+          <Button
             type="button"
-            className="btn btn-primary btn-sm gap-1.5"
+            variant="primary"
+            size="sm"
+            loading={isBusy}
             onClick={onAnalyze}
-            disabled={isBusy}
           >
-            {isBusy ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : (
-              <Search className="size-3.5" />
-            )}
+            <Search className="size-3.5" />
             Analyze {domain}
-          </button>
+          </Button>
         </div>
 
         {preview.length > 0 ? (

@@ -1,4 +1,5 @@
 import { ShieldAlert } from "lucide-react";
+import { Button, LinkButton } from "@cloudflare/kumo/components/button";
 
 const README_CLOUDFLARE_ACCESS_URL =
   "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/DEPLOY_INTERNET_FACING.md";
@@ -35,18 +36,21 @@ export function AuthConfigErrorCard({
 
         <div className="card-actions justify-end">
           {onRetry ? (
-            <button className="btn btn-ghost btn-sm" onClick={onRetry}>
+            <Button variant="ghost" size="sm" onClick={onRetry}>
               Try Again
-            </button>
+            </Button>
           ) : null}
-          <a
-            className="btn btn-primary btn-sm"
+          {/* An anchor, so LinkButton rather than Button — it keeps the real
+              <a> (middle-click, copy link) while matching the button beside it. */}
+          <LinkButton
+            variant="primary"
+            size="sm"
             href={README_CLOUDFLARE_ACCESS_URL}
             target="_blank"
             rel="noreferrer"
           >
             Open Setup Guide
-          </a>
+          </LinkButton>
         </div>
       </div>
     </div>

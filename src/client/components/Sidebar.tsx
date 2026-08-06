@@ -27,6 +27,7 @@ import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { useBillingMode } from "@/client/features/billing/useBillingMode";
 import { BILLING_ROUTE } from "@/shared/billing";
+import { Button } from "@cloudflare/kumo/components/button";
 
 interface SidebarProps {
   projectId: string | null;
@@ -132,14 +133,16 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
           FlyRocketSEO
         </Link>
         {onClose ? (
-          <button
+          <Button
             type="button"
             onClick={onClose}
-            className="btn btn-ghost btn-sm btn-circle"
+            variant="ghost"
+            size="sm"
+            shape="circle"
             aria-label="Close sidebar"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         ) : null}
       </div>
 

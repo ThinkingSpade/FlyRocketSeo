@@ -7,6 +7,7 @@ import {
   openGoogleSheetsTab,
   useExportToSheetsModalState,
 } from "@/client/lib/exportToSheets";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function ExportToSheetsModal() {
   const state = useExportToSheetsModalState();
@@ -42,14 +43,16 @@ export function ExportToSheetsModal() {
             Copied {rowCount} row{rowCount === 1 ? "" : "s"} to your clipboard
           </h3>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs btn-square"
+          variant="ghost"
+          size="xs"
+          shape="square"
           onClick={closeExportToSheetsModal}
           aria-label="Close"
         >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <p className="text-sm text-base-content/75">
@@ -57,14 +60,15 @@ export function ExportToSheetsModal() {
       </p>
 
       <div className="flex justify-end">
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm gap-1.5"
+          variant="primary"
+          size="sm"
           onClick={handleOpenSheet}
         >
           Open new Google Sheet
           <ExternalLink className="size-3.5" />
-        </button>
+        </Button>
       </div>
     </Modal>
   );

@@ -1,4 +1,5 @@
 import { History, RotateCw } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type DataFreshnessProps = {
   fetchedAt: string | number | Date | null | undefined;
@@ -92,11 +93,18 @@ export function DataFreshness({
       {onRefresh ? (
         <>
           <span aria-hidden="true">·</span>
-          <button
+          <Button
             type="button"
+            variant="ghost"
+            size="xs"
             onClick={onRefresh}
             disabled={refreshing}
-            className="btn btn-ghost btn-xs gap-1 px-1.5 text-base-content/60 hover:text-base-content"
+            className="px-1.5 text-base-content/60 hover:text-base-content"
+            // Kumo renders `title` as a real Tooltip rather than the native
+            // attribute, so this sentence is now readable styled text instead
+            // of an OS tooltip that truncates. The aria-label stays separate
+            // and shorter — a screen reader should not have to sit through the
+            // caching caveat to learn what the button does.
             title="Check for newer data. Results are cached, so refreshing soon after a run returns the same figures and the time above will not change."
             aria-label="Check for newer data. Results are cached, so refreshing soon after a run returns the same figures."
           >
@@ -104,7 +112,7 @@ export function DataFreshness({
               className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
             />
             Refresh
-          </button>
+          </Button>
         </>
       ) : null}
     </div>
