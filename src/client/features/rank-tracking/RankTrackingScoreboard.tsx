@@ -15,6 +15,7 @@ import {
   YAxis,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
+import { BarList } from "@/client/components/BarList";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
@@ -28,6 +29,7 @@ import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
 } from "@/client/components/chart/chartTheme";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
 type ChartRow = { label: string; averagePosition: number };
 
@@ -110,37 +112,45 @@ export function RankTrackingScoreboard({
           <p className="mt-0.5 text-xs text-base-content/50">
             Keywords per position bucket — previous check → now.
           </p>
-          <ul className="mt-2 space-y-1.5">
-            {transitions.map((bucket) => {
-              const delta = bucket.current - bucket.previous;
-              const isNotRanking = bucket.label === "Not ranking";
-              // For "not ranking", growth is bad — flip the delta color.
-              const improvedHere = isNotRanking ? delta < 0 : delta > 0;
-              return (
-                <li
-                  key={bucket.label}
-                  className="flex items-center justify-between gap-2 text-sm"
-                >
-                  <span className="text-base-content/70">{bucket.label}</span>
-                  <span className="tabular-nums">
-                    <span className="text-base-content/50">
-                      {bucket.previous}
-                    </span>{" "}
-                    → <span className="font-semibold">{bucket.current}</span>
-                    {delta !== 0 ? (
-                      <span
-                        className={improvedHere ? "text-success" : "text-error"}
-                      >
-                        {" "}
-                        ({delta > 0 ? "+" : ""}
-                        {delta})
-                      </span>
-                    ) : null}
-                  </span>
-                </li>
-              );
-            })}
-          </ul>
+          <div className="mt-2">
+            <BarList
+              // Scaled to the total tracked, not to the biggest bucket. These
+              // are parts of one whole, so a full-width top bar would say
+              // "most keywords are here" when it only means "more than the
+              // other three".
+              max={transitions.reduce((sum, b) => sum + b.current, 0)}
+              items={transitions.map((bucket) => {
+                const delta = bucket.current - bucket.previous;
+                const isNotRanking = bucket.label === "Not ranking";
+                // For "not ranking", growth is bad — flip the delta color.
+                const improvedHere = isNotRanking ? delta < 0 : delta > 0;
+                return {
+                  id: bucket.label,
+                  label: bucket.label,
+                  value: bucket.current,
+                  display: (
+                    <>
+                      <span className="text-base-content/50">
+                        {bucket.previous}
+                      </span>{" "}
+                      → <span className="font-semibold">{bucket.current}</span>
+                      {delta !== 0 ? (
+                        <span
+                          className={
+                            improvedHere ? "text-success" : "text-error"
+                          }
+                        >
+                          {" "}
+                          ({delta > 0 ? "+" : ""}
+                          {delta})
+                        </span>
+                      ) : null}
+                    </>
+                  ),
+                };
+              })}
+            />
+          </div>
         </div>
 
         <AveragePositionCard cells={cells} />
@@ -254,7 +264,8 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
                 dataKey="averagePosition"
                 stroke="#2563eb"
                 strokeWidth={2}
-                dot={{ r: 2.5 }}
+                dot={false}
+                activeDot={<ChartActiveDot />}
                 isAnimationActive={false}
               />
             </LineChart>

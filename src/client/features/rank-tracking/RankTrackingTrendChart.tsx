@@ -13,6 +13,7 @@ import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
 } from "@/client/components/chart/chartTheme";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
 export interface TrendSeries {
   /** key into each data row holding the position value (1 = best, serpDepth = bottom band) */
@@ -143,8 +144,8 @@ export function RankTrendChart({
                 stroke={s.color}
                 strokeWidth={2}
                 strokeDasharray={s.strokeDasharray}
-                dot={{ r: 2 }}
-                activeDot={{ r: 4 }}
+                dot={false}
+                activeDot={<ChartActiveDot />}
                 connectNulls={false}
                 isAnimationActive={false}
               />

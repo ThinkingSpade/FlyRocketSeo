@@ -32,6 +32,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 import type { MonthlySearch } from "@/types/keywords";
 import { formatCompactNumber } from "../utils";
 
@@ -149,8 +150,8 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
             strokeWidth={2}
             fill="url(#trendGrad)"
             isAnimationActive={false}
-            dot={{ r: 3, fill: "var(--color-primary)", strokeWidth: 0 }}
-            activeDot={{ r: 5, fill: "var(--color-primary)" }}
+            dot={false}
+            activeDot={<ChartActiveDot />}
           />
         </AreaChart>
       ) : null}

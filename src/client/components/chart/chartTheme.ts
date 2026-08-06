@@ -60,6 +60,11 @@ export const CHART_CURSOR_BAR = {
   fillOpacity: 0.08,
 } as const;
 
+// The hovered-point marker lives in ./ChartActiveDot.tsx, not here. It cannot be
+// a constant: Recharts passes the series colour to `activeDot` as `fill` and
+// hardcodes `stroke` to `#fff`, so producing the reference's hollow ring needs a
+// value that only exists at render time. See that file for the full reasoning.
+
 // No grid token: every CartesianGrid already uses stroke="currentColor" with an
 // opacity, which is theme-aware for the same reason as the tokens above. Adding a
 // second way to say it would be the drift this file exists to remove.

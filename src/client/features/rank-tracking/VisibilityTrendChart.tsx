@@ -17,6 +17,7 @@ import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
 } from "@/client/components/chart/chartTheme";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
 type ChartRow = {
   label: string;
@@ -155,7 +156,8 @@ export function VisibilityTrendChart({
               dataKey="visibility"
               stroke="#2563eb"
               strokeWidth={2}
-              dot={{ r: 2.5 }}
+              dot={false}
+              activeDot={<ChartActiveDot />}
               isAnimationActive={false}
             />
           </LineChart>
