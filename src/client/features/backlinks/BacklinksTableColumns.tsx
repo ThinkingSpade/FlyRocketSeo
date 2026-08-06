@@ -14,6 +14,7 @@ import {
 import type { DomainRatings } from "./useAhrefsDomainRatings";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Row model for the backlinks table. In the one-per-domain view, depth-0 rows
@@ -59,7 +60,7 @@ function StatusCell({ status }: { status: "loading" | "error" | "empty" }) {
   if (status === "loading") {
     return (
       <span className="flex items-center gap-2 pl-6 text-sm text-base-content/60">
-        <span className="loading loading-spinner loading-xs" />
+        <Loader size="sm" />
         Loading links…
       </span>
     );

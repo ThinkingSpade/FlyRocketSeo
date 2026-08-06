@@ -10,6 +10,7 @@ import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
 import { exportBacklinksTabCsv } from "./export";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export function BacklinksExportMenu({
   activeTab,
@@ -63,7 +64,7 @@ export function BacklinksExportMenu({
             disabled={!canExport}
           >
             {isExportingSheets ? (
-              <span className="loading loading-spinner loading-xs" />
+              <Loader size="sm" />
             ) : (
               <Sheet className="size-4" />
             )}
@@ -125,7 +126,7 @@ export function BacklinksActionsMenu({
             title="Look up Ahrefs Domain Rating for each domain in the table"
           >
             {isLoadingRatings ? (
-              <span className="loading loading-spinner loading-xs" />
+              <Loader size="sm" />
             ) : (
               <Gauge className="size-4" />
             )}

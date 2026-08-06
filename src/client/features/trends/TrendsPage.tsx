@@ -61,6 +61,7 @@ import {
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -197,11 +198,7 @@ function CompareButton({
         Compare
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         Compare
       </Button>
     </div>
@@ -504,7 +501,7 @@ export function TrendsPage({
             </div>
           ) : trendsQuery.isFetching && !result ? (
             <div className="flex items-center justify-center py-16">
-              <span className="loading loading-spinner" />
+              <Loader />
             </div>
           ) : !result || result.points.length === 0 ? (
             <div className="px-4 py-12 text-center text-sm text-base-content/60">

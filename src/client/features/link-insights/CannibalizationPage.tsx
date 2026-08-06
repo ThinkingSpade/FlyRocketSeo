@@ -16,6 +16,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const SEVERITY_BADGE: Record<
   CannibalizationSeverity,
@@ -75,7 +76,7 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
 
       {insightsQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 

@@ -3,6 +3,7 @@ import type { LucideIcon } from "lucide-react";
 import { InsightIcon, type InsightTone } from "@/client/components/InsightTile";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
 import { useKeywordGapQuery } from "./useCompetitorsQueries";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const MODE_META: Record<
   KeywordGapMode,
@@ -127,7 +128,7 @@ export function KeywordGapOverview({
             </div>
             <div className="mt-1.5 text-xl font-semibold tabular-nums">
               {query.isPending ? (
-                <span className="loading loading-dots loading-xs" />
+                <Loader size="sm" />
               ) : count != null ? (
                 count.toLocaleString()
               ) : (

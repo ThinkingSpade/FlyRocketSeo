@@ -32,6 +32,7 @@ import {
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -215,7 +216,7 @@ export function PageExplorerPage({
               disabled={!input.trim() || pageQuery.isFetching}
             >
               {pageQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
+                <Loader size="sm" />
               ) : (
                 <Search className="size-3.5" />
               )}
@@ -304,7 +305,7 @@ export function PageExplorerPage({
 
       {runInput != null && pageQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 

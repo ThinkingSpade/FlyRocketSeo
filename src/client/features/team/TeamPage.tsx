@@ -12,6 +12,7 @@ import {
 } from "@/serverFunctions/invites";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const INVITES_QUERY_KEY = ["teamInvites"] as const;
 
@@ -134,7 +135,7 @@ export function TeamPage() {
           </h2>
           {invitesQuery.isLoading ? (
             <div className="flex justify-center py-10">
-              <span className="loading loading-spinner loading-md" />
+              <Loader size="base" />
             </div>
           ) : invitesQuery.isError ? (
             <p className="text-sm text-error">

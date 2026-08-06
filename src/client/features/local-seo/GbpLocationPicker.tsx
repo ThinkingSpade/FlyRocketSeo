@@ -1,6 +1,7 @@
 import { MapPin } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type LocationOption = {
   name: string;
@@ -64,7 +65,7 @@ export function GbpLocationPicker({
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
-        <span className="loading loading-spinner loading-sm" />
+        <Loader size="sm" />
         Loading locations…
       </div>
     );

@@ -18,6 +18,7 @@ import {
 } from "@/serverFunctions/gbp";
 import type { GbpScheduledPostStatus } from "./gbpPostSchedule";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const STATUS_ICON: Record<GbpScheduledPostStatus, typeof CheckCircle2> = {
   draft: CircleDashed,
@@ -109,7 +110,7 @@ export function GbpScheduledPostsList({ projectId }: { projectId: string }) {
   if (postsQuery.isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
-        <span className="loading loading-spinner loading-sm" />
+        <Loader size="sm" />
         Loading scheduled posts…
       </div>
     );

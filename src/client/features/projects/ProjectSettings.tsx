@@ -16,6 +16,7 @@ import {
 } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export function ProjectSettings({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery({
@@ -28,7 +29,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   if (!project) {
     return (
       <div className="flex h-full items-center justify-center">
-        <span className="loading loading-spinner loading-md" />
+        <Loader size="base" />
       </div>
     );
   }

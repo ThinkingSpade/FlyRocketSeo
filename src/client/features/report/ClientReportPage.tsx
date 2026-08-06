@@ -6,6 +6,7 @@ import { ReportPages } from "@/client/features/report/ReportPages";
 import { useClientReportData } from "@/client/features/report/useClientReportData";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 // The classic print-only-section trick: everything hides except the report, so
 // the browser's Print → Save as PDF produces a clean client deliverable
@@ -134,9 +135,7 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
                 disabled={data.keywordDetailsLoading}
                 onClick={() => data.refreshKeywordDetails()}
               >
-                {data.keywordDetailsLoading ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : null}
+                {data.keywordDetailsLoading ? <Loader size="sm" /> : null}
                 Load keyword details · 1 paid request
               </Button>
             ) : null}
@@ -147,9 +146,7 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
                 disabled={data.backlinkDetailsLoading}
                 onClick={() => data.refreshBacklinkDetails()}
               >
-                {data.backlinkDetailsLoading ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : null}
+                {data.backlinkDetailsLoading ? <Loader size="sm" /> : null}
                 Load backlink details · 2 paid requests
               </Button>
             ) : null}

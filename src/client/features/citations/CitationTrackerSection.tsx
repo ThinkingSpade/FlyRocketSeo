@@ -32,6 +32,7 @@ import {
 } from "./citationModel";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /** "City, Region" when both are on file, otherwise whichever one is --
  *  matches what CitationTrackerService expects as its single `city` field,
@@ -303,7 +304,7 @@ export function CitationTrackerSection({
             disabled={!businessName.trim() || reportQuery.isFetching}
           >
             {reportQuery.isFetching ? (
-              <span className="loading loading-spinner loading-xs" />
+              <Loader size="sm" />
             ) : (
               <Search className="size-3.5" />
             )}

@@ -33,6 +33,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -206,7 +207,7 @@ export function LocalSeoPage({
               disabled={!input.trim() || profileQuery.isFetching}
             >
               {profileQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
+                <Loader size="sm" />
               ) : (
                 <Search className="size-3.5" />
               )}
@@ -246,7 +247,7 @@ export function LocalSeoPage({
           loading={
             <div className="card border border-base-300 bg-base-100">
               <div className="card-body items-center gap-2 py-12 text-sm text-base-content/60">
-                <span className="loading loading-spinner loading-md" />
+                <Loader size="base" />
                 Looking up the business profile…
               </div>
             </div>

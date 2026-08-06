@@ -1,5 +1,6 @@
 import { Search } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export function CompetitorsSearchForm({
   targetInput,
@@ -60,11 +61,7 @@ export function CompetitorsSearchForm({
           isFetching
         }
       >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         Analyze
       </Button>
     </form>

@@ -33,6 +33,7 @@ import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -81,11 +82,7 @@ function PlanClustersButton({
         Plan clusters
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         Plan clusters
       </Button>
     </div>
@@ -416,7 +413,7 @@ export function TopicClustersPage({
 
       {runInput != null && clustersQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 

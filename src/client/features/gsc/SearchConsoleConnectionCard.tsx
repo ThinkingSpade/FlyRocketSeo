@@ -17,6 +17,7 @@ import {
 } from "@/serverFunctions/gsc";
 import type { GscAccessFailureReason } from "@/shared/gsc";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const GRANT_STATUS_KEY = ["gscGrantStatus"];
 
@@ -129,7 +130,7 @@ export function SearchConsoleConnectionCard({
     >
       {connectionQuery.isLoading ? (
         <div className="flex items-center gap-2 text-sm text-base-content/50">
-          <span className="loading loading-spinner loading-sm" />
+          <Loader size="sm" />
           Checking…
         </div>
       ) : selfHostedNeedsSetup ? (

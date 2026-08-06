@@ -8,6 +8,7 @@ import type {
 } from "@/types/schemas/backlinks-compare";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * The three competitive drill-downs that sit under the comparison table: who
@@ -104,7 +105,7 @@ export function LinkIntersectCard({
     >
       {isLoading ? (
         <div className="flex justify-center py-6">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 
@@ -244,9 +245,7 @@ export function CompetingDomainsCard({
           disabled={isLoading}
           onClick={onRun}
         >
-          {isLoading ? (
-            <span className="loading loading-spinner loading-xs" />
-          ) : null}
+          {isLoading ? <Loader size="sm" /> : null}
           {hasRun ? "Refresh" : "Find them"}
         </Button>
       }
@@ -333,9 +332,7 @@ export function ReferringNetworksCard({
           disabled={isLoading}
           onClick={onRun}
         >
-          {isLoading ? (
-            <span className="loading loading-spinner loading-xs" />
-          ) : null}
+          {isLoading ? <Loader size="sm" /> : null}
           {hasRun ? "Refresh" : "Check networks"}
         </Button>
       }

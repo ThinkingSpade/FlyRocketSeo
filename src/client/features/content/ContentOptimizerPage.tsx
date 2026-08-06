@@ -53,6 +53,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -181,11 +182,7 @@ function BuildBriefButton({
         Build brief
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         {meteredActionLabel(
           "Build brief",
           { kind: "paidRequests", count: 4 },
@@ -594,7 +591,7 @@ export function ContentOptimizerPage({
 
       {runInput != null && briefQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 
@@ -748,7 +745,7 @@ export function ContentOptimizerPage({
                             </span>
                           ) : competitorsAuthorized &&
                             analysis === undefined ? (
-                            <span className="loading loading-dots loading-xs" />
+                            <Loader size="sm" />
                           ) : analysis?.wordCount != null ? (
                             analysis.wordCount.toLocaleString()
                           ) : (
@@ -765,7 +762,7 @@ export function ContentOptimizerPage({
                             </span>
                           ) : competitorsAuthorized &&
                             analysis === undefined ? (
-                            <span className="loading loading-dots loading-xs" />
+                            <Loader size="sm" />
                           ) : (
                             (analysis?.h2.length ?? "—")
                           )}

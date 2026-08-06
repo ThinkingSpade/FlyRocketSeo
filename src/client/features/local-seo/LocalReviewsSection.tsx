@@ -17,6 +17,7 @@ import {
 } from "./reviewsTaskStore";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export function LocalReviewsSection({
   projectId,
@@ -128,7 +129,7 @@ export function LocalReviewsSection({
             >
               {isWorking ? (
                 <>
-                  <span className="loading loading-spinner loading-xs" />
+                  <Loader size="sm" />
                   Crawling reviews…
                 </>
               ) : (

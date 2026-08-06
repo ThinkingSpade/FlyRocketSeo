@@ -4,6 +4,7 @@ import { explainFindings } from "@/serverFunctions/insights";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { Verdict } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Turns the verdict above it into prose, on demand.
@@ -64,7 +65,7 @@ export function ExplainButton({
           onClick={() => explain.mutate()}
         >
           {explain.isPending ? (
-            <span className="loading loading-spinner loading-xs" />
+            <Loader size="sm" />
           ) : (
             <Sparkles className="size-3.5 text-base-content/45" />
           )}

@@ -37,6 +37,7 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const GRID_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -381,7 +382,7 @@ export function LocalRankGridPage({
               disabled={!input.trim() || isLocating}
             >
               {isLocating ? (
-                <span className="loading loading-spinner loading-xs" />
+                <Loader size="sm" />
               ) : (
                 <Search className="size-3.5" />
               )}

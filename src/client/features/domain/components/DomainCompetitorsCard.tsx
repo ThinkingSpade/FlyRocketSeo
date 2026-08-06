@@ -7,6 +7,7 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 function formatCount(value: number | null): string {
   if (value == null) return "—";
@@ -60,7 +61,7 @@ export function DomainCompetitorsCard({
           </Button>
         ) : competitorsQuery.isLoading ? (
           <div className="flex justify-center py-4">
-            <span className="loading loading-dots loading-sm" />
+            <Loader size="sm" />
           </div>
         ) : competitorsQuery.isError ? (
           <InlineQueryError

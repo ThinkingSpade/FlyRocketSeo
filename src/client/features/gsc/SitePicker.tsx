@@ -1,6 +1,7 @@
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import type { GscSitesErrorReason } from "@/shared/gsc";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type SiteOption = {
   siteUrl: string;
@@ -47,7 +48,7 @@ export function SitePicker({
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
-        <span className="loading loading-spinner loading-sm" />
+        <Loader size="sm" />
         Loading properties…
       </div>
     );

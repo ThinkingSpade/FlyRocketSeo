@@ -12,6 +12,7 @@ import { resolveQueryState } from "@/client/components/state/queryState";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type PresenceResult = {
   linksToTarget: boolean;
@@ -21,7 +22,7 @@ type PresenceResult = {
 
 function PresenceBadge({ presence }: { presence: PresenceResult | undefined }) {
   if (presence === undefined) {
-    return <span className="loading loading-dots loading-xs" />;
+    return <Loader size="sm" />;
   }
   if (presence.error) {
     return (
@@ -102,7 +103,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
 
       {insightsQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 

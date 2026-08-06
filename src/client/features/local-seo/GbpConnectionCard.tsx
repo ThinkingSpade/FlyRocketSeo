@@ -15,6 +15,7 @@ import { startGbpLink } from "./startGbpLink";
 import { GbpLocationPicker } from "./GbpLocationPicker";
 import { NotConfiguredCard } from "./GbpNotConfiguredCard";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Connect/manage card for GBP writing. Three states, in order of precedence:
@@ -102,7 +103,7 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
             Google Business Profile writing
           </h2>
           <div className="flex items-center gap-2 text-sm text-base-content/50">
-            <span className="loading loading-spinner loading-sm" />
+            <Loader size="sm" />
             Checking…
           </div>
         </div>
@@ -123,7 +124,7 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
 
         {connectionQuery.isLoading ? (
           <div className="flex items-center gap-2 text-sm text-base-content/50">
-            <span className="loading loading-spinner loading-sm" />
+            <Loader size="sm" />
             Checking…
           </div>
         ) : connected && !picking ? (

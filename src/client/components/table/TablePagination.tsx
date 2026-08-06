@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type Props = {
   page: number;
@@ -45,9 +46,7 @@ export function TablePagination({
     <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2 text-sm text-base-content/70 tabular-nums">
         <span>{formatRange(page, pageSize, totalCount)}</span>
-        {isLoading ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : null}
+        {isLoading ? <Loader size="sm" /> : null}
       </div>
 
       <div className="flex items-center gap-6">

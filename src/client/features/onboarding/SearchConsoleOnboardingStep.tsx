@@ -15,6 +15,7 @@ import {
 } from "@/serverFunctions/gsc";
 import { getProjects } from "@/serverFunctions/projects";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Onboarding step for connecting Google Search Console: link the account-level
@@ -168,7 +169,7 @@ function GscConnect({ projectId }: { projectId: string }) {
 function Checking() {
   return (
     <div className="flex items-center gap-2 text-sm text-base-content/50">
-      <span className="loading loading-spinner loading-sm" />
+      <Loader size="sm" />
       Checking…
     </div>
   );

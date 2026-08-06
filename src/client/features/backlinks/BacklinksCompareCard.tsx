@@ -9,6 +9,7 @@ import type {
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -320,9 +321,7 @@ export function BacklinksCompareCard({
             disabled={!canCompare || isLoading}
             onClick={onCompare}
           >
-            {isLoading ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : null}
+            {isLoading ? <Loader size="sm" /> : null}
             {hasCompared ? "Compare again" : "Compare"}
           </Button>
           {competitors.length === 0 ? (

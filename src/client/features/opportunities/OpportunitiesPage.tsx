@@ -29,6 +29,7 @@ import {
 import { AppPageShell } from "@/client/components/AppPageShell";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
@@ -204,7 +205,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           </div>
         ) : reportQuery.isPending || linkInsightsQuery.isPending ? (
           <div className="flex items-center justify-center py-10">
-            <span className="loading loading-spinner loading-md" />
+            <Loader size="base" />
           </div>
         ) : !report?.connected ? (
           <div className="rounded-lg border border-dashed border-base-300 p-6 text-center">
@@ -296,7 +297,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           </div>
         ) : historyQuery.isPending || auditQuery.isPending ? (
           <div className="flex items-center justify-center py-10">
-            <span className="loading loading-spinner loading-md" />
+            <Loader size="base" />
           </div>
         ) : latestAuditId == null ? (
           <div className="rounded-lg border border-dashed border-base-300 p-6 text-center">
