@@ -17,6 +17,7 @@ import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildClustersVerdict } from "@/client/features/insights/verdicts/content";
 import { resolveStoredGeo } from "@/client/features/geo/resolveRunGeo";
 import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * The fetched plan's own view: priority-ranked clusters, coverage against the
@@ -133,9 +134,9 @@ export function ClusterPlan({
           </span>
         ) : null}
         <div className="flex-1" />
-        <button className="btn btn-soft btn-xs gap-1" onClick={handleCopyPlan}>
+        <Button size="xs" className="btn-soft" onClick={handleCopyPlan}>
           <Sparkles className="size-3" /> Copy plan for AI
-        </button>
+        </Button>
       </div>
 
       <NextStepsCard

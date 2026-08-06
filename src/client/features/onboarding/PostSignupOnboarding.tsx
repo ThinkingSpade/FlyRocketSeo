@@ -2,6 +2,7 @@ import { ArrowLeft, ArrowRight, Check } from "lucide-react";
 import type { ReactNode } from "react";
 import { ONBOARDING_LAST_STEP } from "@/client/features/onboarding/onboardingModel";
 import { SearchConsoleOnboardingStep } from "@/client/features/onboarding/SearchConsoleOnboardingStep";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type PostSignupOnboardingProps = {
   firstName: string;
@@ -64,32 +65,34 @@ export function PostSignupOnboarding({
 
         {step < ONBOARDING_LAST_STEP ? (
           <div className="mt-5 flex items-center justify-between gap-3">
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost"
+              variant="ghost"
               disabled={step === 0 || isSaving}
               onClick={onBack}
             >
               Back
-            </button>
+            </Button>
             <div className="flex items-center gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm text-base-content/55"
+                variant="ghost"
+                size="sm"
+                className="text-base-content/55"
                 disabled={isSaving}
                 onClick={onSkip}
               >
                 Skip
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-primary"
+                variant="primary"
                 disabled={isSaving}
                 onClick={onNext}
               >
                 Continue
                 <ArrowRight className="size-4" />
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
@@ -119,15 +122,17 @@ function McpRecommendation({
 
   return (
     <div className="flex flex-col">
-      <button
+      <Button
         type="button"
-        className="btn btn-ghost btn-sm -ml-2 mb-2 self-start gap-1.5 text-base-content/60"
+        variant="ghost"
+        size="sm"
+        className="-ml-2 mb-2 self-start text-base-content/60"
         disabled={isSaving}
         onClick={onBack}
       >
         <ArrowLeft className="size-4" />
         Back
-      </button>
+      </Button>
       <h2 className="text-lg font-semibold">Set up FlyRocketSEO MCP?</h2>
       <p className="mt-1.5 text-sm leading-relaxed text-base-content/70">
         The most powerful way to use FlyRocketSEO — use AI to supercharge your
@@ -145,9 +150,10 @@ function McpRecommendation({
         ))}
       </ul>
 
-      <button
+      <Button
         type="button"
-        className="btn btn-primary mt-5 w-full"
+        variant="primary"
+        className="mt-5 w-full"
         disabled={isSaving}
         onClick={onSetup}
       >
@@ -159,15 +165,17 @@ function McpRecommendation({
             <ArrowRight className="size-4" />
           </>
         )}
-      </button>
-      <button
+      </Button>
+      <Button
         type="button"
-        className="btn btn-ghost btn-sm mt-2 w-full text-base-content/60"
+        variant="ghost"
+        size="sm"
+        className="mt-2 w-full text-base-content/60"
         disabled={isSaving}
         onClick={onSkip}
       >
         Not now
-      </button>
+      </Button>
       {error ? (
         <p className="mt-2 text-sm text-error" role="alert">
           {error}

@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Clock, History, Link2, X } from "lucide-react";
 import type { BacklinksSearchHistoryItem } from "@/client/hooks/useBacklinksSearchHistory";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   projectId: string;
@@ -79,13 +80,15 @@ export function BacklinksHistorySection({
                   day: "numeric",
                 })}
               </span>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 p-1"
+                variant="ghost"
+                size="xs"
+                className="opacity-0 group-hover:opacity-100 p-1"
                 onClick={() => onRemoveHistoryItem(item.timestamp)}
               >
                 <X className="size-3" />
-              </button>
+              </Button>
             </div>
           </div>
         ))}

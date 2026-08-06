@@ -18,6 +18,7 @@ import { LighthouseIssueRow } from "./LighthouseIssueRow";
 import { LighthouseIssuesSummary } from "./LighthouseIssuesSummary";
 import { categoryLabel } from "./utils";
 import { categoryTabs } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function LighthouseIssuesHeader({
   backLabel,
@@ -39,9 +40,9 @@ export function LighthouseIssuesHeader({
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <button className="btn btn-ghost btn-sm px-2" onClick={onBack}>
+        <Button variant="ghost" size="sm" className="px-2" onClick={onBack}>
           &larr; Back to {backLabel}
-        </button>
+        </Button>
         <span className="text-xs text-base-content/60">
           {scannedAt
             ? `Scanned ${new Date(scannedAt).toLocaleString()}`

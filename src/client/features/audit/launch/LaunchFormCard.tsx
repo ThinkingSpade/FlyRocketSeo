@@ -5,6 +5,7 @@ import type { useLaunchController } from "@/client/features/audit/launch/useLaun
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import { PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -54,9 +55,11 @@ export function LaunchFormCard({
 
           <launchForm.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary btn-sm w-full lg:col-span-3"
+                variant="primary"
+                size="sm"
+                className="w-full lg:col-span-3"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -66,7 +69,7 @@ export function LaunchFormCard({
                 ) : (
                   "Start Audit"
                 )}
-              </button>
+              </Button>
             )}
           </launchForm.Subscribe>
 

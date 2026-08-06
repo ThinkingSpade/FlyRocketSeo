@@ -7,6 +7,7 @@ import {
   BRAND_LOOKUP_RAW_COST_USD,
 } from "@/shared/analysis-costs";
 import { BRAND_LOOKUP_MAX_INPUT_LENGTH } from "@/types/schemas/ai-search";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   query: string;
@@ -68,13 +69,14 @@ export function BrandLookupSearchCard({
               />
             </label>
 
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary shrink-0 px-6"
+              variant="primary"
+              className="shrink-0 px-6"
               disabled={isLoading}
             >
               {isLoading ? "Looking up..." : "Look up"}
-            </button>
+            </Button>
           </div>
 
           <div className="flex flex-col gap-1">

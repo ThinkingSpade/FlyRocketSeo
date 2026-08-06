@@ -14,6 +14,7 @@ import {
 import { startGbpLink } from "./startGbpLink";
 import { GbpLocationPicker } from "./GbpLocationPicker";
 import { NotConfiguredCard } from "./GbpNotConfiguredCard";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Connect/manage card for GBP writing. Three states, in order of precedence:
@@ -180,14 +181,16 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
               Connect Google Business Profile to schedule posts and push fixes
               from the audit above straight to Google.
             </p>
-            <button
+            <Button
               type="button"
-              className="btn btn-outline btn-sm gap-1.5 w-fit"
+              variant="outline"
+              size="sm"
+              className="w-fit"
               onClick={() => void startGbpLink(window.location.href)}
             >
               <InsightIcon icon={MapPin} tone="neutral" />
               Connect Google Business Profile
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -219,21 +222,19 @@ function ConnectedState({
         ) : null}
       </div>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={onChange}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onChange}>
           Change location
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm text-error hover:bg-error/10"
+          variant="ghost"
+          size="sm"
+          className="text-error hover:bg-error/10"
           onClick={onDisconnect}
           disabled={disconnecting}
         >
           Disconnect
-        </button>
+        </Button>
       </div>
     </div>
   );

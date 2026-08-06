@@ -13,6 +13,7 @@ import {
   type GbpCallToActionType,
   type GbpPostValidationError,
 } from "./gbpPostSchedule";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
   { value: "BOOK", label: "Book" },
@@ -217,34 +218,38 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
               </span>
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn-sm"
+                variant="primary"
+                size="sm"
                 disabled={scheduleMutation.isPending}
                 onClick={() => scheduleMutation.mutate()}
               >
                 {scheduleMutation.isPending
                   ? "Scheduling…"
                   : "Yes, schedule it"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => setConfirming(false)}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm w-fit"
+            variant="primary"
+            size="sm"
+            className="w-fit"
             disabled={!canSchedule}
             onClick={() => setConfirming(true)}
           >
             Schedule post
-          </button>
+          </Button>
         )}
       </div>
     </div>

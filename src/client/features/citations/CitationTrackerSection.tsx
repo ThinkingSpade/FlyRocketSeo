@@ -30,6 +30,7 @@ import {
   type CitationMatch,
   type CitationReport,
 } from "./citationModel";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /** "City, Region" when both are on file, otherwise whichever one is --
  *  matches what CitationTrackerService expects as its single `city` field,
@@ -293,9 +294,10 @@ export function CitationTrackerSection({
               Runs one search and uses credits, the same as other lookups.
             </p>
           </div>
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-outline gap-1.5"
+            size="sm"
+            variant="outline"
             onClick={() => run.authorize()}
             disabled={!businessName.trim() || reportQuery.isFetching}
           >
@@ -305,7 +307,7 @@ export function CitationTrackerSection({
               <Search className="size-3.5" />
             )}
             Check citations
-          </button>
+          </Button>
         </div>
 
         {errorMessage ? (

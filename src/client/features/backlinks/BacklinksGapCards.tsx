@@ -6,6 +6,7 @@ import type {
   LinkIntersectResult,
   ReferringNetworksResult,
 } from "@/types/schemas/backlinks-compare";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * The three competitive drill-downs that sit under the comparison table: who
@@ -86,14 +87,15 @@ export function LinkIntersectCard({
       errorMessage={errorMessage}
       action={
         rows.length > 0 ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-xs gap-1"
+            variant="ghost"
+            size="xs"
             onClick={() => exportLinkGap(rows, target)}
           >
             <Download className="size-3.5" />
             CSV
-          </button>
+          </Button>
         ) : null
       }
     >
@@ -177,22 +179,26 @@ export function LinkIntersectCard({
                 Page {result?.page ?? 1} · each page is a new lookup
               </span>
               <div className="join">
-                <button
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs join-item"
+                  variant="ghost"
+                  size="xs"
+                  className="join-item"
                   disabled={(result?.page ?? 1) <= 1 || isLoading}
                   onClick={() => onPageChange((result?.page ?? 1) - 1)}
                 >
                   Previous
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs join-item"
+                  variant="ghost"
+                  size="xs"
+                  className="join-item"
                   disabled={!result?.hasMore || isLoading}
                   onClick={() => onPageChange((result?.page ?? 1) + 1)}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           </div>
@@ -255,9 +261,10 @@ export function CompetingDomainsCard({
       icon={Radar}
       errorMessage={errorMessage}
       action={
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm"
+          variant="ghost"
+          size="sm"
           disabled={isLoading}
           onClick={onRun}
         >
@@ -265,7 +272,7 @@ export function CompetingDomainsCard({
             <span className="loading loading-spinner loading-xs" />
           ) : null}
           {hasRun ? "Refresh" : "Find them"}
-        </button>
+        </Button>
       }
     >
       {!hasRun ? (
@@ -288,15 +295,16 @@ export function CompetingDomainsCard({
                 {formatNumber(row.intersections)} shared · DR{" "}
                 {formatNumber(row.rank)}
               </span>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-xs gap-1"
+                variant="ghost"
+                size="xs"
                 disabled={competitors.includes(row.domain)}
                 onClick={() => onAdd(row.domain)}
               >
                 <Plus className="size-3" />
                 {competitors.includes(row.domain) ? "Added" : "Compare"}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -342,9 +350,10 @@ export function ReferringNetworksCard({
       icon={Network}
       errorMessage={errorMessage}
       action={
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm"
+          variant="ghost"
+          size="sm"
           disabled={isLoading}
           onClick={onRun}
         >
@@ -352,7 +361,7 @@ export function ReferringNetworksCard({
             <span className="loading loading-spinner loading-xs" />
           ) : null}
           {hasRun ? "Refresh" : "Check networks"}
-        </button>
+        </Button>
       }
     >
       {!hasRun ? (

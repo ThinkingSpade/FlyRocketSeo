@@ -1,5 +1,6 @@
 import { History } from "lucide-react";
 import { formatRunAge } from "@/client/features/analysis-runs/runAge";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Shown when a tab is displaying a restored past run rather than a fresh one,
@@ -29,13 +30,9 @@ export function RestoredRunBanner({
         {runCount > 1 ? ` · run ${runCount}×` : ""}
       </span>
       {onRunAgain ? (
-        <button
-          type="button"
-          className="btn btn-ghost btn-xs"
-          onClick={onRunAgain}
-        >
+        <Button type="button" variant="ghost" size="xs" onClick={onRunAgain}>
           Run again
-        </button>
+        </Button>
       ) : null}
     </div>
   );

@@ -32,6 +32,7 @@ import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -198,9 +199,10 @@ export function LocalSeoPage({
                 </span>
               ) : null}
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+              variant="primary"
+              size="sm"
               disabled={!input.trim() || profileQuery.isFetching}
             >
               {profileQuery.isFetching ? (
@@ -213,7 +215,7 @@ export function LocalSeoPage({
                 { kind: "paidRequests", count: 1 },
                 true,
               )}
-            </button>
+            </Button>
           </form>
           <LocalGscContext projectId={projectId} context={projectContext} />
         </div>

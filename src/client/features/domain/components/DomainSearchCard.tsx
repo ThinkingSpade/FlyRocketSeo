@@ -6,6 +6,7 @@ import { toSortMode } from "@/client/features/domain/utils";
 import type { DomainSortMode } from "@/client/features/domain/types";
 import { LABS_LOCATION_OPTIONS } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   controlsForm: DomainOverviewControlsForm;
@@ -89,13 +90,14 @@ export function DomainSearchCard({
 
           <controlsForm.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary shrink-0 px-6"
+                variant="primary"
+                className="shrink-0 px-6"
                 disabled={isLoading || isSubmitting}
               >
                 {isLoading || isSubmitting ? "Loading..." : "Search"}
-              </button>
+              </Button>
             )}
           </controlsForm.Subscribe>
         </form>

@@ -36,6 +36,7 @@ import {
   withMeteredRunNonce,
 } from "@/client/lib/useMeteredQuery";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const GRID_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -373,9 +374,10 @@ export function LocalRankGridPage({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+              variant="primary"
+              size="sm"
               disabled={!input.trim() || isLocating}
             >
               {isLocating ? (
@@ -384,7 +386,7 @@ export function LocalRankGridPage({
                 <Search className="size-3.5" />
               )}
               Scan grid
-            </button>
+            </Button>
           </form>
           {locationError ? (
             <p className="text-xs text-error">{locationError}</p>

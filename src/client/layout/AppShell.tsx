@@ -13,6 +13,7 @@ import { BILLING_ROUTE } from "@/shared/billing";
 import { getSeoApiKeyStatus } from "@/serverFunctions/config";
 import { getProjects } from "@/serverFunctions/projects";
 import { getLastProjectId } from "@/client/lib/active-project";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
 
@@ -171,15 +172,17 @@ function MobileTopBar({
 }) {
   return (
     <div className="flex shrink-0 items-center gap-1 border-b border-base-300 bg-base-100 px-2 py-1.5 md:hidden">
-      <button
+      <Button
         type="button"
-        className="btn btn-square btn-ghost btn-sm"
+        shape="square"
+        variant="ghost"
+        size="sm"
         aria-label="Toggle sidebar"
         aria-expanded={drawerOpen}
         onClick={onOpenDrawer}
       >
         <Menu className="h-5 w-5" />
-      </button>
+      </Button>
       <Link
         to="/"
         className="ml-1 flex items-center gap-1.5 font-semibold text-base-content"

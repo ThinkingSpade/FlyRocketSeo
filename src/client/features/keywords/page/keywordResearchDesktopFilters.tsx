@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 function FilterTextInput({
   form,
@@ -107,9 +108,9 @@ export function EmptyFilterResults({
         No keywords match your current filters.
       </p>
       {activeFilterCount > 0 ? (
-        <button className="btn btn-ghost btn-sm" onClick={resetFilters}>
+        <Button variant="ghost" size="sm" onClick={resetFilters}>
           Clear filters
-        </button>
+        </Button>
       ) : null}
     </div>
   );

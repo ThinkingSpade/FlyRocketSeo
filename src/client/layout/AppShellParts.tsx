@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
+import { Button } from "@cloudflare/kumo/components/button";
 
 function SeoApiStatusBanners({
   shouldShowSeoApiWarning,
@@ -125,9 +126,9 @@ const MissingSeoSetupModal = React.forwardRef<
         </div>
 
         <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <button type="button" className="btn btn-ghost" onClick={onClose}>
+          <Button type="button" variant="ghost" onClick={onClose}>
             Dismiss
-          </button>
+          </Button>
           <Link
             {...dataforseoHelpLinkOptions}
             className="btn btn-primary"

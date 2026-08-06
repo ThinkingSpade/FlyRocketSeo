@@ -28,6 +28,7 @@ import {
 } from "@/serverFunctions/onPage";
 import { getAuditHistory } from "@/serverFunctions/audit";
 import { getGscConnection } from "@/serverFunctions/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type StatusValue = "all" | OnPageStatus;
 
@@ -153,9 +154,10 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
           </div>
           <div className="flex items-center gap-2">
             {rewritableCount > 0 ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm gap-1.5"
+                variant="ghost"
+                size="sm"
                 disabled={rewriteMutation.isPending}
                 onClick={() => rewriteMutation.mutate(aiRewritableIds(rows))}
                 title="Rewrite pending titles and descriptions with AI"
@@ -166,12 +168,13 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                   <Wand2 className="size-4" />
                 )}
                 AI rewrite ({rewritableCount})
-              </button>
+              </Button>
             ) : null}
             {rows.length > 0 ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn-sm gap-1.5"
+                variant="primary"
+                size="sm"
                 disabled={generateMutation.isPending}
                 onClick={() => generateMutation.mutate()}
               >
@@ -181,7 +184,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                   <RefreshCw className="size-4" />
                 )}
                 Re-scan
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>
@@ -239,9 +242,11 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                 : ". Connect Search Console for query-informed suggestions"}
               . This analysis is free.
             </p>
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm mt-4 gap-1.5"
+              variant="primary"
+              size="sm"
+              className="mt-4"
               disabled={generateMutation.isPending}
               onClick={() => generateMutation.mutate()}
             >
@@ -251,7 +256,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                 <RefreshCw className="size-4" />
               )}
               Generate fixes
-            </button>
+            </Button>
           </div>
         ) : (
           <>
@@ -268,9 +273,10 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                 counts={counts}
               />
               {summary.pending > 0 ? (
-                <button
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-sm"
+                  variant="ghost"
+                  size="sm"
                   disabled={busy}
                   onClick={() =>
                     statusMutation.mutate({
@@ -280,7 +286,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                   }
                 >
                   Approve all pending ({summary.pending})
-                </button>
+                </Button>
               ) : null}
             </div>
 

@@ -6,6 +6,7 @@ import type {
   BacklinksCompareResult,
   BacklinksComparisonRow,
 } from "@/types/schemas/backlinks-compare";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -93,14 +94,15 @@ function CompetitorInput({
         onChange={(event) => setDraft(event.target.value)}
         aria-label="Competitor domain"
       />
-      <button
+      <Button
         type="submit"
-        className="btn btn-ghost btn-sm gap-1"
+        variant="ghost"
+        size="sm"
         disabled={disabled || draft.trim() === ""}
       >
         <Plus className="size-4" />
         Add
-      </button>
+      </Button>
     </form>
   );
 }
@@ -308,9 +310,10 @@ export function BacklinksCompareCard({
         <CompetitorInput disabled={atLimit} onAdd={onAdd} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={!canCompare || isLoading}
             onClick={onCompare}
           >
@@ -318,7 +321,7 @@ export function BacklinksCompareCard({
               <span className="loading loading-spinner loading-xs" />
             ) : null}
             {hasCompared ? "Compare again" : "Compare"}
-          </button>
+          </Button>
           {competitors.length === 0 ? (
             <span className="text-xs text-base-content/50">
               Add a competitor domain to enable the comparison.

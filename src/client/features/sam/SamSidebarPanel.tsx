@@ -7,6 +7,7 @@ import {
   invalidateSamSessions,
   samSessionsQueryOptions,
 } from "@/client/features/sam/samQueries";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const BETA_NOTICE_DISMISSED_KEY = "sam-beta-notice-dismissed";
 
@@ -24,17 +25,20 @@ function BetaNotice() {
     <div className="mx-2 mb-2 rounded-lg border border-base-300 bg-base-100 p-3">
       <div className="flex items-center justify-between">
         <span className="badge badge-primary badge-sm">Beta</span>
-        <button
+        <Button
           type="button"
           aria-label="Dismiss"
-          className="btn btn-ghost btn-xs btn-square text-base-content/40"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="text-base-content/40"
           onClick={() => {
             localStorage.setItem(BETA_NOTICE_DISMISSED_KEY, "1");
             setDismissed(true);
           }}
         >
           <X className="size-3.5" />
-        </button>
+        </Button>
       </div>
       <p className="mt-1.5 text-xs text-base-content/70">
         For more powerful AI workflows, use the FlyRocketSEO MCP with your own
@@ -113,9 +117,11 @@ export function SamSidebarPanel({
       <div className="px-2 pb-1">
         {/* Ghost row styled like a list item so the sidebar header doesn't
             stack three heavy full-width controls. */}
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm btn-block justify-start gap-2 font-normal text-base-content/70 hover:text-base-content"
+          variant="ghost"
+          size="sm"
+          className="btn-block justify-start font-normal text-base-content/70 hover:text-base-content"
           disabled={createSession.isPending}
           onClick={() => createSession.mutate()}
         >
@@ -125,7 +131,7 @@ export function SamSidebarPanel({
             <Plus className="size-4" />
           )}
           New chat
-        </button>
+        </Button>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
@@ -157,15 +163,18 @@ export function SamSidebarPanel({
                 <span className="shrink-0 text-xs text-base-content/40 group-hover:hidden">
                   {ageLabel(session.updatedAt)}
                 </span>
-                <button
+                <Button
                   type="button"
                   aria-label="Archive chat"
-                  className="btn btn-ghost btn-xs btn-square hidden group-hover:inline-flex"
+                  variant="ghost"
+                  size="xs"
+                  shape="square"
+                  className="hidden group-hover:inline-flex"
                   disabled={archiveSession.isPending}
                   onClick={() => archiveSession.mutate(session.id)}
                 >
                   <Archive className="size-3.5 text-base-content/50" />
-                </button>
+                </Button>
               </div>
             );
           })

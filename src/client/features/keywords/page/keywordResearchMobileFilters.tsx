@@ -1,5 +1,6 @@
 import { RotateCcw } from "lucide-react";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * The mobile results view's own filter panel.
@@ -28,14 +29,15 @@ export function MobileFilters({
             </span>
           ) : null}
         </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={controller.resetFilters}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-2">

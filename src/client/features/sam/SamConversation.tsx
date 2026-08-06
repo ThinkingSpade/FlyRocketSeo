@@ -10,6 +10,7 @@ import {
   humanizeToolLabel,
   messageHasVisibleContent,
 } from "@/client/components/chat/ChatMessage";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const SUGGESTIONS = [
   "What keywords should I focus on next?",
@@ -93,13 +94,15 @@ export function SamConversation({
         // Dev-only escape hatch: wipes this session's persisted transcript on
         // the server (Think's cf_agent_chat_clear), for testing fresh-session
         // behavior without creating a new chat.
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs absolute right-3 top-2 z-10 text-base-content/40"
+          variant="ghost"
+          size="xs"
+          className="absolute right-3 top-2 z-10 text-base-content/40"
           onClick={() => clearHistory()}
         >
           Clear history (dev)
-        </button>
+        </Button>
       ) : null}
       <div ref={scrollRef} className="flex-1 overflow-y-auto px-5 py-6">
         <div className="mx-auto max-w-2xl space-y-6">

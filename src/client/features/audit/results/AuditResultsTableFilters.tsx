@@ -4,6 +4,7 @@ import type {
   PagesFilters,
   PerformanceFilters,
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function PagesFilterBar({
   filters,
@@ -210,15 +211,16 @@ function FilterPanel({
             </span>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
       {children}
     </div>

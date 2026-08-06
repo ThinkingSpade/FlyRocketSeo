@@ -1,5 +1,6 @@
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import type { GscSitesErrorReason } from "@/shared/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type SiteOption = {
   siteUrl: string;
@@ -100,13 +101,9 @@ export function SitePicker({
         <p className="text-sm text-error">
           Couldn&apos;t load your Search Console sites — please try again.
         </p>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={onRetry}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -137,14 +134,15 @@ export function SitePicker({
         </select>
       </label>
       <div className="flex items-center gap-1">
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          variant="primary"
+          size="sm"
           onClick={onSave}
           disabled={!selectedSiteUrl || saving}
         >
           {saving ? "Saving…" : "Save property"}
-        </button>
+        </Button>
         {secondaryAction ? (
           <button
             type="button"

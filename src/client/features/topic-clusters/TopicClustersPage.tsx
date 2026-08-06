@@ -31,6 +31,7 @@ import {
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -78,18 +79,14 @@ function PlanClustersButton({
       >
         Plan clusters
       </span>
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={disabled}
-      >
+      <Button type="submit" variant="primary" size="sm" disabled={disabled}>
         {isFetching ? (
           <span className="loading loading-spinner loading-xs" />
         ) : (
           <Search className="size-3.5" />
         )}
         Plan clusters
-      </button>
+      </Button>
     </div>
   );
 }

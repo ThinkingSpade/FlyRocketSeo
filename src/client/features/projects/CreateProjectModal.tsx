@@ -10,6 +10,7 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { setLastProjectId } from "@/client/lib/active-project";
 import { createProject } from "@/serverFunctions/projects";
 import { getGscConnection } from "@/serverFunctions/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type CreatedProject = { id: string; name: string };
 
@@ -114,21 +115,23 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
         </label>
 
         <div className="flex justify-end gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-sm"
+            variant="ghost"
+            size="sm"
             onClick={onClose}
             disabled={isPending}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={isPending}
           >
             {isPending ? "Creating…" : "Create project"}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>
@@ -186,19 +189,20 @@ function ConnectSearchConsoleStep({
       ) : null}
 
       <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button type="button" className="btn btn-ghost btn-sm" onClick={onSkip}>
+        <Button type="button" variant="ghost" size="sm" onClick={onSkip}>
           {configured ? "Skip for now" : "Go to project"}
-        </button>
+        </Button>
         {configured ? (
           connection?.currentUserHasGrant ? (
-            <button
+            <Button
               type="button"
               onClick={onPickProperty}
-              className="btn btn-primary btn-sm gap-2"
+              variant="primary"
+              size="sm"
             >
               <GoogleGlyph className="size-4" />
               Choose property
-            </button>
+            </Button>
           ) : (
             <button
               type="button"

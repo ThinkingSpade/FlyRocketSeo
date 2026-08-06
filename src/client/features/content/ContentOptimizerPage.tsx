@@ -50,6 +50,7 @@ import {
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -177,11 +178,7 @@ function BuildBriefButton({
       >
         Build brief
       </span>
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={disabled}
-      >
+      <Button type="submit" variant="primary" size="sm" disabled={disabled}>
         {isFetching ? (
           <span className="loading loading-spinner loading-xs" />
         ) : (
@@ -192,7 +189,7 @@ function BuildBriefButton({
           { kind: "paidRequests", count: 4 },
           true,
         )}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -611,13 +608,14 @@ export function ContentOptimizerPage({
                     counts and heading outlines.
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  variant="primary"
+                  size="sm"
                   onClick={() => setCompetitorsAuthorized(true)}
                 >
                   Analyze competitor outlines
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}

@@ -1,4 +1,5 @@
 import { Search } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function CompetitorsSearchForm({
   targetInput,
@@ -49,9 +50,10 @@ export function CompetitorsSearchForm({
           />
         </label>
       ) : null}
-      <button
+      <Button
         type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
+        variant="primary"
+        size="sm"
         disabled={
           !targetInput.trim() ||
           (needsCompetitor && !competitorInput.trim()) ||
@@ -64,7 +66,7 @@ export function CompetitorsSearchForm({
           <Search className="size-3.5" />
         )}
         Analyze
-      </button>
+      </Button>
     </form>
   );
 }

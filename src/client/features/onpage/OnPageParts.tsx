@@ -7,6 +7,7 @@ import {
   type PageGroup,
 } from "@/client/features/onpage/onPageModel";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /** Short element tag shown on each suggestion row. */
 const ELEMENT_TAG: Record<OnPageElement, string> = {
@@ -162,14 +163,15 @@ export function PageGroupCard({
           {group.path}
         </h3>
         {pendingIds.length > 0 ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-xs"
+            variant="ghost"
+            size="xs"
             disabled={busy}
             onClick={() => onApprovePage(pendingIds)}
           >
             Approve all {pendingIds.length}
-          </button>
+          </Button>
         ) : (
           <span className="text-xs text-base-content/40">All decided</span>
         )}

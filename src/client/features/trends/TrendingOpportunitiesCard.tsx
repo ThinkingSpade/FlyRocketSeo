@@ -9,6 +9,7 @@ import {
 } from "./opportunityActions";
 import { momentumLabel } from "./queryMomentum";
 import { useTrendingOpportunities } from "./useTrendingOpportunities";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * What to work on next, ranked, with the action spelled out.
@@ -105,15 +106,17 @@ export function TrendingOpportunitiesCard({ projectId }: Props) {
       </ul>
 
       {actionable.length > INITIAL_ROWS ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm w-fit"
+          variant="ghost"
+          size="sm"
+          className="w-fit"
           onClick={() => setShowAll((current) => !current)}
         >
           {showAll
             ? "Show fewer"
             : `Show all ${actionable.length} opportunities`}
-        </button>
+        </Button>
       ) : null}
     </Shell>
   );

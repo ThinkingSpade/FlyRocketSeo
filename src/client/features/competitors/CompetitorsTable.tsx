@@ -7,6 +7,7 @@ import {
 } from "@/client/components/table/AppDataTable";
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
 import { competitorsRowNote } from "@/client/features/insights/verdicts/competitors";
+import { Button } from "@cloudflare/kumo/components/button";
 
 function formatCount(value: number | null): string {
   return value == null ? "—" : Math.round(value).toLocaleString();
@@ -68,15 +69,16 @@ export function CompetitorsTable({
         id: "actions",
         header: "",
         cell: ({ row }) => (
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-xs gap-1"
+            variant="ghost"
+            size="xs"
             onClick={() => onCompareCompetitor(row.original.domain)}
             title="Compare keywords with this competitor"
           >
             <GitCompareArrows className="size-3.5" />
             Keyword Gap
-          </button>
+          </Button>
         ),
       },
     ],

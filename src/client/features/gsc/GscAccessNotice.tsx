@@ -3,6 +3,7 @@ import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { getGscAccessNotice } from "@/client/features/gsc/gscAccessCopy";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
 import type { GscAccessFailureReason } from "@/shared/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Why a Search Console surface has no data, plus the action that fixes it.
@@ -42,14 +43,15 @@ export function GscAccessNotice({
           {notice.action.label}
         </a>
       ) : (
-        <button
+        <Button
           type="button"
-          className="btn btn-sm mt-3 gap-2"
+          size="sm"
+          className="mt-3"
           onClick={() => void startGscLink(window.location.href)}
         >
           <GoogleGlyph className="size-4" />
           {notice.action.label}
-        </button>
+        </Button>
       )}
     </>
   );

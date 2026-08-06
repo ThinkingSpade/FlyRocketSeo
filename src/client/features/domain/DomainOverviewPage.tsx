@@ -89,6 +89,7 @@ import type {
 } from "@/client/features/domain/types";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   projectId: string;
@@ -715,9 +716,11 @@ export function DomainOverviewPage({
   const tabControls = routeState.domain ? (
     <div className="flex flex-col gap-2">
       <div>
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+          variant="ghost"
+          size="sm"
+          className="px-0 text-base-content/70 hover:bg-transparent"
           onClick={() => {
             searchTabs.setActiveTab(null);
             onShowRecentSearches();
@@ -725,7 +728,7 @@ export function DomainOverviewPage({
         >
           <ArrowLeft className="size-4" />
           Recent searches
-        </button>
+        </Button>
       </div>
       <SearchTabStrip
         projectId={projectId}

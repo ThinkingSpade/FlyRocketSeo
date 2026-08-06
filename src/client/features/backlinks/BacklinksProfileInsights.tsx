@@ -14,6 +14,7 @@ import type {
   BacklinksAnchorsData,
   BacklinksReferringDomainsData,
 } from "./backlinksPageTypes";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Four reads on the link profile that cost nothing extra: each derives from
@@ -239,9 +240,10 @@ export function ToxicLinksCard({
       title="Toxic links worth reviewing"
       icon={ShieldAlert}
       action={
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs gap-1"
+          variant="ghost"
+          size="xs"
           onClick={() =>
             downloadTextFile(
               buildDisavowFilename(target),
@@ -251,7 +253,7 @@ export function ToxicLinksCard({
         >
           <Download className="size-3.5" />
           Disavow file
-        </button>
+        </Button>
       }
     >
       <p className="text-xs text-base-content/60">

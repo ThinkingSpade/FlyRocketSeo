@@ -2,6 +2,7 @@ import { RotateCcw } from "lucide-react";
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBrandLookupFilters";
+import { Button } from "@cloudflare/kumo/components/button";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyForm = { Field: React.ComponentType<any> };
@@ -213,15 +214,16 @@ export function BrandLookupFilterPanel({
             </span>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={current.reset}
           disabled={current.activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       {activeTab === "pages" ? (

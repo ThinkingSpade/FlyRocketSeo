@@ -14,6 +14,7 @@ import {
   DashboardCard,
   useProjectNavLinks,
 } from "./dashboardShared";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function BacklinksCard({
   projectId,
@@ -58,24 +59,27 @@ export function BacklinksCard({
           <p className="mt-1 text-xs text-base-content/50">
             Uses one metered DataForSEO request.
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-outline btn-sm mt-3"
+            variant="outline"
+            size="sm"
+            className="mt-3"
             onClick={() => setLoadRequested(true)}
           >
             Load backlink summary
-          </button>
+          </Button>
         </div>
       ) : overviewQuery.isError ? (
         <div className="space-y-3">
           <CardError error={overviewQuery.error} />
-          <button
+          <Button
             type="button"
-            className="btn btn-outline btn-sm"
+            variant="outline"
+            size="sm"
             onClick={() => void overviewQuery.refetch()}
           >
             Try again
-          </button>
+          </Button>
         </div>
       ) : overviewQuery.isPending || summary === null ? (
         <CardTilesSkeleton />

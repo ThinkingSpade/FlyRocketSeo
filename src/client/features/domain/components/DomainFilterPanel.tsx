@@ -16,6 +16,7 @@ import {
   useDomainRenderDebug,
 } from "@/client/features/domain/domainDebug";
 import { MAX_DATAFORSEO_FILTER_CONDITIONS } from "@/types/schemas/domain";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type FilterValues = Record<string, string>;
 
@@ -156,15 +157,16 @@ export function DomainFilterPanel<TValues extends FilterValues>({
             </span>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={resetFilters}
           disabled={activeFilterCount === 0 && !meta.isDirty}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -215,17 +217,19 @@ export function DomainFilterPanel<TValues extends FilterValues>({
           {meta.conditionCount} / {MAX_DATAFORSEO_FILTER_CONDITIONS} conditions
         </span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-ghost"
+            size="sm"
+            variant="ghost"
             onClick={cancelFilterEdits}
             disabled={!meta.isDirty}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-sm btn-primary"
+            size="sm"
+            variant="primary"
             onClick={applyFilters}
             disabled={!meta.isDirty || meta.overLimit}
             title={
@@ -240,7 +244,7 @@ export function DomainFilterPanel<TValues extends FilterValues>({
                 {meta.dirtyCount}
               </span>
             ) : null}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

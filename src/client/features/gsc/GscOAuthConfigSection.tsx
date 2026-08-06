@@ -7,6 +7,7 @@ import {
   getGscOAuthConfigStatus,
   setGscOAuthConfig,
 } from "@/serverFunctions/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const SETUP_DOCS_URL =
   "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md";
@@ -162,9 +163,10 @@ export function GscOAuthConfigSection() {
               .
             </p>
             <div className="flex justify-end gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setShowForm(false);
                   setClientId("");
@@ -172,21 +174,23 @@ export function GscOAuthConfigSection() {
                 }}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="btn btn-primary btn-sm"
+                variant="primary"
+                size="sm"
                 disabled={!canSave}
               >
                 {saveMutation.isPending ? "Saving…" : "Save"}
-              </button>
+              </Button>
             </div>
           </form>
         ) : (
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-outline btn-sm"
+              variant="outline"
+              size="sm"
               onClick={() => setShowForm(true)}
             >
               {status.source === "custom"
@@ -194,11 +198,12 @@ export function GscOAuthConfigSection() {
                 : status.source === "env"
                   ? "Override in app"
                   : "Add credentials"}
-            </button>
+            </Button>
             {status.source === "custom" ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => clearMutation.mutate()}
                 disabled={clearMutation.isPending}
               >
@@ -207,7 +212,7 @@ export function GscOAuthConfigSection() {
                   : status.hasEnvCredentials
                     ? "Remove (revert to env)"
                     : "Remove"}
-              </button>
+              </Button>
             ) : null}
           </div>
         )}

@@ -17,6 +17,7 @@ import { resolveEffectiveScopeArea } from "@/client/features/geo/resolveScopeAre
 import type { TargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { resolveKeywordProviderNotice } from "./keywordProviderNotice";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   controller: KeywordResearchControllerState;
@@ -183,12 +184,13 @@ export function KeywordResearchSearchBar({
               )}
             </controlsForm.Field>
 
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary w-full px-6 lg:w-auto lg:shrink-0"
+              variant="primary"
+              className="w-full px-6 lg:w-auto lg:shrink-0"
             >
               Search
-            </button>
+            </Button>
           </div>
         </form>
         <controlsForm.Field name="keyword">

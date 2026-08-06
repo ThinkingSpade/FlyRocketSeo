@@ -10,6 +10,7 @@ import {
 import { useSamAccess } from "./useSamAccess";
 import { SamSetupGate } from "./SamSetupGate";
 import { SamConversation } from "./SamConversation";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * The SAM route's content: the active conversation, full-width. The chat
@@ -120,9 +121,10 @@ export function SamChat({
           research tool. Start a chat to get going.
         </p>
       </div>
-      <button
+      <Button
         type="button"
-        className="btn btn-primary btn-sm gap-1"
+        variant="primary"
+        size="sm"
         disabled={createSession.isPending}
         onClick={() => createSession.mutate()}
       >
@@ -132,7 +134,7 @@ export function SamChat({
           <Plus className="size-4" />
         )}
         New chat
-      </button>
+      </Button>
     </div>
   );
 }

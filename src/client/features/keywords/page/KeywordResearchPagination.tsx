@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import type { KeywordResearchRow } from "@/types/keywords";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const KEYWORD_RESEARCH_PAGE_SIZES = [50, 100, 300, 500] as const;
 const DEFAULT_KEYWORD_RESEARCH_PAGE_SIZE = 50;
@@ -56,24 +57,28 @@ export function KeywordResearchPagination({
             Page {page.toLocaleString()} of {totalPages.toLocaleString()}
           </span>
           <div className="flex items-center gap-1">
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm btn-square"
+              variant="ghost"
+              size="sm"
+              shape="square"
               disabled={page <= 1}
               onClick={() => onPageChange(page - 1)}
               aria-label="Previous page"
             >
               <ChevronLeft className="size-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm btn-square"
+              variant="ghost"
+              size="sm"
+              shape="square"
               disabled={page >= totalPages}
               onClick={() => onPageChange(page + 1)}
               aria-label="Next page"
             >
               <ChevronRight className="size-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

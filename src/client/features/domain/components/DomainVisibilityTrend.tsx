@@ -18,6 +18,7 @@ import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
 } from "@/client/components/chart/chartTheme";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /** Narrowed shape of a recharts tooltip payload entry (typed `any` upstream). */
 interface RechartsPayloadEntry {
@@ -94,13 +95,14 @@ export function DomainVisibilityTrend({
       <div className="p-4">
         {!run.authorized ? (
           <div className="py-8 text-center">
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              variant="primary"
+              size="sm"
               onClick={() => run.authorize()}
             >
               Load visibility trend
-            </button>
+            </Button>
           </div>
         ) : query.isFetching && points.length === 0 ? (
           <div className="flex items-center justify-center py-12">

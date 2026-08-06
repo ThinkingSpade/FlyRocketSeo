@@ -2,6 +2,7 @@ import { Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 import type { SavedKeywordsFilterValues } from "./savedKeywordsFilterTypes";
 import type { SavedKeywordsFilterForm } from "./useSavedKeywordsFilters";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function SavedKeywordsFilterPanel({
   form,
@@ -23,15 +24,16 @@ export function SavedKeywordsFilterPanel({
             </span>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">

@@ -12,6 +12,7 @@ import {
   formatNumber,
 } from "./backlinksPageUtils";
 import type { DomainRatings } from "./useAhrefsDomainRatings";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Row model for the backlinks table. In the one-per-domain view, depth-0 rows
@@ -97,9 +98,12 @@ function SourceCell({
   return (
     <div className="flex items-start gap-1.5 break-all">
       {expandable && row.domainFrom && onToggleDomain ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs btn-square shrink-0 -ml-1"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="shrink-0 -ml-1"
           aria-label={`${expanded ? "Hide" : "Show"} all links from ${domainLabel}`}
           aria-expanded={expanded}
           onClick={() => onToggleDomain(row.domainFrom ?? "")}
@@ -107,7 +111,7 @@ function SourceCell({
           <ChevronRight
             className={`size-4 transition-transform ${expanded ? "rotate-90" : ""}`}
           />
-        </button>
+        </Button>
       ) : null}
       <div>
         <div className="font-semibold">{domainLabel}</div>

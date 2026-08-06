@@ -1,5 +1,6 @@
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { SAVED_KEYWORD_PAGE_SIZES } from "./savedKeywordsUtils";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function SavedKeywordsPagination({
   page,
@@ -53,24 +54,28 @@ export function SavedKeywordsPagination({
             Page {page.toLocaleString()} of {totalPages.toLocaleString()}
           </span>
           <div className="flex items-center gap-1">
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm btn-square"
+              variant="ghost"
+              size="sm"
+              shape="square"
               disabled={page <= 1 || isLoading}
               onClick={() => onPageChange(page - 1)}
               aria-label="Previous page"
             >
               <ChevronLeft className="size-4" />
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm btn-square"
+              variant="ghost"
+              size="sm"
+              shape="square"
               disabled={page >= totalPages || isLoading}
               onClick={() => onPageChange(page + 1)}
               aria-label="Next page"
             >
               <ChevronRight className="size-4" />
-            </button>
+            </Button>
           </div>
         </div>
       </div>

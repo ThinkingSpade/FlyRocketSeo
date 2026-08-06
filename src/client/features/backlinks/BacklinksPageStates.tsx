@@ -1,4 +1,5 @@
 import { ShieldAlert } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function BacklinksLoadingState() {
   return (
@@ -53,9 +54,9 @@ export function BacklinksErrorState({
           </p>
         </div>
       </div>
-      <button className="btn btn-sm" onClick={onRetry}>
+      <Button size="sm" onClick={onRetry}>
         Retry
-      </button>
+      </Button>
     </section>
   );
 }

@@ -11,6 +11,7 @@ import {
   type PromptExplorerModel,
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type FormValues = {
   prompt: string;
@@ -104,14 +105,16 @@ export function PromptExplorerForm({
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {promptStarters.map((starter) => (
-                  <button
+                  <Button
                     key={starter}
                     type="button"
-                    className="btn btn-ghost btn-xs h-auto min-h-7 rounded-full border border-base-300 px-2.5 py-1 font-normal"
+                    variant="ghost"
+                    size="xs"
+                    className="h-auto min-h-7 rounded-full border border-base-300 px-2.5 py-1 font-normal"
                     onClick={() => onPromptChange(starter)}
                   >
                     {starter}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <p className="mt-1.5 text-xs text-base-content/50">
@@ -198,9 +201,10 @@ export function PromptExplorerForm({
               ))}
             </select>
           </div>
-          <button
+          <Button
             type="submit"
-            className="btn btn-primary shrink-0 px-6"
+            variant="primary"
+            className="shrink-0 px-6"
             disabled={isLoading || form.models.length === 0}
           >
             {isLoading
@@ -209,7 +213,7 @@ export function PromptExplorerForm({
                   kind: "paidRequests",
                   count: new Set(form.models).size,
                 })}
-          </button>
+          </Button>
         </div>
 
         {validationError ? (

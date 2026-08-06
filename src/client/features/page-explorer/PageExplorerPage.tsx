@@ -30,6 +30,7 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -206,9 +207,10 @@ export function PageExplorerPage({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+              variant="primary"
+              size="sm"
               disabled={!input.trim() || pageQuery.isFetching}
             >
               {pageQuery.isFetching ? (
@@ -217,7 +219,7 @@ export function PageExplorerPage({
                 <Search className="size-3.5" />
               )}
               Inspect
-            </button>
+            </Button>
           </form>
         </div>
       </div>

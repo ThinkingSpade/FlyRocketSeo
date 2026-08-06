@@ -14,6 +14,7 @@ import {
   setGscSite,
 } from "@/serverFunctions/gsc";
 import { getProjects } from "@/serverFunctions/projects";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Onboarding step for connecting Google Search Console: link the account-level
@@ -183,13 +184,9 @@ function QueryError({
   return (
     <div className="space-y-3">
       <p className="text-sm text-error">{message}</p>
-      <button
-        type="button"
-        className="btn btn-outline btn-sm"
-        onClick={onRetry}
-      >
+      <Button type="button" variant="outline" size="sm" onClick={onRetry}>
         Retry
-      </button>
+      </Button>
     </div>
   );
 }

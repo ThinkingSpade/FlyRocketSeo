@@ -16,6 +16,7 @@ import {
   setGscSite,
 } from "@/serverFunctions/gsc";
 import type { GscAccessFailureReason } from "@/shared/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const GRANT_STATUS_KEY = ["gscGrantStatus"];
 
@@ -324,14 +325,16 @@ function BrokenState({
           <GoogleGlyph className="size-[18px]" />
           Reconnect with Google
         </button>
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm text-error hover:bg-error/10"
+          variant="ghost"
+          size="sm"
+          className="text-error hover:bg-error/10"
           onClick={onDisconnect}
           disabled={disconnecting}
         >
           Disconnect
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -370,21 +373,19 @@ function ConnectedState({
         </div>
       </div>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={onChange}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onChange}>
           Change property
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm text-error hover:bg-error/10"
+          variant="ghost"
+          size="sm"
+          className="text-error hover:bg-error/10"
           onClick={onDisconnect}
           disabled={disconnecting}
         >
           Disconnect
-        </button>
+        </Button>
       </div>
     </div>
   );

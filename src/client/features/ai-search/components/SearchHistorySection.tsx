@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { Clock, History, X } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props<TItem extends { timestamp: number }> = {
   history: TItem[];
@@ -81,14 +82,16 @@ export function SearchHistorySection<TItem extends { timestamp: number }>({
                   day: "numeric",
                 })}
               </span>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 p-1"
+                variant="ghost"
+                size="xs"
+                className="opacity-0 group-hover:opacity-100 p-1"
                 onClick={() => onRemoveHistoryItem(item.timestamp)}
                 aria-label="Remove from history"
               >
                 <X className="size-3" />
-              </button>
+              </Button>
             </div>
           </div>
         ))}

@@ -12,6 +12,7 @@ import {
   inferBacklinksSearchScopeFromTarget,
   resolveBacklinksSearchScope,
 } from "./backlinksSearchScope";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
 
@@ -165,13 +166,14 @@ export function BacklinksSearchCard({
 
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => (
-                  <button
+                  <Button
                     type="submit"
-                    className="btn btn-primary shrink-0 px-6"
+                    variant="primary"
+                    className="shrink-0 px-6"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Loading..." : "Search"}
-                  </button>
+                  </Button>
                 )}
               </form.Subscribe>
             </div>

@@ -8,6 +8,7 @@ import {
   useGenerateSeedKeywords,
   useProjectProfile,
 } from "./useProjectProfile";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Proposes seed keywords the client's own customer would type.
@@ -50,9 +51,10 @@ export function SeedSuggestionButton({
 
   return (
     <div className="flex flex-wrap items-center gap-2">
-      <button
+      <Button
         type="button"
-        className="btn btn-ghost btn-xs gap-1.5"
+        variant="ghost"
+        size="xs"
         disabled={disabled || generate.isPending}
         onClick={() => {
           generate.mutate(
@@ -78,7 +80,7 @@ export function SeedSuggestionButton({
       >
         <Sparkles className="size-3.5 text-base-content/60" />
         {generate.isPending ? "Thinking…" : "Suggest keywords for this client"}
-      </button>
+      </Button>
       <span className="text-sm text-base-content/60">
         {generate.isError
           ? getStandardErrorMessage(

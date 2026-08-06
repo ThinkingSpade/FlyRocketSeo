@@ -1,4 +1,5 @@
 import { FileText, Printer } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * The on-screen controls above the report. Carries `report-no-print` so it
@@ -50,13 +51,14 @@ export function ReportToolbar({
             onChange={(event) => onAgencyChange(event.target.value)}
           />
         </label>
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm gap-1.5"
+          variant="primary"
+          size="sm"
           onClick={() => window.print()}
         >
           <Printer className="size-4" /> Print / Save PDF
-        </button>
+        </Button>
       </div>
     </div>
   );

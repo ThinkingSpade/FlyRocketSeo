@@ -59,6 +59,7 @@ import {
   CHART_CURSOR_LINE,
 } from "@/client/components/chart/chartTheme";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -194,18 +195,14 @@ function CompareButton({
       >
         Compare
       </span>
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={disabled}
-      >
+      <Button type="submit" variant="primary" size="sm" disabled={disabled}>
         {isFetching ? (
           <span className="loading loading-spinner loading-xs" />
         ) : (
           <Search className="size-3.5" />
         )}
         Compare
-      </button>
+      </Button>
     </div>
   );
 }

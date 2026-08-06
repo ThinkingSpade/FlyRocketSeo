@@ -15,6 +15,7 @@ import {
   updateProject,
 } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function ProjectSettings({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery({
@@ -129,13 +130,14 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
         </label>
 
         <div className="flex justify-end">
-          <button
+          <Button
             type="submit"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={updateMutation.isPending || !isDirty}
           >
             Save changes
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -183,22 +185,24 @@ function DangerSection({
             tracking. You can restore it later from the Projects page.
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-error btn-sm"
+              variant="destructive"
+              size="sm"
               onClick={() => archiveMutation.mutate()}
               disabled={archiveMutation.isPending}
             >
               Yes, archive project
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm"
+              variant="ghost"
+              size="sm"
               onClick={() => setConfirming(false)}
               disabled={archiveMutation.isPending}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -208,14 +212,19 @@ function DangerSection({
               ? "Archive this project to remove it from your workspace."
               : "You can't archive your only project."}
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-outline btn-error btn-sm shrink-0"
+            // Was `btn-outline btn-error`: an outlined destructive button.
+            // Kumo names that combination directly — a destructive action that
+            // should not shout, which is right for archiving.
+            variant="secondary-destructive"
+            size="sm"
+            className="shrink-0"
             onClick={() => setConfirming(true)}
             disabled={!canArchive}
           >
             Archive project
-          </button>
+          </Button>
         </div>
       )}
     </section>

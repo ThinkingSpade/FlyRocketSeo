@@ -23,6 +23,7 @@ import {
 import type { PortfolioProject } from "@/client/features/projects/types";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const compactFormatter = new Intl.NumberFormat(undefined, {
   notation: "compact",
@@ -130,13 +131,15 @@ function PortfolioError({
       <p className="mx-auto mt-1 max-w-md text-sm text-base-content/60">
         {getStandardErrorMessage(error)}
       </p>
-      <button
+      <Button
         type="button"
-        className="btn btn-outline btn-sm mt-4"
+        variant="outline"
+        size="sm"
+        className="mt-4"
         onClick={onRetry}
       >
         Try again
-      </button>
+      </Button>
     </div>
   );
 }
@@ -168,14 +171,16 @@ export function ProjectsPage() {
               audit, ranking, and analysis history.
             </p>
           </div>
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm shrink-0"
+            variant="primary"
+            size="sm"
+            className="shrink-0"
             onClick={() => setCreating(true)}
           >
             <Plus className="size-4" />
             New project
-          </button>
+          </Button>
         </div>
 
         {portfolioQuery.isPending ? (
@@ -272,14 +277,16 @@ function ArchivedProjects() {
                 {project.domain ?? "No domain set"}
               </span>
             </span>
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm shrink-0"
+              variant="ghost"
+              size="sm"
+              className="shrink-0"
               onClick={() => restoreMutation.mutate(project.id)}
               disabled={restoreMutation.isPending}
             >
               Restore
-            </button>
+            </Button>
           </li>
         ))}
       </ul>

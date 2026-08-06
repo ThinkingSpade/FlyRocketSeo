@@ -10,6 +10,7 @@ import {
   listInvites,
   revokeInvite,
 } from "@/serverFunctions/invites";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const INVITES_QUERY_KEY = ["teamInvites"] as const;
 
@@ -89,9 +90,9 @@ export function TeamPage() {
               maxLength={320}
               disabled={createMutation.isPending}
             />
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary"
+              variant="primary"
               disabled={createMutation.isPending || email.trim() === ""}
             >
               {createMutation.isPending ? (
@@ -100,7 +101,7 @@ export function TeamPage() {
                 <UserPlus className="size-4" />
               )}
               {createMutation.isPending ? "Creating…" : "Create invite"}
-            </button>
+            </Button>
           </form>
 
           {createdInvite ? (
@@ -174,14 +175,16 @@ export function TeamPage() {
                         Expires {formatDate(invite.expiresAt)}
                       </p>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-ghost btn-sm shrink-0 text-error"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-error"
                       onClick={() => revokeMutation.mutate(invite.id)}
                       disabled={isCanceled || revokeMutation.isPending}
                     >
                       {isCanceled ? "Revoked" : "Revoke"}
-                    </button>
+                    </Button>
                   </li>
                 );
               })}

@@ -7,6 +7,7 @@ import {
 } from "react";
 import { ArrowUp, Check, Globe, Loader2, Sparkles } from "lucide-react";
 import { FREE_ONBOARDING_QUESTION_LIMIT } from "@/shared/onboardingChat";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
 
@@ -109,14 +110,16 @@ export function WelcomeMessage({
               Upgrade to run keyword research, rank tracking, and site audits on{" "}
               {domain}.
             </p>
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-xs mt-2"
+              variant="primary"
+              size="xs"
+              className="mt-2"
               disabled={isStartingCheckout}
               onClick={onUpgrade}
             >
               {isStartingCheckout ? "Redirecting..." : "Upgrade"}
-            </button>
+            </Button>
             {checkoutError ? (
               <p className="mt-2 text-error">{checkoutError}</p>
             ) : null}
@@ -190,14 +193,15 @@ export function UpgradeSidebar({
         </ul>
 
         <div className="mt-auto space-y-3 pt-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary w-full"
+            variant="primary"
+            className="w-full"
             disabled={isStartingCheckout}
             onClick={onUpgrade}
           >
             {isStartingCheckout ? "Redirecting..." : "Upgrade to continue"}
-          </button>
+          </Button>
           <p className="text-center text-xs leading-relaxed text-base-content/55">
             Want advice from other FlyRocketSEO users?{" "}
             <a
@@ -245,14 +249,16 @@ export function ChatGate({
         <p className="mx-auto mt-1 max-w-md text-xs text-base-content/70">
           Upgrade to keep working with Sam and unlock the full FlyRocketSEO app.
         </p>
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm mt-3"
+          variant="primary"
+          size="sm"
+          className="mt-3"
           disabled={isStartingCheckout}
           onClick={onUpgrade}
         >
           {isStartingCheckout ? "Redirecting..." : "Upgrade to continue"}
-        </button>
+        </Button>
         <p className="mt-2 text-xs text-base-content/45">
           30-day money-back guarantee
         </p>
@@ -315,18 +321,20 @@ export function ChatComposer({
         placeholder={placeholder}
         className="max-h-40 flex-1 resize-none border-0 bg-transparent px-1 py-1 text-sm leading-relaxed outline-none placeholder:text-base-content/50 focus:outline-none"
       />
-      <button
+      <Button
         type="submit"
         aria-label="Send message"
         disabled={busy || !value.trim()}
-        className="btn btn-primary btn-circle btn-sm"
+        variant="primary"
+        shape="circle"
+        size="sm"
       >
         {busy ? (
           <Loader2 className="size-4 animate-spin" />
         ) : (
           <ArrowUp className="size-4" />
         )}
-      </button>
+      </Button>
     </form>
   );
 }

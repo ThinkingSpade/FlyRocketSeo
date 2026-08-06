@@ -11,6 +11,7 @@ import {
   invalidateOnboardingChatState,
   onboardingChatStateQueryOptions,
 } from "./onboardingChatQueries";
+import { Button } from "@cloudflare/kumo/components/button";
 
 // Full-viewport chat surface. Breaks out of the centered, padded AuthPageShell
 // with `fixed inset-0` so the chat fills the screen. There's no header bar —
@@ -116,13 +117,14 @@ function SiteForm({ projectId }: { projectId: string }) {
             <LocationSelect value={locationCode} onChange={setLocationCode} />
           </label>
 
-          <button
+          <Button
             type="submit"
-            className="btn btn-primary w-full"
+            variant="primary"
+            className="w-full"
             disabled={!domain.trim() || save.isPending}
           >
             {save.isPending ? "Saving…" : "Continue"}
-          </button>
+          </Button>
         </div>
       </form>
     </div>

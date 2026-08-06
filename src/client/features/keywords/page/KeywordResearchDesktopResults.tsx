@@ -20,6 +20,7 @@ import {
 import { computeKeywordTotals } from "@/client/features/keywords/keywordGroups";
 import { formatCompactNumber } from "@/client/features/keywords/utils";
 import { KeywordGroupsRail } from "./KeywordGroupsRail";
+import { FitRefinementButton } from "./FitRefinementButton";
 import { copyKeywordsAsMarkdown } from "@/client/features/keywords/state/keywordsMarkdown";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -41,9 +42,8 @@ import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeyword
 import { getLanguageCode } from "@/client/features/keywords/locations";
 import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
-import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
-import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -380,14 +380,15 @@ function DesktopFilters({
             </span>
           ) : null}
         </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={controller.resetFilters}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       <DesktopFilterFields form={filtersForm} />
@@ -405,35 +406,3 @@ function DesktopFilters({
  * cannot reach, like "how to start a vending machine business" for an
  * operator whose profile only rules out selling.
  */
-function FitRefinementButton({
-  controller,
-}: {
-  controller: KeywordResearchControllerState;
-}) {
-  const aiAvailable = useAiExplainAvailable();
-  const { profile } = useProjectProfile(keywordsRoute.useParams().projectId);
-  const { fitRefinement } = controller;
-  if (!aiAvailable || profile.offer.trim() === "") return null;
-
-  const result = fitRefinement.data;
-  return (
-    <button
-      type="button"
-      className="btn btn-ghost btn-sm gap-1.5"
-      disabled={fitRefinement.isPending || controller.rows.length === 0}
-      onClick={controller.runFitRefinement}
-      title={
-        result
-          ? `${result.classified} newly checked${result.skipped > 0 ? `, ${result.skipped} over the per-run cap` : ""}`
-          : "Judge every keyword against this client's profile, not just the exclusion rules"
-      }
-    >
-      <Sparkles className="size-3.5 text-base-content/60" />
-      {fitRefinement.isPending
-        ? "Checking fit…"
-        : result
-          ? "Fit checked"
-          : "Check fit with AI"}
-    </button>
-  );
-}
