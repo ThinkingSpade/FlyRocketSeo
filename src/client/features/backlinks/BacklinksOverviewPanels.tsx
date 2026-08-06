@@ -9,6 +9,7 @@ import {
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
 import { formatRelativeTimestamp } from "./backlinksPageUtils";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type SummaryStat = { label: string; value: string; description: string };
 
@@ -51,13 +52,13 @@ export function BacklinksOverviewPanels({
       </div>
       <OverviewGrid data={data} summaryStats={summaryStats} />
       {data.scope === "page" ? (
-        <div className="alert alert-info">
+        <Banner variant="default">
           <span>
             Showing backlinks for this exact page. Enter a bare domain for
             site-wide results. Trend charts are only shown for domain-level
             lookups.
           </span>
-        </div>
+        </Banner>
       ) : null}
     </>
   );

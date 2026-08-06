@@ -6,6 +6,7 @@ import { getFieldError, getFormError } from "@/client/lib/forms";
 import { PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -202,9 +203,9 @@ function LaunchErrors({ launchForm }: Pick<Props, "launchForm">) {
           const errorMessage = getFormError(submitError);
 
           return errorMessage ? (
-            <div className="alert alert-error py-2">
+            <Banner variant="error" className="py-2">
               <span className="text-sm">{errorMessage}</span>
-            </div>
+            </Banner>
           ) : null;
         }}
       </launchForm.Subscribe>

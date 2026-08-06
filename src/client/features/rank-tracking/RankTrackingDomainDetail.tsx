@@ -46,6 +46,7 @@ import { useMetricsRefresh } from "./useMetricsRefresh";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
 import { useRankRunPolling } from "./useRankRunPolling";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 function deviceVisibility(
   devices: RankTrackingConfig["devices"],
@@ -221,22 +222,22 @@ export function RankTrackingDomainDetail({
       </Button>
 
       {config.lastSkipReason === "insufficient_credits" && (
-        <div className="alert alert-warning text-sm py-2">
+        <Banner variant="alert" className="text-sm py-2">
           <AlertTriangle className="size-4" />
           <span>
             Last scheduled check was skipped due to insufficient credits. Top up
             your balance to resume automatic tracking.
           </span>
-        </div>
+        </Banner>
       )}
 
       {latestRun?.maybeStale && (
-        <div className="alert alert-warning text-sm py-2">
+        <Banner variant="alert" className="text-sm py-2">
           <AlertTriangle className="size-4" />
           <span>
             This run may be unresponsive and will be cleaned up automatically.
           </span>
-        </div>
+        </Banner>
       )}
 
       <FreePlanAlert visible={isFreePlan} />

@@ -18,6 +18,7 @@ import {
 import { MAX_DATAFORSEO_FILTER_CONDITIONS } from "@/types/schemas/domain";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type FilterValues = Record<string, string>;
 
@@ -204,14 +205,14 @@ export function DomainFilterPanel<TValues extends FilterValues>({
       {renderExtra ? renderExtra(draftFilters, handleValueChange) : null}
 
       {meta.overLimit ? (
-        <div className="alert alert-warning py-2 text-xs">
+        <Banner variant="alert" className="py-2 text-xs">
           <AlertTriangle className="size-4 shrink-0" />
           <span>
             Too many filter conditions ({meta.conditionCount} of{" "}
             {MAX_DATAFORSEO_FILTER_CONDITIONS} max). Remove some terms or ranges
             before applying.
           </span>
-        </div>
+        </Banner>
       ) : null}
       <div className="flex items-center justify-between gap-2 pt-1">
         <span className="text-xs text-base-content/50 tabular-nums">

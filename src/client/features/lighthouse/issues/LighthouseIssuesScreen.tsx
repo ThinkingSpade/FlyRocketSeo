@@ -15,6 +15,7 @@ import {
   LighthouseIssuesToolbar,
 } from "./LighthouseIssuesParts";
 import { categoryTabs } from "./types";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type LighthouseIssuesScreenProps = {
   projectId: string;
@@ -95,21 +96,21 @@ export function LighthouseIssuesScreen(props: LighthouseIssuesScreenProps) {
         <div className="card bg-base-100 border border-base-300">
           <div className="card-body gap-4">
             {issuesQuery.isError ? (
-              <div className="alert alert-error">
+              <Banner variant="error">
                 <AlertCircle className="size-4" />
                 <span>{issuesErrorMessage}</span>
-              </div>
+              </Banner>
             ) : null}
 
             {showsLegacyPayloadNotice ? (
-              <div className="alert alert-warning">
+              <Banner variant="alert">
                 <TriangleAlert className="size-4" />
                 <span>
                   This Lighthouse run was stored before issue details were
                   preserved. Re-run the audit to see category counts and issue
                   cards.
                 </span>
-              </div>
+              </Banner>
             ) : null}
 
             <LighthouseIssuesToolbar

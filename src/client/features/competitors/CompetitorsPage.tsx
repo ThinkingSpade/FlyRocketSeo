@@ -41,6 +41,7 @@ import {
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type CompetitorsSearchState = {
   target: string;
@@ -253,7 +254,9 @@ export function CompetitorsPage({
       </div>
 
       {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
+        <Banner variant="error" className="text-sm">
+          {errorMessage}
+        </Banner>
       ) : null}
 
       {!target && tab === "competitors" ? (

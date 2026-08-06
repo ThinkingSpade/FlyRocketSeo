@@ -15,6 +15,7 @@ import { resolveQueryState } from "@/client/components/state/queryState";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const SEVERITY_BADGE: Record<
   CannibalizationSeverity,
@@ -79,9 +80,9 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       ) : null}
 
       {insightsQuery.isError ? (
-        <div className="alert alert-error text-sm">
+        <Banner variant="error" className="text-sm">
           {getStandardErrorMessage(insightsQuery.error)}
-        </div>
+        </Banner>
       ) : null}
 
       {data && !data.connected ? (

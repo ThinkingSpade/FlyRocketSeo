@@ -1,5 +1,6 @@
 import { ShieldAlert } from "lucide-react";
 import { Button, LinkButton } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const README_CLOUDFLARE_ACCESS_URL =
   "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/DEPLOY_INTERNET_FACING.md";
@@ -21,9 +22,9 @@ export function AuthConfigErrorCard({
           Authentication setup required
         </h2>
 
-        <div className="alert alert-error">
+        <Banner variant="error">
           <span>{message}</span>
-        </div>
+        </Banner>
 
         <p className="text-sm text-base-content/70">
           Check the auth environment variables for your selected

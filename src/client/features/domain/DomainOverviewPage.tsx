@@ -90,6 +90,7 @@ import type {
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type Props = {
   projectId: string;
@@ -873,12 +874,12 @@ export function DomainOverviewPage({
           ) : null}
 
           {!state.overview.hasData ? (
-            <div className="alert alert-info">
+            <Banner variant="default">
               <span>
                 Not enough data for this domain yet. Try another domain or
                 include subdomains.
               </span>
-            </div>
+            </Banner>
           ) : null}
 
           <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">

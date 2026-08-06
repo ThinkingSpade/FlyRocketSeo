@@ -22,6 +22,7 @@ import {
 } from "@/client/features/audit/shared";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const NO_COMPARISON = "none";
 const MAX_LISTED_PAGES = 25;
@@ -108,12 +109,12 @@ export function AuditComparison({
 
         {comparisonId !== NO_COMPARISON &&
           (comparisonQuery.isError ? (
-            <div className="alert alert-error text-sm py-2">
+            <Banner variant="error" className="text-sm py-2">
               <AlertCircle className="size-4" />
               <span>
                 Couldn't load that comparison run. Try selecting another one.
               </span>
-            </div>
+            </Banner>
           ) : diff ? (
             <ComparisonSummary diff={diff} />
           ) : (

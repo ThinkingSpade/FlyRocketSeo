@@ -4,6 +4,7 @@ import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 function SeoApiStatusBanners({
   shouldShowSeoApiWarning,
@@ -17,7 +18,7 @@ function SeoApiStatusBanners({
       {shouldShowSeoApiWarning ? (
         <div className="shrink-0 px-4 py-2.5 md:px-6">
           <div className="mx-auto max-w-7xl">
-            <div className="alert alert-warning">
+            <Banner variant="alert">
               <AlertTriangle className="size-4 shrink-0" />
               <span className="text-sm">
                 Setup needed: add your DataForSEO API key to use FlyRocketSEO
@@ -30,7 +31,7 @@ function SeoApiStatusBanners({
                 </Link>
                 .
               </span>
-            </div>
+            </Banner>
           </div>
         </div>
       ) : null}
@@ -38,7 +39,7 @@ function SeoApiStatusBanners({
       {seoApiKeyStatusError ? (
         <div className="shrink-0 px-4 py-2.5 md:px-6">
           <div className="mx-auto max-w-7xl">
-            <div className="alert alert-info">
+            <Banner variant="default">
               <AlertTriangle className="size-4 shrink-0" />
               <span className="text-sm">
                 We could not verify your DataForSEO setup. If features are not
@@ -51,7 +52,7 @@ function SeoApiStatusBanners({
                 </Link>
                 .
               </span>
-            </div>
+            </Banner>
           </div>
         </div>
       ) : null}

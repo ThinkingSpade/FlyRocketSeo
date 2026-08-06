@@ -27,6 +27,7 @@ import {
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const BACKLINKS_RESULTS_TABS: Array<{
   tab: BacklinksSearchState["tab"];
@@ -194,9 +195,9 @@ export function BacklinksResultsCard({
 
       <div className="p-4">
         {tabErrorMessage ? (
-          <div className="alert alert-error mb-3">
+          <Banner variant="error" className="mb-3">
             <span>{tabErrorMessage}</span>
-          </div>
+          </Banner>
         ) : null}
         {isTabLoading && !tabErrorMessage ? (
           <TabLoadingState label={TAB_LOADING_LABELS[activeTab]} />

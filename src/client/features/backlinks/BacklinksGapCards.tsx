@@ -1,12 +1,13 @@
 import { Download, Network, Plus, Radar, Target } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
-import { buildCsv, downloadCsv } from "@/client/lib/csv";
+import { exportLinkGap } from "./exportLinkGap";
 import type {
   CompetingDomainsResult,
   LinkIntersectResult,
   ReferringNetworksResult,
 } from "@/types/schemas/backlinks-compare";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 /**
  * The three competitive drill-downs that sit under the comparison table: who
@@ -55,7 +56,9 @@ function CardShell({
           {action}
         </div>
         {errorMessage ? (
-          <div className="alert alert-error py-2 text-sm">{errorMessage}</div>
+          <Banner variant="error" className="py-2 text-sm">
+            {errorMessage}
+          </Banner>
         ) : null}
         {children}
       </div>
@@ -205,33 +208,6 @@ export function LinkIntersectCard({
         </>
       ) : null}
     </CardShell>
-  );
-}
-
-function exportLinkGap(rows: LinkIntersectResult["rows"], target: string) {
-  const slug = target.toLowerCase().replace(/[^a-z0-9.-]+/g, "-");
-  downloadCsv(
-    `link-gap-${slug || "export"}.csv`,
-    buildCsv(
-      [
-        "Referring Domain",
-        "Competitors Linked",
-        "Which Competitors",
-        "Domain Rank",
-        "Backlinks",
-        "Spam Score",
-        "First Seen",
-      ],
-      rows.map((row) => [
-        row.domain,
-        row.competitorsLinked,
-        row.linkedTo.join(" | "),
-        row.rank,
-        row.backlinks,
-        row.spamScore,
-        row.firstSeen,
-      ]),
-    ),
   );
 }
 

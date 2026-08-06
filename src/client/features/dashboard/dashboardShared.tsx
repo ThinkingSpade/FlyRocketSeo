@@ -2,6 +2,7 @@ import { useMemo, type ComponentType, type ReactNode } from "react";
 import { Link, type LinkOptions } from "@tanstack/react-router";
 import { getProjectNavGroups } from "@/client/navigation/items";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 // ---------------------------------------------------------------------------
 // Project nav link reuse
@@ -125,9 +126,9 @@ export function DeltaStatTile({
 
 export function CardError({ error }: { error: unknown }) {
   return (
-    <div className="alert alert-error text-sm">
+    <Banner variant="error" className="text-sm">
       {getStandardErrorMessage(error)}
-    </div>
+    </Banner>
   );
 }
 

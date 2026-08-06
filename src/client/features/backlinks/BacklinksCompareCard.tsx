@@ -8,6 +8,7 @@ import type {
 } from "@/types/schemas/backlinks-compare";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -332,7 +333,9 @@ export function BacklinksCompareCard({
         </div>
 
         {errorMessage ? (
-          <div className="alert alert-error py-2 text-sm">{errorMessage}</div>
+          <Banner variant="error" className="py-2 text-sm">
+            {errorMessage}
+          </Banner>
         ) : null}
 
         {result && result.rows.length > 0 ? (

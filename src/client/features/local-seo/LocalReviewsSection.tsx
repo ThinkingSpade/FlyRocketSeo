@@ -16,6 +16,7 @@ import {
   type StoredReviewsTask,
 } from "./reviewsTaskStore";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 export function LocalReviewsSection({
   projectId,
@@ -140,7 +141,9 @@ export function LocalReviewsSection({
           </div>
 
           {errorMessage ? (
-            <div className="alert alert-error text-sm">{errorMessage}</div>
+            <Banner variant="error" className="text-sm">
+              {errorMessage}
+            </Banner>
           ) : null}
 
           {outcome?.status === "completed" ? (

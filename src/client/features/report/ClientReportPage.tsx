@@ -5,6 +5,7 @@ import { ReportCover } from "@/client/features/report/ReportChrome";
 import { ReportPages } from "@/client/features/report/ReportPages";
 import { useClientReportData } from "@/client/features/report/useClientReportData";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 // The classic print-only-section trick: everything hides except the report, so
 // the browser's Print → Save as PDF produces a clean client deliverable
@@ -96,14 +97,14 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
             metered and only load after the paid-request buttons below.
           </p>
           {data.keywordDetailsError ? (
-            <div className="mt-3 alert alert-error text-sm">
+            <Banner variant="error" className="mt-3 text-sm">
               {data.keywordDetailsError}
-            </div>
+            </Banner>
           ) : null}
           {data.backlinkDetailsError ? (
-            <div className="mt-3 alert alert-error text-sm">
+            <Banner variant="error" className="mt-3 text-sm">
               {data.backlinkDetailsError}
-            </div>
+            </Banner>
           ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
             {data.domainSnapshotMissing ? (

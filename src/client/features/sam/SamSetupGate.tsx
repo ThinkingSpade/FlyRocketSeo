@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ShieldAlert, Wrench } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 export function SamSetupGate({
   errorMessage,
@@ -54,10 +55,10 @@ export function SamSetupGate({
         </div>
 
         {errorMessage ? (
-          <div className="alert alert-warning">
+          <Banner variant="alert">
             <ShieldAlert className="size-4 shrink-0" />
             <span>{errorMessage}</span>
-          </div>
+          </Banner>
         ) : null}
       </div>
     </section>

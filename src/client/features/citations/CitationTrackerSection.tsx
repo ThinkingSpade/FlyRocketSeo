@@ -31,6 +31,7 @@ import {
   type CitationReport,
 } from "./citationModel";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 /** "City, Region" when both are on file, otherwise whichever one is --
  *  matches what CitationTrackerService expects as its single `city` field,
@@ -311,7 +312,9 @@ export function CitationTrackerSection({
         </div>
 
         {errorMessage ? (
-          <div className="alert alert-error text-sm">{errorMessage}</div>
+          <Banner variant="error" className="text-sm">
+            {errorMessage}
+          </Banner>
         ) : null}
 
         {!run.authorized ? (
