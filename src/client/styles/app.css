@@ -8,8 +8,12 @@
   /* Easing curves. These are the single biggest contributor to motion reading
      as "smooth" — a long, slow tail is what separates a premium feel from the
      browser default `ease`, which decelerates too early and lands abruptly.
-     Registered here (not :root) so Tailwind generates `ease-out-soft` etc. */
+     Registered here (not :root) so Tailwind generates `ease-out-soft` etc.
+
+     `--ease-out-soft` and `--ease-bounce` are the literal curves Cloudflare's
+     Kumo ships (@cloudflare/kumo@2.9.1, MIT); the other two are ours. */
   --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.2, 0, 0, 1.5);
   --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
   --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
   /* Overshoots slightly past the target before settling. Micro-interactions
@@ -397,15 +401,26 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
    forget one. See src/client/hooks/useReveal.ts for the JS-side gate. */
 
 :root {
-  --motion-duration-fast: 150ms;
-  --motion-duration-base: 320ms;
-  --motion-duration-slow: 620ms;
-  /* How far a revealing element travels. Subtle beats dramatic: past ~24px the
-     eye tracks the movement instead of the content. */
-  --motion-rise-distance: 20px;
-  /* Gap between consecutive items in a staggered group. */
-  --motion-stagger-step: 70ms;
-  --motion-lift-distance: -2px;
+  /* Measured from @cloudflare/kumo@2.9.1 (MIT), the component library behind
+     the Cloudflare dashboard, which is the reference for this work.
+
+     The counter-intuitive part: a dashboard reads as "smooth" because it is
+     FAST, not slow. Kumo's default transition is 100ms — interactions resolve
+     almost instantly, and only entrances get a long curve. Marketing-site
+     timings (300ms+ on a hover) applied to a dense tool feel sluggish, not
+     premium. Hence the wide gap between `fast` and `slow` here. */
+  --motion-duration-fast: 100ms; /* Kumo --default-transition-duration */
+  --motion-duration-base: 200ms; /* ours: sits between the two Kumo anchors */
+  --motion-duration-slow: 500ms; /* Kumo's reveal transform/opacity duration */
+  /* How far a revealing element travels. Ours — Kumo does not expose a token
+     for it. Subtle beats dramatic: past ~24px the eye tracks the movement
+     instead of the content, and dashboards want less travel than landing pages. */
+  --motion-rise-distance: 16px;
+  /* Gap between consecutive items in a staggered group. Ours. */
+  --motion-stagger-step: 50ms;
+  /* Ours, and deliberately small: Kumo's own hover states tint the surface
+     rather than move it (see .motion-lift below). */
+  --motion-lift-distance: -1px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -452,7 +467,14 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 }
 
 /* Micro-interactions. `motion-lift` is the hover treatment for cards and other
-   clickable surfaces; pair it with the element's own shadow/border classes. */
+   clickable surfaces; pair it with the element's own ring/border classes.
+
+   Note on the reference: Kumo's own buttons do NOT lift. Every variant tints
+   instead — `hover:bg-kumo-tint` over a hairline ring, with the ring colour
+   shifting on the outline variant. Movement is reserved for things that
+   actually move (sidebar, popovers, reveals). Prefer a tint here too, on
+   anything that appears in a dense list; keep the lift for large standalone
+   cards where a 1px shift reads as depth rather than jitter. */
 .motion-lift {
   transition:
     transform var(--motion-duration-fast) var(--ease-out-quart),
