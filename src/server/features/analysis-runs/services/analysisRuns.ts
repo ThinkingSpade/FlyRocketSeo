@@ -79,6 +79,21 @@ type RestoredRun = {
 };
 
 /**
+ * Why a restore produced nothing, when it does.
+ *
+ * A bare `null` conflated two very different situations, and the tab rendered
+ * both as "you have never run this": there was no run at all, versus there WAS
+ * a run and its payload is gone. Only the second is worth telling the user
+ * about, and it is the common one — the payload used to live under the
+ * `dataforseo-cache/` prefix, which the bucket deletes after 7 days while the
+ * D1 row lives forever (see RUN_PAYLOAD_PREFIX in r2-cache.ts).
+ */
+type RestoreOutcome =
+  | Readonly<{ status: "none" }>
+  | Readonly<{ status: "expired"; label: string; lastRanAt: string }>
+  | Readonly<{ status: "ready"; run: RestoredRun }>;
+
+/**
  * The most recent run for a tab, with its stored result. Returns null when
  * there is no run yet, or when the payload is no longer in R2 — either way the
  * tab falls back to its normal empty state.
@@ -91,8 +106,8 @@ async function hydrate(
     lastRanAt: string;
     runCount: number;
   } | null,
-): Promise<RestoredRun | null> {
-  if (!row) return null;
+): Promise<RestoreOutcome> {
+  if (!row) return { status: "none" };
 
   // The run's own durable copy first, then the shared cache object as a
   // fallback. The fallback is what keeps runs recorded BEFORE this fix
@@ -102,21 +117,28 @@ async function hydrate(
   const resultJson =
     (await getRunPayload(row.cacheKey)) ??
     (await getCachedRawIgnoringTtl(row.cacheKey));
-  if (resultJson == null) return null;
+
+  // The row is proof the run happened, so this is an expiry, not an absence.
+  if (resultJson == null) {
+    return { status: "expired", label: row.label, lastRanAt: row.lastRanAt };
+  }
 
   return {
-    label: row.label,
-    paramsJson: row.paramsJson,
-    resultJson,
-    lastRanAt: row.lastRanAt,
-    runCount: row.runCount,
+    status: "ready",
+    run: {
+      label: row.label,
+      paramsJson: row.paramsJson,
+      resultJson,
+      lastRanAt: row.lastRanAt,
+      runCount: row.runCount,
+    },
   };
 }
 
 async function restoreLatest(
   projectId: string,
   feature: string,
-): Promise<RestoredRun | null> {
+): Promise<RestoreOutcome> {
   return hydrate(await AnalysisRunRepository.latest(projectId, feature));
 }
 
@@ -124,7 +146,7 @@ async function restoreLatest(
 async function restoreRun(
   projectId: string,
   runId: string,
-): Promise<RestoredRun | null> {
+): Promise<RestoreOutcome> {
   return hydrate(await AnalysisRunRepository.getById(projectId, runId));
 }
 
