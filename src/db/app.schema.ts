@@ -79,6 +79,55 @@ export const projects = sqliteTable(
   ],
 );
 
+// Hosts under a project's apex `domain` that the project also owns.
+//
+// A project still has exactly ONE `domain` (the apex). This table holds the
+// hosts beneath it, so features needing the whole estate can read a list
+// instead of forcing one project per subdomain.
+//
+// A row per host rather than a JSON blob on `projects`: discovery re-runs
+// upsert per host, and an estate of hundreds has to be searchable, sortable by
+// the discovered metrics, and individually toggleable — none of which a blob
+// supports without rewriting the whole value on every edit.
+export const projectSubdomains = sqliteTable(
+  "project_subdomains",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    host: text("host").notNull(),
+    // How the row got here. A re-run refreshes metrics but never downgrades a
+    // `manual` row, so a hand-added host keeps its provenance in the UI.
+    source: text("source", { enum: ["manual", "gsc", "dataforseo"] })
+      .notNull()
+      .default("manual"),
+    // Excluded hosts stay as rows so the next discovery run does not resurrect
+    // a host the user deliberately turned off.
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    // Captured at discovery time so a large estate can be ranked by whichever
+    // signal its source could provide. Null when that source had none: GSC
+    // fills clicks/impressions, DataForSEO fills the organic pair.
+    organicKeywords: integer("organic_keywords"),
+    organicTraffic: integer("organic_traffic"),
+    clicks: integer("clicks"),
+    impressions: integer("impressions"),
+    // Last discovery run that still saw this host. Null for manual rows never
+    // confirmed by a run — which is exactly how the UI flags a host that may
+    // no longer exist.
+    lastSeenAt: text("last_seen_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("project_subdomains_project_host_idx").on(
+      table.projectId,
+      table.host,
+    ),
+  ],
+);
+
 // User-saved keywords within a project. This is the canonical saved list.
 export const savedKeywords = sqliteTable(
   "saved_keywords",
