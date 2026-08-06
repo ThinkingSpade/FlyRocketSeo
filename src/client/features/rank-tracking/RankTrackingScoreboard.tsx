@@ -24,7 +24,10 @@ import {
   computeBucketTransitions,
   computeScorecards,
 } from "./rankTrackingScorecards";
-import { computeAveragePositionTrend } from "./visibilityTrend";
+import {
+  computeAveragePositionTrend,
+  computeVisibilityTrend,
+} from "./visibilityTrend";
 import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
@@ -69,6 +72,19 @@ export function RankTrackingScoreboard({
     () => computeBucketTransitions(rows, device),
     [rows, device],
   );
+  // The Visibility tile states one number; this is the shape behind it. Same
+  // series the Visibility trend chart draws further down the page, from the
+  // same two inputs, so the tile and the chart cannot disagree.
+  const visibilityTrend = useMemo(
+    () =>
+      computeVisibilityTrend(
+        cells,
+        new Map(rows.map((r) => [r.trackingKeywordId, r.searchVolume])),
+      )
+        .map((point) => point.visibility)
+        .filter((visibility): visibility is number => visibility != null),
+    [cells, rows],
+  );
 
   if (rows.length === 0) return null;
 
@@ -87,6 +103,7 @@ export function RankTrackingScoreboard({
               : "Volume-weighted click potential"
           }
           tone="primary"
+          trend={visibilityTrend}
         />
         <InsightTile
           icon={ArrowUpRight}
