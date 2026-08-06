@@ -1,3 +1,18 @@
+/* Kumo — Cloudflare's component library (MIT), the design reference for this
+   app. Two ordering rules from its README, both load-bearing:
+
+     1. Tailwind 4 does not scan node_modules, so without this @source the
+        utilities Kumo's own components use are never generated and parts of
+        them render unstyled (centring, overlays).
+     2. Kumo must be imported BEFORE tailwindcss, so its @theme tokens are
+        registered first.
+
+   Kumo's @theme also resets the type scale to a 14px base (13px sm, 12px xs).
+   That is deliberate — it is where most of the dashboard's density comes from
+   — but it applies to the DaisyUI components still in the app too, so expect
+   the whole UI to tighten a step until the migration finishes. */
+@source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 /* Leaflet map chrome for the Local Rank Grid. */
 @import "leaflet/dist/leaflet.css";
@@ -291,6 +306,49 @@ html[data-theme="flyrocketseo-dark"] .tag-chip-violet {
 }
 html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
   color: #f5d0fe;
+}
+
+/* FlyRocketSEO's identity over Kumo's structure.
+   ---------------------------------------------------------------------------
+   Kumo ships Cloudflare's own brand values: a blue --color-kumo-brand and the
+   #f6821f orange on --text-color-kumo-brand. We want their density, spacing
+   and motion — not their identity — so only the brand-carrying tokens are
+   remapped, onto the palette the DaisyUI themes above already define.
+   Everything else (the neutral surface ramp, badge hues, the type scale, the
+   focus ring) is left exactly as Kumo ships it.
+
+   The rule is map identity, keep their craft — which is why the semantic
+   status colours (--color-kumo-danger/info/success/warning and their -tint and
+   text pairs) are NOT remapped, even though the app has its own error red.
+   Each of those is a tuned triple: a solid that carries white text, a
+   translucent tint, and a text colour for a surface, all balanced across both
+   modes. Substituting the DaisyUI values would mean inventing eight new
+   colours and hand-checking their contrast, and since the plan is to migrate
+   off DaisyUI entirely, it would be inventing them only to delete them later.
+   Until then a DaisyUI alert and a Kumo banner will show slightly different
+   reds; both read as red, and the drift ends when the last DaisyUI component
+   goes. If that mismatch turns out to be intolerable sooner, this is the block
+   to add them to.
+
+   light-dark() rather than a [data-theme] override, because that is the
+   mechanism Kumo's own :root tokens use and it is already driven correctly:
+   the two DaisyUI themes set color-scheme, so this follows the existing theme
+   toggle with no data-mode wiring of our own.
+
+   The background and the text tokens do NOT get the same dark value, which
+   looks like an inconsistency and is not. Kumo's primary button hardcodes
+   `!text-white`, so --color-kumo-brand has to stay dark enough for white text
+   in BOTH modes — the DaisyUI dark primary (#a89bff) is a light lavender that
+   pairs with dark text, and white on it would fail contrast. The text/link
+   tokens sit on a page surface instead, so there they take the lavender. */
+:root {
+  /* Button/emphasis backgrounds — always carries white text. */
+  --color-kumo-brand: light-dark(#4934c7, #5b46d9);
+  --color-kumo-brand-hover: light-dark(#3b29a3, #6d5ae8);
+  /* Brand-coloured text and links — sits on base/canvas, so it tracks the
+     DaisyUI primary exactly. */
+  --text-color-kumo-brand: light-dark(#4934c7, #a89bff);
+  --text-color-kumo-link: light-dark(#4934c7, #a89bff);
 }
 
 /* Keyword difficulty score badges — muted/transparent style to match tag chips */
