@@ -9,6 +9,7 @@ import {
   parseBrandTerms,
   type QueryTotals,
 } from "./brandedSplit";
+import { Input } from "@cloudflare/kumo/components/input";
 
 function formatCount(value: number): string {
   return value.toLocaleString();
@@ -62,9 +63,10 @@ export function BrandedSplitCard({
           </h2>
           <label className="flex items-center gap-2 text-xs text-base-content/60">
             Brand terms
-            <input
+            <Input
               type="text"
-              className="input input-bordered input-xs w-56"
+              size="xs"
+              className="w-56"
               placeholder="brand, brand misspelling"
               value={termsInput}
               onChange={(event) => {

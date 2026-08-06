@@ -7,6 +7,7 @@ import type {
 } from "@/types/schemas/rank-tracking";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export type Filters = {
   include: string;
@@ -94,8 +95,9 @@ export function FilterPanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
             Include
           </p>
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            size="sm"
+            className="w-full bg-base-100"
             placeholder="e.g. seo, tool"
             value={filters.include}
             onChange={(e) => update("include", e.target.value)}
@@ -105,8 +107,9 @@ export function FilterPanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
             Exclude
           </p>
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            size="sm"
+            className="w-full bg-base-100"
             placeholder="e.g. free, cheap"
             value={filters.exclude}
             onChange={(e) => update("exclude", e.target.value)}
@@ -156,8 +159,9 @@ export function DomainListFilterBar({
           <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
             Search
           </span>
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            size="sm"
+            className="w-full bg-base-100"
             placeholder="Domain or website"
             value={filters.query}
             onChange={(event) =>
@@ -249,15 +253,17 @@ function RangeFilter({
         {title}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          size="xs"
+          className="bg-base-100"
           placeholder="Min"
           type="number"
           value={minValue}
           onChange={(e) => onMinChange(e.target.value)}
         />
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          size="xs"
+          className="bg-base-100"
           placeholder="Max"
           type="number"
           value={maxValue}

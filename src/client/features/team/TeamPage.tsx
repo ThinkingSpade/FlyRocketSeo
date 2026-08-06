@@ -13,6 +13,7 @@ import {
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const INVITES_QUERY_KEY = ["teamInvites"] as const;
 
@@ -81,9 +82,9 @@ export function TeamPage() {
               createMutation.mutate(email);
             }}
           >
-            <input
+            <Input
               type="email"
-              className="input input-bordered min-w-0 flex-1"
+              className="min-w-0 flex-1"
               placeholder="teammate@example.com"
               value={email}
               onChange={(event) => setEmail(event.currentTarget.value)}
@@ -109,8 +110,9 @@ export function TeamPage() {
           {createdInvite ? (
             <div className="rounded-lg border border-base-300 bg-base-200/40 p-3">
               <div className="flex items-start gap-2">
-                <input
-                  className="input input-sm input-bordered min-w-0 flex-1 font-mono text-xs"
+                <Input
+                  size="sm"
+                  className="min-w-0 flex-1 font-mono text-xs"
                   value={createdInvite.inviteUrl}
                   readOnly
                   aria-label="Invitation link"

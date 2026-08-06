@@ -8,6 +8,7 @@ import {
   isBrandSeed,
   isBrandedQuery,
 } from "@/client/features/search-performance/brandedSplit";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * Picks the keyword the keyword-driven analyses run on.
@@ -113,9 +114,9 @@ export function SeedKeywordField({
         <span className="text-xs font-medium text-base-content/70">
           Seed keyword
         </span>
-        <input
+        <Input
           type="text"
-          className="input input-bordered input-sm"
+          size="sm"
           value={value}
           placeholder="e.g. office coffee service"
           disabled={disabled}

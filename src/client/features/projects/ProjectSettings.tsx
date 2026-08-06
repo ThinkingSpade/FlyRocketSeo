@@ -17,6 +17,7 @@ import {
 import type { ProjectSummary } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function ProjectSettings({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery({
@@ -107,12 +108,12 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">Name</span>
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
             maxLength={120}
-            className="input input-bordered w-full"
+            className="w-full"
           />
         </label>
 
@@ -120,13 +121,13 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
           <span className="font-medium">
             Domain <span className="text-base-content/50">(optional)</span>
           </span>
-          <input
+          <Input
             type="text"
             value={domain}
             onChange={(event) => setDomain(event.target.value)}
             placeholder="example.com"
             maxLength={255}
-            className="input input-bordered w-full"
+            className="w-full"
           />
         </label>
 

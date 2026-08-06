@@ -11,6 +11,7 @@ import { setLastProjectId } from "@/client/lib/active-project";
 import { createProject } from "@/serverFunctions/projects";
 import { getGscConnection } from "@/serverFunctions/gsc";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type CreatedProject = { id: string; name: string };
 
@@ -86,14 +87,14 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
 
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">Name</span>
-          <input
+          <Input
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="Acme Inc."
             maxLength={120}
             autoFocus
-            className="input input-bordered w-full"
+            className="w-full"
           />
         </label>
 
@@ -101,13 +102,13 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
           <span className="font-medium">
             Domain <span className="text-base-content/50">(optional)</span>
           </span>
-          <input
+          <Input
             type="text"
             value={domain}
             onChange={(event) => setDomain(event.target.value)}
             placeholder="example.com"
             maxLength={255}
-            className="input input-bordered w-full"
+            className="w-full"
           />
           <span className="text-xs text-base-content/50">
             Next, you can connect this client's Google Search Console.

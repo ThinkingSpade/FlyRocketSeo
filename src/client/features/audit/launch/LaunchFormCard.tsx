@@ -7,6 +7,7 @@ import { PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -106,11 +107,12 @@ function LaunchOptions({
         <span className="text-sm text-base-content/70">Max pages</span>
         <launchForm.Field name="maxPagesInput">
           {(field) => (
-            <input
+            <Input
               type="number"
               min={MIN_PAGES}
               max={maxPagesLimit}
-              className="input input-bordered input-sm w-28"
+              size="sm"
+              className="w-28"
               value={field.state.value}
               onChange={(event) => {
                 const next = event.target.value;

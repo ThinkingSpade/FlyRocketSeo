@@ -10,6 +10,7 @@ import {
   searchGbpCategories,
 } from "@/serverFunctions/gbp";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /** The only two GBP Audit checks (gbpAudit.ts) this can actually fix. Every
  *  other check either isn't a listing field (reviews, rating, owner
@@ -234,9 +235,10 @@ function CategoryFixForm({
 
   return (
     <div className="mt-1.5 space-y-1.5">
-      <input
+      <Input
         type="text"
-        className="input input-bordered input-xs w-full"
+        size="xs"
+        className="w-full"
         placeholder="Search Google's category list (e.g. Pizza restaurant)"
         value={selected ? selected.displayName : query}
         onChange={(event) => {

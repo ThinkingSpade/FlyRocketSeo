@@ -23,6 +23,7 @@ import {
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Input } from "@cloudflare/kumo/components/input";
 
 // Keep the shortcut's rank-check shape aligned with the full config flow, but
 // leave recurring spend off until the user explicitly chooses a schedule.
@@ -256,10 +257,10 @@ export function TrackKeywordsModal({
                 <label className="label">
                   <span className="label-text font-medium">Target domain</span>
                 </label>
-                <input
+                <Input
                   type="text"
                   placeholder="example.com"
-                  className="input input-bordered w-full"
+                  className="w-full"
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
                   onBlur={handleDomainBlur}

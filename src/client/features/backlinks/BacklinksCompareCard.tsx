@@ -10,6 +10,7 @@ import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -85,9 +86,10 @@ function CompetitorInput({
         submit();
       }}
     >
-      <input
+      <Input
         type="text"
-        className="input input-bordered input-sm min-w-0 flex-1"
+        size="sm"
+        className="min-w-0 flex-1"
         placeholder={
           disabled
             ? `Up to ${MAX_COMPARE_COMPETITORS} competitors`

@@ -38,6 +38,7 @@ import {
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const GRID_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -325,9 +326,10 @@ export function LocalRankGridPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Keyword
               </span>
-              <input
+              <Input
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="vending machines"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -337,9 +339,10 @@ export function LocalRankGridPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Location
               </span>
-              <input
+              <Input
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="75201 · Plano, TX · any address"
                 value={locationInput}
                 onChange={(event) => setLocationInput(event.target.value)}

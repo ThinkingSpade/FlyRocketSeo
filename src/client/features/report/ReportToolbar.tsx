@@ -1,5 +1,6 @@
 import { FileText, Printer } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * The on-screen controls above the report. Carries `report-no-print` so it
@@ -33,8 +34,9 @@ export function ReportToolbar({
           <span className="label-text text-xs text-base-content/60">
             Prepared by
           </span>
-          <input
-            className="input input-bordered input-sm w-40"
+          <Input
+            size="sm"
+            className="w-40"
             value={preparedBy}
             placeholder="Your name"
             onChange={(event) => onPreparedByChange(event.target.value)}
@@ -44,8 +46,9 @@ export function ReportToolbar({
           <span className="label-text text-xs text-base-content/60">
             Agency
           </span>
-          <input
-            className="input input-bordered input-sm w-40"
+          <Input
+            size="sm"
+            className="w-40"
             value={agency}
             placeholder="Company name"
             onChange={(event) => onAgencyChange(event.target.value)}

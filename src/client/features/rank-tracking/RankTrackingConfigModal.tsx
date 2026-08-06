@@ -26,6 +26,7 @@ import { resolveInitialConfigArea } from "./rankTrackingConfigArea";
 import { useConfigAreaLookup } from "./useConfigAreaLookup";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type Props = {
   projectId: string;
@@ -264,10 +265,10 @@ export function RankTrackingConfigModal({
           <label className="label">
             <span className="label-text font-medium">Target Domain</span>
           </label>
-          <input
+          <Input
             type="text"
             placeholder="example.com"
-            className="input input-bordered w-full"
+            className="w-full"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             onBlur={handleDomainBlur}

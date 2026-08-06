@@ -34,6 +34,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -297,9 +298,10 @@ export function TopicClustersPage({
                 <span className="label-text pb-1 text-xs font-medium">
                   Seed topic
                 </span>
-                <input
+                <Input
                   type="text"
-                  className="input input-bordered input-sm w-full"
+                  size="sm"
+                  className="w-full"
                   placeholder="office vending machines"
                   value={input}
                   onChange={(event) => {

@@ -34,6 +34,7 @@ import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -186,9 +187,10 @@ export function LocalSeoPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Business name (add a city for precision)
               </span>
-              <input
+              <Input
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="Joe's Pizza Brooklyn"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}

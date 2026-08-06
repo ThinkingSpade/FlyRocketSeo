@@ -12,6 +12,7 @@ import {
   onboardingChatStateQueryOptions,
 } from "./onboardingChatQueries";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 // Full-viewport chat surface. Breaks out of the centered, padded AuthPageShell
 // with `fixed inset-0` so the chat fills the screen. There's no header bar —
@@ -101,9 +102,9 @@ function SiteForm({ projectId }: { projectId: string }) {
         <div className="space-y-4 rounded-lg border border-base-300 bg-base-100 p-5 shadow-sm">
           <label className="block space-y-1">
             <span className="text-sm font-medium">Your website</span>
-            <input
+            <Input
               type="text"
-              className="input input-bordered w-full"
+              className="w-full"
               placeholder="example.com"
               value={domain}
               onChange={(event) => setDomain(event.target.value)}

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Input } from "@cloudflare/kumo/components/input";
 
 function FilterFieldLabel({ children }: { children: ReactNode }) {
   return (
@@ -22,8 +23,9 @@ export function FilterTextInput({
   return (
     <label className="form-control gap-1.5">
       <FilterFieldLabel>{label}</FilterFieldLabel>
-      <input
-        className="input input-bordered input-sm w-full bg-base-100"
+      <Input
+        size="sm"
+        className="w-full bg-base-100"
         placeholder={placeholder}
         value={value}
         onChange={(event) => onChange(event.target.value)}
@@ -44,8 +46,9 @@ export function FilterNumberInput({
   step?: string;
 }) {
   return (
-    <input
-      className="input input-bordered input-xs bg-base-100"
+    <Input
+      size="xs"
+      className="bg-base-100"
       type="text"
       inputMode="decimal"
       step={step}

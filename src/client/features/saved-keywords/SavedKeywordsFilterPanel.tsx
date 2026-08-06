@@ -4,6 +4,7 @@ import type { SavedKeywordsFilterValues } from "./savedKeywordsFilterTypes";
 import type { SavedKeywordsFilterForm } from "./useSavedKeywordsFilters";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function SavedKeywordsFilterPanel({
   form,
@@ -269,8 +270,9 @@ function CompactRangeInput({
   return (
     <form.Field name={name}>
       {(field) => (
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          size="xs"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           step={step}

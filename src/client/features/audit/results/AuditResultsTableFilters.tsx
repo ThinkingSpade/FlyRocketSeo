@@ -6,6 +6,7 @@ import type {
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function PagesFilterBar({
   filters,
@@ -248,8 +249,9 @@ function TextFilter({
       <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
         {label}
       </span>
-      <input
-        className="input input-bordered input-sm w-full bg-base-100"
+      <Input
+        size="sm"
+        className="w-full bg-base-100"
         type={type}
         value={value}
         placeholder={placeholder}
@@ -278,15 +280,17 @@ function RangeFilter({
         {label}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          size="xs"
+          className="bg-base-100"
           type="number"
           value={min}
           placeholder="Min"
           onChange={(event) => onMinChange(event.target.value)}
         />
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          size="xs"
+          className="bg-base-100"
           type="number"
           value={max}
           placeholder="Max"

@@ -33,6 +33,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -185,9 +186,10 @@ export function PageExplorerPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Page URL
               </span>
-              <input
+              <Input
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="https://competitor.com/their-best-page/"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}

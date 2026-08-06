@@ -2,6 +2,7 @@ import { RotateCcw } from "lucide-react";
 import type { KeywordResearchControllerState } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * The mobile results view's own filter panel.
@@ -44,8 +45,9 @@ export function MobileFilters({
       <div className="grid grid-cols-1 gap-2">
         <filtersForm.Field name="include">
           {(field) => (
-            <input
-              className="input input-bordered input-sm bg-base-100"
+            <Input
+              size="sm"
+              className="bg-base-100"
               placeholder="Include terms (audit, checker)"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
@@ -54,8 +56,9 @@ export function MobileFilters({
         </filtersForm.Field>
         <filtersForm.Field name="exclude">
           {(field) => (
-            <input
-              className="input input-bordered input-sm bg-base-100"
+            <Input
+              size="sm"
+              className="bg-base-100"
               placeholder="Exclude terms (jobs, course)"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
@@ -116,8 +119,9 @@ function MobileRangeInput({
   return (
     <form.Field name={name}>
       {(field) => (
-        <input
-          className="input input-bordered input-sm bg-base-100"
+        <Input
+          size="sm"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           step={step}

@@ -54,6 +54,7 @@ import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -472,9 +473,10 @@ export function ContentOptimizerPage({
                 <span className="label-text pb-1 text-xs font-medium">
                   Target keyword
                 </span>
-                <input
+                <Input
                   type="text"
-                  className="input input-bordered input-sm w-full"
+                  size="sm"
+                  className="w-full"
                   placeholder="office coffee service dallas"
                   value={input}
                   onChange={(event) => {

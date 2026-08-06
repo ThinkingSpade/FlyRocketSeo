@@ -27,6 +27,7 @@ import {
   VisibilityTrendChart,
 } from "@/client/features/ai-search/components/BrandVisibilityParts";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * The project-centric home of the Brand Lookup tab: one-click "Analyze <your
@@ -137,9 +138,10 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
 
       <label className="flex flex-col gap-1 text-xs text-base-content/60 sm:max-w-md">
         Compare competitors (optional, comma-separated)
-        <input
+        <Input
           type="text"
-          className="input input-sm input-bordered w-full"
+          size="sm"
+          className="w-full"
           placeholder="competitor-a.com, competitor-b.com"
           value={competitorsInput}
           onChange={(event) => setCompetitorsInput(event.target.value)}

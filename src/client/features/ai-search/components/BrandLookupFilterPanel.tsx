@@ -5,6 +5,7 @@ import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBra
 import { Button } from "@cloudflare/kumo/components/button";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * Stands in for the filter model's empty-string "no filter" value.
@@ -38,8 +39,9 @@ function FilterTextInput({
           state: { value: string };
           handleChange: (v: string) => void;
         }) => (
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            size="sm"
+            className="w-full bg-base-100"
             placeholder={placeholder}
             value={field.state.value}
             onChange={(event) => field.handleChange(event.target.value)}
@@ -89,8 +91,9 @@ function CompactRangeInput({
         state: { value: string };
         handleChange: (v: string) => void;
       }) => (
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          size="xs"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           value={field.state.value}

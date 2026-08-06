@@ -8,6 +8,7 @@ import {
   setGscOAuthConfig,
 } from "@/serverFunctions/gsc";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const SETUP_DOCS_URL =
   "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md";
@@ -126,24 +127,26 @@ export function GscOAuthConfigSection() {
           >
             <label className="flex flex-col gap-1.5">
               <span className="font-medium">Client ID</span>
-              <input
+              <Input
                 type="text"
                 value={clientId}
                 onChange={(event) => setClientId(event.target.value)}
                 placeholder="1234-abc.apps.googleusercontent.com"
                 autoComplete="off"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
               />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="font-medium">Client secret</span>
-              <input
+              <Input
                 type="password"
                 value={clientSecret}
                 onChange={(event) => setClientSecret(event.target.value)}
                 placeholder="GOCSPX-…"
                 autoComplete="off"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
               />
             </label>
             <p className="text-xs text-base-content/50">

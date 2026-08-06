@@ -14,6 +14,7 @@ import {
   type GbpPostValidationError,
 } from "./gbpPostSchedule";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
   { value: "BOOK", label: "Book" },
@@ -142,9 +143,9 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
           <span className="label-text pb-1 text-xs font-medium">
             Photo URL (optional)
           </span>
-          <input
+          <Input
             type="text"
-            className="input input-bordered input-sm"
+            size="sm"
             value={mediaUrl}
             onChange={(event) => setMediaUrl(event.target.value)}
           />
@@ -173,9 +174,9 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
               <span className="label-text pb-1 text-xs font-medium">
                 Button URL
               </span>
-              <input
+              <Input
                 type="text"
-                className="input input-bordered input-sm"
+                size="sm"
                 value={ctaUrl}
                 onChange={(event) => setCtaUrl(event.target.value)}
               />
@@ -187,9 +188,9 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
           <span className="label-text pb-1 text-xs font-medium">
             Publish at
           </span>
-          <input
+          <Input
             type="datetime-local"
-            className="input input-bordered input-sm"
+            size="sm"
             value={scheduledAtLocal}
             onChange={(event) => setScheduledAtLocal(event.target.value)}
           />

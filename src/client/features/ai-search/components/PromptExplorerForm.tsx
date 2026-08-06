@@ -12,6 +12,7 @@ import {
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type FormValues = {
   prompt: string;
@@ -133,10 +134,10 @@ export function PromptExplorerForm({
             >
               Highlight brand (optional)
             </label>
-            <input
+            <Input
               id="prompt-explorer-brand"
               type="text"
-              className="input input-bordered w-full"
+              className="w-full"
               value={form.highlightBrand}
               onChange={(event) => onHighlightBrandChange(event.target.value)}
               autoComplete="off"
