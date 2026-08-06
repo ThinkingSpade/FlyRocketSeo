@@ -24,6 +24,8 @@ import {
   BACKLINKS_PAGE_SIZES,
   type BacklinksTab,
 } from "@/types/schemas/backlinks";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const BACKLINKS_RESULTS_TABS: Array<{
   tab: BacklinksSearchState["tab"];
@@ -108,17 +110,20 @@ export function BacklinksResultsCard({
     <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
         <div className="space-y-2">
-          <div role="tablist" className="tabs tabs-border w-fit">
-            {BACKLINKS_RESULTS_TABS.map(({ label, tab }) => (
-              <TabLink
-                key={tab}
-                activeTab={activeTab}
-                label={label}
-                onSelect={onTabChange}
-                tab={tab}
-              />
-            ))}
-          </div>
+          <Tabs
+            variant="underline"
+            value={activeTab}
+            onValueChange={(next) => {
+              const selected = BACKLINKS_RESULTS_TABS.find(
+                (t) => t.tab === next,
+              );
+              if (selected) onTabChange(selected.tab);
+            }}
+            tabs={BACKLINKS_RESULTS_TABS.map(({ tab, label }) => ({
+              value: tab,
+              label,
+            }))}
+          />
           <p className="max-w-xl text-sm text-base-content/60">
             {TAB_DESCRIPTIONS[activeTab]}
           </p>
@@ -142,8 +147,10 @@ export function BacklinksResultsCard({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-base-300">
-        <button
-          className={`btn btn-ghost btn-sm gap-1.5 ${filters.showFilters ? "btn-active" : ""}`}
+        <Button
+          variant={filters.showFilters ? "secondary" : "ghost"}
+          size="sm"
+          aria-pressed={filters.showFilters}
           onClick={() => filters.setShowFilters((current) => !current)}
           title="Toggle table filters"
         >
@@ -154,34 +161,25 @@ export function BacklinksResultsCard({
               {activeFilterCount}
             </span>
           ) : null}
-        </button>
+        </Button>
         {activeTab === "backlinks" ? (
-          <div
-            role="tablist"
-            aria-label="Backlinks view"
-            className="ml-auto tabs tabs-border tabs-xs w-fit"
-          >
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view !== "all"}
-              className={`tab ${view !== "all" ? "tab-active" : ""}`}
-              title="Show each referring domain's strongest link; expand a row for the rest"
-              onClick={() => onViewChange(undefined)}
-            >
-              One per domain
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={view === "all"}
-              className={`tab ${view === "all" ? "tab-active" : ""}`}
-              title="List every individual backlink"
-              onClick={() => onViewChange("all")}
-            >
-              All links
-            </button>
-          </div>
+          <Tabs
+            // The only strip in the app that was `tabs-xs`. Kumo has one
+            // compact step (`sm`), which is what every other small control here
+            // already uses, so the odd size disappears rather than being
+            // reproduced.
+            className="ml-auto"
+            variant="underline"
+            size="sm"
+            value={view === "all" ? "all" : "one-per-domain"}
+            onValueChange={(next) =>
+              onViewChange(next === "all" ? "all" : undefined)
+            }
+            tabs={[
+              { value: "one-per-domain", label: "One per domain" },
+              { value: "all", label: "All links" },
+            ]}
+          />
         ) : null}
       </div>
 
@@ -271,32 +269,6 @@ function collectRatableDomains(tabRows: BacklinksTabRows): string[] {
   return [
     ...new Set(domains.filter((domain): domain is string => Boolean(domain))),
   ];
-}
-
-function TabLink({
-  activeTab,
-  label,
-  onSelect,
-  tab,
-}: {
-  activeTab: BacklinksSearchState["tab"];
-  label: string;
-  onSelect: (tab: BacklinksSearchState["tab"]) => void;
-  tab: BacklinksSearchState["tab"];
-}) {
-  const isActive = activeTab === tab;
-
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={isActive}
-      className={`tab ${isActive ? "tab-active" : ""}`}
-      onClick={() => onSelect(tab)}
-    >
-      {label}
-    </button>
-  );
 }
 
 function TabLoadingState({ label }: { label: string }) {

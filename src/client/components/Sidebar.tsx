@@ -28,6 +28,7 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { useBillingMode } from "@/client/features/billing/useBillingMode";
 import { BILLING_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 interface SidebarProps {
   projectId: string | null;
@@ -157,20 +158,36 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
         // Same underline tab idiom as the in-page tab strips (e.g. Domain
         // Overview's Top Keywords / Top Pages).
         <div className="px-3 pb-1">
-          <div role="tablist" className="tabs tabs-border w-full">
-            <SidebarViewTab
-              icon={LayoutGrid}
-              label="Browse"
-              active={view === "browse"}
-              onClick={() => setView("browse")}
-            />
-            <SidebarViewTab
-              icon={MessageCircle}
-              label="Chat"
-              active={view === "chat"}
-              onClick={openChat}
-            />
-          </div>
+          <Tabs
+            variant="underline"
+            value={view}
+            onValueChange={(next) => {
+              // Chat has a side effect beyond selection (it navigates to /sam),
+              // so the two branches cannot collapse into a single setter.
+              if (next === "chat") openChat();
+              else if (next === "browse") setView("browse");
+            }}
+            tabs={[
+              {
+                value: "browse",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <LayoutGrid className="size-4" />
+                    Browse
+                  </span>
+                ),
+              },
+              {
+                value: "chat",
+                label: (
+                  <span className="flex items-center gap-1.5">
+                    <MessageCircle className="size-4" />
+                    Chat
+                  </span>
+                ),
+              },
+            ]}
+          />
         </div>
       ) : null}
 
@@ -202,31 +219,6 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
 
       <SidebarFooter onNavigate={onNavigate} />
     </div>
-  );
-}
-
-function SidebarViewTab({
-  icon: Icon,
-  label,
-  active,
-  onClick,
-}: {
-  icon: ComponentType<{ className?: string }>;
-  label: string;
-  active: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      role="tab"
-      aria-selected={active}
-      onClick={onClick}
-      className={`tab flex-1 gap-1.5 ${active ? "tab-active" : ""}`}
-    >
-      <Icon className="size-4" />
-      {label}
-    </button>
   );
 }
 

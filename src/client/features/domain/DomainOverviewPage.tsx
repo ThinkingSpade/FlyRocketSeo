@@ -88,6 +88,7 @@ import type {
   SortOrder,
 } from "@/client/features/domain/types";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 type Props = {
   projectId: string;
@@ -879,26 +880,19 @@ export function DomainOverviewPage({
 
           <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
-              <div role="tablist" className="tabs tabs-border w-fit">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={routeState.tab === "keywords"}
-                  className={`tab ${routeState.tab === "keywords" ? "tab-active" : ""}`}
-                  onClick={() => state.handleTabChange("keywords")}
-                >
-                  Top Keywords
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={routeState.tab === "pages"}
-                  className={`tab ${routeState.tab === "pages" ? "tab-active" : ""}`}
-                  onClick={() => state.handleTabChange("pages")}
-                >
-                  Top Pages
-                </button>
-              </div>
+              <Tabs
+                variant="underline"
+                value={routeState.tab}
+                onValueChange={(next) => {
+                  if (next === "keywords" || next === "pages") {
+                    state.handleTabChange(next);
+                  }
+                }}
+                tabs={[
+                  { value: "keywords", label: "Top Keywords" },
+                  { value: "pages", label: "Top Pages" },
+                ]}
+              />
             </div>
 
             {routeState.tab === "keywords" ? (

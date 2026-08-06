@@ -24,7 +24,6 @@ import {
   exportDimensionRows,
   exportStriking,
   StrikingDistanceTable,
-  TabButton,
   TotalsCards,
   type ExportTarget,
   type Tab,
@@ -47,6 +46,16 @@ import {
 } from "@/types/schemas/search-performance";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { TableSkeleton } from "@/client/components/TableSkeleton";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
+
+/** The tab set, declared once so the strip and its value resolver agree. */
+const SEARCH_PERFORMANCE_TABS: ReadonlyArray<{ value: Tab }> = [
+  { value: "striking" },
+  { value: "ctr" },
+  { value: "content" },
+  { value: "queries" },
+  { value: "pages" },
+];
 
 function tabDimension(tab: Tab): SearchPerformanceTableDimension {
   return tab === "pages" ? "page" : "query";
@@ -266,33 +275,32 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
             />
             <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
               <div className="flex flex-col gap-3 border-b border-base-300 px-4 py-3 lg:flex-row lg:items-center lg:justify-between">
-                <div role="tablist" className="tabs tabs-border w-fit">
-                  <TabButton
-                    active={tab === "striking"}
-                    onClick={() => setTab("striking")}
-                    label={`Striking distance (${report.strikingDistance.length})`}
-                  />
-                  <TabButton
-                    active={tab === "ctr"}
-                    onClick={() => setTab("ctr")}
-                    label={`CTR opportunities (${report.ctrOpportunities.length})`}
-                  />
-                  <TabButton
-                    active={tab === "content"}
-                    onClick={() => setTab("content")}
-                    label="Content"
-                  />
-                  <TabButton
-                    active={tab === "queries"}
-                    onClick={() => setTab("queries")}
-                    label="Queries"
-                  />
-                  <TabButton
-                    active={tab === "pages"}
-                    onClick={() => setTab("pages")}
-                    label="Pages"
-                  />
-                </div>
+                <Tabs
+                  variant="underline"
+                  value={tab}
+                  onValueChange={(next) => {
+                    // Resolve against the declared list rather than asserting:
+                    // recovers `Tab` from Kumo's plain string, and ignores any
+                    // value that is not one of ours.
+                    const selected = SEARCH_PERFORMANCE_TABS.find(
+                      (t) => t.value === next,
+                    );
+                    if (selected) setTab(selected.value);
+                  }}
+                  tabs={[
+                    {
+                      value: "striking",
+                      label: `Striking distance (${report.strikingDistance.length})`,
+                    },
+                    {
+                      value: "ctr",
+                      label: `CTR opportunities (${report.ctrOpportunities.length})`,
+                    },
+                    { value: "content", label: "Content" },
+                    { value: "queries", label: "Queries" },
+                    { value: "pages", label: "Pages" },
+                  ]}
+                />
                 <SearchPerformanceFilters
                   device={device}
                   onDeviceChange={setDevice}

@@ -22,6 +22,7 @@ import {
 } from "@/shared/rank-tracking";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 // Keep the shortcut's rank-check shape aligned with the full config flow, but
 // leave recurring spend off until the user explicitly chooses a schedule.
@@ -213,25 +214,23 @@ export function TrackKeywordsModal({
         </div>
       ) : (
         <>
+          {/* `segmented`, not `underline`: this is a choice between two
+              mutually exclusive forms inside a modal, which is what the old
+              `tabs-boxed` was saying. The page-level strips are underline. */}
           {hasConfigs ? (
-            <div role="tablist" className="tabs tabs-boxed w-fit">
-              <button
-                type="button"
-                role="tab"
-                className={`tab ${mode === "existing" ? "tab-active" : ""}`}
-                onClick={() => setModeOverride("existing")}
-              >
-                Add to existing
-              </button>
-              <button
-                type="button"
-                role="tab"
-                className={`tab ${mode === "create" ? "tab-active" : ""}`}
-                onClick={() => setModeOverride("create")}
-              >
-                New domain
-              </button>
-            </div>
+            <Tabs
+              variant="segmented"
+              value={mode}
+              onValueChange={(next) => {
+                if (next === "existing" || next === "create") {
+                  setModeOverride(next);
+                }
+              }}
+              tabs={[
+                { value: "existing", label: "Add to existing" },
+                { value: "create", label: "New domain" },
+              ]}
+            />
           ) : null}
 
           {mode === "existing" ? (

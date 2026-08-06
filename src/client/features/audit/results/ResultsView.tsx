@@ -23,6 +23,7 @@ import {
   type AuditIssueSummary,
 } from "@/client/features/insights/verdicts/audit";
 import { getContentPerformance } from "@/serverFunctions/searchPerformance";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 type ResultsTab = "pages" | "performance";
 
@@ -234,24 +235,15 @@ function ResultsHeader({
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
       {hasPerformanceTab ? (
-        <div role="tablist" className="tabs tabs-border w-fit">
-          {tabs.map(({ label, tab }) => {
-            const isActive = activeTab === tab;
-
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`tab ${isActive ? "tab-active" : ""}`}
-                onClick={() => onTabChange(tab)}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          variant="underline"
+          value={activeTab}
+          onValueChange={(next) => {
+            const selected = tabs.find((t) => t.tab === next);
+            if (selected) onTabChange(selected.tab);
+          }}
+          tabs={tabs.map(({ tab, label }) => ({ value: tab, label }))}
+        />
       ) : (
         <h3 className="text-base font-medium">Pages ({pageCount})</h3>
       )}

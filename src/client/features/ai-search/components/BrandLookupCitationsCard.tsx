@@ -25,6 +25,7 @@ import {
 import { useBrandLookupFilters } from "@/client/features/ai-search/useBrandLookupFilters";
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 const DEFAULT_PAGES_SORT: SortingState = [{ id: "capturedVolume", desc: true }];
 const DEFAULT_QUERIES_SORT: SortingState = [
@@ -149,26 +150,17 @@ export function CitationTabsCard({
   return (
     <section className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
-        <div role="tablist" className="tabs tabs-border w-fit">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={queriesActive}
-            className={`tab ${queriesActive ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("queries")}
-          >
-            Queries
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pagesActive}
-            className={`tab ${pagesActive ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("pages")}
-          >
-            Cited sources
-          </button>
-        </div>
+        <Tabs
+          variant="underline"
+          value={queriesActive ? "queries" : "pages"}
+          onValueChange={(next) => {
+            if (next === "queries" || next === "pages") setActiveTab(next);
+          }}
+          tabs={[
+            { value: "queries", label: "Queries" },
+            { value: "pages", label: "Cited sources" },
+          ]}
+        />
 
         <div className="dropdown dropdown-end">
           <div

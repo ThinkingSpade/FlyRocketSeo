@@ -39,6 +39,7 @@ import {
   TAB_PAGE_SIZES,
 } from "./competitorsPageContent";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 type CompetitorsSearchState = {
   target: string;
@@ -340,20 +341,21 @@ export function CompetitorsPage({
 
       <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
         <div className="border-b border-base-300 px-4 py-3">
-          <div role="tablist" className="tabs tabs-border w-fit">
-            {COMPETITORS_TABS.map(({ tab: tabId, label }) => (
-              <button
-                key={tabId}
-                type="button"
-                role="tab"
-                aria-selected={tab === tabId}
-                className={`tab ${tab === tabId ? "tab-active" : ""}`}
-                onClick={() => updateSearch({ tab: tabId, page: 1 })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            variant="underline"
+            value={tab}
+            onValueChange={(next) => {
+              // Kumo hands back a plain string; resolve it against the source
+              // list to recover CompetitorsTab without an assertion, and drop
+              // anything that is not ours rather than trusting it.
+              const selected = COMPETITORS_TABS.find((t) => t.tab === next);
+              if (selected) updateSearch({ tab: selected.tab, page: 1 });
+            }}
+            tabs={COMPETITORS_TABS.map(({ tab: tabId, label }) => ({
+              value: tabId,
+              label,
+            }))}
+          />
         </div>
 
         <TabBody
