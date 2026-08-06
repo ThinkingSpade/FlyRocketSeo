@@ -31,6 +31,7 @@ import {
 import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
 } from "@/client/components/chart/chartTheme";
 import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
@@ -249,7 +250,7 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
                 tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
-                minTickGap={24}
+                minTickGap={CHART_X_TICK_GAP}
               />
               <YAxis
                 reversed

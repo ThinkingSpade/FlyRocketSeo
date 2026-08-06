@@ -12,6 +12,7 @@ import type { TooltipContentProps } from "recharts";
 import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
 } from "@/client/components/chart/chartTheme";
 import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
@@ -106,7 +107,7 @@ export function RankTrendChart({
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              minTickGap={32}
+              minTickGap={CHART_X_TICK_GAP}
             />
             <YAxis
               reversed

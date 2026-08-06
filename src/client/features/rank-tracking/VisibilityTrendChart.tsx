@@ -16,6 +16,7 @@ import { computeVisibilityTrend } from "./visibilityTrend";
 import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
 } from "@/client/components/chart/chartTheme";
 import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
@@ -125,7 +126,7 @@ export function VisibilityTrendChart({
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              minTickGap={24}
+              minTickGap={CHART_X_TICK_GAP}
             />
             <YAxis
               domain={[0, 100]}
