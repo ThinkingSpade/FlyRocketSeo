@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useReveal } from "@/client/hooks/useReveal";
 
 /**
  * The outer frame every project page sits in.
@@ -37,11 +38,24 @@ export function AppPageShell({
   width?: keyof typeof WIDTHS;
   children: ReactNode;
 }) {
+  // Page entrance. The ref goes on the existing content wrapper rather than a
+  // new <Reveal> element on purpose: these 22 pages hang tables, charts and
+  // grids off this container, and inserting a div between it and them would
+  // reshuffle every one of those layouts. A ref adds no DOM at all.
+  //
+  // One reveal for the whole page, not a stagger per section. Staggering means
+  // wrapping each child, which is the same layout risk — worth doing later,
+  // per-page, where the sections can actually be seen.
+  const revealRef = useReveal();
+
   return (
     // `pb-24` on small screens clears the mobile bottom nav; the desktop
     // breakpoint drops back to normal padding.
     <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
-      <div className={`mx-auto flex w-full flex-col gap-4 ${WIDTHS[width]}`}>
+      <div
+        ref={revealRef}
+        className={`mx-auto flex w-full flex-col gap-4 ${WIDTHS[width]}`}
+      >
         {children}
       </div>
     </div>
