@@ -7,6 +7,7 @@ import type {
   BacklinksComparisonRow,
 } from "@/types/schemas/backlinks-compare";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -41,9 +42,10 @@ function CompetitorChips({
   return (
     <div className="flex flex-wrap gap-1.5">
       {competitors.map((competitor) => (
-        <span
+        <Badge
           key={competitor}
-          className="badge badge-outline gap-1 py-2.5 font-normal"
+          variant="outline"
+          className="gap-1 py-2.5 font-normal"
         >
           {competitor}
           <button
@@ -54,7 +56,7 @@ function CompetitorChips({
           >
             <X className="size-3" />
           </button>
-        </span>
+        </Badge>
       ))}
     </div>
   );

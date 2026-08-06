@@ -3,6 +3,7 @@ import { SlidersHorizontal } from "lucide-react";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TableLoadingRows } from "@/client/features/domain/components/TableLoadingRows";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type DomainTableExportAction = {
   label: string;
@@ -53,9 +54,9 @@ export function DomainTableTabSurface({
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </Button>
         <span className="text-sm text-base-content/60">

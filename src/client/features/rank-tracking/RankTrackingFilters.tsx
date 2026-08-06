@@ -6,6 +6,7 @@ import type {
   RankTrackingRow,
 } from "@/types/schemas/rank-tracking";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export type Filters = {
   include: string;
@@ -73,9 +74,9 @@ export function FilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {activeFilterCount > 0 && (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           )}
         </div>
         <Button
@@ -219,9 +220,9 @@ export function DomainListFilterBar({
           >
             <RotateCcw className="size-3" />
             Clear
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           </Button>
         )}
       </div>

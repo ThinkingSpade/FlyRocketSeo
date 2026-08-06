@@ -5,6 +5,7 @@ import type { TagColorKey } from "@/shared/tag-colors";
 import type { SavedKeywordTagSummary } from "@/types/keywords";
 import type { SavedKeywordsFilterForm } from "./useSavedKeywordsFilters";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function SavedKeywordsFilters({
   filtersForm,
@@ -51,9 +52,9 @@ export function SavedKeywordsFilters({
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </Button>
         <SavedKeywordsTagFilter

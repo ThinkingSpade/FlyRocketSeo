@@ -13,6 +13,7 @@ import {
 } from "@/client/features/ai-search/platformLabels";
 import { formatUrlForDisplay } from "@/client/components/table/url";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type TopPageRow = BrandLookupResult["topPages"][number];
 type TopQueryRow = BrandLookupResult["topQueries"][number];
@@ -103,7 +104,9 @@ function PageUrlCell({
           {row.domain ?? formatUrlForDisplay(row.url)}
         </span>
         {isOwn ? (
-          <span className="badge badge-primary badge-xs border-0">You</span>
+          <Badge variant="primary" className="border-0">
+            You
+          </Badge>
         ) : null}
         <ExternalLink className="size-3 shrink-0 text-base-content/40" />
       </span>

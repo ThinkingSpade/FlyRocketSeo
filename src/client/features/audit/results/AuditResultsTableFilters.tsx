@@ -5,6 +5,7 @@ import type {
   PerformanceFilters,
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function PagesFilterBar({
   filters,
@@ -171,9 +172,9 @@ export function TableFilterToggle({
         <SlidersHorizontal className="size-3.5" />
         Filters
         {activeFilterCount > 0 ? (
-          <span className="badge badge-xs badge-primary border-0 text-primary-content">
+          <Badge variant="primary" className="border-0 text-primary-content">
             {activeFilterCount}
-          </span>
+          </Badge>
         ) : null}
       </Button>
       <span className="text-sm tabular-nums text-base-content/60">
@@ -208,9 +209,9 @@ function FilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
         <Button

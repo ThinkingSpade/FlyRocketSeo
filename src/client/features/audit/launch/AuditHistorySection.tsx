@@ -2,6 +2,7 @@ import { Link } from "@tanstack/react-router";
 import { MoreHorizontal, ScanSearch, Trash2 } from "lucide-react";
 import type { getAuditHistory } from "@/serverFunctions/audit";
 import { formatDate, StatusBadge } from "@/client/features/audit/shared";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function AuditHistorySection({
   projectId,
@@ -79,7 +80,7 @@ export function AuditHistorySection({
                   <td>{audit.pagesTotal || audit.pagesCrawled}</td>
                   <td>
                     {audit.ranLighthouse ? (
-                      <span className="badge badge-ghost badge-xs">Yes</span>
+                      <Badge variant="neutral">Yes</Badge>
                     ) : null}
                   </td>
                   <td>

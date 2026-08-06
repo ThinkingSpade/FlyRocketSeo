@@ -9,6 +9,7 @@ import {
   DashboardCard,
   useProjectNavLinks,
 } from "./dashboardShared";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 // Inferred from the server function so the card can never drift from the
 // digest's shape (no cross-boundary type import needed).
@@ -78,9 +79,7 @@ export function RankChangesCard({ projectId }: { projectId: string }) {
               {primary.domain}
             </span>{" "}
             · Desktop
-            {isNew ? (
-              <span className="badge badge-primary badge-sm">New</span>
-            ) : null}
+            {isNew ? <Badge variant="primary">New</Badge> : null}
           </p>
 
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">

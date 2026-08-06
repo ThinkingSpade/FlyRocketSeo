@@ -44,6 +44,7 @@ import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -198,9 +199,9 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </Button>
         <span className="text-sm text-base-content/60">
@@ -377,9 +378,9 @@ function DesktopFilters({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine table results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
         <Button

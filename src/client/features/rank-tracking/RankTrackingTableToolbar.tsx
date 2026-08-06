@@ -2,6 +2,7 @@ import { CalendarDays, Loader2, SlidersHorizontal, Table } from "lucide-react";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { ExportMenu, MoreMenu } from "./ToolbarMenus";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function RankTrackingTableToolbar({
   showFilters,
@@ -83,9 +84,9 @@ export function RankTrackingTableToolbar({
         <SlidersHorizontal className="size-3.5" />
         Filters
         {activeFilterCount > 0 && (
-          <span className="badge badge-xs badge-primary border-0 text-primary-content">
+          <Badge variant="primary" className="border-0 text-primary-content">
             {activeFilterCount}
-          </span>
+          </Badge>
         )}
       </Button>
 

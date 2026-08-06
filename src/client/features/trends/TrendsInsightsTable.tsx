@@ -12,6 +12,7 @@ import {
   computeTrendInsights,
   type KeywordTrendInsight,
 } from "@/client/features/trends/trendsInsights";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 // Series palette matching the rank-tracking charts; shared with the chart in
 // TrendsPage so row dots line up with the plotted lines.
@@ -49,9 +50,9 @@ function MomentumBadge({ insight }: { insight: KeywordTrendInsight }) {
     return <span className="text-base-content/40">—</span>;
   }
   const styles = {
-    rising: "badge-success",
-    stable: "badge-ghost",
-    falling: "badge-error",
+    rising: "success",
+    stable: "neutral",
+    falling: "error",
   } as const;
   const icons = {
     rising: <ArrowUpRight className="size-3" />,
@@ -59,10 +60,10 @@ function MomentumBadge({ insight }: { insight: KeywordTrendInsight }) {
     falling: <ArrowDownRight className="size-3" />,
   } as const;
   return (
-    <span className={`badge badge-sm gap-1 ${styles[insight.momentum]}`}>
+    <Badge variant={styles[insight.momentum]}>
       {icons[insight.momentum]}
       {formatPercent(insight.momentumPercent)}
-    </span>
+    </Badge>
   );
 }
 

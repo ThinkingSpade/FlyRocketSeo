@@ -51,6 +51,7 @@ import {
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -648,14 +649,14 @@ export function ContentOptimizerPage({
                 ) : null}
                 <div className="flex flex-wrap gap-1.5">
                   {brief.terms.map((term) => (
-                    <span key={term.keyword} className="badge badge-ghost">
+                    <Badge key={term.keyword} variant="neutral">
                       {term.keyword}
                       {term.searchVolume != null ? (
                         <span className="ml-1 text-base-content/50 tabular-nums">
                           {term.searchVolume.toLocaleString()}
                         </span>
                       ) : null}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>

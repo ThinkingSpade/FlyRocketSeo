@@ -27,6 +27,7 @@ import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterT
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const DEFAULT_PAGES_SORT: SortingState = [{ id: "capturedVolume", desc: true }];
 const DEFAULT_QUERIES_SORT: SortingState = [
@@ -213,9 +214,9 @@ export function CitationTabsCard({
           <SlidersHorizontal className="size-3.5" />
           Filters
           {currentFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {currentFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </Button>
       </div>

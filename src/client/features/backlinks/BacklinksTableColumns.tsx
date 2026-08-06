@@ -13,6 +13,7 @@ import {
 } from "./backlinksPageUtils";
 import type { DomainRatings } from "./useAhrefsDomainRatings";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /**
  * Row model for the backlinks table. In the one-per-domain view, depth-0 rows
@@ -33,20 +34,22 @@ function BacklinkFlags({ row }: { row: BacklinksRow }) {
   return (
     <div className="flex flex-wrap gap-1">
       {row.isLost ? (
-        <span className="badge badge-sm badge-error badge-outline">Lost</span>
+        <Badge variant="error" appearance="dot">
+          Lost
+        </Badge>
       ) : null}
       {row.isBroken ? (
-        <span className="badge badge-sm badge-warning badge-outline">
+        <Badge variant="warning" appearance="dot">
           Broken
-        </span>
+        </Badge>
       ) : null}
       {row.isDofollow === false ? (
-        <span className="badge badge-sm badge-outline">Nofollow</span>
+        <Badge variant="outline">Nofollow</Badge>
       ) : null}
       {row.linksCount != null && row.linksCount > 1 ? (
-        <span className="badge badge-sm badge-outline min-w-fit whitespace-nowrap">
+        <Badge variant="outline" className="min-w-fit whitespace-nowrap">
           {row.linksCount} links
-        </span>
+        </Badge>
       ) : null}
     </div>
   );

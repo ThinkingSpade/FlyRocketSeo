@@ -7,6 +7,7 @@ import type {
   RankTrackingDeviceResult,
   RankTrackingRow,
 } from "@/types/schemas/rank-tracking";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const FEATURE_SHORT_LABELS: Record<string, string> = {
   featured_snippet: "FS",
@@ -39,13 +40,13 @@ export function SerpFeatureTags({ features }: { features: string[] }) {
   return (
     <div className="flex gap-1 flex-wrap">
       {notable.map((f) => (
-        <span
-          key={f}
-          className="badge badge-xs gap-0.5 cursor-help bg-base-300 border-0 text-base-content/70"
-          title={FEATURE_TOOLTIPS[f] ?? f}
-        >
-          {f === "ai_overview" && <Sparkles className="size-2.5" />}
-          {FEATURE_SHORT_LABELS[f]}
+        // Wrapper carries the tooltip; Kumo's Badge takes no HTML attributes,
+        // and these SERP-feature chips are cursor-help by design.
+        <span key={f} className="cursor-help" title={FEATURE_TOOLTIPS[f] ?? f}>
+          <Badge variant="neutral">
+            {f === "ai_overview" && <Sparkles className="size-2.5" />}
+            {FEATURE_SHORT_LABELS[f]}
+          </Badge>
         </span>
       ))}
     </div>

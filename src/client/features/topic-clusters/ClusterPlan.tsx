@@ -18,6 +18,7 @@ import { buildClustersVerdict } from "@/client/features/insights/verdicts/conten
 import { resolveStoredGeo } from "@/client/features/geo/resolveRunGeo";
 import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /**
  * The fetched plan's own view: priority-ranked clusters, coverage against the
@@ -117,21 +118,21 @@ export function ClusterPlan({
       />
 
       <div className="flex flex-wrap items-center gap-2">
-        <span className="badge badge-ghost tabular-nums">
+        <Badge variant="neutral" className="tabular-nums">
           {totals.clusterCount} clusters
-        </span>
-        <span className="badge badge-ghost tabular-nums">
+        </Badge>
+        <Badge variant="neutral" className="tabular-nums">
           {totals.keywordCount} keywords
-        </span>
-        <span className="badge badge-ghost tabular-nums">
+        </Badge>
+        <Badge variant="neutral" className="tabular-nums">
           {totals.totalVolume.toLocaleString()} total vol
           {geoSuffix ? ` (${geoSuffix})` : ""}
-        </span>
+        </Badge>
         {totals.averageDifficulty != null ? (
-          <span className="badge badge-ghost tabular-nums">
+          <Badge variant="neutral" className="tabular-nums">
             avg KD {totals.averageDifficulty}
             {geoSuffix ? ` (${geoSuffix})` : ""}
-          </span>
+          </Badge>
         ) : null}
         <div className="flex-1" />
         <Button size="xs" className="btn-soft" onClick={handleCopyPlan}>

@@ -27,24 +27,28 @@ import {
   type OpportunityKind,
 } from "./opportunityModel";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
+
+type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 const KIND_META: Record<
   OpportunityKind,
-  { label: string; icon: typeof PenLine; className: string }
+  { label: string; icon: typeof PenLine; variant: BadgeVariant }
 > = {
   "quick-win": {
     label: "Quick win",
     icon: ArrowUpRight,
-    className: "badge-success",
+    variant: "success",
   },
-  ctr: { label: "Rewrite title", icon: PenLine, className: "badge-warning" },
-  consolidate: { label: "Consolidate", icon: Split, className: "badge-error" },
+  ctr: { label: "Rewrite title", icon: PenLine, variant: "warning" },
+  consolidate: { label: "Consolidate", icon: Split, variant: "error" },
 };
 
 const SEVERITY_CLASS = {
-  high: "badge-error",
-  medium: "badge-warning",
-  low: "badge-ghost",
+  high: "error",
+  medium: "warning",
+  low: "neutral",
 } as const;
 
 const OPPORTUNITY_LIMIT = 25;
@@ -321,11 +325,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
                 className="rounded-lg border border-base-300 p-3"
               >
                 <div className="flex flex-wrap items-center gap-2">
-                  <span
-                    className={`badge badge-sm ${SEVERITY_CLASS[issue.severity]}`}
-                  >
+                  <Badge variant={SEVERITY_CLASS[issue.severity]}>
                     {issue.severity}
-                  </span>
+                  </Badge>
                   <span className="text-sm font-medium">{issue.label}</span>
                   <span className="text-xs text-base-content/50 tabular-nums">
                     {issue.pageCount.toLocaleString()} page
@@ -358,10 +360,10 @@ function OpportunityRow({
   return (
     <tr>
       <td>
-        <span className={`badge badge-sm gap-1 ${meta.className}`}>
+        <Badge variant={meta.variant}>
           <meta.icon className="size-3" />
           {meta.label}
-        </span>
+        </Badge>
       </td>
       <td className="max-w-64">
         <span className="line-clamp-1 font-medium" title={row.query}>

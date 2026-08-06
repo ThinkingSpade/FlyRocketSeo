@@ -37,6 +37,7 @@ import { DifficultyOverviewControl } from "@/client/features/keywords/Difficulty
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 import { MobileFilters } from "./keywordResearchMobileFilters";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -194,9 +195,9 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </Button>
         <span className="text-xs text-base-content/60">

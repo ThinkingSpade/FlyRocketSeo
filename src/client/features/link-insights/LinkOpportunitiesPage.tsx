@@ -10,6 +10,7 @@ import {
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type PresenceResult = {
   linksToTarget: boolean;
@@ -23,29 +24,26 @@ function PresenceBadge({ presence }: { presence: PresenceResult | undefined }) {
   }
   if (presence.error) {
     return (
-      <span className="badge badge-ghost badge-sm" title={presence.error}>
-        couldn&rsquo;t check
+      <span title={presence.error}>
+        <Badge variant="neutral">couldn&rsquo;t check</Badge>
       </span>
     );
   }
   if (presence.linksToTarget) {
     return (
-      <span className="badge badge-ghost badge-sm gap-1">
+      <Badge variant="neutral" className="gap-1">
         <Check className="size-3" /> already links
-      </span>
+      </Badge>
     );
   }
   if (presence.mentionsPhrase) {
     return (
-      <span
-        className="badge badge-success badge-sm"
-        title="This page already mentions the phrase — ideal place to add the link"
-      >
-        add link — mentions phrase
+      <span title="This page already mentions the phrase — ideal place to add the link">
+        <Badge variant="success">add link — mentions phrase</Badge>
       </span>
     );
   }
-  return <span className="badge badge-warning badge-sm">add link</span>;
+  return <Badge variant="warning">add link</Badge>;
 }
 
 export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
@@ -184,9 +182,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
                   </a>{" "}
                   — currently #{Math.round(opportunity.target.position)} for
                 </span>{" "}
-                <span className="badge badge-primary badge-outline">
-                  {opportunity.query}
-                </span>
+                <Badge variant="outline">{opportunity.query}</Badge>
               </div>
               <span className="text-xs text-base-content/50 tabular-nums">
                 {opportunity.target.impressions.toLocaleString()} impressions ·

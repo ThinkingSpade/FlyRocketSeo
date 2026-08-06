@@ -8,6 +8,7 @@ import {
   samSessionsQueryOptions,
 } from "@/client/features/sam/samQueries";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const BETA_NOTICE_DISMISSED_KEY = "sam-beta-notice-dismissed";
 
@@ -24,7 +25,7 @@ function BetaNotice() {
   return (
     <div className="mx-2 mb-2 rounded-lg border border-base-300 bg-base-100 p-3">
       <div className="flex items-center justify-between">
-        <span className="badge badge-primary badge-sm">Beta</span>
+        <Badge variant="primary">Beta</Badge>
         <Button
           type="button"
           aria-label="Dismiss"

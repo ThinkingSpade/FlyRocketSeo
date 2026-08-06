@@ -17,6 +17,7 @@ import {
 } from "@/client/features/domain/domainDebug";
 import { MAX_DATAFORSEO_FILTER_CONDITIONS } from "@/types/schemas/domain";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type FilterValues = Record<string, string>;
 
@@ -147,14 +148,14 @@ export function DomainFilterPanel<TValues extends FilterValues>({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine table results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
           {meta.dirtyCount > 0 ? (
-            <span className="badge badge-xs badge-warning border-0">
+            <Badge variant="warning" className="border-0">
               {meta.dirtyCount} unapplied
-            </span>
+            </Badge>
           ) : null}
         </div>
         <Button
@@ -240,9 +241,9 @@ export function DomainFilterPanel<TValues extends FilterValues>({
           >
             Apply filters
             {meta.isDirty ? (
-              <span className="badge badge-xs ml-1 border-0 bg-primary-content/20">
+              <Badge className="ml-1 border-0 bg-primary-content/20">
                 {meta.dirtyCount}
-              </span>
+              </Badge>
             ) : null}
           </Button>
         </div>

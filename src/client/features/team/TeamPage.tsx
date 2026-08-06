@@ -11,6 +11,7 @@ import {
   revokeInvite,
 } from "@/serverFunctions/invites";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const INVITES_QUERY_KEY = ["teamInvites"] as const;
 
@@ -167,9 +168,9 @@ export function TeamPage() {
                         >
                           {invite.email}
                         </span>
-                        <span className="badge badge-sm badge-ghost capitalize">
+                        <Badge variant="neutral" className="capitalize">
                           {displayStatus}
-                        </span>
+                        </Badge>
                       </div>
                       <p className="mt-1 text-xs text-base-content/50">
                         Expires {formatDate(invite.expiresAt)}

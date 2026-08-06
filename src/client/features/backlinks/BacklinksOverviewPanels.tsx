@@ -8,6 +8,7 @@ import {
 } from "./BacklinksPageCharts";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
 import { formatRelativeTimestamp } from "./backlinksPageUtils";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type SummaryStat = { label: string; value: string; description: string };
 
@@ -43,7 +44,7 @@ export function BacklinksOverviewPanels({
         </Link>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
-        <span className="badge badge-outline">{data.scope}</span>
+        <Badge variant="outline">{data.scope}</Badge>
         <span>Target: {data.displayTarget}</span>
         <span>-</span>
         <span>Updated {formatRelativeTimestamp(data.fetchedAt)}</span>

@@ -20,6 +20,8 @@ import {
   formatStartedAt,
   HttpStatusBadge,
 } from "@/client/features/audit/shared";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const NO_COMPARISON = "none";
 const MAX_LISTED_PAGES = 25;
@@ -165,17 +167,17 @@ function ComparisonSummary({ diff }: { diff: AuditDiff }) {
         <PageDiffChip
           label="new"
           count={diff.newPages.length}
-          className="badge-success"
+          variant="success"
         />
         <PageDiffChip
           label="removed"
           count={diff.removedPages.length}
-          className="badge-error"
+          variant="error"
         />
         <PageDiffChip
           label="changed"
           count={diff.changedPages.length}
-          className="badge-warning"
+          variant="warning"
         />
       </div>
 
@@ -237,21 +239,19 @@ function DeltaBadge({ delta }: { delta: number | null }) {
 function PageDiffChip({
   label,
   count,
-  className,
+  variant,
 }: {
   label: string;
   count: number;
-  className: string;
+  variant: ComponentProps<typeof Badge>["variant"];
 }) {
+  // A zero count keeps the chip but drops the colour: "0 removed" is
+  // information, not an alarm.
   const active = count > 0;
   return (
-    <span
-      className={`badge badge-sm gap-1 ${
-        active ? className : "badge-ghost text-base-content/50"
-      }`}
-    >
+    <Badge variant={active ? variant : "neutral"}>
       <span className="font-semibold">{count}</span> {label}
-    </span>
+    </Badge>
   );
 }
 

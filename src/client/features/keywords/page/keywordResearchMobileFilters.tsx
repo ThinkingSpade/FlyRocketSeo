@@ -1,6 +1,7 @@
 import { RotateCcw } from "lucide-react";
 import type { KeywordResearchControllerState } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /**
  * The mobile results view's own filter panel.
@@ -24,9 +25,9 @@ export function MobileFilters({
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold">Refine table results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </div>
         <Button

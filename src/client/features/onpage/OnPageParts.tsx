@@ -8,6 +8,7 @@ import {
 } from "@/client/features/onpage/onPageModel";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /** Short element tag shown on each suggestion row. */
 const ELEMENT_TAG: Record<OnPageElement, string> = {
@@ -78,10 +79,10 @@ function FixDiff({ row }: { row: FixRow }) {
 
 function StatusPill({ status }: { status: FixRow["status"] }) {
   if (status === "approved") {
-    return <span className="badge badge-success badge-sm">Approved</span>;
+    return <Badge variant="success">Approved</Badge>;
   }
   if (status === "excluded") {
-    return <span className="badge badge-ghost badge-sm">Excluded</span>;
+    return <Badge variant="neutral">Excluded</Badge>;
   }
   return null;
 }
@@ -105,9 +106,7 @@ function FixRowView({
       </span>
       <FixDiff row={row} />
       <div className="flex shrink-0 items-center gap-1.5">
-        {row.source === "ai" ? (
-          <span className="badge badge-outline badge-sm">AI</span>
-        ) : null}
+        {row.source === "ai" ? <Badge variant="outline">AI</Badge> : null}
         <StatusPill status={row.status} />
         {/* Both are toggles, so the chosen state is `aria-pressed` rather
             than a colour class. Kumo has no "success" variant; approving is

@@ -7,6 +7,7 @@ import {
   computeTrafficConcentration,
   type PageKeyword,
 } from "./pageInsights";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 function formatCount(value: number | null | undefined): string {
   if (value == null) return "—";
@@ -40,9 +41,9 @@ export function TrafficConcentrationCard({
               >
                 {row.keyword}
               </span>
-              <span className="badge badge-ghost badge-xs shrink-0 tabular-nums">
+              <Badge variant="neutral" className="shrink-0 tabular-nums">
                 #{row.position ?? "—"}
-              </span>
+              </Badge>
               <span className="h-2 flex-1 overflow-hidden rounded-full bg-base-200">
                 <span
                   className="block h-full rounded-full bg-primary/70"

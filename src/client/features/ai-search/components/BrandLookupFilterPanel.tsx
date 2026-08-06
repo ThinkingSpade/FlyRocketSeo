@@ -4,6 +4,7 @@ import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels"
 import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBrandLookupFilters";
 import { Button } from "@cloudflare/kumo/components/button";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /**
  * Stands in for the filter model's empty-string "no filter" value.
@@ -218,9 +219,9 @@ export function BrandLookupFilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {current.activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {current.activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
         <Button

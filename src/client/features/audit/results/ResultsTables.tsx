@@ -38,6 +38,7 @@ import {
   type PerformanceFilters,
   type PerformanceRowData,
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const pageColumnHelper = createColumnHelper<PageRow>();
 const performanceColumnHelper = createColumnHelper<PerformanceRowData>();
@@ -268,15 +269,19 @@ function buildPerformanceColumns({
         const isFailed = isLighthouseFailure(row.original);
         const failureMessage =
           row.original.errorMessage ?? "Lighthouse returned no category scores";
+        // The title lives on a wrapper: Kumo's Badge takes no HTML attributes,
+        // and the failure text is the only explanation the row gives for a
+        // failed audit.
         return isFailed ? (
-          <span
-            className="badge badge-error badge-outline text-xs"
-            title={failureMessage}
-          >
-            failed
+          <span title={failureMessage}>
+            <Badge variant="error" appearance="dot" className="text-xs">
+              failed
+            </Badge>
           </span>
         ) : (
-          <span className="badge badge-success badge-outline text-xs">ok</span>
+          <Badge variant="success" appearance="dot" className="text-xs">
+            ok
+          </Badge>
         );
       },
       enableSorting: true,

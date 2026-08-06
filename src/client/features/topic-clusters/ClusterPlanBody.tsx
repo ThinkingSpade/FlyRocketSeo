@@ -9,11 +9,16 @@ import {
   CoverageTag,
   type PlanCoverage,
 } from "@/client/features/topic-clusters/TopicCoverageOverlay";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
-const PRIORITY_BADGES: Record<ClusterPriority, string> = {
-  1: "badge-success",
-  2: "badge-warning",
-  3: "badge-ghost",
+const PRIORITY_BADGES: Record<
+  ClusterPriority,
+  ComponentProps<typeof Badge>["variant"]
+> = {
+  1: "success",
+  2: "warning",
+  3: "neutral",
 };
 
 function formatVolume(value: number | null): string {
@@ -66,12 +71,12 @@ export function ClusterPlanBody({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {plan.hub.map((keyword) => (
-                <span key={keyword.keyword} className="badge badge-ghost">
+                <Badge key={keyword.keyword} variant="neutral">
                   {keyword.keyword}
                   <span className="ml-1 text-base-content/50 tabular-nums">
                     {formatVolume(keyword.searchVolume)}
                   </span>
-                </span>
+                </Badge>
               ))}
             </div>
           </div>
@@ -90,11 +95,10 @@ export function ClusterPlanBody({
               <div className="card-body gap-2 p-4">
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="flex items-center gap-1.5 font-semibold">
-                    <span
-                      className={`badge badge-sm ${PRIORITY_BADGES[cluster.priority]}`}
-                      title="Priority from volume weighed against difficulty — write P1 clusters first"
-                    >
-                      P{cluster.priority}
+                    <span title="Priority from volume weighed against difficulty — write P1 clusters first">
+                      <Badge variant={PRIORITY_BADGES[cluster.priority]}>
+                        P{cluster.priority}
+                      </Badge>
                     </span>
                     {cluster.name}
                   </h3>

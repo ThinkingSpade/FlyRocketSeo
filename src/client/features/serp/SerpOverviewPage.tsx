@@ -70,6 +70,7 @@ import {
 } from "@/client/features/serp/serpRunGeo";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -741,13 +742,14 @@ export function SerpOverviewPage({
                 SERP features
               </span>
               {result.serpFeatures.map((feature) => (
-                <span
+                <Badge
                   key={feature.type}
-                  className="badge badge-ghost badge-sm capitalize"
+                  variant="neutral"
+                  className="capitalize"
                 >
                   {formatFeatureLabel(feature.type)}
                   {feature.count > 1 ? ` ×${feature.count}` : ""}
-                </span>
+                </Badge>
               ))}
             </div>
           ) : null}
@@ -867,9 +869,7 @@ function SerpResultsTable({
                     <div className="flex items-center gap-1 tabular-nums">
                       {item.rank ?? "—"}
                       {item.isNew ? (
-                        <span className="badge badge-success badge-xs">
-                          new
-                        </span>
+                        <Badge variant="success">new</Badge>
                       ) : item.isUp ? (
                         <ArrowUp className="size-3 text-success" />
                       ) : item.isDown ? (

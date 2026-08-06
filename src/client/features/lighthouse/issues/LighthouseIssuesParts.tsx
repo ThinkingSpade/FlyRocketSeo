@@ -19,6 +19,7 @@ import { LighthouseIssuesSummary } from "./LighthouseIssuesSummary";
 import { categoryLabel } from "./utils";
 import { categoryTabs } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function LighthouseIssuesHeader({
   backLabel,
@@ -60,18 +61,18 @@ export function LighthouseIssuesHeader({
           </div>
           <LighthouseIssuesSummary scores={scores} metrics={metrics} />
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="badge border border-error/30 bg-error/10 text-error/80 gap-1">
+            <Badge className="border border-error/30 bg-error/10 text-error/80 gap-1">
               <FileWarning className="size-3" />
               Critical {severityCounts.critical}
-            </span>
-            <span className="badge border border-warning/30 bg-warning/10 text-warning/80 gap-1">
+            </Badge>
+            <Badge className="border border-warning/30 bg-warning/10 text-warning/80 gap-1">
               <TriangleAlert className="size-3" />
               Warning {severityCounts.warning}
-            </span>
-            <span className="badge border border-info/30 bg-info/10 text-info/80 gap-1">
+            </Badge>
+            <Badge className="border border-info/30 bg-info/10 text-info/80 gap-1">
               <Info className="size-3" />
               Info {severityCounts.info}
-            </span>
+            </Badge>
           </div>
         </div>
       </div>
