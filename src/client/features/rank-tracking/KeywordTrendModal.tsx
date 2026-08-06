@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Copy, Download, Loader2 } from "lucide-react";
+import { Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/client/components/Modal";
@@ -14,6 +14,7 @@ import {
   TrendRangeToggle,
   type TrendSeries,
 } from "./RankTrackingTrendChart";
+import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
@@ -153,9 +154,9 @@ export function KeywordTrendModal({
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="size-5 animate-spin text-base-content/50" />
-        </div>
+        // Matches RankTrendChart's default height, so the modal does not resize
+        // under the cursor the moment the history arrives.
+        <ChartSkeleton height={224} label="Loading rank history" />
       ) : maxPerDevice <= 1 ? (
         <EmptyState count={maxPerDevice} />
       ) : (

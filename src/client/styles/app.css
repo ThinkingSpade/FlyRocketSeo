@@ -595,3 +595,39 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
     animation: none;
   }
 }
+
+/* Chart loading wave.
+
+   The reference's charts do not show a spinner while they load. They draw a
+   slow sine that slides sideways, so the card reads as "a chart is coming"
+   rather than "something is happening somewhere". Kumo ships this as
+   `kumo-chart-wave`, but that keyframe lives in its `kumo-binding.css` /
+   `kumo-standalone.css` bundles, NOT in `styles/tailwind` (`kumo.css`) which is
+   the one imported above — so using it means defining it, which is all this is.
+
+   The translation distance and the wave's period are a matched pair: the path
+   repeats every 200px and this moves it exactly 400px, so the loop closes on
+   itself and there is no visible jump at the seam. Changing one without the
+   other reintroduces the stutter.
+
+   Duration is deliberately far slower than the interaction tokens. Those are
+   100ms because a control should resolve instantly; a loading state is the
+   opposite case, where a fast loop reads as agitation. */
+@keyframes chart-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-400px);
+  }
+}
+
+.chart-wave {
+  animation: chart-wave 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-wave {
+    animation: none;
+  }
+}
