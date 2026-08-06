@@ -1,6 +1,7 @@
 import { CalendarDays, Loader2, SlidersHorizontal, Table } from "lucide-react";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { ExportMenu, MoreMenu } from "./ToolbarMenus";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function RankTrackingTableToolbar({
   showFilters,
@@ -68,8 +69,14 @@ export function RankTrackingTableToolbar({
         />
       )}
 
-      <button
-        className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
+      {/* DaisyUI's `btn-active` was carrying the pressed state as pure styling.
+          Kumo has no "active" variant, which is a useful forcing function: the
+          state is now `aria-pressed` (so it is actually announced) and the
+          visual difference comes from secondary-vs-ghost. */}
+      <Button
+        variant={showFilters ? "secondary" : "ghost"}
+        size="sm"
+        aria-pressed={showFilters}
         onClick={onToggleFilters}
         title="Toggle table filters"
       >
@@ -80,7 +87,7 @@ export function RankTrackingTableToolbar({
             {activeFilterCount}
           </span>
         )}
-      </button>
+      </Button>
 
       {isRunning && latestRun ? (
         <div className="flex items-center gap-2 text-sm text-base-content/70">

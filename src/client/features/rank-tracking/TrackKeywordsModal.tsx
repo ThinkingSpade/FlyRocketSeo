@@ -21,6 +21,7 @@ import {
   scheduleLabel,
 } from "@/shared/rank-tracking";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
+import { Button } from "@cloudflare/kumo/components/button";
 
 // Keep the shortcut's rank-check shape aligned with the full config flow, but
 // leave recurring spend off until the user explicitly chooses a schedule.
@@ -172,9 +173,15 @@ export function TrackKeywordsModal({
         <h2 id="track-keywords-title" className="text-lg font-semibold">
           Track {keywordLabel}
         </h2>
-        <button className="btn btn-ghost btn-sm btn-square" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="sm"
+          shape="square"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <p className="text-sm text-base-content/60">
@@ -333,22 +340,19 @@ export function TrackKeywordsModal({
       ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={onClose}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          variant="primary"
+          size="sm"
           onClick={() => mutation.mutate()}
           disabled={confirmDisabled}
         >
           {isPending && <Loader2 className="size-3.5 animate-spin" />}
           Track {keywordLabel}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

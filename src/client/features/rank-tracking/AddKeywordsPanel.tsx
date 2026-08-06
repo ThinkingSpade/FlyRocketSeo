@@ -5,6 +5,7 @@ import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { MAX_TRACKED_KEYWORD_LENGTH } from "@/shared/rank-tracking";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Loader2 } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function AddKeywordsPanel({
   configId,
@@ -40,8 +41,9 @@ export function AddKeywordsPanel({
         onChange={(e) => setKeywordInput(e.target.value)}
       />
       <div className="flex flex-col gap-1">
-        <button
-          className="btn btn-primary btn-sm"
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => {
             const lines = keywordInput
               .split("\n")
@@ -59,10 +61,10 @@ export function AddKeywordsPanel({
         >
           {isPending && <Loader2 className="size-3 animate-spin" />}
           Add
-        </button>
-        <button className="btn btn-ghost btn-sm" onClick={onCancel}>
+        </Button>
+        <Button variant="ghost" size="sm" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </div>
   );

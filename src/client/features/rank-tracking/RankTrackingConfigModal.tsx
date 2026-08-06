@@ -25,6 +25,7 @@ import type { TargetArea } from "@/shared/geo/types";
 import { resolveInitialConfigArea } from "./rankTrackingConfigArea";
 import { useConfigAreaLookup } from "./useConfigAreaLookup";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   projectId: string;
@@ -247,9 +248,15 @@ export function RankTrackingConfigModal({
         <h2 id="rank-config-modal-title" className="text-lg font-semibold">
           {isEdit ? "Edit Domain Config" : "Add Domain"}
         </h2>
-        <button className="btn btn-ghost btn-sm btn-square" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="sm"
+          shape="square"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -401,21 +408,18 @@ export function RankTrackingConfigModal({
         />
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={onClose}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={isPending || !domain.trim()}
           >
             {isPending && <Loader2 className="size-3.5 animate-spin" />}
             {isEdit ? "Save Changes" : "Add Domain"}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

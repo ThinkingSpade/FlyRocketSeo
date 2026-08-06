@@ -5,6 +5,7 @@ import type {
   RankTrackingConfig,
   RankTrackingRow,
 } from "@/types/schemas/rank-tracking";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export type Filters = {
   include: string;
@@ -77,14 +78,15 @@ export function FilterPanel({
             </span>
           )}
         </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="space-y-1.5">
@@ -209,8 +211,10 @@ export function DomainListFilterBar({
           </select>
         </label>
         {activeFilterCount > 0 && (
-          <button
-            className="btn btn-ghost btn-sm gap-1.5 self-start lg:self-auto"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start lg:self-auto"
             onClick={onReset}
           >
             <RotateCcw className="size-3" />
@@ -218,7 +222,7 @@ export function DomainListFilterBar({
             <span className="badge badge-xs badge-primary border-0 text-primary-content">
               {activeFilterCount}
             </span>
-          </button>
+          </Button>
         )}
       </div>
     </div>

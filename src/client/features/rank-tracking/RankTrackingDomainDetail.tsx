@@ -45,6 +45,7 @@ import { CheckConfirmModal } from "./CheckConfirmModal";
 import { useMetricsRefresh } from "./useMetricsRefresh";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
 import { useRankRunPolling } from "./useRankRunPolling";
+import { Button } from "@cloudflare/kumo/components/button";
 
 function deviceVisibility(
   devices: RankTrackingConfig["devices"],
@@ -209,13 +210,15 @@ export function RankTrackingDomainDetail({
 
   return (
     <div className="space-y-3">
-      <button
-        className="btn btn-ghost btn-xs gap-1 -ml-2 text-base-content/60"
+      <Button
+        variant="ghost"
+        size="xs"
+        className="-ml-2 text-base-content/60"
         onClick={onBack}
       >
         <ArrowLeft className="size-3" />
         Back to domains
-      </button>
+      </Button>
 
       {config.lastSkipReason === "insufficient_credits" && (
         <div className="alert alert-warning text-sm py-2">

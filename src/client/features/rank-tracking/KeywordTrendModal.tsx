@@ -15,6 +15,7 @@ import {
   type TrendSeries,
 } from "./RankTrackingTrendChart";
 import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
@@ -177,17 +178,14 @@ export function KeywordTrendModal({
           />
 
           <div className="flex items-center justify-end gap-2">
-            <button className="btn btn-ghost btn-xs gap-1" onClick={handleCopy}>
+            <Button variant="ghost" size="xs" onClick={handleCopy}>
               <Copy className="size-3.5" />
               Copy
-            </button>
-            <button
-              className="btn btn-ghost btn-xs gap-1"
-              onClick={handleExport}
-            >
+            </Button>
+            <Button variant="ghost" size="xs" onClick={handleExport}>
               <Download className="size-3.5" />
               Export CSV
-            </button>
+            </Button>
           </div>
 
           <div className="max-h-64 overflow-auto rounded-lg border border-base-300">
@@ -264,9 +262,9 @@ export function KeywordTrendModal({
       )}
 
       <div className="flex justify-end">
-        <button className="btn btn-ghost btn-sm" onClick={onClose}>
+        <Button variant="ghost" size="sm" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
     </Modal>
   );
