@@ -5,7 +5,6 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import {
   resolveQueryState,
@@ -47,6 +46,7 @@ import {
   type SearchPerformanceTableDimension,
 } from "@/types/schemas/search-performance";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { TableSkeleton } from "@/client/components/TableSkeleton";
 
 function tabDimension(tab: Tab): SearchPerformanceTableDimension {
   return tab === "pages" ? "page" : "query";
@@ -334,11 +334,7 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
               ) : (
                 <QueryStateBoundary
                   state={tableState}
-                  loading={
-                    <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-                      <Loader2 className="size-4 animate-spin" /> Loading…
-                    </div>
-                  }
+                  loading={<TableSkeleton rows={10} columns={5} />}
                   errorMessage={getStandardErrorMessage(tableQuery.error)}
                   // Access can be revoked between the report call and this one.
                   // Before, that rendered as "no data for this period", which
