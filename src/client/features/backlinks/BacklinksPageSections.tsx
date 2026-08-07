@@ -113,7 +113,7 @@ export function BacklinksResultsCard({
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
         <div className="space-y-2">
           <Tabs
-            variant="underline"
+            variant="segmented"
             value={activeTab}
             onValueChange={(next) => {
               const selected = BACKLINKS_RESULTS_TABS.find(
@@ -171,7 +171,7 @@ export function BacklinksResultsCard({
             // already uses, so the odd size disappears rather than being
             // reproduced.
             className="ml-auto"
-            variant="underline"
+            variant="segmented"
             size="sm"
             value={view === "all" ? "all" : "one-per-domain"}
             onValueChange={(next) =>

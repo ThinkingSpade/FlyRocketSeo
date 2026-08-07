@@ -18,6 +18,14 @@ interface SegmentedToggleItem<T extends string> {
  * the old row of <button>s never had, and the active state now slides between
  * segments instead of cutting.
  *
+ * Every tab strip in this app is `segmented`, and that is measured rather than
+ * chosen. The reference dashboard's page-level strip — the Overview / Metrics /
+ * Deployments / Bindings row on a Worker — renders Kumo's segmented variant: a
+ * filled `oklch(0.965 0 0)` track at an 8px radius, a 6px pill on the active
+ * tab, and NO bottom border. An earlier pass here used `underline` for
+ * page-level strips on the assumption that a page-level tab is an underline
+ * tab; checking the reference showed the opposite.
+ *
  * `icon` became optional so this could absorb the DaisyUI `join` groups too.
  * Those turned out not to be one pattern: four of the five were single-select
  * filters — a sort order, a status filter, a date range — which is exactly what
