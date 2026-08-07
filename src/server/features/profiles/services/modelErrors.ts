@@ -18,9 +18,15 @@ export function rethrowModelError(error: unknown): never {
       ? (error as { statusCode?: unknown }).statusCode
       : undefined;
   if (status === 402) {
+    // MODEL_CREDITS_EXHAUSTED, not PAYMENT_REQUIRED. The message below never
+    // crossed the client boundary (only the code does), so this rendered as
+    // PAYMENT_REQUIRED's "An active hosted subscription is required before
+    // you can use FlyRocketSEO" -- which sent a user whose OpenRouter balance
+    // had run out to buy a subscription that would not have helped. The
+    // remedy really is a link and a top-up, so the code has to say so.
     throw new AppError(
-      "PAYMENT_REQUIRED",
-      "Your OpenRouter account is out of credits. Add some at https://openrouter.ai/settings/credits, or fill the fields in yourself — nothing else here needs a model.",
+      "MODEL_CREDITS_EXHAUSTED",
+      "Your OpenRouter account is out of credits.",
     );
   }
   throw error;

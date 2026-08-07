@@ -35,6 +35,18 @@ const ERROR_CODES = [
   // (restart the run) worth stating plainly rather than folding into a
   // generic "something went wrong".
   "GEO_SEED_DATA_LOST",
+  // Same reason as the three above: the profile drafter had FIVE distinct
+  // failures, each with its own written explanation and its own remedy, and
+  // every one of them reached the user as INTERNAL_ERROR's "check server
+  // logs" -- advice an end user cannot act on and which named the wrong
+  // person. Two were worse than useless: a missing key and an empty
+  // OpenRouter balance both threw PAYMENT_REQUIRED, so a user whose model
+  // account needed topping up was told to buy a FlyRocketSEO subscription.
+  "PROJECT_DOMAIN_MISSING",
+  "PROFILE_SITE_UNREADABLE",
+  "PROFILE_DRAFT_UNREADABLE",
+  "MODEL_NOT_CONFIGURED",
+  "MODEL_CREDITS_EXHAUSTED",
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES);
@@ -53,6 +65,16 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   // An expected per-project state (haven't connected GBP yet), not a bug --
   // same treatment as NOT_FOUND above.
   "GBP_NOT_CONNECTED",
+  // Configuration and third-party-account states, not faults in this code:
+  // the project has no domain yet, the operator hasn't set a key, the user's
+  // OpenRouter balance ran out, or the client's own site refused a bot. Each
+  // is a thing SOMEONE can fix, and none of them is a bug worth paging on.
+  // PROFILE_DRAFT_UNREADABLE is deliberately NOT here -- a model returning
+  // output we cannot parse is a real defect signal worth capturing.
+  "PROJECT_DOMAIN_MISSING",
+  "PROFILE_SITE_UNREADABLE",
+  "MODEL_NOT_CONFIGURED",
+  "MODEL_CREDITS_EXHAUSTED",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

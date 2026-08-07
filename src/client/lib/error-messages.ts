@@ -40,6 +40,25 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
     "This project isn't connected to a Google Business Profile location yet. Connect one from the Local SEO tab first.",
   GEO_SEED_DATA_LOST:
     'The in-progress location data expired or was lost. Click "Seed location data" again to restart from the beginning — locations already written are unaffected.',
+  // The profile drafter's five failures. The wording is the wording that was
+  // already written at each throw site in ProfileDraftService/projectProfile
+  // and never reached anyone, because only the CODE crosses the boundary.
+  // Each one names who can fix it and what still works without it — the whole
+  // feature degrades to "type it in yourself", so no failure here is fatal.
+  PROJECT_DOMAIN_MISSING:
+    "This project has no domain set, so there's no site to read. Add one in project settings, or fill the fields in yourself.",
+  // Deliberately does not name the domain: only the code crosses the client
+  // boundary, so there is nowhere to interpolate it. Worth the trade — a
+  // sentence that says what happened beats one that names the site but
+  // explains nothing.
+  PROFILE_SITE_UNREADABLE:
+    "We couldn't read that site — it may block automated requests. Fill the fields in yourself and everything downstream still works.",
+  PROFILE_DRAFT_UNREADABLE:
+    "The model's answer wasn't usable. Try again, or fill the fields in yourself.",
+  MODEL_NOT_CONFIGURED:
+    "Drafting needs an OPENROUTER_API_KEY on the deployment. Add it, or fill the fields in yourself — everything else here works without it.",
+  MODEL_CREDITS_EXHAUSTED:
+    "Your OpenRouter account is out of credits. Top it up at openrouter.ai/settings/credits, or fill the fields in yourself — nothing else here needs a model.",
 };
 
 export function getStandardErrorMessage(

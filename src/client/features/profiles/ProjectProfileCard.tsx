@@ -290,21 +290,32 @@ function ProfileSummary({
   isFilled: boolean;
   onOpen: () => void;
 }) {
+  // The un-started state is deliberately LOUDER than the filled one below.
+  // Both used to be the same quiet base-300 row, which made the one state
+  // that needs an action look like the one that needs nothing -- and this
+  // card's whole point is that results are miscalibrated until it is filled
+  // in. The tint, border and Info-style colouring are the same treatment the
+  // search bar on this tab already uses to mean "read this"; the filled state
+  // keeps the quiet styling, so the card recedes once it has done its job.
   if (!isFilled) {
     return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-3">
+      <div
+        className="flex flex-wrap items-start justify-between gap-3 rounded-xl border border-info/30 bg-info/10 px-4 py-3.5"
+        role="status"
+      >
         <div className="flex items-start gap-2">
-          <Briefcase className="mt-0.5 size-4 shrink-0 text-base-content/50" />
-          <p className="text-sm text-base-content/80">
-            Keyword results don&apos;t know what this client does yet, so a
-            machine reseller&apos;s keywords look the same as an
-            operator&apos;s.{" "}
-            <span className="text-base-content/60">
-              Takes a minute, costs nothing.
-            </span>
-          </p>
+          <Briefcase className="mt-0.5 size-4 shrink-0 text-info" />
+          <div className="space-y-0.5">
+            <p className="text-sm font-semibold">
+              Keyword results don&apos;t know what this client does yet
+            </p>
+            <p className="text-sm text-base-content/70">
+              So a machine reseller&apos;s keywords look the same as an
+              operator&apos;s. Takes a minute, costs nothing.
+            </p>
+          </div>
         </div>
-        <Button type="button" size="sm" onClick={onOpen}>
+        <Button type="button" variant="primary" size="sm" onClick={onOpen}>
           Describe this client
         </Button>
       </div>
