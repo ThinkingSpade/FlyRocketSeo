@@ -511,9 +511,25 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 
 [data-reveal="shown"] {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
-  /* Release the compositor layer once the element has landed — a permanent
-     will-change on many elements costs memory and can blur text on some GPUs. */
+  /* `none`, NOT `translate3d(0, 0, 0)`. An identity transform is still a
+     transform, and ANY transform other than `none` makes the element the
+     containing block for its `position: fixed` descendants. AppPageShell puts
+     this attribute on the wrapper holding all of a page's content, so the
+     leftover identity transform re-anchored anything fixed-with-insets inside a
+     page to the content column instead of the viewport: a `fixed inset-0`
+     overlay measured 976x180 rather than the full 1280x720, and `Modal`
+     centred in that box put its dialog at y = -184, off the top of the screen.
+     That hit all 12 Modal call sites and ToolbarMenus' click-catcher. (Fixed
+     children with AUTO insets — the LocationSelect/GeoLocationSelect dropdowns
+     — keep their static position and were unaffected; FloatingTooltip portals
+     to body and never sees this wrapper at all.)
+
+     Interpolation to `none` is defined against the identity matrix, so the
+     entrance animation is unchanged. Releasing will-change matters for the same
+     reason it always did — a permanent will-change on many elements costs
+     memory and can blur text on some GPUs — but note it is the TRANSFORM that
+     was creating the containing block here, not will-change. */
+  transform: none;
   will-change: auto;
 }
 
