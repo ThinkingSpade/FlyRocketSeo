@@ -169,7 +169,7 @@ export function ProjectProfileCard({ projectId }: Props) {
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">Where do they sell?</span>
           <select
-            className="select select-bordered w-full max-w-sm"
+            className="app-select w-full max-w-sm"
             value={draft.serviceAreaKind}
             onChange={(event) => {
               const next = event.target.value;

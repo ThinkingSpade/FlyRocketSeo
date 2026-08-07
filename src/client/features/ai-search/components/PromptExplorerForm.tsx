@@ -188,7 +188,7 @@ export function PromptExplorerForm({
             <select
               id="prompt-explorer-country"
               aria-label="Web search location"
-              className="select select-bordered select-sm min-w-0 sm:max-w-xs"
+              className="app-select app-select-sm min-w-0 sm:max-w-xs"
               value={form.webSearchCountryCode}
               onChange={(event) =>
                 onCountryChange(parseCountryCode(event.target.value))

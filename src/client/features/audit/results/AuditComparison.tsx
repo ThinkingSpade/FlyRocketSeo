@@ -88,7 +88,7 @@ export function AuditComparison({
               <Loader2 className="size-4 animate-spin text-base-content/50" />
             )}
             <select
-              className="select select-bordered select-sm w-full sm:w-auto max-w-xs"
+              className="app-select app-select-sm w-full sm:w-auto max-w-xs"
               value={comparisonId}
               onChange={(event) => setComparisonId(event.target.value)}
               aria-label="Comparison run"

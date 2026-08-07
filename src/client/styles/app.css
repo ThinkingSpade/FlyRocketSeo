@@ -131,11 +131,23 @@ body {
   overflow: hidden;
 }
 
-/* Prevent Safari mobile from zooming on input focus (requires 16px minimum) */
-input,
-textarea,
-select {
-  @apply text-base;
+/* Baseline size for form controls.
+
+   In `@layer base` so component classes can override it. Unlayered, it beat
+   `.app-select-sm` on the cascade — an element selector losing to nothing,
+   because unlayered CSS outranks anything in a layer regardless of specificity
+   — and every small select silently rendered at the base size.
+
+   The original comment claimed this prevents Safari's zoom-on-focus, which
+   needs 16px. It does not: `text-base` is 14px in this app, since Kumo's type
+   scale is live. Left in place because it is still the right baseline, but the
+   Safari claim was never true here. */
+@layer base {
+  input,
+  textarea,
+  select {
+    @apply text-base;
+  }
 }
 
 /* Global input focus styling - use primary color instead of default ring */
@@ -602,5 +614,69 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 @media (prefers-reduced-motion: reduce) {
   .chart-wave {
     animation: none;
+  }
+}
+
+/* Native <select>, wearing Kumo's Input geometry.
+
+   Deliberately still a native element. Kumo ships a Select, but it is a Base UI
+   listbox rather than a `<select>`, and swapping the two would trade the OS
+   picker on mobile, browser autofill and normal form submission for a styled
+   popup. That is a functional change, and none of the 36 selects here asked for
+   one — they asked to look like the rest of the app.
+
+   Geometry is Kumo's, measured from its Input variants so a select and an input
+   sitting side by side line up: base is h-9 / rounded-lg / px-3 / 14px, small is
+   h-6.5 / rounded-md / px-2 / 12px. Colours are ours, per this branch's rule —
+   take their craft, keep our identity.
+
+   INSIDE `@layer base`, and the choice is load-bearing rather than tidy.
+
+   Unlayered, its width beat every `w-20` / `w-36` / `w-full` a call site had
+   set and the page grew a horizontal scrollbar. `@layer components` did not fix
+   it either, for a subtler reason: layer precedence follows the order layers
+   are FIRST DECLARED, and Tailwind opens `utilities` early (line ~1300 of the
+   compiled sheet) while a `components` block appended at the end of this file
+   declares that layer last — so components outranked utilities. `base` is
+   already open by then, so rules here lose to utilities, which is what a
+   component class should do, while still beating the bare `input, textarea,
+   select` element rule above on specificity.
+
+   Width copies DaisyUI's own `clamp(3rem, 20rem, 100%)` rather than filling,
+   so the sites that never set a width keep the size they had.
+
+   The arrow is inline SVG rather than DaisyUI's two-gradient triangle: it is a
+   real chevron, it scales, and `currentColor` cannot be used inside a data URI,
+   so each theme sets its own stroke below. */
+@layer base {
+  .app-select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: clamp(3rem, 20rem, 100%);
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 0.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23172033' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    @apply h-9 rounded-lg border border-base-300 bg-base-100 pl-3 pr-8 text-base text-base-content;
+  }
+
+  [data-theme="flyrocketseo-dark"] .app-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23eaf0fa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .app-select-sm {
+    background-position: right 0.5rem center;
+    background-size: 0.625rem;
+    @apply h-6.5 rounded-md pl-2 pr-6 text-xs;
+  }
+
+  .app-select:focus,
+  .app-select:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .app-select:disabled {
+    @apply cursor-not-allowed opacity-50;
   }
 }

@@ -157,7 +157,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
               Action button (optional)
             </span>
             <select
-              className="select select-bordered select-sm"
+              className="app-select app-select-sm"
               value={ctaType}
               onChange={(event) => setCtaType(parseCtaType(event.target.value))}
             >

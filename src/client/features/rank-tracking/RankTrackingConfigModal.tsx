@@ -300,7 +300,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Language</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={languageCode}
             onChange={(e) => setLanguageCode(e.target.value)}
             disabled={languageOptions.length <= 1}
@@ -318,7 +318,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Devices</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={devices}
             onChange={(e) => {
               const value = e.target.value;
@@ -354,7 +354,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Schedule</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={schedule}
             onChange={(e) => {
               const value = e.target.value;
@@ -386,7 +386,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Search Depth</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={depthToPages(serpDepth)}
             onChange={(e) => setSerpDepth(pagesToDepth(Number(e.target.value)))}
           >

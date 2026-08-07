@@ -151,7 +151,7 @@ export function KeywordResearchSearchBar({
             <controlsForm.Field name="resultLimit">
               {(field) => (
                 <select
-                  className="select select-bordered w-full lg:w-auto lg:shrink-0"
+                  className="app-select w-full lg:w-auto lg:shrink-0"
                   value={field.state.value}
                   onChange={(event) => {
                     const next = Number(event.target.value);
@@ -170,7 +170,7 @@ export function KeywordResearchSearchBar({
             <controlsForm.Field name="mode">
               {(field) => (
                 <select
-                  className="select select-bordered w-full lg:w-auto lg:shrink-0"
+                  className="app-select w-full lg:w-auto lg:shrink-0"
                   value={field.state.value}
                   onChange={(event) =>
                     field.handleChange(normalizeKeywordMode(event.target.value))

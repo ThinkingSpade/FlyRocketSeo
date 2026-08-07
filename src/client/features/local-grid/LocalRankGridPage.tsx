@@ -353,7 +353,7 @@ export function LocalRankGridPage({
                 Radius
               </span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={radiusInput}
                 onChange={(event) => setRadiusInput(event.target.value)}
               >
@@ -367,7 +367,7 @@ export function LocalRankGridPage({
             <label className="form-control w-28">
               <span className="label-text pb-1 text-xs font-medium">Grid</span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={gridInput}
                 onChange={(event) => setGridInput(event.target.value)}
               >

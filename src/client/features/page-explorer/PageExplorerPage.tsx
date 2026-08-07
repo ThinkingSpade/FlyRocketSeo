@@ -200,7 +200,7 @@ export function PageExplorerPage({
                 Location
               </span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={locationInput}
                 onChange={(event) => setLocationInput(event.target.value)}
               >

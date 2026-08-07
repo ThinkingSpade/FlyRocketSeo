@@ -39,7 +39,7 @@ export function KeywordResearchPagination({
         <label className="flex items-center gap-2 text-sm text-base-content/70">
           <span className="whitespace-nowrap">Rows per page</span>
           <select
-            className="select select-bordered select-sm w-20"
+            className="app-select app-select-sm w-20"
             value={pageSize}
             onChange={(event) =>
               onPageSizeChange(parseKeywordResearchPageSize(event.target.value))

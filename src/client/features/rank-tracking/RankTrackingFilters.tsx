@@ -174,7 +174,7 @@ export function DomainListFilterBar({
             Device
           </span>
           <select
-            className="select select-bordered select-sm w-full bg-base-100"
+            className="app-select app-select-sm w-full bg-base-100"
             value={filters.device}
             onChange={(event) => {
               const value = event.target.value;
@@ -201,7 +201,7 @@ export function DomainListFilterBar({
             Country
           </span>
           <select
-            className="select select-bordered select-sm w-full bg-base-100"
+            className="app-select app-select-sm w-full bg-base-100"
             value={filters.locationCode}
             onChange={(event) =>
               onChange({ ...filters, locationCode: event.target.value })

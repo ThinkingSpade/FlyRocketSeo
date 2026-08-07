@@ -240,7 +240,7 @@ export function TrackKeywordsModal({
                 <span className="label-text font-medium">Tracked domain</span>
               </label>
               <select
-                className="select select-bordered w-full"
+                className="app-select w-full"
                 value={effectiveConfigId}
                 onChange={(e) => setSelectedConfigId(e.target.value)}
               >
@@ -288,7 +288,7 @@ export function TrackKeywordsModal({
                   <span className="label-text font-medium">Schedule</span>
                 </label>
                 <select
-                  className="select select-bordered w-full"
+                  className="app-select w-full"
                   value={schedule}
                   onChange={(event) => {
                     const value = event.target.value;

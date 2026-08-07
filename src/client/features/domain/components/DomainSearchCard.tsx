@@ -71,7 +71,7 @@ export function DomainSearchCard({
           <controlsForm.Field name="sort">
             {(field) => (
               <select
-                className="select select-bordered shrink-0"
+                className="app-select shrink-0"
                 value={field.state.value}
                 onChange={(event) => {
                   const next = toSortMode(event.target.value) ?? "traffic";

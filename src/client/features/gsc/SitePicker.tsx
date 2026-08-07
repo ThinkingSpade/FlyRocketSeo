@@ -115,7 +115,7 @@ export function SitePicker({
           Property
         </span>
         <select
-          className="select select-bordered w-full max-w-md"
+          className="app-select w-full max-w-md"
           value={selectedSiteUrl}
           onChange={(e) => onSelect(e.target.value)}
         >

@@ -318,7 +318,7 @@ function SelectFilter<T extends string>({
         {label}
       </span>
       <select
-        className="select select-bordered select-sm w-full bg-base-100"
+        className="app-select app-select-sm w-full bg-base-100"
         value={value}
         onChange={(event) => {
           const selected = options.find(

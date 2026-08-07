@@ -84,7 +84,7 @@ export function RankTrackingDetailHeader({
           />
         )}
         <select
-          className="select select-bordered select-sm text-xs w-auto"
+          className="app-select app-select-sm text-xs w-auto"
           title="Comparison period"
           value={comparePeriod}
           onChange={(e) => {
