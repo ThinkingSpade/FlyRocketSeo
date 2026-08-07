@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
+import { Sparkline } from "@/client/components/Sparkline";
 
 export type InsightTone =
   | "primary"
@@ -45,10 +46,29 @@ export function InsightIcon({
   );
 }
 
+/** Height of the sparkline strip, and of the block that stands in for it while
+ *  loading. Shared so the two can never drift apart — if they did, the tile
+ *  would change height when data lands, which is the one thing this is for. */
+const TREND_H = "h-10";
+
 /**
  * Stat tile in the app's native style: uppercase muted label with a small
  * quiet icon, big tabular value. `tone` colors the icon and, for
  * warning/error states, the border — no chip backgrounds.
+ *
+ * Pass `trend` to fill the bottom of the tile with a sparkline. That strip was
+ * empty before, and on the reference dashboard it is the single biggest
+ * difference between their stat tiles and ours: theirs put a trend line in the
+ * bottom ~40% of every tile, bleeding to the card's edges, so a tile answers
+ * "and which way is it going?" without costing a second card. Hence the
+ * negative margins — the strip has to escape the card's padding to reach the
+ * border, the way theirs does.
+ *
+ * Pass `loading` for the placeholder. It renders the same three bands at the
+ * same heights, so the tile does not resize when the data arrives. That is what
+ * makes the reference feel smooth as it loads: not easing curves, but the fact
+ * that a loading card is exactly the shape of the loaded one, so nothing on the
+ * page moves.
  */
 export function InsightTile({
   icon: Icon,
@@ -57,6 +77,8 @@ export function InsightTile({
   hint,
   tone = "neutral",
   title,
+  trend,
+  loading = false,
 }: {
   icon: LucideIcon;
   label: string;
@@ -64,10 +86,15 @@ export function InsightTile({
   hint?: ReactNode;
   tone?: InsightTone;
   title?: string;
+  /** Oldest → newest. Fewer than 2 points renders nothing, as a trend needs a
+   *  direction; the tile keeps its compact height in that case. */
+  trend?: number[];
+  loading?: boolean;
 }) {
+  const showTrend = !loading && (trend?.length ?? 0) >= 2;
   return (
     <div
-      className={`rounded-lg border bg-base-100 p-3 ${BORDER[tone]}`}
+      className={`overflow-hidden rounded-lg border bg-base-100 p-3 ${BORDER[tone]}`}
       title={title}
     >
       <div className="flex items-center justify-between gap-2">
@@ -76,9 +103,33 @@ export function InsightTile({
         </span>
         <Icon className={`size-3.5 shrink-0 ${ICON_COLOR[tone]}`} />
       </div>
-      <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
-      {hint ? (
-        <div className="mt-0.5 text-xs text-base-content/50">{hint}</div>
+
+      {loading ? (
+        <>
+          {/* Widths approximate a number and a short caption rather than
+              filling the row: a placeholder the full width of the card reads as
+              a loaded empty state, not as something still arriving. */}
+          <div className="mt-1 h-7 w-20 skeleton rounded" />
+          <div className="mt-0.5 h-4 w-28 skeleton rounded" />
+        </>
+      ) : (
+        <>
+          <div className="mt-1 text-xl font-semibold tabular-nums">{value}</div>
+          {hint ? (
+            <div className="mt-0.5 text-xs text-base-content/50">{hint}</div>
+          ) : null}
+        </>
+      )}
+
+      {loading ? (
+        <div className={`-mx-3 -mb-3 mt-2 ${TREND_H} skeleton rounded-none`} />
+      ) : showTrend ? (
+        <div className={`-mx-3 -mb-3 mt-2 ${TREND_H} ${ICON_COLOR[tone]}`}>
+          {/* Colour comes from the tone's icon class and the paths use
+              `currentColor`, so the line matches the tile's own accent without
+              a second palette to keep in sync. */}
+          <Sparkline values={trend ?? []} />
+        </div>
       ) : null}
     </div>
   );

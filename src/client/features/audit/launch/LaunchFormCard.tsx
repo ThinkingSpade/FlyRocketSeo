@@ -5,6 +5,9 @@ import type { useLaunchController } from "@/client/features/audit/launch/useLaun
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import { PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -18,9 +21,9 @@ export function LaunchFormCard({
   maxPagesLimit,
 }: Props) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-4">
-        <h2 className="card-title text-base">Start New Audit</h2>
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+        <h2 className="text-base font-semibold">Start New Audit</h2>
 
         <form
           className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center"
@@ -54,9 +57,11 @@ export function LaunchFormCard({
 
           <launchForm.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary btn-sm w-full lg:col-span-3"
+                variant="primary"
+                size="sm"
+                className="w-full lg:col-span-3"
                 disabled={isSubmitting}
               >
                 {isSubmitting ? (
@@ -66,7 +71,7 @@ export function LaunchFormCard({
                 ) : (
                   "Start Audit"
                 )}
-              </button>
+              </Button>
             )}
           </launchForm.Subscribe>
 
@@ -102,11 +107,13 @@ function LaunchOptions({
         <span className="text-sm text-base-content/70">Max pages</span>
         <launchForm.Field name="maxPagesInput">
           {(field) => (
-            <input
+            <Input
+              passwordManagerIgnore
               type="number"
               min={MIN_PAGES}
               max={maxPagesLimit}
-              className="input input-bordered input-sm w-28"
+              size="sm"
+              className="w-28"
               value={field.state.value}
               onChange={(event) => {
                 const next = event.target.value;
@@ -199,9 +206,9 @@ function LaunchErrors({ launchForm }: Pick<Props, "launchForm">) {
           const errorMessage = getFormError(submitError);
 
           return errorMessage ? (
-            <div className="alert alert-error py-2">
+            <Banner variant="error" className="py-2">
               <span className="text-sm">{errorMessage}</span>
-            </div>
+            </Banner>
           ) : null;
         }}
       </launchForm.Subscribe>

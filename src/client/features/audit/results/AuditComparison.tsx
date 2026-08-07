@@ -20,6 +20,9 @@ import {
   formatStartedAt,
   HttpStatusBadge,
 } from "@/client/features/audit/shared";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const NO_COMPARISON = "none";
 const MAX_LISTED_PAGES = 25;
@@ -76,8 +79,8 @@ export function AuditComparison({
   if (comparableRuns.length === 0) return null;
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-3">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h3 className="text-base font-medium">Compare to previous run</h3>
           <div className="flex items-center gap-2">
@@ -85,7 +88,7 @@ export function AuditComparison({
               <Loader2 className="size-4 animate-spin text-base-content/50" />
             )}
             <select
-              className="select select-bordered select-sm w-full sm:w-auto max-w-xs"
+              className="app-select app-select-sm w-full sm:w-auto max-w-xs"
               value={comparisonId}
               onChange={(event) => setComparisonId(event.target.value)}
               aria-label="Comparison run"
@@ -106,12 +109,12 @@ export function AuditComparison({
 
         {comparisonId !== NO_COMPARISON &&
           (comparisonQuery.isError ? (
-            <div className="alert alert-error text-sm py-2">
+            <Banner variant="error" className="text-sm py-2">
               <AlertCircle className="size-4" />
               <span>
                 Couldn't load that comparison run. Try selecting another one.
               </span>
-            </div>
+            </Banner>
           ) : diff ? (
             <ComparisonSummary diff={diff} />
           ) : (
@@ -165,17 +168,17 @@ function ComparisonSummary({ diff }: { diff: AuditDiff }) {
         <PageDiffChip
           label="new"
           count={diff.newPages.length}
-          className="badge-success"
+          variant="success"
         />
         <PageDiffChip
           label="removed"
           count={diff.removedPages.length}
-          className="badge-error"
+          variant="error"
         />
         <PageDiffChip
           label="changed"
           count={diff.changedPages.length}
-          className="badge-warning"
+          variant="warning"
         />
       </div>
 
@@ -237,21 +240,19 @@ function DeltaBadge({ delta }: { delta: number | null }) {
 function PageDiffChip({
   label,
   count,
-  className,
+  variant,
 }: {
   label: string;
   count: number;
-  className: string;
+  variant: ComponentProps<typeof Badge>["variant"];
 }) {
+  // A zero count keeps the chip but drops the colour: "0 removed" is
+  // information, not an alarm.
   const active = count > 0;
   return (
-    <span
-      className={`badge badge-sm gap-1 ${
-        active ? className : "badge-ghost text-base-content/50"
-      }`}
-    >
+    <Badge variant={active ? variant : "neutral"}>
       <span className="font-semibold">{count}</span> {label}
-    </span>
+    </Badge>
   );
 }
 

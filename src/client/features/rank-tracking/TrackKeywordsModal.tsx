@@ -21,6 +21,9 @@ import {
   scheduleLabel,
 } from "@/shared/rank-tracking";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Input } from "@cloudflare/kumo/components/input";
 
 // Keep the shortcut's rank-check shape aligned with the full config flow, but
 // leave recurring spend off until the user explicitly chooses a schedule.
@@ -172,9 +175,15 @@ export function TrackKeywordsModal({
         <h2 id="track-keywords-title" className="text-lg font-semibold">
           Track {keywordLabel}
         </h2>
-        <button className="btn btn-ghost btn-sm btn-square" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="sm"
+          shape="square"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <p className="text-sm text-base-content/60">
@@ -206,25 +215,23 @@ export function TrackKeywordsModal({
         </div>
       ) : (
         <>
+          {/* `segmented`, not `underline`: this is a choice between two
+              mutually exclusive forms inside a modal, which is what the old
+              `tabs-boxed` was saying. The page-level strips are underline. */}
           {hasConfigs ? (
-            <div role="tablist" className="tabs tabs-boxed w-fit">
-              <button
-                type="button"
-                role="tab"
-                className={`tab ${mode === "existing" ? "tab-active" : ""}`}
-                onClick={() => setModeOverride("existing")}
-              >
-                Add to existing
-              </button>
-              <button
-                type="button"
-                role="tab"
-                className={`tab ${mode === "create" ? "tab-active" : ""}`}
-                onClick={() => setModeOverride("create")}
-              >
-                New domain
-              </button>
-            </div>
+            <Tabs
+              variant="segmented"
+              value={mode}
+              onValueChange={(next) => {
+                if (next === "existing" || next === "create") {
+                  setModeOverride(next);
+                }
+              }}
+              tabs={[
+                { value: "existing", label: "Add to existing" },
+                { value: "create", label: "New domain" },
+              ]}
+            />
           ) : null}
 
           {mode === "existing" ? (
@@ -233,7 +240,7 @@ export function TrackKeywordsModal({
                 <span className="label-text font-medium">Tracked domain</span>
               </label>
               <select
-                className="select select-bordered w-full"
+                className="app-select w-full"
                 value={effectiveConfigId}
                 onChange={(e) => setSelectedConfigId(e.target.value)}
               >
@@ -250,10 +257,11 @@ export function TrackKeywordsModal({
                 <label className="label">
                   <span className="label-text font-medium">Target domain</span>
                 </label>
-                <input
+                <Input
+                  passwordManagerIgnore
                   type="text"
                   placeholder="example.com"
-                  className="input input-bordered w-full"
+                  className="w-full"
                   value={domain}
                   onChange={(e) => setDomain(e.target.value)}
                   onBlur={handleDomainBlur}
@@ -281,7 +289,7 @@ export function TrackKeywordsModal({
                   <span className="label-text font-medium">Schedule</span>
                 </label>
                 <select
-                  className="select select-bordered w-full"
+                  className="app-select w-full"
                   value={schedule}
                   onChange={(event) => {
                     const value = event.target.value;
@@ -333,22 +341,19 @@ export function TrackKeywordsModal({
       ) : null}
 
       <div className="flex justify-end gap-2 pt-2">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={onClose}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          variant="primary"
+          size="sm"
           onClick={() => mutation.mutate()}
           disabled={confirmDisabled}
         >
           {isPending && <Loader2 className="size-3.5 animate-spin" />}
           Track {keywordLabel}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

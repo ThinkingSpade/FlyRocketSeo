@@ -6,6 +6,7 @@ import { toSortMode } from "@/client/features/domain/utils";
 import type { DomainSortMode } from "@/client/features/domain/types";
 import { LABS_LOCATION_OPTIONS } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   controlsForm: DomainOverviewControlsForm;
@@ -23,8 +24,8 @@ export function DomainSearchCard({
   onLocationChange,
 }: Props) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <form
           className="flex flex-col gap-3 lg:flex-row lg:items-center"
           onSubmit={onSubmit}
@@ -70,7 +71,7 @@ export function DomainSearchCard({
           <controlsForm.Field name="sort">
             {(field) => (
               <select
-                className="select select-bordered shrink-0"
+                className="app-select shrink-0"
                 value={field.state.value}
                 onChange={(event) => {
                   const next = toSortMode(event.target.value) ?? "traffic";
@@ -89,13 +90,14 @@ export function DomainSearchCard({
 
           <controlsForm.Subscribe selector={(state) => state.isSubmitting}>
             {(isSubmitting) => (
-              <button
+              <Button
                 type="submit"
-                className="btn btn-primary shrink-0 px-6"
+                variant="primary"
+                className="shrink-0 px-6"
                 disabled={isLoading || isSubmitting}
               >
                 {isLoading || isSubmitting ? "Loading..." : "Search"}
-              </button>
+              </Button>
             )}
           </controlsForm.Subscribe>
         </form>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Copy, Download, Loader2 } from "lucide-react";
+import { Copy, Download } from "lucide-react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/client/components/Modal";
@@ -14,6 +14,8 @@ import {
   TrendRangeToggle,
   type TrendSeries,
 } from "./RankTrackingTrendChart";
+import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
@@ -153,9 +155,9 @@ export function KeywordTrendModal({
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center py-16">
-          <Loader2 className="size-5 animate-spin text-base-content/50" />
-        </div>
+        // Matches RankTrendChart's default height, so the modal does not resize
+        // under the cursor the moment the history arrives.
+        <ChartSkeleton height={224} label="Loading rank history" />
       ) : maxPerDevice <= 1 ? (
         <EmptyState count={maxPerDevice} />
       ) : (
@@ -176,17 +178,14 @@ export function KeywordTrendModal({
           />
 
           <div className="flex items-center justify-end gap-2">
-            <button className="btn btn-ghost btn-xs gap-1" onClick={handleCopy}>
+            <Button variant="ghost" size="xs" onClick={handleCopy}>
               <Copy className="size-3.5" />
               Copy
-            </button>
-            <button
-              className="btn btn-ghost btn-xs gap-1"
-              onClick={handleExport}
-            >
+            </Button>
+            <Button variant="ghost" size="xs" onClick={handleExport}>
               <Download className="size-3.5" />
               Export CSV
-            </button>
+            </Button>
           </div>
 
           <div className="max-h-64 overflow-auto rounded-lg border border-base-300">
@@ -263,9 +262,9 @@ export function KeywordTrendModal({
       )}
 
       <div className="flex justify-end">
-        <button className="btn btn-ghost btn-sm" onClick={onClose}>
+        <Button variant="ghost" size="sm" onClick={onClose}>
           Close
-        </button>
+        </Button>
       </div>
     </Modal>
   );

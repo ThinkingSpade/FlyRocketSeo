@@ -78,7 +78,7 @@ export function SearchPerformanceFilters({
         <Loader2 className="size-4 animate-spin text-base-content/40" />
       ) : null}
       <select
-        className="select select-bordered select-sm w-36"
+        className="app-select app-select-sm w-36"
         value={device}
         onChange={(event) => {
           onDeviceChange(
@@ -95,7 +95,7 @@ export function SearchPerformanceFilters({
         ))}
       </select>
       <select
-        className="select select-bordered select-sm w-36"
+        className="app-select app-select-sm w-36"
         value={country}
         onChange={(event) => onCountryChange(event.target.value)}
         aria-label="Country filter"
@@ -108,7 +108,7 @@ export function SearchPerformanceFilters({
         ))}
       </select>
       <select
-        className="select select-bordered select-sm w-36"
+        className="app-select app-select-sm w-36"
         value={range}
         onChange={(event) => {
           if (isDateRange(event.target.value)) {

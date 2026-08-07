@@ -30,9 +30,11 @@ export function Modal({
         role="dialog"
         aria-modal="true"
         aria-labelledby={labelledBy}
-        className={`card bg-base-100 border border-base-300 w-full ${maxWidth} shadow-xl`}
+        className={`relative flex flex-col rounded-xl bg-base-100 border border-base-300 w-full ${maxWidth} shadow-xl`}
       >
-        <div className="card-body gap-4">{children}</div>
+        <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+          {children}
+        </div>
       </div>
     </div>
   );

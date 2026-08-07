@@ -11,6 +11,8 @@ import {
   type PromptExplorerModel,
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type FormValues = {
   prompt: string;
@@ -67,9 +69,9 @@ export function PromptExplorerForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="card border border-base-300 bg-base-100"
+      className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
     >
-      <div className="card-body gap-5">
+      <div className="flex flex-auto flex-col gap-5 p-6 text-sm">
         <div className="space-y-1.5">
           <label
             className="block text-sm font-medium"
@@ -104,14 +106,16 @@ export function PromptExplorerForm({
               </p>
               <div className="flex flex-wrap gap-1.5">
                 {promptStarters.map((starter) => (
-                  <button
+                  <Button
                     key={starter}
                     type="button"
-                    className="btn btn-ghost btn-xs h-auto min-h-7 rounded-full border border-base-300 px-2.5 py-1 font-normal"
+                    variant="ghost"
+                    size="xs"
+                    className="h-auto min-h-7 rounded-full border border-base-300 px-2.5 py-1 font-normal"
                     onClick={() => onPromptChange(starter)}
                   >
                     {starter}
-                  </button>
+                  </Button>
                 ))}
               </div>
               <p className="mt-1.5 text-xs text-base-content/50">
@@ -130,10 +134,11 @@ export function PromptExplorerForm({
             >
               Highlight brand (optional)
             </label>
-            <input
+            <Input
+              passwordManagerIgnore
               id="prompt-explorer-brand"
               type="text"
-              className="input input-bordered w-full"
+              className="w-full"
               value={form.highlightBrand}
               onChange={(event) => onHighlightBrandChange(event.target.value)}
               autoComplete="off"
@@ -184,7 +189,7 @@ export function PromptExplorerForm({
             <select
               id="prompt-explorer-country"
               aria-label="Web search location"
-              className="select select-bordered select-sm min-w-0 sm:max-w-xs"
+              className="app-select app-select-sm min-w-0 sm:max-w-xs"
               value={form.webSearchCountryCode}
               onChange={(event) =>
                 onCountryChange(parseCountryCode(event.target.value))
@@ -198,9 +203,10 @@ export function PromptExplorerForm({
               ))}
             </select>
           </div>
-          <button
+          <Button
             type="submit"
-            className="btn btn-primary shrink-0 px-6"
+            variant="primary"
+            className="shrink-0 px-6"
             disabled={isLoading || form.models.length === 0}
           >
             {isLoading
@@ -209,7 +215,7 @@ export function PromptExplorerForm({
                   kind: "paidRequests",
                   count: new Set(form.models).size,
                 })}
-          </button>
+          </Button>
         </div>
 
         {validationError ? (

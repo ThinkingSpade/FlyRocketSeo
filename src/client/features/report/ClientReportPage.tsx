@@ -4,6 +4,9 @@ import { ReportToolbar } from "@/client/features/report/ReportToolbar";
 import { ReportCover } from "@/client/features/report/ReportChrome";
 import { ReportPages } from "@/client/features/report/ReportPages";
 import { useClientReportData } from "@/client/features/report/useClientReportData";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 // The classic print-only-section trick: everything hides except the report, so
 // the browser's Print → Save as PDF produces a clean client deliverable
@@ -95,14 +98,14 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
             metered and only load after the paid-request buttons below.
           </p>
           {data.keywordDetailsError ? (
-            <div className="mt-3 alert alert-error text-sm">
+            <Banner variant="error" className="mt-3 text-sm">
               {data.keywordDetailsError}
-            </div>
+            </Banner>
           ) : null}
           {data.backlinkDetailsError ? (
-            <div className="mt-3 alert alert-error text-sm">
+            <Banner variant="error" className="mt-3 text-sm">
               {data.backlinkDetailsError}
-            </div>
+            </Banner>
           ) : null}
           <div className="mt-3 flex flex-wrap gap-2">
             {data.domainSnapshotMissing ? (
@@ -126,30 +129,26 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
               </Link>
             ) : null}
             {data.keywordDetailsMissing ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-sm"
+                size="sm"
                 disabled={data.keywordDetailsLoading}
                 onClick={() => data.refreshKeywordDetails()}
               >
-                {data.keywordDetailsLoading ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : null}
+                {data.keywordDetailsLoading ? <Loader size="sm" /> : null}
                 Load keyword details · 1 paid request
-              </button>
+              </Button>
             ) : null}
             {data.backlinkDetailsMissing ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-sm"
+                size="sm"
                 disabled={data.backlinkDetailsLoading}
                 onClick={() => data.refreshBacklinkDetails()}
               >
-                {data.backlinkDetailsLoading ? (
-                  <span className="loading loading-spinner loading-xs" />
-                ) : null}
+                {data.backlinkDetailsLoading ? <Loader size="sm" /> : null}
                 Load backlink details · 2 paid requests
-              </button>
+              </Button>
             ) : null}
           </div>
         </div>

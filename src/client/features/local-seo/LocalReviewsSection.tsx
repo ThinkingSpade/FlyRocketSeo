@@ -15,6 +15,9 @@ import {
   saveReviewsTask,
   type StoredReviewsTask,
 } from "./reviewsTaskStore";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export function LocalReviewsSection({
   projectId,
@@ -109,13 +112,14 @@ export function LocalReviewsSection({
         <ReviewAnalyticsCards reviews={outcome.items} />
       ) : null}
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Latest reviews</h2>
-            <button
+            <Button
               type="button"
-              className="btn btn-sm btn-outline gap-1.5"
+              size="sm"
+              variant="outline"
               onClick={() => {
                 setTask(null);
                 clearReviewsTask(projectId, keyword);
@@ -125,7 +129,7 @@ export function LocalReviewsSection({
             >
               {isWorking ? (
                 <>
-                  <span className="loading loading-spinner loading-xs" />
+                  <Loader size="sm" />
                   Crawling reviews…
                 </>
               ) : (
@@ -134,11 +138,13 @@ export function LocalReviewsSection({
                   count: 1,
                 })
               )}
-            </button>
+            </Button>
           </div>
 
           {errorMessage ? (
-            <div className="alert alert-error text-sm">{errorMessage}</div>
+            <Banner variant="error" className="text-sm">
+              {errorMessage}
+            </Banner>
           ) : null}
 
           {outcome?.status === "completed" ? (

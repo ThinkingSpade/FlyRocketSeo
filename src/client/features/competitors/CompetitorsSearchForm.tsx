@@ -1,4 +1,7 @@
 import { Search } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function CompetitorsSearchForm({
   targetInput,
@@ -27,9 +30,11 @@ export function CompetitorsSearchForm({
     >
       <label className="form-control w-full sm:max-w-xs">
         <span className="label-text pb-1 text-xs font-medium">Your domain</span>
-        <input
+        <Input
+          passwordManagerIgnore
           type="text"
-          className="input input-bordered input-sm w-full"
+          size="sm"
+          className="w-full"
           placeholder="example.com"
           value={targetInput}
           onChange={(event) => onTargetChange(event.target.value)}
@@ -40,31 +45,30 @@ export function CompetitorsSearchForm({
           <span className="label-text pb-1 text-xs font-medium">
             Competitor domain
           </span>
-          <input
+          <Input
+            passwordManagerIgnore
             type="text"
-            className="input input-bordered input-sm w-full"
+            size="sm"
+            className="w-full"
             placeholder="competitor.com"
             value={competitorInput}
             onChange={(event) => onCompetitorChange(event.target.value)}
           />
         </label>
       ) : null}
-      <button
+      <Button
         type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
+        variant="primary"
+        size="sm"
         disabled={
           !targetInput.trim() ||
           (needsCompetitor && !competitorInput.trim()) ||
           isFetching
         }
       >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         Analyze
-      </button>
+      </Button>
     </form>
   );
 }

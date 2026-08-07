@@ -31,6 +31,10 @@ import {
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type ClustersNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -78,18 +82,10 @@ function PlanClustersButton({
       >
         Plan clusters
       </span>
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={disabled}
-      >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+      <Button type="submit" variant="primary" size="sm" disabled={disabled}>
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         Plan clusters
-      </button>
+      </Button>
     </div>
   );
 }
@@ -259,8 +255,8 @@ export function TopicClustersPage({
 
       <TargetAreaBanner projectId={projectId} />
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
@@ -302,9 +298,11 @@ export function TopicClustersPage({
                 <span className="label-text pb-1 text-xs font-medium">
                   Seed topic
                 </span>
-                <input
+                <Input
+                  passwordManagerIgnore
                   type="text"
-                  className="input input-bordered input-sm w-full"
+                  size="sm"
+                  className="w-full"
                   placeholder="office vending machines"
                   value={input}
                   onChange={(event) => {
@@ -328,7 +326,7 @@ export function TopicClustersPage({
                 Location
               </span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={locationInput}
                 onChange={(event) => {
                   setLocationTouched(true);
@@ -351,7 +349,9 @@ export function TopicClustersPage({
       </div>
 
       {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
+        <Banner variant="error" className="text-sm">
+          {errorMessage}
+        </Banner>
       ) : null}
 
       {runInput == null ? (
@@ -403,8 +403,8 @@ export function TopicClustersPage({
       ) : null}
 
       {runInput == null && !restoredRun ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Enter a topic to plan a cluster</p>
             <p className="max-w-md text-sm text-base-content/60">
               Hub-and-spoke content is how sites own a topic: one pillar page
@@ -416,7 +416,7 @@ export function TopicClustersPage({
 
       {runInput != null && clustersQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 

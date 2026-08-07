@@ -18,6 +18,8 @@ import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
 } from "@/client/components/chart/chartTheme";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /** Narrowed shape of a recharts tooltip payload entry (typed `any` upstream). */
 interface RechartsPayloadEntry {
@@ -86,25 +88,24 @@ export function DomainVisibilityTrend({
             Monthly ranking keywords over time
           </p>
         </div>
-        {query.isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : null}
+        {query.isFetching ? <Loader size="sm" /> : null}
       </div>
 
       <div className="p-4">
         {!run.authorized ? (
           <div className="py-8 text-center">
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              variant="primary"
+              size="sm"
               onClick={() => run.authorize()}
             >
               Load visibility trend
-            </button>
+            </Button>
           </div>
         ) : query.isFetching && points.length === 0 ? (
           <div className="flex items-center justify-center py-12">
-            <span className="loading loading-spinner" />
+            <Loader />
           </div>
         ) : points.length === 0 ? (
           <p className="py-8 text-center text-sm text-base-content/50">

@@ -10,6 +10,7 @@ import {
   RefreshCw,
   Sheet,
 } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 function ToolbarMenu({
   label,
@@ -23,21 +24,48 @@ function ToolbarMenu({
   children: ReactNode;
 }) {
   const [open, setOpen] = useState(false);
+  // Both `title` and `label` are optional, so neither alone can be trusted to
+  // name the trigger. The fallback is deliberately generic rather than clever:
+  // a wrong name is worse than a plain one.
+  const accessibleLabel = title ?? label ?? "Open menu";
   return (
     <div className="relative">
-      <button
-        type="button"
-        className={`btn btn-ghost btn-sm ${label ? "gap-1" : "btn-square"}`}
-        onClick={() => setOpen((c) => !c)}
-        title={title}
-        aria-label={title ?? label}
-        aria-haspopup="menu"
-        aria-expanded={open}
-      >
-        {icon}
-        {label}
-        {label && <ChevronDown className="size-3.5 opacity-60" />}
-      </button>
+      {/* Two branches rather than `shape={label ? "base" : "square"}`, because
+          Kumo models icon-only buttons as a separate props union: a `shape` of
+          type `"base" | "square"` matches neither member, and the square member
+          requires `aria-label` to be a definite string. The old code passed
+          `title ?? label`, both optional — so the icon-only trigger could render
+          with no accessible name at all. `accessibleLabel` closes that. */}
+      {label ? (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setOpen((c) => !c)}
+          title={title}
+          aria-label={accessibleLabel}
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          {icon}
+          {label}
+          <ChevronDown className="size-3.5 opacity-60" />
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          shape="square"
+          onClick={() => setOpen((c) => !c)}
+          title={title}
+          aria-label={accessibleLabel}
+          aria-haspopup="menu"
+          aria-expanded={open}
+        >
+          {icon}
+        </Button>
+      )}
       {open && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />

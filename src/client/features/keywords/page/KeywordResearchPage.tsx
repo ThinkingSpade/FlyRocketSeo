@@ -38,6 +38,7 @@ import {
 import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = Omit<KeywordResearchControllerInput, "onFormSubmit">;
 type KeywordSearchTab = SearchTab & { input: KeywordSearchTabInput };
@@ -332,15 +333,17 @@ export function KeywordResearchPage(input: Props) {
 
       {controller.hasSearched ? (
         <div className="flex flex-col gap-2">
-          <button
+          <Button
             type="button"
             data-testid="keyword-research-recent-searches"
-            className="btn btn-ghost btn-sm w-fit gap-2 px-0 text-base-content/70 hover:bg-transparent"
+            variant="ghost"
+            size="sm"
+            className="w-fit px-0 text-base-content/70 hover:bg-transparent"
             onClick={showRecentSearches}
           >
             <ArrowLeft className="size-4" />
             Recent searches
-          </button>
+          </Button>
           <SearchTabStrip
             projectId={projectId}
             tabs={searchTabs.tabs}
@@ -390,9 +393,9 @@ function KeywordResearchContent({
               Go to Billing
             </Link>
           ) : (
-            <button className="btn btn-sm" onClick={controller.retrySearch}>
+            <Button size="sm" onClick={controller.retrySearch}>
               Try again
-            </button>
+            </Button>
           )}
         </div>
       </div>
@@ -436,15 +439,12 @@ function KeywordSaveDialog({
           </p>
         </div>
         <div className="modal-action">
-          <button
-            className="btn"
-            onClick={() => controller.setShowSaveDialog(false)}
-          >
+          <Button onClick={() => controller.setShowSaveDialog(false)}>
             Cancel
-          </button>
-          <button className="btn btn-primary" onClick={controller.confirmSave}>
+          </Button>
+          <Button variant="primary" onClick={controller.confirmSave}>
             Save
-          </button>
+          </Button>
         </div>
       </div>
       <div

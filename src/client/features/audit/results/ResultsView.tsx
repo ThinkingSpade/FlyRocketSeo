@@ -23,6 +23,7 @@ import {
   type AuditIssueSummary,
 } from "@/client/features/insights/verdicts/audit";
 import { getContentPerformance } from "@/serverFunctions/searchPerformance";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
 
 type ResultsTab = "pages" | "performance";
 
@@ -116,8 +117,8 @@ export function ResultsView({
       <NextStepsCard verdict={verdict} projectId={projectId} tab="Site Audit" />
       <AuditIssuesList issues={issues} />
 
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body gap-3">
+      <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+        <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
           <ResultsHeader
             pageCount={pages.length}
             lighthouseCount={lighthouse.length}
@@ -177,8 +178,8 @@ function AuditIssuesList({ issues }: { issues: AuditIssueSummary[] }) {
   const sorted = issues.toSorted((a, b) => b.pageCount - a.pageCount);
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <InsightIcon icon={AlertTriangle} />
           Issues found
@@ -234,24 +235,15 @@ function ResultsHeader({
   return (
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
       {hasPerformanceTab ? (
-        <div role="tablist" className="tabs tabs-border w-fit">
-          {tabs.map(({ label, tab }) => {
-            const isActive = activeTab === tab;
-
-            return (
-              <button
-                key={tab}
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`tab ${isActive ? "tab-active" : ""}`}
-                onClick={() => onTabChange(tab)}
-              >
-                {label}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          variant="underline"
+          value={activeTab}
+          onValueChange={(next) => {
+            const selected = tabs.find((t) => t.tab === next);
+            if (selected) onTabChange(selected.tab);
+          }}
+          tabs={tabs.map(({ tab, label }) => ({ value: tab, label }))}
+        />
       ) : (
         <h3 className="text-base font-medium">Pages ({pageCount})</h3>
       )}

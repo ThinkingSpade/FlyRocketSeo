@@ -1,6 +1,7 @@
 import { Settings, User } from "lucide-react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { signOutAndRedirect } from "@/lib/auth-client";
+import { Button } from "@cloudflare/kumo/components/button";
 
 // Account dropdown shared by the onboarding wizard and the onboarding chat so a
 // signed-in user can reach Settings / theme / sign out from either surface.
@@ -17,14 +18,15 @@ export function OnboardingAccountMenu({
   return (
     <div className="fixed top-4 right-4">
       <div className="dropdown dropdown-end">
-        <button
+        <Button
           type="button"
           tabIndex={0}
-          className="btn btn-ghost btn-circle"
+          variant="ghost"
+          shape="circle"
           aria-label="Open account menu"
         >
           <User className="h-5 w-5" />
-        </button>
+        </Button>
         <ul
           tabIndex={0}
           className="dropdown-content z-20 menu mt-3 min-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"

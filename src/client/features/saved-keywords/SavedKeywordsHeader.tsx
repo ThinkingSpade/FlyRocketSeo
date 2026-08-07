@@ -6,6 +6,7 @@ import {
   RefreshCw,
   Sheet,
 } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function SavedKeywordsHeader({
   totalCount,
@@ -36,19 +37,20 @@ export function SavedKeywordsHeader({
 
       <div className="flex items-center gap-2">
         <div className="dropdown dropdown-end">
-          <button
+          <Button
             type="button"
             tabIndex={0}
             disabled={disabled || metricsRefreshing}
             aria-haspopup="menu"
-            className={`btn btn-ghost btn-sm gap-1.5 ${disabled || metricsRefreshing ? "btn-disabled" : ""}`}
+            variant="ghost"
+            size="sm"
           >
             <RefreshCw
               className={`size-4 ${metricsRefreshing ? "animate-spin" : ""}`}
             />
             {metricsRefreshing ? "Updating..." : "Actions"}
             <ChevronDown className="size-3 opacity-60" />
-          </button>
+          </Button>
           <ul
             tabIndex={0}
             role="menu"
@@ -73,12 +75,13 @@ export function SavedKeywordsHeader({
         </div>
 
         <div className="dropdown dropdown-end">
-          <button
+          <Button
             type="button"
             tabIndex={0}
             disabled={disabled}
             aria-haspopup="menu"
-            className={`btn btn-ghost btn-sm gap-1.5 ${disabled ? "btn-disabled" : ""}`}
+            variant="ghost"
+            size="sm"
           >
             {exporting != null ? (
               <Loader2 className="size-4 animate-spin" />
@@ -87,7 +90,7 @@ export function SavedKeywordsHeader({
             )}
             Export
             <ChevronDown className="size-3 opacity-60" />
-          </button>
+          </Button>
           <ul
             tabIndex={0}
             role="menu"

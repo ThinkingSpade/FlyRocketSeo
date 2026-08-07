@@ -1,6 +1,7 @@
 import { MapPin, X } from "lucide-react";
 import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
 import type { TargetArea } from "@/shared/geo/types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   /** The tab's currently active area -- never null: before anything is ever
@@ -48,15 +49,18 @@ export function ScopeControl({
         className={className}
       />
       {hasConfirmedArea && onClear ? (
-        <button
+        <Button
           type="button"
           aria-label="Clear target area"
           title="Reset to national"
-          className="btn btn-ghost btn-xs btn-square text-base-content/40"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="text-base-content/40"
           onClick={onClear}
         >
           <X className="size-3.5" />
-        </button>
+        </Button>
       ) : null}
     </div>
   );

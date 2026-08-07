@@ -1,12 +1,16 @@
 import { ShieldAlert } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function BacklinksLoadingState() {
   return (
     <div className="space-y-3">
       <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
         {Array.from({ length: 8 }).map((_, index) => (
-          <div key={index} className="card bg-base-100 border border-base-300">
-            <div className="card-body gap-3 p-4">
+          <div
+            key={index}
+            className="relative flex flex-col rounded-xl bg-base-100 border border-base-300"
+          >
+            <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
               <div className="skeleton h-3 w-24" />
               <div className="skeleton h-8 w-28" />
             </div>
@@ -15,16 +19,19 @@ export function BacklinksLoadingState() {
       </div>
       <div className="grid grid-cols-1 gap-3 xl:grid-cols-2">
         {Array.from({ length: 2 }).map((_, index) => (
-          <div key={index} className="card bg-base-100 border border-base-300">
-            <div className="card-body gap-3">
+          <div
+            key={index}
+            className="relative flex flex-col rounded-xl bg-base-100 border border-base-300"
+          >
+            <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
               <div className="skeleton h-4 w-32" />
               <div className="skeleton h-64 w-full" />
             </div>
           </div>
         ))}
       </div>
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body gap-3">
+      <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+        <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
           <div className="skeleton h-8 w-60" />
           <div className="skeleton h-80 w-full" />
         </div>
@@ -53,9 +60,9 @@ export function BacklinksErrorState({
           </p>
         </div>
       </div>
-      <button className="btn btn-sm" onClick={onRetry}>
+      <Button size="sm" onClick={onRetry}>
         Retry
-      </button>
+      </Button>
     </section>
   );
 }

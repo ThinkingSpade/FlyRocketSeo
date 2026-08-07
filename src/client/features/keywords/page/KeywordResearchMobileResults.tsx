@@ -36,6 +36,8 @@ import { getLanguageCode } from "@/client/features/keywords/locations";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
 import { MobileFilters } from "./keywordResearchMobileFilters";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -184,18 +186,20 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
       ) : null}
 
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-base-300 bg-base-100">
-        <button
-          className={`btn btn-ghost btn-xs gap-1 ${showFilters ? "btn-active" : ""}`}
+        <Button
+          size="xs"
+          variant={showFilters ? "secondary" : "ghost"}
+          aria-pressed={showFilters}
           onClick={() => controller.setShowFilters((current) => !current)}
         >
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
-        </button>
+        </Button>
         <span className="text-xs text-base-content/60">
           {keywordCountLabel}
         </span>

@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 function FilterTextInput({
   form,
@@ -19,8 +21,10 @@ function FilterTextInput({
       </span>
       <form.Field name={name}>
         {(field) => (
-          <input
-            className="input input-bordered input-sm bg-base-100"
+          <Input
+            passwordManagerIgnore
+            size="sm"
+            className="bg-base-100"
             placeholder={placeholder}
             value={field.state.value}
             onChange={(event) => field.handleChange(event.target.value)}
@@ -81,8 +85,10 @@ function CompactRangeInput({
   return (
     <form.Field name={name}>
       {(field) => (
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           step={step}
@@ -107,9 +113,9 @@ export function EmptyFilterResults({
         No keywords match your current filters.
       </p>
       {activeFilterCount > 0 ? (
-        <button className="btn btn-ghost btn-sm" onClick={resetFilters}>
+        <Button variant="ghost" size="sm" onClick={resetFilters}>
           Clear filters
-        </button>
+        </Button>
       ) : null}
     </div>
   );

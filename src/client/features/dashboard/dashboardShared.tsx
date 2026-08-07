@@ -2,6 +2,7 @@ import { useMemo, type ComponentType, type ReactNode } from "react";
 import { Link, type LinkOptions } from "@tanstack/react-router";
 import { getProjectNavGroups } from "@/client/navigation/items";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 // ---------------------------------------------------------------------------
 // Project nav link reuse
@@ -57,8 +58,8 @@ export function DashboardCard({
   children: ReactNode;
 }) {
   return (
-    <section className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-3 p-4">
+    <section className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-sm font-medium">
             <Icon className="size-4 text-base-content/60" />
@@ -98,8 +99,8 @@ export function DeltaStatTile({
   deltaTitle?: string;
 }) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body p-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col p-4 gap-2 text-sm">
         <p className="text-xs uppercase tracking-wide text-base-content/60">
           {label}
         </p>
@@ -125,9 +126,9 @@ export function DeltaStatTile({
 
 export function CardError({ error }: { error: unknown }) {
   return (
-    <div className="alert alert-error text-sm">
+    <Banner variant="error" className="text-sm">
       {getStandardErrorMessage(error)}
-    </div>
+    </Banner>
   );
 }
 
@@ -144,8 +145,11 @@ export function CardTilesSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div className="grid grid-cols-2 gap-3 md:grid-cols-4" aria-busy>
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-2 p-4">
+        <div
+          key={index}
+          className="relative flex flex-col rounded-xl bg-base-100 border border-base-300"
+        >
+          <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <div className="skeleton h-3 w-16" />
             <div className="skeleton h-7 w-20" />
           </div>

@@ -6,6 +6,9 @@ import {
   type OnPageElement,
   type PageGroup,
 } from "@/client/features/onpage/onPageModel";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /** Short element tag shown on each suggestion row. */
 const ELEMENT_TAG: Record<OnPageElement, string> = {
@@ -76,10 +79,10 @@ function FixDiff({ row }: { row: FixRow }) {
 
 function StatusPill({ status }: { status: FixRow["status"] }) {
   if (status === "approved") {
-    return <span className="badge badge-success badge-sm">Approved</span>;
+    return <Badge variant="success">Approved</Badge>;
   }
   if (status === "excluded") {
-    return <span className="badge badge-ghost badge-sm">Excluded</span>;
+    return <Badge variant="neutral">Excluded</Badge>;
   }
   return null;
 }
@@ -103,34 +106,37 @@ function FixRowView({
       </span>
       <FixDiff row={row} />
       <div className="flex shrink-0 items-center gap-1.5">
-        {row.source === "ai" ? (
-          <span className="badge badge-outline badge-sm">AI</span>
-        ) : null}
+        {row.source === "ai" ? <Badge variant="outline">AI</Badge> : null}
         <StatusPill status={row.status} />
-        <button
+        {/* Both are toggles, so the chosen state is `aria-pressed` rather
+            than a colour class. Kumo has no "success" variant; approving is
+            the affirmative action here, so it takes `primary`. */}
+        <Button
           type="button"
-          className={`btn btn-xs btn-circle ${
-            row.status === "approved" ? "btn-success" : "btn-ghost"
-          }`}
+          shape="circle"
+          size="xs"
+          variant={row.status === "approved" ? "primary" : "ghost"}
+          aria-pressed={row.status === "approved"}
           disabled={busy}
           onClick={onApprove}
           aria-label="Approve"
           title="Approve"
         >
           <Check className="size-3.5" />
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={`btn btn-xs btn-circle ${
-            row.status === "excluded" ? "btn-active" : "btn-ghost"
-          }`}
+          shape="circle"
+          size="xs"
+          variant={row.status === "excluded" ? "secondary" : "ghost"}
+          aria-pressed={row.status === "excluded"}
           disabled={busy}
           onClick={onExclude}
           aria-label="Exclude"
           title="Exclude"
         >
           <X className="size-3.5" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -161,14 +167,15 @@ export function PageGroupCard({
           {group.path}
         </h3>
         {pendingIds.length > 0 ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-xs"
+            variant="ghost"
+            size="xs"
             disabled={busy}
             onClick={() => onApprovePage(pendingIds)}
           >
             Approve all {pendingIds.length}
-          </button>
+          </Button>
         ) : (
           <span className="text-xs text-base-content/40">All decided</span>
         )}
@@ -188,7 +195,7 @@ export function PageGroupCard({
   );
 }
 
-/** The status filter as a daisyUI join. */
+/** Single-select status filter — a segmented control, not a button group. */
 export function StatusFilter({
   value,
   onChange,
@@ -205,20 +212,15 @@ export function StatusFilter({
     { key: "excluded", label: `Excluded (${counts.excluded})` },
   ];
   return (
-    <div className="join">
-      {options.map((option) => (
-        <button
-          key={option.key}
-          type="button"
-          className={`btn btn-xs join-item ${
-            value === option.key ? "btn-active" : "btn-ghost"
-          }`}
-          onClick={() => onChange(option.key)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedToggle
+      showLabels
+      items={options.map((option) => ({
+        value: option.key,
+        label: option.label,
+      }))}
+      value={value}
+      onChange={onChange}
+    />
   );
 }
 

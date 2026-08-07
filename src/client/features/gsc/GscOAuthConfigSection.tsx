@@ -7,6 +7,8 @@ import {
   getGscOAuthConfigStatus,
   setGscOAuthConfig,
 } from "@/serverFunctions/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const SETUP_DOCS_URL =
   "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/SELF_HOSTING_GOOGLE_SEARCH_CONSOLE.md";
@@ -125,24 +127,27 @@ export function GscOAuthConfigSection() {
           >
             <label className="flex flex-col gap-1.5">
               <span className="font-medium">Client ID</span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
                 value={clientId}
                 onChange={(event) => setClientId(event.target.value)}
                 placeholder="1234-abc.apps.googleusercontent.com"
                 autoComplete="off"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
               />
             </label>
             <label className="flex flex-col gap-1.5">
               <span className="font-medium">Client secret</span>
-              <input
+              <Input
                 type="password"
                 value={clientSecret}
                 onChange={(event) => setClientSecret(event.target.value)}
                 placeholder="GOCSPX-…"
                 autoComplete="off"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
               />
             </label>
             <p className="text-xs text-base-content/50">
@@ -162,9 +167,10 @@ export function GscOAuthConfigSection() {
               .
             </p>
             <div className="flex justify-end gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => {
                   setShowForm(false);
                   setClientId("");
@@ -172,21 +178,23 @@ export function GscOAuthConfigSection() {
                 }}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
-                className="btn btn-primary btn-sm"
+                variant="primary"
+                size="sm"
                 disabled={!canSave}
               >
                 {saveMutation.isPending ? "Saving…" : "Save"}
-              </button>
+              </Button>
             </div>
           </form>
         ) : (
           <div className="flex flex-wrap gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-outline btn-sm"
+              variant="outline"
+              size="sm"
               onClick={() => setShowForm(true)}
             >
               {status.source === "custom"
@@ -194,11 +202,12 @@ export function GscOAuthConfigSection() {
                 : status.source === "env"
                   ? "Override in app"
                   : "Add credentials"}
-            </button>
+            </Button>
             {status.source === "custom" ? (
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => clearMutation.mutate()}
                 disabled={clearMutation.isPending}
               >
@@ -207,7 +216,7 @@ export function GscOAuthConfigSection() {
                   : status.hasEnvCredentials
                     ? "Remove (revert to env)"
                     : "Remove"}
-              </button>
+              </Button>
             ) : null}
           </div>
         )}

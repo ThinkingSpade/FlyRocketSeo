@@ -18,6 +18,8 @@ import { LighthouseIssueRow } from "./LighthouseIssueRow";
 import { LighthouseIssuesSummary } from "./LighthouseIssuesSummary";
 import { categoryLabel } from "./utils";
 import { categoryTabs } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function LighthouseIssuesHeader({
   backLabel,
@@ -39,9 +41,9 @@ export function LighthouseIssuesHeader({
   return (
     <>
       <div className="flex items-center justify-between gap-3">
-        <button className="btn btn-ghost btn-sm px-2" onClick={onBack}>
+        <Button variant="ghost" size="sm" className="px-2" onClick={onBack}>
           &larr; Back to {backLabel}
-        </button>
+        </Button>
         <span className="text-xs text-base-content/60">
           {scannedAt
             ? `Scanned ${new Date(scannedAt).toLocaleString()}`
@@ -49,8 +51,8 @@ export function LighthouseIssuesHeader({
         </span>
       </div>
 
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body py-5 gap-4">
+      <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+        <div className="flex flex-auto flex-col py-5 gap-4 text-sm">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold">Lighthouse Issues</h1>
             <p className="text-sm text-base-content/70 break-all">
@@ -59,18 +61,18 @@ export function LighthouseIssuesHeader({
           </div>
           <LighthouseIssuesSummary scores={scores} metrics={metrics} />
           <div className="flex flex-wrap gap-2 text-xs">
-            <span className="badge border border-error/30 bg-error/10 text-error/80 gap-1">
+            <Badge className="border border-error/30 bg-error/10 text-error/80 gap-1">
               <FileWarning className="size-3" />
               Critical {severityCounts.critical}
-            </span>
-            <span className="badge border border-warning/30 bg-warning/10 text-warning/80 gap-1">
+            </Badge>
+            <Badge className="border border-warning/30 bg-warning/10 text-warning/80 gap-1">
               <TriangleAlert className="size-3" />
               Warning {severityCounts.warning}
-            </span>
-            <span className="badge border border-info/30 bg-info/10 text-info/80 gap-1">
+            </Badge>
+            <Badge className="border border-info/30 bg-info/10 text-info/80 gap-1">
               <Info className="size-3" />
               Info {severityCounts.info}
-            </span>
+            </Badge>
           </div>
         </div>
       </div>

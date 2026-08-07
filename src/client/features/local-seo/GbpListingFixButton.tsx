@@ -9,6 +9,8 @@ import {
   getGbpConnection,
   searchGbpCategories,
 } from "@/serverFunctions/gbp";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /** The only two GBP Audit checks (gbpAudit.ts) this can actually fix. Every
  *  other check either isn't a listing field (reviews, rating, owner
@@ -89,17 +91,18 @@ function ConfirmBar({
     <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs">
       <TriangleAlert className="size-3.5 shrink-0 text-warning" />
       <span>{label}</span>
-      <button
+      <Button
         type="button"
-        className="btn btn-primary btn-xs"
+        variant="primary"
+        size="xs"
         disabled={pending}
         onClick={onConfirm}
       >
         {pending ? "Applying…" : "Confirm"}
-      </button>
-      <button type="button" className="btn btn-ghost btn-xs" onClick={onCancel}>
+      </Button>
+      <Button type="button" variant="ghost" size="xs" onClick={onCancel}>
         Cancel
-      </button>
+      </Button>
     </div>
   );
 }
@@ -152,21 +155,18 @@ function DescriptionFixForm({
         />
       ) : (
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-xs"
+            variant="primary"
+            size="xs"
             disabled={!description.trim()}
             onClick={() => setConfirming(true)}
           >
             Save to Google
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            onClick={onClose}
-          >
+          </Button>
+          <Button type="button" variant="ghost" size="xs" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
         </div>
       )}
     </div>
@@ -235,9 +235,11 @@ function CategoryFixForm({
 
   return (
     <div className="mt-1.5 space-y-1.5">
-      <input
+      <Input
+        passwordManagerIgnore
         type="text"
-        className="input input-bordered input-xs w-full"
+        size="xs"
+        className="w-full"
         placeholder="Search Google's category list (e.g. Pizza restaurant)"
         value={selected ? selected.displayName : query}
         onChange={(event) => {
@@ -269,21 +271,18 @@ function CategoryFixForm({
         />
       ) : (
         <div className="flex gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-xs"
+            variant="primary"
+            size="xs"
             disabled={!selected}
             onClick={() => setConfirming(true)}
           >
             Save to Google
-          </button>
-          <button
-            type="button"
-            className="btn btn-ghost btn-xs"
-            onClick={onClose}
-          >
+          </Button>
+          <Button type="button" variant="ghost" size="xs" onClick={onClose}>
             Cancel
-          </button>
+          </Button>
         </div>
       )}
     </div>

@@ -36,6 +36,7 @@ import {
   createMeteredRunKey,
   useAuthorizedRun,
 } from "@/client/lib/useMeteredQuery";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -202,13 +203,14 @@ export function PagesTab({
     <>
       {!run.authorized ? (
         <div className="border-b border-base-300 p-4 text-center">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             onClick={() => run.authorize()}
           >
             Load pages
-          </button>
+          </Button>
         </div>
       ) : null}
       {routeState.page === 1 ? <DomainPagesTreemap rows={rows} /> : null}

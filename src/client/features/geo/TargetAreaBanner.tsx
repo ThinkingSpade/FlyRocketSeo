@@ -12,6 +12,7 @@ import {
   describeTargetAreaSource,
   type TargetAreaBannerViewModel,
 } from "@/client/features/geo/targetAreaBannerViewModel";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   projectId: string;
@@ -70,20 +71,24 @@ export function TargetAreaBanner({ projectId }: Props) {
             ) : null}
           </div>
         </div>
-        <button
+        <Button
           type="button"
           aria-label="Dismiss"
-          className="btn btn-ghost btn-xs btn-square shrink-0"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="shrink-0"
           onClick={() => setDismissed(true)}
         >
           <X className="size-3.5" />
-        </button>
+        </Button>
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-xs"
+          variant="primary"
+          size="xs"
           disabled={confirmMutation.isPending}
           onClick={() =>
             confirmMutation.mutate({
@@ -93,14 +98,15 @@ export function TargetAreaBanner({ projectId }: Props) {
           }
         >
           Use this for research
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs"
+          variant="ghost"
+          size="xs"
           onClick={() => setPickerOpen(true)}
         >
           Not right?
-        </button>
+        </Button>
       </div>
 
       {pickerOpen ? (

@@ -48,6 +48,28 @@ export const CHART_AXIS_TICK_SM = {
   fontSize: 11,
 } as const;
 
+/**
+ * Minimum pixel spacing between x-axis labels, for `<XAxis minTickGap>`.
+ *
+ * Recharts drops labels that would land closer together than this, so the value
+ * bounds the label COUNT by the chart's width rather than letting it grow with
+ * the data. That is the reference's habit: its 24-hour chart plots 288 points
+ * and labels six of them. Ours labelled every point, which at a 12-check
+ * history meant twelve dates competing with the line.
+ *
+ * Going full-bleed already fixed the acute case — twelve labels across 2,300px
+ * are ~190px apart and perfectly calm. The reason to set this anyway is the
+ * case that has not happened yet: at daily checks a 90-point history on the old
+ * `24` would pack ~90 labels into the same space. It also replaces four
+ * hand-picked values (24, 32, 24, 32) that differed for no reason anyone
+ * recorded.
+ *
+ * 120 is chosen against the widest label these axes carry — a short date like
+ * "May 21" at 10px — so consecutive labels keep roughly two label-widths of air
+ * between them at any viewport.
+ */
+export const CHART_X_TICK_GAP = 120;
+
 /** Hover crosshair for line and area charts. */
 export const CHART_CURSOR_LINE = {
   stroke: BASE_CONTENT,
@@ -59,6 +81,11 @@ export const CHART_CURSOR_BAR = {
   fill: BASE_CONTENT,
   fillOpacity: 0.08,
 } as const;
+
+// The hovered-point marker lives in ./ChartActiveDot.tsx, not here. It cannot be
+// a constant: Recharts passes the series colour to `activeDot` as `fill` and
+// hardcodes `stroke` to `#fff`, so producing the reference's hollow ring needs a
+// value that only exists at render time. See that file for the full reasoning.
 
 // No grid token: every CartesianGrid already uses stroke="currentColor" with an
 // opacity, which is theme-aware for the same reason as the tokens above. Adding a

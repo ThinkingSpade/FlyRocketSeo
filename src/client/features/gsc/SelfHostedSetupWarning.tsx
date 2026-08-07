@@ -1,6 +1,7 @@
 import { AlertTriangle } from "lucide-react";
 import { SafeExternalLink } from "@/client/components/SafeExternalLink";
 import { GSC_SELF_HOSTED_SETUP_DOCS_URL } from "@/shared/gsc";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 /**
  * Shown in self-hosted deployments that haven't set GOOGLE_CLIENT_ID/SECRET yet
@@ -8,7 +9,7 @@ import { GSC_SELF_HOSTED_SETUP_DOCS_URL } from "@/shared/gsc";
  */
 export function SelfHostedSetupWarning() {
   return (
-    <div className="alert alert-warning items-start text-sm">
+    <Banner variant="alert" className="items-start text-sm">
       <AlertTriangle className="mt-0.5 size-4 shrink-0" />
       <div className="space-y-1">
         <p className="font-medium">Google OAuth client not configured</p>
@@ -22,6 +23,6 @@ export function SelfHostedSetupWarning() {
           className="inline-flex items-center gap-1 font-medium underline underline-offset-2"
         />
       </div>
-    </div>
+    </Banner>
   );
 }

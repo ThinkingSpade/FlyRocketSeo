@@ -2,6 +2,9 @@ import { Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useState, type KeyboardEvent } from "react";
 import type { SavedKeywordsFilterValues } from "./savedKeywordsFilterTypes";
 import type { SavedKeywordsFilterForm } from "./useSavedKeywordsFilters";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function SavedKeywordsFilterPanel({
   form,
@@ -18,20 +21,21 @@ export function SavedKeywordsFilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-2 lg:grid-cols-2">
@@ -266,8 +270,10 @@ function CompactRangeInput({
   return (
     <form.Field name={name}>
       {(field) => (
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           step={step}

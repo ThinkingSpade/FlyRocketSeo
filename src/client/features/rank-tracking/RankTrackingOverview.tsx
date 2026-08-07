@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import {
   Area,
@@ -19,7 +18,9 @@ import {
 import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
 } from "@/client/components/chart/chartTheme";
+import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
 
 const BUCKETS = [
   { key: "top3", label: "Top 3", color: "#16a34a" },
@@ -91,9 +92,10 @@ export function RankTrackingOverview({
         </div>
 
         {trendLoading ? (
-          <div className="flex items-center justify-center p-8">
-            <Loader2 className="size-4 animate-spin text-base-content/50" />
-          </div>
+          // 220 is the chart's own height below, not a guess: a spinner in a
+          // p-8 box was two thirds shorter, so the card grew when data landed
+          // and everything under it jumped down the page.
+          <ChartSkeleton height={220} label="Loading position distribution" />
         ) : chartData.length <= 1 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-8 text-center text-xs text-base-content/60">
             {chartData.length === 0
@@ -128,7 +130,7 @@ export function RankTrackingOverview({
                   tick={CHART_AXIS_TICK}
                   tickLine={false}
                   axisLine={false}
-                  minTickGap={32}
+                  minTickGap={CHART_X_TICK_GAP}
                 />
                 <YAxis
                   allowDecimals={false}

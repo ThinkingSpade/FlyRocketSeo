@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Layers, Loader2, TrendingDown, TrendingUp } from "lucide-react";
+import { Layers, TrendingDown, TrendingUp } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
@@ -16,8 +16,64 @@ import {
   buildPageBuckets,
   type ContentGroupRow,
 } from "./contentGroups";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 type TrendFilter = "all" | "growing" | "decaying";
+
+/**
+ * The silhouette of this tab, not a spinner.
+ *
+ * It mirrors the real layout below — the same four-tile grid at the same
+ * breakpoints, then the groups card with a table's worth of rows — so the tab
+ * does not resize when the data lands. A spinner in a `p-8` box was roughly a
+ * tenth of the loaded height, which meant every tab switch dropped the page
+ * and then shoved it back down.
+ *
+ * Deliberately page-specific rather than a shared `<PageSkeleton>`: the whole
+ * value is in matching THIS layout, and a generic one would drift from it the
+ * first time either changes. The reference builds them per card for the same
+ * reason.
+ */
+function ContentPerformanceSkeleton() {
+  return (
+    <div className="space-y-3 p-4" aria-hidden="true">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {BUCKET_TILES.map((tile) => (
+          <div
+            key={tile.key}
+            className="rounded-lg border border-base-300 bg-base-100 p-3"
+          >
+            {/* The label is real text, not a bar. It is known before the data
+                arrives, and showing what IS known reads as progress rather
+                than as a blank card. */}
+            <div className="text-xs font-medium uppercase tracking-wide text-base-content/50">
+              {tile.label}
+            </div>
+            <div className="mt-1 h-7 w-16 skeleton rounded" />
+            <div className="mt-1 h-4 w-12 skeleton rounded" />
+          </div>
+        ))}
+      </div>
+      <div className="rounded-lg border border-base-300 bg-base-100 p-4">
+        <div className="h-5 w-32 skeleton rounded" />
+        <div className="mt-1.5 h-3 w-80 max-w-full skeleton rounded" />
+        <div className="mt-4 space-y-2">
+          {Array.from({ length: 6 }, (_, index) => (
+            <div
+              key={index}
+              className="grid grid-cols-[minmax(0,2fr)_repeat(3,minmax(0,1fr))] items-center gap-3"
+            >
+              <div className="h-4 skeleton rounded" />
+              <div className="h-4 skeleton rounded" />
+              <div className="h-4 skeleton rounded" />
+              <div className="h-4 skeleton rounded" />
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 const BUCKET_TILES = [
   { key: "top3", label: "Top 1–3" },
@@ -144,12 +200,7 @@ export function ContentPerformanceTab({
   return (
     <QueryStateBoundary
       state={tabState}
-      loading={
-        <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" /> Loading content
-          performance…
-        </div>
-      }
+      loading={<ContentPerformanceSkeleton />}
       errorMessage={getStandardErrorMessage(contentQuery.error)}
       notConnected={
         <div className="p-4 text-sm text-base-content/60">
@@ -190,20 +241,16 @@ export function ContentPerformanceTab({
                 <InsightIcon icon={Layers} tone="primary" />
                 Content groups
               </h3>
-              <div className="join">
-                {(["all", "growing", "decaying"] as const).map((filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    className={`btn btn-xs join-item capitalize ${
-                      trendFilter === filter ? "btn-active" : "btn-ghost"
-                    }`}
-                    onClick={() => setTrendFilter(filter)}
-                  >
-                    {filter}
-                  </button>
-                ))}
-              </div>
+              <SegmentedToggle
+                showLabels
+                items={[
+                  { value: "all", label: "All" },
+                  { value: "growing", label: "Growing" },
+                  { value: "decaying", label: "Decaying" },
+                ]}
+                value={trendFilter}
+                onChange={setTrendFilter}
+              />
             </div>
             <p className="mt-0.5 text-xs text-base-content/50">
               Your pages grouped by what they are, compared with the previous

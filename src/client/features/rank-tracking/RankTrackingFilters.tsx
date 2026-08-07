@@ -5,6 +5,9 @@ import type {
   RankTrackingConfig,
   RankTrackingRow,
 } from "@/types/schemas/rank-tracking";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export type Filters = {
   include: string;
@@ -72,27 +75,30 @@ export function FilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {activeFilterCount > 0 && (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           )}
         </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         <div className="space-y-1.5">
           <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
             Include
           </p>
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            passwordManagerIgnore
+            size="sm"
+            className="w-full bg-base-100"
             placeholder="e.g. seo, tool"
             value={filters.include}
             onChange={(e) => update("include", e.target.value)}
@@ -102,8 +108,10 @@ export function FilterPanel({
           <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
             Exclude
           </p>
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            passwordManagerIgnore
+            size="sm"
+            className="w-full bg-base-100"
             placeholder="e.g. free, cheap"
             value={filters.exclude}
             onChange={(e) => update("exclude", e.target.value)}
@@ -153,8 +161,10 @@ export function DomainListFilterBar({
           <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
             Search
           </span>
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            passwordManagerIgnore
+            size="sm"
+            className="w-full bg-base-100"
             placeholder="Domain or website"
             value={filters.query}
             onChange={(event) =>
@@ -167,7 +177,7 @@ export function DomainListFilterBar({
             Device
           </span>
           <select
-            className="select select-bordered select-sm w-full bg-base-100"
+            className="app-select app-select-sm w-full bg-base-100"
             value={filters.device}
             onChange={(event) => {
               const value = event.target.value;
@@ -194,7 +204,7 @@ export function DomainListFilterBar({
             Country
           </span>
           <select
-            className="select select-bordered select-sm w-full bg-base-100"
+            className="app-select app-select-sm w-full bg-base-100"
             value={filters.locationCode}
             onChange={(event) =>
               onChange({ ...filters, locationCode: event.target.value })
@@ -209,16 +219,18 @@ export function DomainListFilterBar({
           </select>
         </label>
         {activeFilterCount > 0 && (
-          <button
-            className="btn btn-ghost btn-sm gap-1.5 self-start lg:self-auto"
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start lg:self-auto"
             onClick={onReset}
           >
             <RotateCcw className="size-3" />
             Clear
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
-          </button>
+            </Badge>
+          </Button>
         )}
       </div>
     </div>
@@ -244,15 +256,19 @@ function RangeFilter({
         {title}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           placeholder="Min"
           type="number"
           value={minValue}
           onChange={(e) => onMinChange(e.target.value)}
         />
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           placeholder="Max"
           type="number"
           value={maxValue}

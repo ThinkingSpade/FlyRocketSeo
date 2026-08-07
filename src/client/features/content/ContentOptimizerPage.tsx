@@ -50,6 +50,11 @@ import {
 } from "@/client/features/insights/handoffStore";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -177,22 +182,14 @@ function BuildBriefButton({
       >
         Build brief
       </span>
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={disabled}
-      >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+      <Button type="submit" variant="primary" size="sm" disabled={disabled}>
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         {meteredActionLabel(
           "Build brief",
           { kind: "paidRequests", count: 4 },
           true,
         )}
-      </button>
+      </Button>
     </div>
   );
 }
@@ -431,8 +428,8 @@ export function ContentOptimizerPage({
       <ContentOptimizerHeading scope={targetAreaScope} />
       <TargetAreaBanner projectId={projectId} />
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
@@ -476,9 +473,11 @@ export function ContentOptimizerPage({
                 <span className="label-text pb-1 text-xs font-medium">
                   Target keyword
                 </span>
-                <input
+                <Input
+                  passwordManagerIgnore
                   type="text"
-                  className="input input-bordered input-sm w-full"
+                  size="sm"
+                  className="w-full"
                   placeholder="office coffee service dallas"
                   value={input}
                   onChange={(event) => {
@@ -502,7 +501,7 @@ export function ContentOptimizerPage({
                 Location
               </span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={locationInput}
                 onChange={(event) => {
                   setLocationTouched(true);
@@ -525,7 +524,9 @@ export function ContentOptimizerPage({
       </div>
 
       {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
+        <Banner variant="error" className="text-sm">
+          {errorMessage}
+        </Banner>
       ) : null}
 
       <RestoreRail
@@ -593,15 +594,15 @@ export function ContentOptimizerPage({
 
       {runInput != null && briefQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 
       {brief ? (
         <>
           {competitorUrls.length > 0 && !competitorsAuthorized ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body flex-row items-center justify-between gap-3 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col flex-row items-center justify-between gap-3 p-4 text-sm">
                 <div>
                   <h2 className="text-sm font-semibold">
                     Competitor outlines are a separate paid analysis
@@ -611,13 +612,14 @@ export function ContentOptimizerPage({
                     counts and heading outlines.
                   </p>
                 </div>
-                <button
+                <Button
                   type="button"
-                  className="btn btn-primary btn-sm"
+                  variant="primary"
+                  size="sm"
                   onClick={() => setCompetitorsAuthorized(true)}
                 >
                   Analyze competitor outlines
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -632,8 +634,8 @@ export function ContentOptimizerPage({
           />
 
           {brief.terms.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="text-sm font-semibold">
                   {effectiveGeo
                     ? formatGeoMetricLabel(
@@ -650,14 +652,14 @@ export function ContentOptimizerPage({
                 ) : null}
                 <div className="flex flex-wrap gap-1.5">
                   {brief.terms.map((term) => (
-                    <span key={term.keyword} className="badge badge-ghost">
+                    <Badge key={term.keyword} variant="neutral">
                       {term.keyword}
                       {term.searchVolume != null ? (
                         <span className="ml-1 text-base-content/50 tabular-nums">
                           {term.searchVolume.toLocaleString()}
                         </span>
                       ) : null}
-                    </span>
+                    </Badge>
                   ))}
                 </div>
               </div>
@@ -665,8 +667,8 @@ export function ContentOptimizerPage({
           ) : null}
 
           {brief.paaQuestions.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="text-sm font-semibold">Questions to answer</h2>
                 <ul className="list-inside list-disc space-y-1 text-sm text-base-content/80">
                   {brief.paaQuestions.map((question) => (
@@ -678,8 +680,8 @@ export function ContentOptimizerPage({
           ) : null}
 
           {headingIdeas.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="text-sm font-semibold">
                   Subtopics the top pages cover
                 </h2>
@@ -694,7 +696,7 @@ export function ContentOptimizerPage({
             </div>
           ) : null}
 
-          <div className="card border border-base-300 bg-base-100">
+          <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
             {effectiveGeo?.competitors.scope === "local" ? (
               <p className="px-4 pt-3 text-xs text-base-content/45">
                 Ranking pages · {effectiveGeo.competitors.label}
@@ -746,7 +748,7 @@ export function ContentOptimizerPage({
                             </span>
                           ) : competitorsAuthorized &&
                             analysis === undefined ? (
-                            <span className="loading loading-dots loading-xs" />
+                            <Loader size="sm" />
                           ) : analysis?.wordCount != null ? (
                             analysis.wordCount.toLocaleString()
                           ) : (
@@ -763,7 +765,7 @@ export function ContentOptimizerPage({
                             </span>
                           ) : competitorsAuthorized &&
                             analysis === undefined ? (
-                            <span className="loading loading-dots loading-xs" />
+                            <Loader size="sm" />
                           ) : (
                             (analysis?.h2.length ?? "—")
                           )}

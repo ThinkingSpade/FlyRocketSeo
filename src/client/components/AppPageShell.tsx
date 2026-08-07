@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { useReveal } from "@/client/hooks/useReveal";
 
 /**
  * The outer frame every project page sits in.
@@ -14,11 +15,16 @@ import type { ReactNode } from "react";
  * applications. There are now two widths, and the choice is about the content
  * rather than the page:
  *
- * - `data` (default) — anything with a table, a chart or a grid. Wide, because
- *   an SEO tool's rows are long and horizontal scroll is worse than density.
- * - `form` — settings, onboarding, single-column reading. Narrow, because a
- *   96-character line of prose or a full-width text input is harder to use, not
- *   easier.
+ * - `data` (default) — anything with a table, a chart or a grid. Uncapped,
+ *   because an SEO tool's rows are long and horizontal scroll is worse than
+ *   density. Measured against the reference: at a 2560 viewport the old
+ *   `max-w-screen-2xl` left 1,024px empty while Cloudflare's dashboard ran the
+ *   full 2,300px to the gutters. Dead space on the right does not read as calm,
+ *   it reads as a page that ran out of things to say.
+ * - `form` — settings, onboarding, single-column reading. Still narrow, and
+ *   deliberately unchanged: a 96-character line of prose or a full-width text
+ *   input is harder to use, not easier. Width follows the content, and only
+ *   tabular content got wider.
  *
  * Deliberately no `className` prop. A per-page escape hatch is exactly how the
  * five widths happened; if a page needs something else, it belongs here as a
@@ -26,7 +32,7 @@ import type { ReactNode } from "react";
  */
 
 const WIDTHS = {
-  data: "max-w-screen-2xl",
+  data: "max-w-none",
   form: "max-w-2xl",
 } as const;
 
@@ -37,11 +43,24 @@ export function AppPageShell({
   width?: keyof typeof WIDTHS;
   children: ReactNode;
 }) {
+  // Page entrance. The ref goes on the existing content wrapper rather than a
+  // new <Reveal> element on purpose: these 22 pages hang tables, charts and
+  // grids off this container, and inserting a div between it and them would
+  // reshuffle every one of those layouts. A ref adds no DOM at all.
+  //
+  // One reveal for the whole page, not a stagger per section. Staggering means
+  // wrapping each child, which is the same layout risk — worth doing later,
+  // per-page, where the sections can actually be seen.
+  const revealRef = useReveal();
+
   return (
     // `pb-24` on small screens clears the mobile bottom nav; the desktop
     // breakpoint drops back to normal padding.
     <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
-      <div className={`mx-auto flex w-full flex-col gap-4 ${WIDTHS[width]}`}>
+      <div
+        ref={revealRef}
+        className={`mx-auto flex w-full flex-col gap-4 ${WIDTHS[width]}`}
+      >
         {children}
       </div>
     </div>

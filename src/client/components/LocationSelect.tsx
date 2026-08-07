@@ -107,7 +107,7 @@ export function LocationSelect({
     <div ref={containerRef} className={`relative ${className}`}>
       <button
         type="button"
-        className="select select-bordered flex w-full items-center justify-between gap-2 text-left font-normal"
+        className="app-select flex w-full items-center justify-between gap-2 text-left font-normal"
         aria-haspopup="listbox"
         aria-expanded={open}
         onClick={() => setOpen((prev) => !prev)}

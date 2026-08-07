@@ -11,6 +11,7 @@ import {
   getGeoLocationSeedStatus,
   seedGeoLocationsChunk,
 } from "@/serverFunctions/geo";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const DATAFORSEO_LOCATIONS_DOCS_URL =
   "https://docs.dataforseo.com/v3/keywords_data/google_ads/locations/";
@@ -158,16 +159,18 @@ export function GeoLocationSeedSection() {
         </p>
 
         {!confirming && !running ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-outline w-fit gap-2"
+            size="sm"
+            variant="outline"
+            className="w-fit"
             onClick={() => setConfirming(true)}
           >
             <MapPin className="size-4" />
             {rowCount !== null && rowCount > 0
               ? "Re-seed location data"
               : "Seed location data"}
-          </button>
+          </Button>
         ) : null}
 
         {confirming ? (
@@ -193,20 +196,22 @@ export function GeoLocationSeedSection() {
               </span>
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn-sm"
+                variant="primary"
+                size="sm"
                 onClick={() => void runFrom(0)}
               >
                 Yes, seed now
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => setConfirming(false)}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         ) : null}
@@ -225,13 +230,14 @@ export function GeoLocationSeedSection() {
         {error ? (
           <div className="space-y-2 rounded-lg border border-error/40 bg-error/10 p-3">
             <p>{error}</p>
-            <button
+            <Button
               type="button"
-              className="btn btn-sm btn-outline"
+              size="sm"
+              variant="outline"
               onClick={() => void runFrom(offsetRef.current)}
             >
               Retry from where it stopped
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

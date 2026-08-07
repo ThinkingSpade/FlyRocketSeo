@@ -1,4 +1,6 @@
 import { ShieldAlert } from "lucide-react";
+import { Button, LinkButton } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const README_CLOUDFLARE_ACCESS_URL =
   "https://github.com/ThinkingSpade/FlyRocketSeo/blob/main/docs/DEPLOY_INTERNET_FACING.md";
@@ -13,16 +15,16 @@ export function AuthConfigErrorCard({
   onRetry,
 }: AuthConfigErrorCardProps) {
   return (
-    <div className="card w-full max-w-2xl bg-base-100 border border-base-300 shadow-xl">
-      <div className="card-body gap-4">
-        <h2 className="card-title gap-2">
+    <div className="relative flex flex-col rounded-xl w-full max-w-2xl bg-base-100 border border-base-300 shadow-xl">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+        <h2 className="text-base font-semibold gap-2">
           <ShieldAlert className="size-5 text-error" />
           Authentication setup required
         </h2>
 
-        <div className="alert alert-error">
+        <Banner variant="error">
           <span>{message}</span>
-        </div>
+        </Banner>
 
         <p className="text-sm text-base-content/70">
           Check the auth environment variables for your selected
@@ -33,20 +35,23 @@ export function AuthConfigErrorCard({
           <code className="ml-1">BETTER_AUTH_URL</code>.
         </p>
 
-        <div className="card-actions justify-end">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
           {onRetry ? (
-            <button className="btn btn-ghost btn-sm" onClick={onRetry}>
+            <Button variant="ghost" size="sm" onClick={onRetry}>
               Try Again
-            </button>
+            </Button>
           ) : null}
-          <a
-            className="btn btn-primary btn-sm"
+          {/* An anchor, so LinkButton rather than Button — it keeps the real
+              <a> (middle-click, copy link) while matching the button beside it. */}
+          <LinkButton
+            variant="primary"
+            size="sm"
             href={README_CLOUDFLARE_ACCESS_URL}
             target="_blank"
             rel="noreferrer"
           >
             Open Setup Guide
-          </a>
+          </LinkButton>
         </div>
       </div>
     </div>

@@ -10,6 +10,7 @@ import {
   Undo2,
 } from "lucide-react";
 import { Markdown } from "@/client/components/Markdown";
+import { Button } from "@cloudflare/kumo/components/button";
 
 // Shared rendering for the chat agents (onboarding + SAM). The chats differ
 // only in which tools are available and how tool names become labels
@@ -60,11 +61,14 @@ function messageText(message: UIMessage): string {
 function CopyButton({ message }: { message: UIMessage }) {
   const [copied, setCopied] = useState(false);
   return (
-    <button
+    <Button
       type="button"
       aria-label="Copy message"
       title="Copy"
-      className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content"
+      variant="ghost"
+      size="xs"
+      shape="square"
+      className="text-base-content/40 hover:text-base-content"
       onClick={() => {
         void navigator.clipboard.writeText(messageText(message));
         setCopied(true);
@@ -72,7 +76,7 @@ function CopyButton({ message }: { message: UIMessage }) {
       }}
     >
       {copied ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
-    </button>
+    </Button>
   );
 }
 
@@ -96,26 +100,32 @@ function MessageActions({
     >
       <CopyButton message={message} />
       {onStartEdit ? (
-        <button
+        <Button
           type="button"
           aria-label="Edit message"
           title="Edit and resend"
-          className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="text-base-content/40 hover:text-base-content"
           onClick={onStartEdit}
         >
           <Pencil className="size-3.5" />
-        </button>
+        </Button>
       ) : null}
       {onUndo ? (
-        <button
+        <Button
           type="button"
           aria-label="Undo from this message"
           title="Undo — remove this message and everything after it"
-          className="btn btn-ghost btn-xs btn-square text-base-content/40 hover:text-base-content"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="text-base-content/40 hover:text-base-content"
           onClick={onUndo}
         >
           <Undo2 className="size-3.5" />
-        </button>
+        </Button>
       ) : null}
     </div>
   );
@@ -251,20 +261,17 @@ export function ChatMessage({
             }}
           />
           <div className="flex gap-1.5">
-            <button
+            <Button
               type="button"
-              className="btn btn-ghost btn-xs"
+              variant="ghost"
+              size="xs"
               onClick={() => setEditing(false)}
             >
               Cancel
-            </button>
-            <button
-              type="button"
-              className="btn btn-primary btn-xs"
-              onClick={submit}
-            >
+            </Button>
+            <Button type="button" variant="primary" size="xs" onClick={submit}>
               Save & resend
-            </button>
+            </Button>
           </div>
         </div>
       );

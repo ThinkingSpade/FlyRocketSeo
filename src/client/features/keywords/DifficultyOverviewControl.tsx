@@ -1,4 +1,6 @@
 import { Gauge } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type Props = {
   /** How many keywords this click would fetch difficulty for -- always the
@@ -44,19 +46,17 @@ export function DifficultyOverviewControl({
 
   return (
     <div className="flex items-center gap-2 text-xs">
-      <button
+      <Button
         type="button"
-        className="btn btn-ghost btn-xs gap-1.5 text-base-content/60"
+        variant="ghost"
+        size="xs"
+        className="text-base-content/60"
         onClick={onLoad}
         disabled={isLoading}
       >
-        {isLoading ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Gauge className="size-3.5" />
-        )}
+        {isLoading ? <Loader size="sm" /> : <Gauge className="size-3.5" />}
         Load difficulty for these {count}
-      </button>
+      </Button>
       {isError ? (
         <span className="text-error">Couldn&rsquo;t load difficulty.</span>
       ) : null}

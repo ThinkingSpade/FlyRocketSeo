@@ -36,6 +36,9 @@ import {
   withMeteredRunNonce,
 } from "@/client/lib/useMeteredQuery";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const GRID_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -310,8 +313,8 @@ export function LocalRankGridPage({
         </p>
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-2 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
           <form
             className="flex flex-col gap-3 lg:flex-row lg:items-end"
             onSubmit={(event) => {
@@ -323,9 +326,11 @@ export function LocalRankGridPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Keyword
               </span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="vending machines"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -335,9 +340,11 @@ export function LocalRankGridPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Location
               </span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="75201 · Plano, TX · any address"
                 value={locationInput}
                 onChange={(event) => setLocationInput(event.target.value)}
@@ -348,7 +355,7 @@ export function LocalRankGridPage({
                 Radius
               </span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={radiusInput}
                 onChange={(event) => setRadiusInput(event.target.value)}
               >
@@ -362,7 +369,7 @@ export function LocalRankGridPage({
             <label className="form-control w-28">
               <span className="label-text pb-1 text-xs font-medium">Grid</span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={gridInput}
                 onChange={(event) => setGridInput(event.target.value)}
               >
@@ -373,18 +380,19 @@ export function LocalRankGridPage({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+              variant="primary"
+              size="sm"
               disabled={!input.trim() || isLocating}
             >
               {isLocating ? (
-                <span className="loading loading-spinner loading-xs" />
+                <Loader size="sm" />
               ) : (
                 <Search className="size-3.5" />
               )}
               Scan grid
-            </button>
+            </Button>
           </form>
           {locationError ? (
             <p className="text-xs text-error">{locationError}</p>
@@ -472,8 +480,8 @@ export function LocalRankGridPage({
       ) : null}
 
       {!keyword ? (
-        <div className="card border border-base-300 bg-base-100">
-          <div className="card-body gap-3 p-5">
+        <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+          <div className="flex flex-auto flex-col gap-3 p-5 text-sm">
             <div>
               <h2 className="text-base font-semibold">
                 Map your local visibility

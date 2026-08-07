@@ -16,6 +16,9 @@ import {
   useDomainRenderDebug,
 } from "@/client/features/domain/domainDebug";
 import { MAX_DATAFORSEO_FILTER_CONDITIONS } from "@/types/schemas/domain";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type FilterValues = Record<string, string>;
 
@@ -146,25 +149,26 @@ export function DomainFilterPanel<TValues extends FilterValues>({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine table results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
           {meta.dirtyCount > 0 ? (
-            <span className="badge badge-xs badge-warning border-0">
+            <Badge variant="warning" className="border-0">
               {meta.dirtyCount} unapplied
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={resetFilters}
           disabled={activeFilterCount === 0 && !meta.isDirty}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
@@ -201,31 +205,33 @@ export function DomainFilterPanel<TValues extends FilterValues>({
       {renderExtra ? renderExtra(draftFilters, handleValueChange) : null}
 
       {meta.overLimit ? (
-        <div className="alert alert-warning py-2 text-xs">
+        <Banner variant="alert" className="py-2 text-xs">
           <AlertTriangle className="size-4 shrink-0" />
           <span>
             Too many filter conditions ({meta.conditionCount} of{" "}
             {MAX_DATAFORSEO_FILTER_CONDITIONS} max). Remove some terms or ranges
             before applying.
           </span>
-        </div>
+        </Banner>
       ) : null}
       <div className="flex items-center justify-between gap-2 pt-1">
         <span className="text-xs text-base-content/50 tabular-nums">
           {meta.conditionCount} / {MAX_DATAFORSEO_FILTER_CONDITIONS} conditions
         </span>
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-ghost"
+            size="sm"
+            variant="ghost"
             onClick={cancelFilterEdits}
             disabled={!meta.isDirty}
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-sm btn-primary"
+            size="sm"
+            variant="primary"
             onClick={applyFilters}
             disabled={!meta.isDirty || meta.overLimit}
             title={
@@ -236,11 +242,11 @@ export function DomainFilterPanel<TValues extends FilterValues>({
           >
             Apply filters
             {meta.isDirty ? (
-              <span className="badge badge-xs ml-1 border-0 bg-primary-content/20">
+              <Badge className="ml-1 border-0 bg-primary-content/20">
                 {meta.dirtyCount}
-              </span>
+              </Badge>
             ) : null}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

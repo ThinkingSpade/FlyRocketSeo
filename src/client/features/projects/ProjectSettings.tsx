@@ -15,6 +15,9 @@ import {
   updateProject,
 } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function ProjectSettings({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery({
@@ -27,7 +30,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
   if (!project) {
     return (
       <div className="flex h-full items-center justify-center">
-        <span className="loading loading-spinner loading-md" />
+        <Loader size="base" />
       </div>
     );
   }
@@ -105,12 +108,13 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">Name</span>
-          <input
+          <Input
+            passwordManagerIgnore
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
             maxLength={120}
-            className="input input-bordered w-full"
+            className="w-full"
           />
         </label>
 
@@ -118,24 +122,26 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
           <span className="font-medium">
             Domain <span className="text-base-content/50">(optional)</span>
           </span>
-          <input
+          <Input
+            passwordManagerIgnore
             type="text"
             value={domain}
             onChange={(event) => setDomain(event.target.value)}
             placeholder="example.com"
             maxLength={255}
-            className="input input-bordered w-full"
+            className="w-full"
           />
         </label>
 
         <div className="flex justify-end">
-          <button
+          <Button
             type="submit"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={updateMutation.isPending || !isDirty}
           >
             Save changes
-          </button>
+          </Button>
         </div>
       </form>
     </section>
@@ -183,22 +189,24 @@ function DangerSection({
             tracking. You can restore it later from the Projects page.
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-error btn-sm"
+              variant="destructive"
+              size="sm"
               onClick={() => archiveMutation.mutate()}
               disabled={archiveMutation.isPending}
             >
               Yes, archive project
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm"
+              variant="ghost"
+              size="sm"
               onClick={() => setConfirming(false)}
               disabled={archiveMutation.isPending}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
@@ -208,14 +216,19 @@ function DangerSection({
               ? "Archive this project to remove it from your workspace."
               : "You can't archive your only project."}
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-outline btn-error btn-sm shrink-0"
+            // Was `btn-outline btn-error`: an outlined destructive button.
+            // Kumo names that combination directly — a destructive action that
+            // should not shout, which is right for archiving.
+            variant="secondary-destructive"
+            size="sm"
+            className="shrink-0"
             onClick={() => setConfirming(true)}
             disabled={!canArchive}
           >
             Archive project
-          </button>
+          </Button>
         </div>
       )}
     </section>

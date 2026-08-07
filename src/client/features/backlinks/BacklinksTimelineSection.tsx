@@ -18,6 +18,7 @@ import {
   CHART_AXIS_TICK,
   CHART_CURSOR_BAR,
 } from "@/client/components/chart/chartTheme";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type TimelineRow = {
   label: string;
@@ -100,7 +101,7 @@ export function BacklinksTimelineSection({
       </p>
       {timelineQuery.isPending ? (
         <div className="flex items-center justify-center py-14">
-          <span className="loading loading-spinner loading-sm" />
+          <Loader size="sm" />
         </div>
       ) : timelineQuery.isError ? (
         <InlineQueryError

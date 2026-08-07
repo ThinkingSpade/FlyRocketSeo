@@ -1,9 +1,39 @@
+/* Kumo — Cloudflare's component library (MIT), the design reference for this
+   app. Two ordering rules from its README, both load-bearing:
+
+     1. Tailwind 4 does not scan node_modules, so without this @source the
+        utilities Kumo's own components use are never generated and parts of
+        them render unstyled (centring, overlays).
+     2. Kumo must be imported BEFORE tailwindcss, so its @theme tokens are
+        registered first.
+
+   Kumo's @theme also resets the type scale to a 14px base (13px sm, 12px xs).
+   That is deliberate — it is where most of the dashboard's density comes from
+   — but it applies to the DaisyUI components still in the app too, so expect
+   the whole UI to tighten a step until the migration finishes. */
+@source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
+@import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
 /* Leaflet map chrome for the Local Rank Grid. */
 @import "leaflet/dist/leaflet.css";
 
 @theme {
   --container-8xl: 88rem;
+
+  /* Easing curves. These are the single biggest contributor to motion reading
+     as "smooth" — a long, slow tail is what separates a premium feel from the
+     browser default `ease`, which decelerates too early and lands abruptly.
+     Registered here (not :root) so Tailwind generates `ease-out-soft` etc.
+
+     `--ease-out-soft` and `--ease-bounce` are the literal curves Cloudflare's
+     Kumo ships (@cloudflare/kumo@2.9.1, MIT); the other two are ours. */
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-bounce: cubic-bezier(0.2, 0, 0, 1.5);
+  --ease-out-quart: cubic-bezier(0.25, 1, 0.5, 1);
+  --ease-in-out-soft: cubic-bezier(0.65, 0, 0.35, 1);
+  /* Overshoots slightly past the target before settling. Micro-interactions
+     only (a button press, a toggle) — never reveals, where it reads as a wobble. */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 :root {
@@ -101,11 +131,23 @@ body {
   overflow: hidden;
 }
 
-/* Prevent Safari mobile from zooming on input focus (requires 16px minimum) */
-input,
-textarea,
-select {
-  @apply text-base;
+/* Baseline size for form controls.
+
+   In `@layer base` so component classes can override it. Unlayered, it beat
+   `.app-select-sm` on the cascade — an element selector losing to nothing,
+   because unlayered CSS outranks anything in a layer regardless of specificity
+   — and every small select silently rendered at the base size.
+
+   The original comment claimed this prevents Safari's zoom-on-focus, which
+   needs 16px. It does not: `text-base` is 14px in this app, since Kumo's type
+   scale is live. Left in place because it is still the right baseline, but the
+   Safari claim was never true here. */
+@layer base {
+  input,
+  textarea,
+  select {
+    @apply text-base;
+  }
 }
 
 /* Global input focus styling - use primary color instead of default ring */
@@ -183,33 +225,6 @@ html[data-theme="flyrocketseo"]
   --btn-border: var(--color-base-300);
 }
 
-/* Underline tabs: DaisyUI's tabs-border underlines the active tab with
-   currentColor; use the primary accent instead (PostHog-style). */
-.tabs-border > .tab.tab-active::before {
-  --tab-border-color: var(--color-primary);
-}
-
-/* Custom alert styling with darker borders and transparent background */
-.alert {
-  @apply flex gap-3 rounded-lg border p-4 text-base-content/70;
-}
-
-.alert-warning {
-  @apply border-warning/70 bg-warning/40 text-base-content/90;
-}
-
-.alert-info {
-  @apply border-info/70 bg-info/40 text-base-content/90;
-}
-
-.alert-success {
-  @apply border-success/70 bg-success/40 text-base-content/90;
-}
-
-.alert-error {
-  @apply border-error/70 bg-error/40 text-base-content/90;
-}
-
 /* Tag chip colors — muted background + readable text in both themes.
    Text uses darker shades on light theme for contrast, lighter on dark. */
 .tag-chip-slate {
@@ -276,6 +291,49 @@ html[data-theme="flyrocketseo-dark"] .tag-chip-violet {
 }
 html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
   color: #f5d0fe;
+}
+
+/* FlyRocketSEO's identity over Kumo's structure.
+   ---------------------------------------------------------------------------
+   Kumo ships Cloudflare's own brand values: a blue --color-kumo-brand and the
+   #f6821f orange on --text-color-kumo-brand. We want their density, spacing
+   and motion — not their identity — so only the brand-carrying tokens are
+   remapped, onto the palette the DaisyUI themes above already define.
+   Everything else (the neutral surface ramp, badge hues, the type scale, the
+   focus ring) is left exactly as Kumo ships it.
+
+   The rule is map identity, keep their craft — which is why the semantic
+   status colours (--color-kumo-danger/info/success/warning and their -tint and
+   text pairs) are NOT remapped, even though the app has its own error red.
+   Each of those is a tuned triple: a solid that carries white text, a
+   translucent tint, and a text colour for a surface, all balanced across both
+   modes. Substituting the DaisyUI values would mean inventing eight new
+   colours and hand-checking their contrast, and since the plan is to migrate
+   off DaisyUI entirely, it would be inventing them only to delete them later.
+   Until then a DaisyUI alert and a Kumo banner will show slightly different
+   reds; both read as red, and the drift ends when the last DaisyUI component
+   goes. If that mismatch turns out to be intolerable sooner, this is the block
+   to add them to.
+
+   light-dark() rather than a [data-theme] override, because that is the
+   mechanism Kumo's own :root tokens use and it is already driven correctly:
+   the two DaisyUI themes set color-scheme, so this follows the existing theme
+   toggle with no data-mode wiring of our own.
+
+   The background and the text tokens do NOT get the same dark value, which
+   looks like an inconsistency and is not. Kumo's primary button hardcodes
+   `!text-white`, so --color-kumo-brand has to stay dark enough for white text
+   in BOTH modes — the DaisyUI dark primary (#a89bff) is a light lavender that
+   pairs with dark text, and white on it would fail contrast. The text/link
+   tokens sit on a page surface instead, so there they take the lavender. */
+:root {
+  /* Button/emphasis backgrounds — always carries white text. */
+  --color-kumo-brand: light-dark(#4934c7, #5b46d9);
+  --color-kumo-brand-hover: light-dark(#3b29a3, #6d5ae8);
+  /* Brand-coloured text and links — sits on base/canvas, so it tracks the
+     DaisyUI primary exactly. */
+  --text-color-kumo-brand: light-dark(#4934c7, #a89bff);
+  --text-color-kumo-link: light-dark(#4934c7, #a89bff);
 }
 
 /* Keyword difficulty score badges — muted/transparent style to match tag chips */
@@ -371,4 +429,254 @@ html[data-theme="flyrocketseo-dark"] .alert-success {
 
 html[data-theme="flyrocketseo-dark"] .alert-error {
   @apply border-error/60 bg-error/20;
+}
+
+/* ---------------------------------------------------------------------------
+   Motion foundation
+   ---------------------------------------------------------------------------
+   Shared timing for entrance reveals, scroll reveals and hover states. Drive
+   everything from these tokens rather than per-component durations, so the
+   whole app accelerates and settles on one rhythm — inconsistent timing is
+   what makes a UI feel "janky" even when each individual animation is fine.
+
+   Reduced motion is handled ONCE, here, by collapsing the tokens. Every
+   consumer inherits it; no component needs its own media query, and none can
+   forget one. See src/client/hooks/useReveal.ts for the JS-side gate. */
+
+:root {
+  /* Measured from @cloudflare/kumo@2.9.1 (MIT), the component library behind
+     the Cloudflare dashboard, which is the reference for this work.
+
+     The counter-intuitive part: a dashboard reads as "smooth" because it is
+     FAST, not slow. Kumo's default transition is 100ms — interactions resolve
+     almost instantly, and only entrances get a long curve. Marketing-site
+     timings (300ms+ on a hover) applied to a dense tool feel sluggish, not
+     premium. Hence the wide gap between `fast` and `slow` here. */
+  --motion-duration-fast: 100ms; /* Kumo --default-transition-duration */
+  --motion-duration-base: 200ms; /* ours: sits between the two Kumo anchors */
+  --motion-duration-slow: 500ms; /* Kumo's reveal transform/opacity duration */
+  /* How far a revealing element travels. Ours — Kumo does not expose a token
+     for it. Subtle beats dramatic: past ~24px the eye tracks the movement
+     instead of the content, and dashboards want less travel than landing pages. */
+  --motion-rise-distance: 16px;
+  /* Gap between consecutive items in a staggered group. Ours. */
+  --motion-stagger-step: 50ms;
+  /* Ours, and deliberately small: Kumo's own hover states tint the surface
+     rather than move it (see .motion-lift below). */
+  --motion-lift-distance: -1px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-duration-fast: 1ms;
+    --motion-duration-base: 1ms;
+    --motion-duration-slow: 1ms;
+    --motion-rise-distance: 0px;
+    --motion-stagger-step: 0ms;
+    --motion-lift-distance: 0px;
+  }
+}
+
+/* Scroll/entrance reveal.
+
+   The hidden state deliberately lives on `[data-reveal="hidden"]`, an attribute
+   only JavaScript ever sets — it is NOT the element's static state. If the
+   hidden state were plain CSS, then any path where the script does not run
+   (a JS error, an unsupported browser, a crawler that renders CSS but not JS)
+   would leave the content permanently invisible. On an SEO product that failure
+   mode is not acceptable, so the markup ships visible and JS opts into hiding
+   it a frame before the reveal. */
+[data-reveal] {
+  transition-property: opacity, transform;
+  transition-duration: var(--motion-duration-slow);
+  transition-timing-function: var(--ease-out-soft);
+  transition-delay: calc(var(--motion-index, 0) * var(--motion-stagger-step));
+  will-change: opacity, transform;
+}
+
+[data-reveal="hidden"] {
+  opacity: 0;
+  /* translate3d, not translateY: promotes to its own compositor layer, so the
+     reveal never triggers layout or paint on the main thread. */
+  transform: translate3d(0, var(--motion-rise-distance), 0);
+}
+
+[data-reveal="shown"] {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  /* Release the compositor layer once the element has landed — a permanent
+     will-change on many elements costs memory and can blur text on some GPUs. */
+  will-change: auto;
+}
+
+/* Micro-interactions. `motion-lift` is the hover treatment for cards and other
+   clickable surfaces; pair it with the element's own ring/border classes.
+
+   Note on the reference: Kumo's own buttons do NOT lift. Every variant tints
+   instead — `hover:bg-kumo-tint` over a hairline ring, with the ring colour
+   shifting on the outline variant. Movement is reserved for things that
+   actually move (sidebar, popovers, reveals). Prefer a tint here too, on
+   anything that appears in a dense list; keep the lift for large standalone
+   cards where a 1px shift reads as depth rather than jitter. */
+.motion-lift {
+  transition:
+    transform var(--motion-duration-fast) var(--ease-out-quart),
+    box-shadow var(--motion-duration-fast) var(--ease-out-quart),
+    border-color var(--motion-duration-fast) var(--ease-out-quart);
+}
+
+.motion-lift:hover {
+  transform: translate3d(0, var(--motion-lift-distance), 0);
+}
+
+/* Pressing should feel immediate — it confirms the click landed, so it snaps
+   back to neutral rather than easing out. */
+.motion-lift:active {
+  transform: translate3d(0, 0, 0);
+  transition-duration: 60ms;
+}
+
+/* Skeleton placeholders — restoring the base colour Kumo's reset removed.
+
+   Two libraries here define `.skeleton`. DaisyUI's paints a solid
+   `base-300` block and sweeps a lighter gradient across it. Kumo's paints
+   ONLY a gradient, with transparent stops at both ends and no background
+   colour, because it is designed to sit on top of a surface a component has
+   already coloured.
+
+   Kumo's wins, and not because of import order — DaisyUI ships its component
+   inside `@layer daisyui.l1.l2.l3`, and an UNLAYERED rule beats a layered one
+   no matter which came first. So adding Kumo silently turned every existing
+   skeleton in this app into a 5%-black sweep over nothing: technically
+   animating, visually absent.
+
+   That matters more than it sounds. The reason the reference dashboard reads
+   as loading smoothly is that each card shows a silhouette of the content
+   that is coming, at the size it will be, so nothing shifts when data lands.
+   An invisible placeholder gives up exactly that.
+
+   The fix is one declaration rather than a rename: restore a base colour, and
+   both libraries' sweeps then have something to sweep over. Unlayered here
+   too, so it applies to Kumo's own components as well as ours.
+
+   `--motion-duration-*` is deliberately NOT used for the shimmer. Those tokens
+   collapse to ~0 under prefers-reduced-motion, which for a looping shimmer
+   would mean a strobe rather than stillness; the media query below stops it
+   outright instead.
+
+   The dark selector is not redundant. Kumo's dark rule uses the `background`
+   SHORTHAND, which resets `background-color` back to transparent, and at
+   `[data-mode="dark"] .skeleton` it also outranks a bare `.skeleton` on
+   specificity. Matching that selector — later in the cascade, same weight — is
+   what makes the fix hold in both themes. Verified by reading the computed
+   background in each: the light-only version left dark still transparent. */
+.skeleton,
+[data-mode="dark"] .skeleton {
+  background-color: var(--color-base-300);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+/* Chart loading wave.
+
+   The reference's charts do not show a spinner while they load. They draw a
+   slow sine that slides sideways, so the card reads as "a chart is coming"
+   rather than "something is happening somewhere". Kumo ships this as
+   `kumo-chart-wave`, but that keyframe lives in its `kumo-binding.css` /
+   `kumo-standalone.css` bundles, NOT in `styles/tailwind` (`kumo.css`) which is
+   the one imported above — so using it means defining it, which is all this is.
+
+   The translation distance and the wave's period are a matched pair: the path
+   repeats every 200px and this moves it exactly 400px, so the loop closes on
+   itself and there is no visible jump at the seam. Changing one without the
+   other reintroduces the stutter.
+
+   Duration is deliberately far slower than the interaction tokens. Those are
+   100ms because a control should resolve instantly; a loading state is the
+   opposite case, where a fast loop reads as agitation. */
+@keyframes chart-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-400px);
+  }
+}
+
+.chart-wave {
+  animation: chart-wave 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chart-wave {
+    animation: none;
+  }
+}
+
+/* Native <select>, wearing Kumo's Input geometry.
+
+   Deliberately still a native element. Kumo ships a Select, but it is a Base UI
+   listbox rather than a `<select>`, and swapping the two would trade the OS
+   picker on mobile, browser autofill and normal form submission for a styled
+   popup. That is a functional change, and none of the 36 selects here asked for
+   one — they asked to look like the rest of the app.
+
+   Geometry is Kumo's, measured from its Input variants so a select and an input
+   sitting side by side line up: base is h-9 / rounded-lg / px-3 / 14px, small is
+   h-6.5 / rounded-md / px-2 / 12px. Colours are ours, per this branch's rule —
+   take their craft, keep our identity.
+
+   INSIDE `@layer base`, and the choice is load-bearing rather than tidy.
+
+   Unlayered, its width beat every `w-20` / `w-36` / `w-full` a call site had
+   set and the page grew a horizontal scrollbar. `@layer components` did not fix
+   it either, for a subtler reason: layer precedence follows the order layers
+   are FIRST DECLARED, and Tailwind opens `utilities` early (line ~1300 of the
+   compiled sheet) while a `components` block appended at the end of this file
+   declares that layer last — so components outranked utilities. `base` is
+   already open by then, so rules here lose to utilities, which is what a
+   component class should do, while still beating the bare `input, textarea,
+   select` element rule above on specificity.
+
+   Width copies DaisyUI's own `clamp(3rem, 20rem, 100%)` rather than filling,
+   so the sites that never set a width keep the size they had.
+
+   The arrow is inline SVG rather than DaisyUI's two-gradient triangle: it is a
+   real chevron, it scales, and `currentColor` cannot be used inside a data URI,
+   so each theme sets its own stroke below. */
+@layer base {
+  .app-select {
+    appearance: none;
+    -webkit-appearance: none;
+    width: clamp(3rem, 20rem, 100%);
+    background-repeat: no-repeat;
+    background-position: right 0.625rem center;
+    background-size: 0.75rem;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23172033' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+    @apply h-9 rounded-lg border border-base-300 bg-base-100 pl-3 pr-8 text-base text-base-content;
+  }
+
+  [data-theme="flyrocketseo-dark"] .app-select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23eaf0fa' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  }
+
+  .app-select-sm {
+    background-position: right 0.5rem center;
+    background-size: 0.625rem;
+    @apply h-6.5 rounded-md pl-2 pr-6 text-xs;
+  }
+
+  .app-select:focus,
+  .app-select:focus-visible {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+
+  .app-select:disabled {
+    @apply cursor-not-allowed opacity-50;
+  }
 }

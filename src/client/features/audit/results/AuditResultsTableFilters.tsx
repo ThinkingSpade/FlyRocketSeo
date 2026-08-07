@@ -4,6 +4,9 @@ import type {
   PagesFilters,
   PerformanceFilters,
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export function PagesFilterBar({
   filters,
@@ -159,8 +162,10 @@ export function TableFilterToggle({
 }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-base-300 px-4 py-2.5">
-      <button
-        className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
+      <Button
+        size="sm"
+        variant={showFilters ? "secondary" : "ghost"}
+        aria-pressed={showFilters}
         onClick={onToggle}
         title="Toggle filters"
         type="button"
@@ -168,11 +173,11 @@ export function TableFilterToggle({
         <SlidersHorizontal className="size-3.5" />
         Filters
         {activeFilterCount > 0 ? (
-          <span className="badge badge-xs badge-primary border-0 text-primary-content">
+          <Badge variant="primary" className="border-0 text-primary-content">
             {activeFilterCount}
-          </span>
+          </Badge>
         ) : null}
-      </button>
+      </Button>
       <span className="text-sm tabular-nums text-base-content/60">
         {resultCount.toLocaleString()} of {totalCount.toLocaleString()}
       </span>
@@ -205,20 +210,21 @@ function FilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
       {children}
     </div>
@@ -243,8 +249,10 @@ function TextFilter({
       <span className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
         {label}
       </span>
-      <input
-        className="input input-bordered input-sm w-full bg-base-100"
+      <Input
+        passwordManagerIgnore
+        size="sm"
+        className="w-full bg-base-100"
         type={type}
         value={value}
         placeholder={placeholder}
@@ -273,15 +281,19 @@ function RangeFilter({
         {label}
       </p>
       <div className="grid grid-cols-2 gap-2">
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           type="number"
           value={min}
           placeholder="Min"
           onChange={(event) => onMinChange(event.target.value)}
         />
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           type="number"
           value={max}
           placeholder="Max"
@@ -309,7 +321,7 @@ function SelectFilter<T extends string>({
         {label}
       </span>
       <select
-        className="select select-bordered select-sm w-full bg-base-100"
+        className="app-select app-select-sm w-full bg-base-100"
         value={value}
         onChange={(event) => {
           const selected = options.find(

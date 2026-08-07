@@ -7,6 +7,8 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import type { LighthouseIssue } from "./types";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
   const [open, setOpen] = useState(false);
@@ -26,12 +28,10 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
           ) : null}
         </td>
         <td className="py-3 pr-3">
-          <span
-            className={`badge badge-sm border ${severityBadgeClass(issue.severity)} gap-1`}
-          >
+          <Badge variant={severityVariant(issue.severity)}>
             {severityIcon(issue.severity)}
             {issue.severity}
-          </span>
+          </Badge>
         </td>
         <td className="py-3 pr-3">
           <div>
@@ -147,14 +147,12 @@ function renderInlineMarkdown(markdown: string): ReactNode {
   return nodes.length ? nodes : markdown;
 }
 
-function severityBadgeClass(severity: "critical" | "warning" | "info") {
-  if (severity === "critical") {
-    return "border-error/30 bg-error/10 text-error/80";
-  }
-  if (severity === "warning") {
-    return "border-warning/35 bg-warning/10 text-warning/80";
-  }
-  return "border-info/30 bg-info/10 text-info/80";
+function severityVariant(
+  severity: "critical" | "warning" | "info",
+): ComponentProps<typeof Badge>["variant"] {
+  if (severity === "critical") return "error";
+  if (severity === "warning") return "warning";
+  return "info";
 }
 
 function severityIcon(severity: "critical" | "warning" | "info") {

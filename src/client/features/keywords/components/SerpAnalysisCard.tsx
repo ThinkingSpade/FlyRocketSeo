@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
 import { ExportToSheetsButton } from "@/client/components/table/ExportToSheetsButton";
 import type { SerpResultItem } from "@/types/keywords";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function SerpAnalysisCard({
   items,
@@ -36,9 +37,9 @@ export function SerpAnalysisCard({
       <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error space-y-2">
         <p>{error}</p>
         {onRetry ? (
-          <button className="btn btn-xs" onClick={onRetry}>
+          <Button size="xs" onClick={onRetry}>
             Retry
-          </button>
+          </Button>
         ) : null}
       </div>
     );
@@ -141,22 +142,24 @@ function SerpAnalysisPagination({
         Page {page + 1} of {totalPages}
       </span>
       <div className="flex gap-1">
-        <button
-          className="btn btn-ghost btn-xs"
+        <Button
+          variant="ghost"
+          size="xs"
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
         >
           <ChevronLeft className="size-3.5" />
           Prev
-        </button>
-        <button
-          className="btn btn-ghost btn-xs"
+        </Button>
+        <Button
+          variant="ghost"
+          size="xs"
           disabled={page >= totalPages - 1}
           onClick={() => onPageChange(page + 1)}
         >
           Next
           <ChevronRight className="size-3.5" />
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -215,9 +218,9 @@ function SerpAnalysisEmptyState({
         <p className="text-sm text-base-content/60">
           See who currently ranks for “{analyzeKeyword}”.
         </p>
-        <button type="button" className="btn btn-sm" onClick={onAnalyze}>
+        <Button type="button" size="sm" onClick={onAnalyze}>
           Analyze this SERP
-        </button>
+        </Button>
         <p className="text-sm text-base-content/50">
           Uses SERP credits. Clicking any keyword row does the same thing.
         </p>

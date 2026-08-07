@@ -8,6 +8,8 @@ import {
 } from "./BacklinksPageCharts";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
 import { formatRelativeTimestamp } from "./backlinksPageUtils";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type SummaryStat = { label: string; value: string; description: string };
 
@@ -43,20 +45,20 @@ export function BacklinksOverviewPanels({
         </Link>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
-        <span className="badge badge-outline">{data.scope}</span>
+        <Badge variant="outline">{data.scope}</Badge>
         <span>Target: {data.displayTarget}</span>
         <span>-</span>
         <span>Updated {formatRelativeTimestamp(data.fetchedAt)}</span>
       </div>
       <OverviewGrid data={data} summaryStats={summaryStats} />
       {data.scope === "page" ? (
-        <div className="alert alert-info">
+        <Banner variant="default">
           <span>
             Showing backlinks for this exact page. Enter a bare domain for
             site-wide results. Trend charts are only shown for domain-level
             lookups.
           </span>
-        </div>
+        </Banner>
       ) : null}
     </>
   );
@@ -92,7 +94,7 @@ function SummaryStatsGrid({
 
   return (
     <div className={cardClassName}>
-      <div className="card-body p-4 xl:h-full">
+      <div className="flex flex-auto flex-col p-4 xl:h-full gap-2 text-sm">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:gap-y-6">
           {summaryStats.map((item) => (
             <div key={item.label}>
@@ -146,8 +148,8 @@ function TrendCard({
   title: string;
 }) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div>
           <h2 className="text-sm font-medium">{title}</h2>
           <p className="text-xs text-base-content/55">{description}</p>

@@ -3,6 +3,7 @@ import {
   formatPlatformLabel,
 } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type ShareOfVoice = NonNullable<BrandLookupResult["shareOfVoice"]>;
 type ShareEntry = ShareOfVoice["entries"][number];
@@ -86,7 +87,9 @@ function LeaderboardRow({
         <div className="flex items-center gap-2">
           <span className="truncate text-sm">{entry.label}</span>
           {entry.isTarget ? (
-            <span className="badge badge-primary badge-xs border-0">You</span>
+            <Badge variant="primary" className="border-0">
+              You
+            </Badge>
           ) : null}
           <span className="ml-auto shrink-0 text-xs tabular-nums text-base-content/50">
             {/* Null mentions = "no data"; render a dash, not zero. */}

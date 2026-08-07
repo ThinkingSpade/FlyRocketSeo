@@ -17,6 +17,8 @@ import {
   publishGbpPostNow,
 } from "@/serverFunctions/gbp";
 import type { GbpScheduledPostStatus } from "./gbpPostSchedule";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const STATUS_ICON: Record<GbpScheduledPostStatus, typeof CheckCircle2> = {
   draft: CircleDashed,
@@ -108,15 +110,15 @@ export function GbpScheduledPostsList({ projectId }: { projectId: string }) {
   if (postsQuery.isLoading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
-        <span className="loading loading-spinner loading-sm" />
+        <Loader size="sm" />
         Loading scheduled posts…
       </div>
     );
   }
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
             <InsightIcon icon={Send} tone="neutral" />
@@ -126,33 +128,36 @@ export function GbpScheduledPostsList({ projectId }: { projectId: string }) {
             <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-xs">
               <TriangleAlert className="size-3.5 shrink-0 text-warning" />
               <span>Publish {dueCount} due post(s) to Google now?</span>
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn-xs"
+                variant="primary"
+                size="xs"
                 disabled={publishDueMutation.isPending}
                 onClick={() => publishDueMutation.mutate()}
               >
                 Yes
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-ghost btn-xs"
+                variant="ghost"
+                size="xs"
                 onClick={() => setConfirmingBulk(false)}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
+            <Button
               type="button"
-              className="btn btn-outline btn-sm gap-1.5"
+              variant="outline"
+              size="sm"
               disabled={dueCount === 0}
               onClick={() => setConfirmingBulk(true)}
             >
               <Send className="size-3.5" />
               Publish due posts now
               {dueCount > 0 ? ` (${dueCount})` : ""}
-            </button>
+            </Button>
           )}
         </div>
 
@@ -181,30 +186,34 @@ export function GbpScheduledPostsList({ projectId }: { projectId: string }) {
                 {post.status === "scheduled" ? (
                   confirmingPostId === post.id ? (
                     <div className="flex shrink-0 items-center gap-1">
-                      <button
+                      <Button
                         type="button"
-                        className="btn btn-primary btn-xs"
+                        variant="primary"
+                        size="xs"
                         disabled={publishOneMutation.isPending}
                         onClick={() => publishOneMutation.mutate(post.id)}
                       >
                         Confirm
-                      </button>
-                      <button
+                      </Button>
+                      <Button
                         type="button"
-                        className="btn btn-ghost btn-xs"
+                        variant="ghost"
+                        size="xs"
                         onClick={() => setConfirmingPostId(null)}
                       >
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   ) : (
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-ghost btn-xs shrink-0"
+                      variant="ghost"
+                      size="xs"
+                      className="shrink-0"
                       onClick={() => setConfirmingPostId(post.id)}
                     >
                       Publish now
-                    </button>
+                    </Button>
                   )
                 ) : null}
               </li>

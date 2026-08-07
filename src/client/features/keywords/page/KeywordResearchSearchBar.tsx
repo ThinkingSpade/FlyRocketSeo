@@ -17,6 +17,7 @@ import { resolveEffectiveScopeArea } from "@/client/features/geo/resolveScopeAre
 import type { TargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { resolveKeywordProviderNotice } from "./keywordProviderNotice";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   controller: KeywordResearchControllerState;
@@ -56,8 +57,8 @@ export function KeywordResearchSearchBar({
   const { controlsForm, handleSearchSubmit, isLoading } = controller;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-6 text-sm">
         <form
           className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:gap-2"
           onSubmit={handleSearchSubmit}
@@ -150,7 +151,7 @@ export function KeywordResearchSearchBar({
             <controlsForm.Field name="resultLimit">
               {(field) => (
                 <select
-                  className="select select-bordered w-full lg:w-auto lg:shrink-0"
+                  className="app-select w-full lg:w-auto lg:shrink-0"
                   value={field.state.value}
                   onChange={(event) => {
                     const next = Number(event.target.value);
@@ -169,7 +170,7 @@ export function KeywordResearchSearchBar({
             <controlsForm.Field name="mode">
               {(field) => (
                 <select
-                  className="select select-bordered w-full lg:w-auto lg:shrink-0"
+                  className="app-select w-full lg:w-auto lg:shrink-0"
                   value={field.state.value}
                   onChange={(event) =>
                     field.handleChange(normalizeKeywordMode(event.target.value))
@@ -183,12 +184,13 @@ export function KeywordResearchSearchBar({
               )}
             </controlsForm.Field>
 
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary w-full px-6 lg:w-auto lg:shrink-0"
+              variant="primary"
+              className="w-full px-6 lg:w-auto lg:shrink-0"
             >
               Search
-            </button>
+            </Button>
           </div>
         </form>
         <controlsForm.Field name="keyword">

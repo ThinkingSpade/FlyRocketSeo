@@ -26,6 +26,8 @@ import {
   VisibilityStatTiles,
   VisibilityTrendChart,
 } from "@/client/features/ai-search/components/BrandVisibilityParts";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * The project-centric home of the Brand Lookup tab: one-click "Analyze <your
@@ -112,9 +114,10 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
             </p>
           </div>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm gap-1.5"
+          variant="primary"
+          size="sm"
           disabled={analyzing}
           onClick={() =>
             analyzeMutation.mutate(parseCompetitorList(competitorsInput))
@@ -130,14 +133,16 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
             { kind: "estimateUsd", usd: BRAND_ANALYSIS_DISPLAYED_COST_USD },
             true,
           )}
-        </button>
+        </Button>
       </div>
 
       <label className="flex flex-col gap-1 text-xs text-base-content/60 sm:max-w-md">
         Compare competitors (optional, comma-separated)
-        <input
+        <Input
+          passwordManagerIgnore
           type="text"
-          className="input input-sm input-bordered w-full"
+          size="sm"
+          className="w-full"
           placeholder="competitor-a.com, competitor-b.com"
           value={competitorsInput}
           onChange={(event) => setCompetitorsInput(event.target.value)}

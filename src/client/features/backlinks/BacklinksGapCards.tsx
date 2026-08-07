@@ -1,11 +1,14 @@
 import { Download, Network, Plus, Radar, Target } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
-import { buildCsv, downloadCsv } from "@/client/lib/csv";
+import { exportLinkGap } from "./exportLinkGap";
 import type {
   CompetingDomainsResult,
   LinkIntersectResult,
   ReferringNetworksResult,
 } from "@/types/schemas/backlinks-compare";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * The three competitive drill-downs that sit under the comparison table: who
@@ -41,8 +44,8 @@ function CardShell({
   children: React.ReactNode;
 }) {
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h3 className="flex items-center gap-2 text-sm font-semibold">
@@ -54,7 +57,9 @@ function CardShell({
           {action}
         </div>
         {errorMessage ? (
-          <div className="alert alert-error py-2 text-sm">{errorMessage}</div>
+          <Banner variant="error" className="py-2 text-sm">
+            {errorMessage}
+          </Banner>
         ) : null}
         {children}
       </div>
@@ -86,20 +91,21 @@ export function LinkIntersectCard({
       errorMessage={errorMessage}
       action={
         rows.length > 0 ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-ghost btn-xs gap-1"
+            variant="ghost"
+            size="xs"
             onClick={() => exportLinkGap(rows, target)}
           >
             <Download className="size-3.5" />
             CSV
-          </button>
+          </Button>
         ) : null
       }
     >
       {isLoading ? (
         <div className="flex justify-center py-6">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 
@@ -177,55 +183,32 @@ export function LinkIntersectCard({
                 Page {result?.page ?? 1} · each page is a new lookup
               </span>
               <div className="join">
-                <button
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs join-item"
+                  variant="ghost"
+                  size="xs"
+                  className="join-item"
                   disabled={(result?.page ?? 1) <= 1 || isLoading}
                   onClick={() => onPageChange((result?.page ?? 1) - 1)}
                 >
                   Previous
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs join-item"
+                  variant="ghost"
+                  size="xs"
+                  className="join-item"
                   disabled={!result?.hasMore || isLoading}
                   onClick={() => onPageChange((result?.page ?? 1) + 1)}
                 >
                   Next
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         </>
       ) : null}
     </CardShell>
-  );
-}
-
-function exportLinkGap(rows: LinkIntersectResult["rows"], target: string) {
-  const slug = target.toLowerCase().replace(/[^a-z0-9.-]+/g, "-");
-  downloadCsv(
-    `link-gap-${slug || "export"}.csv`,
-    buildCsv(
-      [
-        "Referring Domain",
-        "Competitors Linked",
-        "Which Competitors",
-        "Domain Rank",
-        "Backlinks",
-        "Spam Score",
-        "First Seen",
-      ],
-      rows.map((row) => [
-        row.domain,
-        row.competitorsLinked,
-        row.linkedTo.join(" | "),
-        row.rank,
-        row.backlinks,
-        row.spamScore,
-        row.firstSeen,
-      ]),
-    ),
   );
 }
 
@@ -255,17 +238,16 @@ export function CompetingDomainsCard({
       icon={Radar}
       errorMessage={errorMessage}
       action={
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm"
+          variant="ghost"
+          size="sm"
           disabled={isLoading}
           onClick={onRun}
         >
-          {isLoading ? (
-            <span className="loading loading-spinner loading-xs" />
-          ) : null}
+          {isLoading ? <Loader size="sm" /> : null}
           {hasRun ? "Refresh" : "Find them"}
-        </button>
+        </Button>
       }
     >
       {!hasRun ? (
@@ -288,15 +270,16 @@ export function CompetingDomainsCard({
                 {formatNumber(row.intersections)} shared · DR{" "}
                 {formatNumber(row.rank)}
               </span>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-xs gap-1"
+                variant="ghost"
+                size="xs"
                 disabled={competitors.includes(row.domain)}
                 onClick={() => onAdd(row.domain)}
               >
                 <Plus className="size-3" />
                 {competitors.includes(row.domain) ? "Added" : "Compare"}
-              </button>
+              </Button>
             </li>
           ))}
         </ul>
@@ -342,17 +325,16 @@ export function ReferringNetworksCard({
       icon={Network}
       errorMessage={errorMessage}
       action={
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm"
+          variant="ghost"
+          size="sm"
           disabled={isLoading}
           onClick={onRun}
         >
-          {isLoading ? (
-            <span className="loading loading-spinner loading-xs" />
-          ) : null}
+          {isLoading ? <Loader size="sm" /> : null}
           {hasRun ? "Refresh" : "Check networks"}
-        </button>
+        </Button>
       }
     >
       {!hasRun ? (

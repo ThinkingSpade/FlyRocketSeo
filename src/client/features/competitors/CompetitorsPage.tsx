@@ -39,6 +39,15 @@ import {
   TAB_PAGE_SIZES,
 } from "./competitorsPageContent";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Banner } from "@cloudflare/kumo/components/banner";
+
+/** Derived from a module constant, so it is built once rather than per render. */
+const COMPETITORS_TAB_ITEMS = COMPETITORS_TABS.map(({ tab, label }) => ({
+  value: tab,
+  label,
+}));
 
 type CompetitorsSearchState = {
   target: string;
@@ -190,8 +199,8 @@ export function CompetitorsPage({
         />
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <CompetitorsSearchForm
             targetInput={targetInput}
             competitorInput={competitorInput}
@@ -234,23 +243,26 @@ export function CompetitorsPage({
           {tab === "gap" ? (
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs text-base-content/60">Show</span>
-              {keywordGapModes.map((gapMode) => (
-                <button
-                  key={gapMode}
-                  type="button"
-                  className={`btn btn-xs ${mode === gapMode ? "btn-primary" : "btn-ghost"}`}
-                  onClick={() => updateSearch({ mode: gapMode, page: 1 })}
-                >
-                  {GAP_MODE_LABELS[gapMode]}
-                </button>
-              ))}
+              <SegmentedToggle
+                showLabels
+                items={keywordGapModes.map((gapMode) => ({
+                  value: gapMode,
+                  label: GAP_MODE_LABELS[gapMode],
+                }))}
+                value={mode}
+                onChange={(nextMode) =>
+                  updateSearch({ mode: nextMode, page: 1 })
+                }
+              />
             </div>
           ) : null}
         </div>
       </div>
 
       {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
+        <Banner variant="error" className="text-sm">
+          {errorMessage}
+        </Banner>
       ) : null}
 
       {!target && tab === "competitors" ? (
@@ -340,20 +352,18 @@ export function CompetitorsPage({
 
       <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
         <div className="border-b border-base-300 px-4 py-3">
-          <div role="tablist" className="tabs tabs-border w-fit">
-            {COMPETITORS_TABS.map(({ tab: tabId, label }) => (
-              <button
-                key={tabId}
-                type="button"
-                role="tab"
-                aria-selected={tab === tabId}
-                className={`tab ${tab === tabId ? "tab-active" : ""}`}
-                onClick={() => updateSearch({ tab: tabId, page: 1 })}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <Tabs
+            variant="underline"
+            value={tab}
+            onValueChange={(next) => {
+              // Kumo hands back a plain string; resolve it against the source
+              // list to recover CompetitorsTab without an assertion, and drop
+              // anything that is not ours rather than trusting it.
+              const selected = COMPETITORS_TABS.find((t) => t.tab === next);
+              if (selected) updateSearch({ tab: selected.tab, page: 1 });
+            }}
+            tabs={COMPETITORS_TAB_ITEMS}
+          />
         </div>
 
         <TabBody

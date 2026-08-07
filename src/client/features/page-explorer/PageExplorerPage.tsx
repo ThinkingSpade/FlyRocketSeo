@@ -30,6 +30,10 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type PageExplorerNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -155,8 +159,8 @@ export function PageExplorerPage({
         </p>
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
             onSubmit={(event) => {
@@ -182,9 +186,11 @@ export function PageExplorerPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Page URL
               </span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="https://competitor.com/their-best-page/"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -195,7 +201,7 @@ export function PageExplorerPage({
                 Location
               </span>
               <select
-                className="select select-bordered select-sm w-full"
+                className="app-select app-select-sm w-full"
                 value={locationInput}
                 onChange={(event) => setLocationInput(event.target.value)}
               >
@@ -206,24 +212,27 @@ export function PageExplorerPage({
                 ))}
               </select>
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+              variant="primary"
+              size="sm"
               disabled={!input.trim() || pageQuery.isFetching}
             >
               {pageQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
+                <Loader size="sm" />
               ) : (
                 <Search className="size-3.5" />
               )}
               Inspect
-            </button>
+            </Button>
           </form>
         </div>
       </div>
 
       {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
+        <Banner variant="error" className="text-sm">
+          {errorMessage}
+        </Banner>
       ) : null}
 
       <RestoreRail
@@ -285,8 +294,8 @@ export function PageExplorerPage({
             }}
             isBusy={pageQuery.isFetching}
           />
-          <div className="card border border-dashed border-base-300">
-            <div className="card-body items-center py-8 text-center">
+          <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+            <div className="flex flex-auto flex-col items-center py-8 text-center gap-2">
               <p className="max-w-md text-sm text-base-content/60">
                 Great for reverse-engineering a competitor page that outranks
                 you — see exactly which keywords it wins and how strong its
@@ -299,7 +308,7 @@ export function PageExplorerPage({
 
       {runInput != null && pageQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 

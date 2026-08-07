@@ -12,6 +12,9 @@ import {
   formatNumber,
 } from "./backlinksPageUtils";
 import type { DomainRatings } from "./useAhrefsDomainRatings";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Row model for the backlinks table. In the one-per-domain view, depth-0 rows
@@ -32,20 +35,22 @@ function BacklinkFlags({ row }: { row: BacklinksRow }) {
   return (
     <div className="flex flex-wrap gap-1">
       {row.isLost ? (
-        <span className="badge badge-sm badge-error badge-outline">Lost</span>
+        <Badge variant="error" appearance="dot">
+          Lost
+        </Badge>
       ) : null}
       {row.isBroken ? (
-        <span className="badge badge-sm badge-warning badge-outline">
+        <Badge variant="warning" appearance="dot">
           Broken
-        </span>
+        </Badge>
       ) : null}
       {row.isDofollow === false ? (
-        <span className="badge badge-sm badge-outline">Nofollow</span>
+        <Badge variant="outline">Nofollow</Badge>
       ) : null}
       {row.linksCount != null && row.linksCount > 1 ? (
-        <span className="badge badge-sm badge-outline min-w-fit whitespace-nowrap">
+        <Badge variant="outline" className="min-w-fit whitespace-nowrap">
           {row.linksCount} links
-        </span>
+        </Badge>
       ) : null}
     </div>
   );
@@ -55,7 +60,7 @@ function StatusCell({ status }: { status: "loading" | "error" | "empty" }) {
   if (status === "loading") {
     return (
       <span className="flex items-center gap-2 pl-6 text-sm text-base-content/60">
-        <span className="loading loading-spinner loading-xs" />
+        <Loader size="sm" />
         Loading links…
       </span>
     );
@@ -97,9 +102,12 @@ function SourceCell({
   return (
     <div className="flex items-start gap-1.5 break-all">
       {expandable && row.domainFrom && onToggleDomain ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs btn-square shrink-0 -ml-1"
+          variant="ghost"
+          size="xs"
+          shape="square"
+          className="shrink-0 -ml-1"
           aria-label={`${expanded ? "Hide" : "Show"} all links from ${domainLabel}`}
           aria-expanded={expanded}
           onClick={() => onToggleDomain(row.domainFrom ?? "")}
@@ -107,7 +115,7 @@ function SourceCell({
           <ChevronRight
             className={`size-4 transition-transform ${expanded ? "rotate-90" : ""}`}
           />
-        </button>
+        </Button>
       ) : null}
       <div>
         <div className="font-semibold">{domainLabel}</div>

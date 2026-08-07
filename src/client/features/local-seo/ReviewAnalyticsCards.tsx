@@ -78,8 +78,8 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
       </div>
 
       <div className="grid items-start gap-3 lg:grid-cols-2">
-        <div className="card border border-base-300 bg-base-100">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+          <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
               <InsightIcon icon={Star} tone="warning" />
               Rating distribution
@@ -108,8 +108,8 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
           </div>
         </div>
 
-        <div className="card border border-base-300 bg-base-100">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+          <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
               <InsightIcon icon={TrendingUp} tone="primary" />
               Review velocity
@@ -145,8 +145,8 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
       </div>
 
       {needsResponse.length > 0 ? (
-        <div className="card border border-warning/40 bg-base-100">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl border border-warning/40 bg-base-100">
+          <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
               <InsightIcon icon={MessageSquareWarning} tone="warning" />
               Needs a response

@@ -13,24 +13,32 @@ import {
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const SEVERITY_BADGE: Record<
   CannibalizationSeverity,
-  { label: string; className: string; hint: string }
+  {
+    label: string;
+    variant: ComponentProps<typeof Badge>["variant"];
+    hint: string;
+  }
 > = {
   high: {
     label: "High",
-    className: "badge-error",
+    variant: "error",
     hint: "Clicks are spread nearly evenly across these pages on a high-impression query — investigate this one first",
   },
   medium: {
     label: "Medium",
-    className: "badge-warning",
+    variant: "warning",
     hint: "A meaningful share of clicks goes to pages other than the top-clicked one",
   },
   low: {
     label: "Low",
-    className: "badge-ghost",
+    variant: "neutral",
     hint: "One page takes almost all the clicks — keep an eye on it",
   },
 };
@@ -68,19 +76,19 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
 
       {insightsQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
 
       {insightsQuery.isError ? (
-        <div className="alert alert-error text-sm">
+        <Banner variant="error" className="text-sm">
           {getStandardErrorMessage(insightsQuery.error)}
-        </div>
+        </Banner>
       ) : null}
 
       {data && !data.connected ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Connect Search Console first</p>
             <p className="max-w-md text-sm text-base-content/60">
               Cannibalization detection is built from your own Search Console
@@ -104,8 +112,8 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
           absence cannot render the confident sentence, because the caller never
           gets the chance to supply it. */}
       {data?.connected && rows.length === 0 ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-6">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-6 gap-2 text-sm">
             <QueryStateBoundary
               state={resolveQueryState({
                 isPending: false,
@@ -134,19 +142,16 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       {rows.map((row) => (
         <div
           key={row.query}
-          className="card border border-base-300 bg-base-100"
+          className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
         >
-          <div className="card-body gap-3 p-4">
+          <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="inline-flex items-center gap-2">
-                <span className="badge badge-primary badge-outline">
-                  {row.query}
-                </span>
-                <span
-                  className={`badge badge-sm ${SEVERITY_BADGE[row.severity].className}`}
-                  title={SEVERITY_BADGE[row.severity].hint}
-                >
-                  {SEVERITY_BADGE[row.severity].label}
+                <Badge variant="outline">{row.query}</Badge>
+                <span title={SEVERITY_BADGE[row.severity].hint}>
+                  <Badge variant={SEVERITY_BADGE[row.severity].variant}>
+                    {SEVERITY_BADGE[row.severity].label}
+                  </Badge>
                 </span>
               </span>
               <span className="text-xs text-base-content/50 tabular-nums">
@@ -181,11 +186,10 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                             {toPath(page.page)}
                           </a>
                           {page.isWinner ? (
-                            <span
-                              className="badge badge-success badge-sm gap-1"
-                              title="Best-RANKING page for this query, and so the likely consolidation target if these really do compete. Not necessarily the page earning the most clicks."
-                            >
-                              <Trophy className="size-3" /> best rank
+                            <span title="Best-RANKING page for this query, and so the likely consolidation target if these really do compete. Not necessarily the page earning the most clicks.">
+                              <Badge variant="success">
+                                <Trophy className="size-3" /> best rank
+                              </Badge>
                             </span>
                           ) : null}
                         </span>

@@ -32,6 +32,9 @@ import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -164,8 +167,8 @@ export function LocalSeoPage({
         </p>
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)]">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col grid gap-4 p-4 lg:grid-cols-[minmax(0,1fr)_minmax(20rem,0.8fr)] text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
             onSubmit={(event) => {
@@ -184,9 +187,11 @@ export function LocalSeoPage({
               <span className="label-text pb-1 text-xs font-medium">
                 Business name (add a city for precision)
               </span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="Joe's Pizza Brooklyn"
                 value={input}
                 onChange={(event) => setInput(event.target.value)}
@@ -198,13 +203,14 @@ export function LocalSeoPage({
                 </span>
               ) : null}
             </label>
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary btn-sm gap-1.5"
+              variant="primary"
+              size="sm"
               disabled={!input.trim() || profileQuery.isFetching}
             >
               {profileQuery.isFetching ? (
-                <span className="loading loading-spinner loading-xs" />
+                <Loader size="sm" />
               ) : (
                 <Search className="size-3.5" />
               )}
@@ -213,7 +219,7 @@ export function LocalSeoPage({
                 { kind: "paidRequests", count: 1 },
                 true,
               )}
-            </button>
+            </Button>
           </form>
           <LocalGscContext projectId={projectId} context={projectContext} />
         </div>
@@ -242,9 +248,9 @@ export function LocalSeoPage({
         <QueryStateBoundary
           state={profileState}
           loading={
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body items-center gap-2 py-12 text-sm text-base-content/60">
-                <span className="loading loading-spinner loading-md" />
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col items-center gap-2 py-12 text-sm text-base-content/60">
+                <Loader size="base" />
                 Looking up the business profile…
               </div>
             </div>
@@ -258,8 +264,8 @@ export function LocalSeoPage({
         >
           {profile ? (
             !profile.found ? (
-              <div className="card border border-base-300 bg-base-100">
-                <div className="card-body items-center py-12 text-sm text-base-content/60">
+              <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+                <div className="flex flex-auto flex-col items-center py-12 text-sm text-base-content/60 gap-2">
                   No Google Business Profile found for &ldquo;
                   {runKeyword ?? input}&rdquo;. Try adding the city or checking
                   the spelling.
@@ -311,8 +317,8 @@ type ProfileData = NonNullable<Awaited<ReturnType<typeof getBusinessProfile>>>;
 
 function ProfileCard({ profile }: { profile: ProfileData }) {
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex items-start gap-3">
           {profile.logo ? (
             <img

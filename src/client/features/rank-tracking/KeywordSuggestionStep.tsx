@@ -26,6 +26,7 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type SuggestedKeyword = {
   keyword: string;
@@ -247,9 +248,15 @@ export function KeywordSuggestionStep({
       <h2 id="keyword-suggestions-title" className="text-lg font-semibold">
         {title}
       </h2>
-      <button className="btn btn-ghost btn-sm btn-square" onClick={onClose}>
+      <Button
+        variant="ghost"
+        size="sm"
+        shape="square"
+        aria-label="Close"
+        onClick={onClose}
+      >
         <X className="size-4" />
-      </button>
+      </Button>
     </div>
   );
 
@@ -262,9 +269,14 @@ export function KeywordSuggestionStep({
             Ranked-keyword suggestions aren't available for this country.
             Continue and add the keywords you want to track manually.
           </p>
-          <button className="btn btn-primary btn-sm mt-2" onClick={onClose}>
+          <Button
+            variant="primary"
+            size="sm"
+            className="mt-2"
+            onClick={onClose}
+          >
             Continue
-          </button>
+          </Button>
         </div>
       </>
     );
@@ -278,13 +290,14 @@ export function KeywordSuggestionStep({
           <p className="text-sm text-base-content/60">
             Find keywords that {domain} already ranks for.
           </p>
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             onClick={() => run.authorize()}
           >
             Find keywords for {domain}
-          </button>
+          </Button>
         </div>
       </>
     );
@@ -316,9 +329,9 @@ export function KeywordSuggestionStep({
             You can skip this step and add keywords manually later.
           </p>
           <div className="flex gap-2 mt-2">
-            <button className="btn btn-primary btn-sm" onClick={onClose}>
+            <Button variant="primary" size="sm" onClick={onClose}>
               Skip
-            </button>
+            </Button>
           </div>
         </div>
       </>
@@ -335,9 +348,14 @@ export function KeywordSuggestionStep({
             We couldn't find any keywords {domain} currently ranks for. You can
             add keywords manually.
           </p>
-          <button className="btn btn-primary btn-sm mt-2" onClick={onClose}>
+          <Button
+            variant="primary"
+            size="sm"
+            className="mt-2"
+            onClick={onClose}
+          >
             Skip
-          </button>
+          </Button>
         </div>
       </>
     );
@@ -375,12 +393,13 @@ export function KeywordSuggestionStep({
           {selectedCount} of {data.length} selected
         </p>
         <div className="flex items-center gap-2">
-          <button className="btn btn-ghost btn-sm" onClick={onClose}>
+          <Button variant="ghost" size="sm" onClick={onClose}>
             Skip
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             onClick={handleAdd}
             disabled={addMutation.isPending || selectedCount === 0}
           >
@@ -388,7 +407,7 @@ export function KeywordSuggestionStep({
               <Loader2 className="size-3.5 animate-spin" />
             )}
             Save Keyword{selectedCount !== 1 ? "s" : ""}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

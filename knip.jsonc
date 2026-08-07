@@ -25,6 +25,13 @@
     // design, not by accident -- same reasoning as the src/db/schema.ts
     // family above, applied to a public UI entry point instead of a barrel.
     "src/client/features/geo/GeoLocationSelect.tsx",
+    // The stagger wrappers over useReveal (which IS wired, into AppPageShell).
+    // Still importer-less because staggering means wrapping each section in its
+    // own element, and doing that blind across 22 pages would reshuffle the
+    // table/chart/grid layouts hanging off those containers. It is the next
+    // step's tool, applied per page once the pages can be seen -- same
+    // situation as GeoLocationSelect above, no importer by design.
+    "src/client/components/Reveal.tsx",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",
@@ -39,6 +46,13 @@
     // Tailwindcss used via @tailwindcss/vite plugin
     "tailwindcss",
     "daisyui",
+    // A peer dependency @cloudflare/kumo requires us to install but that we
+    // never import directly -- Kumo pulls its Base UI primitives from inside
+    // its own modules, so no file here references it and knip cannot see the
+    // link. Kumo's other peers (@phosphor-icons/react, echarts) do NOT need an
+    // entry: knip resolves those through Kumo itself, and listing them earns a
+    // "Remove from ignoreDependencies" hint.
+    "@base-ui/react",
     // Spawned by scripts/cross-platform.mjs for the agent dev server.
     "portless",
   ],

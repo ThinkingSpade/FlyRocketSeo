@@ -10,6 +10,7 @@ import {
   SUBSCRIBE_ROUTE,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 export function FreePlanBanner() {
   const { data: session } = useSession();
@@ -100,19 +101,17 @@ function BannerShell({
   variant: "info" | "warning" | "error";
   children: React.ReactNode;
 }) {
-  const alertClass =
-    variant === "error"
-      ? "alert-error"
-      : variant === "warning"
-        ? "alert-warning"
-        : "alert-info";
+  // Kumo has no "warning" banner; `alert` is its warning-weight variant, and
+  // `default` carries the neutral notice DaisyUI called info.
+  const bannerVariant =
+    variant === "error" ? "error" : variant === "warning" ? "alert" : "default";
 
   return (
     <div className="shrink-0 px-4 py-2.5 md:px-6">
       <div className="mx-auto max-w-7xl">
-        <div className={`alert text-sm ${alertClass}`}>
+        <Banner variant={bannerVariant} className="text-sm">
           <span>{children}</span>
-        </div>
+        </Banner>
       </div>
     </div>
   );

@@ -26,6 +26,7 @@ import {
   SeedKeywordField,
   useSeedSuggestions,
 } from "@/client/features/dashboard/SeedKeywordField";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * Runs the project's analyses in one go, so a new project stops being a grid of
@@ -350,26 +351,30 @@ export function AnalyzeProjectCard({
             </span>
           </p>
           <div className="flex gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-primary btn-sm"
+              variant="primary"
+              size="sm"
               onClick={() => void runSelected()}
             >
               Yes, run {chosen.length}
-            </button>
-            <button
+            </Button>
+            <Button
               type="button"
-              className="btn btn-ghost btn-sm"
+              variant="ghost"
+              size="sm"
               onClick={() => setConfirming(false)}
             >
               Cancel
-            </button>
+            </Button>
           </div>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm w-fit gap-1.5"
+          variant="primary"
+          size="sm"
+          className="w-fit"
           disabled={running || chosen.length === 0}
           onClick={() => setConfirming(true)}
         >
@@ -381,7 +386,7 @@ export function AnalyzeProjectCard({
           {running
             ? "Running…"
             : `Run ${chosen.length} ${chosen.length === 1 ? "analysis" : "analyses"}`}
-        </button>
+        </Button>
       )}
     </DashboardCard>
   );

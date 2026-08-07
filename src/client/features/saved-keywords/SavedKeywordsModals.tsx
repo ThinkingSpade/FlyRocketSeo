@@ -1,5 +1,6 @@
 import { AlertCircle, Loader2 } from "lucide-react";
 import { Modal } from "@/client/components/Modal";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function RemoveSavedKeywordsError({ message }: { message: string }) {
   return (
@@ -31,23 +32,20 @@ export function DeleteSavedKeywordsModal({
         {selectedCount !== 1 ? "s" : ""}.
       </p>
       <div className="flex justify-end gap-2">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={onClose}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-error btn-sm gap-1"
+          variant="destructive"
+          size="sm"
           onClick={onConfirm}
           disabled={isPending}
         >
           {isPending ? <Loader2 className="size-3 animate-spin" /> : null}
           Delete {selectedCount} keyword
           {selectedCount !== 1 ? "s" : ""}
-        </button>
+        </Button>
       </div>
     </Modal>
   );

@@ -1,5 +1,8 @@
 import { RotateCcw } from "lucide-react";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * The mobile results view's own filter panel.
@@ -23,26 +26,29 @@ export function MobileFilters({
         <div className="flex items-center gap-2">
           <p className="text-xs font-semibold">Refine table results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={controller.resetFilters}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear
-        </button>
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 gap-2">
         <filtersForm.Field name="include">
           {(field) => (
-            <input
-              className="input input-bordered input-sm bg-base-100"
+            <Input
+              passwordManagerIgnore
+              size="sm"
+              className="bg-base-100"
               placeholder="Include terms (audit, checker)"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
@@ -51,8 +57,10 @@ export function MobileFilters({
         </filtersForm.Field>
         <filtersForm.Field name="exclude">
           {(field) => (
-            <input
-              className="input input-bordered input-sm bg-base-100"
+            <Input
+              passwordManagerIgnore
+              size="sm"
+              className="bg-base-100"
               placeholder="Exclude terms (jobs, course)"
               value={field.state.value}
               onChange={(event) => field.handleChange(event.target.value)}
@@ -113,8 +121,10 @@ function MobileRangeInput({
   return (
     <form.Field name={name}>
       {(field) => (
-        <input
-          className="input input-bordered input-sm bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="sm"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           step={step}

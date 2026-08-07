@@ -30,6 +30,9 @@ import {
   type CitationMatch,
   type CitationReport,
 } from "./citationModel";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /** "City, Region" when both are on file, otherwise whichever one is --
  *  matches what CitationTrackerService expects as its single `city` field,
@@ -276,8 +279,8 @@ export function CitationTrackerSection({
     : null;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-xl">
             <h2 className="flex items-center gap-1.5 text-sm font-semibold">
@@ -293,23 +296,26 @@ export function CitationTrackerSection({
               Runs one search and uses credits, the same as other lookups.
             </p>
           </div>
-          <button
+          <Button
             type="button"
-            className="btn btn-sm btn-outline gap-1.5"
+            size="sm"
+            variant="outline"
             onClick={() => run.authorize()}
             disabled={!businessName.trim() || reportQuery.isFetching}
           >
             {reportQuery.isFetching ? (
-              <span className="loading loading-spinner loading-xs" />
+              <Loader size="sm" />
             ) : (
               <Search className="size-3.5" />
             )}
             Check citations
-          </button>
+          </Button>
         </div>
 
         {errorMessage ? (
-          <div className="alert alert-error text-sm">{errorMessage}</div>
+          <Banner variant="error" className="text-sm">
+            {errorMessage}
+          </Banner>
         ) : null}
 
         {!run.authorized ? (

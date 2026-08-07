@@ -12,7 +12,10 @@ import type { TooltipContentProps } from "recharts";
 import {
   CHART_AXIS_TICK,
   CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
 } from "@/client/components/chart/chartTheme";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 export interface TrendSeries {
   /** key into each data row holding the position value (1 = best, serpDepth = bottom band) */
@@ -105,7 +108,7 @@ export function RankTrendChart({
               tick={CHART_AXIS_TICK}
               tickLine={false}
               axisLine={false}
-              minTickGap={32}
+              minTickGap={CHART_X_TICK_GAP}
             />
             <YAxis
               reversed
@@ -143,8 +146,8 @@ export function RankTrendChart({
                 stroke={s.color}
                 strokeWidth={2}
                 strokeDasharray={s.strokeDasharray}
-                dot={{ r: 2 }}
-                activeDot={{ r: 4 }}
+                dot={false}
+                activeDot={<ChartActiveDot />}
                 connectNulls={false}
                 isAnimationActive={false}
               />
@@ -199,19 +202,23 @@ export function TrendRangeToggle({
   onChange: (sinceDays: number) => void;
 }) {
   return (
-    <div className="join">
-      {TREND_RANGES.map((range) => (
-        <button
-          key={range.label}
-          type="button"
-          className={`btn btn-xs join-item ${
-            value === range.sinceDays ? "btn-active" : "btn-ghost"
-          }`}
-          onClick={() => onChange(range.sinceDays)}
-        >
-          {range.label}
-        </button>
-      ))}
-    </div>
+    <SegmentedToggle
+      showLabels
+      // Kumo's Tabs key on strings, and `sinceDays` is a number. Round-tripping
+      // through the label rather than String(sinceDays) keeps the mapping in
+      // one place — the labels are already unique, and TREND_RANGES stays the
+      // single source of which day counts exist.
+      items={TREND_RANGES.map((range) => ({
+        value: range.label,
+        label: range.label,
+      }))}
+      value={
+        TREND_RANGES.find((range) => range.sinceDays === value)?.label ?? "All"
+      }
+      onChange={(label) => {
+        const range = TREND_RANGES.find((r) => r.label === label);
+        if (range) onChange(range.sinceDays);
+      }}
+    />
   );
 }

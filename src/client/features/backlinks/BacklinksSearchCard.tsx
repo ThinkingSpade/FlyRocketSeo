@@ -12,6 +12,8 @@ import {
   inferBacklinksSearchScopeFromTarget,
   resolveBacklinksSearchScope,
 } from "./backlinksSearchScope";
+import { Button } from "@cloudflare/kumo/components/button";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
 
@@ -124,8 +126,8 @@ export function BacklinksSearchCard({
   }, [targetIsDirty, currentTarget, prefillTarget, form]);
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <form
           className="space-y-3"
           onSubmit={(event) => {
@@ -165,13 +167,14 @@ export function BacklinksSearchCard({
 
               <form.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => (
-                  <button
+                  <Button
                     type="submit"
-                    className="btn btn-primary shrink-0 px-6"
+                    variant="primary"
+                    className="shrink-0 px-6"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Loading..." : "Search"}
-                  </button>
+                  </Button>
                 )}
               </form.Subscribe>
             </div>
@@ -199,28 +202,18 @@ export function BacklinksSearchCard({
             <div className="flex items-center gap-1">
               <form.Field name="scope">
                 {(field) => (
-                  <>
-                    <button
-                      type="button"
-                      className={`btn btn-xs ${field.state.value === "domain" ? "btn-soft" : "btn-ghost"}`}
-                      onClick={() => {
-                        setUserSelectedScope(true);
-                        field.handleChange("domain");
-                      }}
-                    >
-                      Site-wide
-                    </button>
-                    <button
-                      type="button"
-                      className={`btn btn-xs ${field.state.value === "page" ? "btn-soft" : "btn-ghost"}`}
-                      onClick={() => {
-                        setUserSelectedScope(true);
-                        field.handleChange("page");
-                      }}
-                    >
-                      Exact page
-                    </button>
-                  </>
+                  <SegmentedToggle
+                    showLabels
+                    items={[
+                      { value: "domain", label: "Site-wide" },
+                      { value: "page", label: "Exact page" },
+                    ]}
+                    value={field.state.value === "page" ? "page" : "domain"}
+                    onChange={(scope) => {
+                      setUserSelectedScope(true);
+                      field.handleChange(scope);
+                    }}
+                  />
                 )}
               </form.Field>
             </div>

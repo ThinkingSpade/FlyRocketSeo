@@ -10,6 +10,10 @@ import {
   listInvites,
   revokeInvite,
 } from "@/serverFunctions/invites";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const INVITES_QUERY_KEY = ["teamInvites"] as const;
 
@@ -78,9 +82,10 @@ export function TeamPage() {
               createMutation.mutate(email);
             }}
           >
-            <input
+            <Input
+              passwordManagerIgnore
               type="email"
-              className="input input-bordered min-w-0 flex-1"
+              className="min-w-0 flex-1"
               placeholder="teammate@example.com"
               value={email}
               onChange={(event) => setEmail(event.currentTarget.value)}
@@ -89,9 +94,9 @@ export function TeamPage() {
               maxLength={320}
               disabled={createMutation.isPending}
             />
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary"
+              variant="primary"
               disabled={createMutation.isPending || email.trim() === ""}
             >
               {createMutation.isPending ? (
@@ -100,14 +105,16 @@ export function TeamPage() {
                 <UserPlus className="size-4" />
               )}
               {createMutation.isPending ? "Creating…" : "Create invite"}
-            </button>
+            </Button>
           </form>
 
           {createdInvite ? (
             <div className="rounded-lg border border-base-300 bg-base-200/40 p-3">
               <div className="flex items-start gap-2">
-                <input
-                  className="input input-sm input-bordered min-w-0 flex-1 font-mono text-xs"
+                <Input
+                  passwordManagerIgnore
+                  size="sm"
+                  className="min-w-0 flex-1 font-mono text-xs"
                   value={createdInvite.inviteUrl}
                   readOnly
                   aria-label="Invitation link"
@@ -132,7 +139,7 @@ export function TeamPage() {
           </h2>
           {invitesQuery.isLoading ? (
             <div className="flex justify-center py-10">
-              <span className="loading loading-spinner loading-md" />
+              <Loader size="base" />
             </div>
           ) : invitesQuery.isError ? (
             <p className="text-sm text-error">
@@ -166,22 +173,24 @@ export function TeamPage() {
                         >
                           {invite.email}
                         </span>
-                        <span className="badge badge-sm badge-ghost capitalize">
+                        <Badge variant="neutral" className="capitalize">
                           {displayStatus}
-                        </span>
+                        </Badge>
                       </div>
                       <p className="mt-1 text-xs text-base-content/50">
                         Expires {formatDate(invite.expiresAt)}
                       </p>
                     </div>
-                    <button
+                    <Button
                       type="button"
-                      className="btn btn-ghost btn-sm shrink-0 text-error"
+                      variant="ghost"
+                      size="sm"
+                      className="shrink-0 text-error"
                       onClick={() => revokeMutation.mutate(invite.id)}
                       disabled={isCanceled || revokeMutation.isPending}
                     >
                       {isCanceled ? "Revoked" : "Revoke"}
-                    </button>
+                    </Button>
                   </li>
                 );
               })}

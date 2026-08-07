@@ -1,5 +1,7 @@
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import type { GscSitesErrorReason } from "@/shared/gsc";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type SiteOption = {
   siteUrl: string;
@@ -46,7 +48,7 @@ export function SitePicker({
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
-        <span className="loading loading-spinner loading-sm" />
+        <Loader size="sm" />
         Loading properties…
       </div>
     );
@@ -100,13 +102,9 @@ export function SitePicker({
         <p className="text-sm text-error">
           Couldn&apos;t load your Search Console sites — please try again.
         </p>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={onRetry}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -117,7 +115,7 @@ export function SitePicker({
           Property
         </span>
         <select
-          className="select select-bordered w-full max-w-md"
+          className="app-select w-full max-w-md"
           value={selectedSiteUrl}
           onChange={(e) => onSelect(e.target.value)}
         >
@@ -137,14 +135,15 @@ export function SitePicker({
         </select>
       </label>
       <div className="flex items-center gap-1">
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          variant="primary"
+          size="sm"
           onClick={onSave}
           disabled={!selectedSiteUrl || saving}
         >
           {saving ? "Saving…" : "Save property"}
-        </button>
+        </Button>
         {secondaryAction ? (
           <button
             type="button"

@@ -9,6 +9,7 @@ import {
 } from "./opportunityActions";
 import { momentumLabel } from "./queryMomentum";
 import { useTrendingOpportunities } from "./useTrendingOpportunities";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * What to work on next, ranked, with the action spelled out.
@@ -105,15 +106,17 @@ export function TrendingOpportunitiesCard({ projectId }: Props) {
       </ul>
 
       {actionable.length > INITIAL_ROWS ? (
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm w-fit"
+          variant="ghost"
+          size="sm"
+          className="w-fit"
           onClick={() => setShowAll((current) => !current)}
         >
           {showAll
             ? "Show fewer"
             : `Show all ${actionable.length} opportunities`}
-        </button>
+        </Button>
       ) : null}
     </Shell>
   );
@@ -121,8 +124,8 @@ export function TrendingOpportunitiesCard({ projectId }: Props) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold">
             <TrendingUp className="size-4 text-base-content/50" />
@@ -257,8 +260,8 @@ function OpportunityLink({
 
 function OpportunitiesSkeleton() {
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="h-4 w-48 animate-pulse rounded bg-base-200" />
         {Array.from({ length: 4 }).map((_, index) => (
           <div

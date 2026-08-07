@@ -7,6 +7,7 @@ import {
   BRAND_LOOKUP_RAW_COST_USD,
 } from "@/shared/analysis-costs";
 import { BRAND_LOOKUP_MAX_INPUT_LENGTH } from "@/types/schemas/ai-search";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   query: string;
@@ -42,8 +43,8 @@ export function BrandLookupSearchCard({
   const competitorsError = validationError?.field === "competitors";
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <label
@@ -68,13 +69,14 @@ export function BrandLookupSearchCard({
               />
             </label>
 
-            <button
+            <Button
               type="submit"
-              className="btn btn-primary shrink-0 px-6"
+              variant="primary"
+              className="shrink-0 px-6"
               disabled={isLoading}
             >
               {isLoading ? "Looking up..." : "Look up"}
-            </button>
+            </Button>
           </div>
 
           <div className="flex flex-col gap-1">

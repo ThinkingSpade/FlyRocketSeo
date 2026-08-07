@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildContentVerdict } from "@/client/features/insights/verdicts/content";
 import { computeOutlineThemes, isThemeCovered } from "./outlineGap";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const STOPWORDS = new Set([
   "a",
@@ -125,22 +126,18 @@ export function DraftGrader({
   });
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold">Grade your draft</h2>
           {score != null ? (
-            <span
-              className={`badge ${
-                score >= 70
-                  ? "badge-success"
-                  : score >= 40
-                    ? "badge-warning"
-                    : "badge-error"
-              }`}
+            <Badge
+              variant={
+                score >= 70 ? "success" : score >= 40 ? "warning" : "error"
+              }
             >
               {score}% covered · ~{wordCount.toLocaleString()} words
-            </span>
+            </Badge>
           ) : null}
         </div>
         <p className="text-xs text-base-content/60">
@@ -167,15 +164,13 @@ export function DraftGrader({
           <>
             <div className="flex flex-wrap gap-1.5">
               {termHits.map((term) => (
-                <span
+                <Badge
                   key={term.keyword}
-                  className={`badge badge-sm ${
-                    term.covered ? "badge-success" : "badge-ghost"
-                  }`}
+                  variant={term.covered ? "success" : "neutral"}
                 >
                   {term.covered ? "✓ " : ""}
                   {term.keyword}
-                </span>
+                </Badge>
               ))}
             </div>
             {questionHits.length > 0 ? (

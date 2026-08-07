@@ -2,6 +2,18 @@ import { RotateCcw } from "lucide-react";
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBrandLookupFilters";
+import { Button } from "@cloudflare/kumo/components/button";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Input } from "@cloudflare/kumo/components/input";
+
+/**
+ * Stands in for the filter model's empty-string "no filter" value.
+ *
+ * Kumo's tabs key on a non-empty string, so "All" travels as this sentinel and
+ * is mapped back to "" on the way out — the form state never sees it.
+ */
+const ALL_PLATFORMS = "all";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type AnyForm = { Field: React.ComponentType<any> };
@@ -27,8 +39,10 @@ function FilterTextInput({
           state: { value: string };
           handleChange: (v: string) => void;
         }) => (
-          <input
-            className="input input-bordered input-sm w-full bg-base-100"
+          <Input
+            passwordManagerIgnore
+            size="sm"
+            className="w-full bg-base-100"
             placeholder={placeholder}
             value={field.state.value}
             onChange={(event) => field.handleChange(event.target.value)}
@@ -78,8 +92,10 @@ function CompactRangeInput({
         state: { value: string };
         handleChange: (v: string) => void;
       }) => (
-        <input
-          className="input input-bordered input-xs bg-base-100"
+        <Input
+          passwordManagerIgnore
+          size="xs"
+          className="bg-base-100"
           placeholder={placeholder}
           type="number"
           value={field.state.value}
@@ -101,18 +117,18 @@ function PlatformToggle({ form }: { form: AnyForm }) {
           state: { value: string };
           handleChange: (v: string) => void;
         }) => (
-          <div className="flex flex-wrap items-center gap-1">
-            {(["", "chat_gpt", "google"] as const).map((value) => (
-              <button
-                key={value || "all"}
-                type="button"
-                className={`btn btn-xs ${field.state.value === value ? "btn-soft" : "btn-ghost"}`}
-                onClick={() => field.handleChange(value)}
-              >
-                {value === "" ? "All" : formatPlatformLabel(value)}
-              </button>
-            ))}
-          </div>
+          <SegmentedToggle
+            showLabels
+            items={[
+              { value: ALL_PLATFORMS, label: "All" },
+              { value: "chat_gpt", label: formatPlatformLabel("chat_gpt") },
+              { value: "google", label: formatPlatformLabel("google") },
+            ]}
+            value={field.state.value === "" ? ALL_PLATFORMS : field.state.value}
+            onChange={(value) =>
+              field.handleChange(value === ALL_PLATFORMS ? "" : value)
+            }
+          />
         )}
       </form.Field>
     </div>
@@ -208,20 +224,21 @@ export function BrandLookupFilterPanel({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine results</p>
           {current.activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {current.activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-xs btn-ghost gap-1"
+          size="xs"
+          variant="ghost"
           onClick={current.reset}
           disabled={current.activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       {activeTab === "pages" ? (

@@ -69,6 +69,11 @@ import {
   type SerpRunGeo,
 } from "@/client/features/serp/serpRunGeo";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -181,18 +186,10 @@ function AnalyzeButton({
       >
         Analyze
       </span>
-      <button
-        type="submit"
-        className="btn btn-primary btn-sm gap-1.5"
-        disabled={disabled}
-      >
-        {isFetching ? (
-          <span className="loading loading-spinner loading-xs" />
-        ) : (
-          <Search className="size-3.5" />
-        )}
+      <Button type="submit" variant="primary" size="sm" disabled={disabled}>
+        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
         Analyze
-      </button>
+      </Button>
     </div>
   );
 }
@@ -227,8 +224,8 @@ function SerpSearchForm({
   onSubmit: (keyword: string) => void;
 }) {
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-start"
           onSubmit={(event) => {
@@ -243,9 +240,11 @@ function SerpSearchForm({
               <span className="label-text pb-1 text-xs font-medium">
                 Keyword
               </span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
-                className="input input-bordered input-sm w-full"
+                size="sm"
+                className="w-full"
                 placeholder="office coffee service dallas"
                 value={input}
                 onChange={(event) => {
@@ -269,7 +268,7 @@ function SerpSearchForm({
               Location
             </span>
             <select
-              className="select select-bordered select-sm w-full"
+              className="app-select app-select-sm w-full"
               value={locationInput}
               onChange={(event) => {
                 setLocationTouched(true);
@@ -657,7 +656,9 @@ export function SerpOverviewPage({
       />
 
       {errorMessage ? (
-        <div className="alert alert-error text-sm">{errorMessage}</div>
+        <Banner variant="error" className="text-sm">
+          {errorMessage}
+        </Banner>
       ) : null}
 
       {runInput == null ? (
@@ -719,8 +720,8 @@ export function SerpOverviewPage({
       ) : null}
 
       {runInput == null && !restoredRun ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Enter a keyword to get started</p>
             <p className="max-w-md text-sm text-base-content/60">
               Analyze any SERP to size up the competition before you target a
@@ -744,13 +745,14 @@ export function SerpOverviewPage({
                 SERP features
               </span>
               {result.serpFeatures.map((feature) => (
-                <span
+                <Badge
                   key={feature.type}
-                  className="badge badge-ghost badge-sm capitalize"
+                  variant="neutral"
+                  className="capitalize"
                 >
                   {formatFeatureLabel(feature.type)}
                   {feature.count > 1 ? ` ×${feature.count}` : ""}
-                </span>
+                </Badge>
               ))}
             </div>
           ) : null}
@@ -777,8 +779,8 @@ export function SerpOverviewPage({
           />
 
           {result.paaQuestions.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="flex items-center gap-1.5 text-sm font-semibold">
                   <InsightIcon icon={HelpCircle} tone="info" />
                   People also ask
@@ -802,7 +804,7 @@ export function SerpOverviewPage({
 
       {runInput != null && serpQuery.isLoading ? (
         <div className="flex items-center justify-center py-12">
-          <span className="loading loading-spinner loading-md" />
+          <Loader size="base" />
         </div>
       ) : null}
     </AppPageShell>
@@ -828,7 +830,7 @@ function SerpResultsTable({
   );
 
   return (
-    <div className="card border border-base-300 bg-base-100">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="overflow-x-auto">
         <table className="table table-sm">
           <thead>
@@ -870,9 +872,7 @@ function SerpResultsTable({
                     <div className="flex items-center gap-1 tabular-nums">
                       {item.rank ?? "—"}
                       {item.isNew ? (
-                        <span className="badge badge-success badge-xs">
-                          new
-                        </span>
+                        <Badge variant="success">new</Badge>
                       ) : item.isUp ? (
                         <ArrowUp className="size-3 text-success" />
                       ) : item.isDown ? (

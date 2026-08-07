@@ -1,5 +1,7 @@
 import { MapPin } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 type LocationOption = {
   name: string;
@@ -63,7 +65,7 @@ export function GbpLocationPicker({
   if (loading) {
     return (
       <div className="flex items-center gap-2 text-sm text-base-content/50">
-        <span className="loading loading-spinner loading-sm" />
+        <Loader size="sm" />
         Loading locations…
       </div>
     );
@@ -80,14 +82,10 @@ export function GbpLocationPicker({
           Couldn&apos;t verify your Google Business Profile connection.
           Reconnect to continue.
         </p>
-        <button
-          type="button"
-          onClick={onReconnect}
-          className="btn btn-outline btn-sm gap-1.5"
-        >
+        <Button type="button" onClick={onReconnect} variant="outline" size="sm">
           <InsightIcon icon={MapPin} tone="neutral" />
           Reconnect Google Business Profile
-        </button>
+        </Button>
       </div>
     );
   }
@@ -105,14 +103,10 @@ export function GbpLocationPicker({
           This Google account doesn&apos;t have permission to manage Business
           Profile listings.
         </p>
-        <button
-          type="button"
-          onClick={onReconnect}
-          className="btn btn-outline btn-sm gap-1.5"
-        >
+        <Button type="button" onClick={onReconnect} variant="outline" size="sm">
           <InsightIcon icon={MapPin} tone="neutral" />
           Reconnect with a different Google account
-        </button>
+        </Button>
       </div>
     );
   }
@@ -122,13 +116,9 @@ export function GbpLocationPicker({
         <p className="text-sm text-error">
           Couldn&apos;t load your Business Profile locations — please try again.
         </p>
-        <button
-          type="button"
-          className="btn btn-outline btn-sm"
-          onClick={onRetry}
-        >
+        <Button type="button" variant="outline" size="sm" onClick={onRetry}>
           Retry
-        </button>
+        </Button>
       </div>
     );
   }
@@ -158,7 +148,7 @@ export function GbpLocationPicker({
           Location
         </span>
         <select
-          className="select select-bordered w-full max-w-md"
+          className="app-select w-full max-w-md"
           value={selectedLocationName}
           onChange={(e) => onSelect(e.target.value)}
         >
@@ -173,14 +163,15 @@ export function GbpLocationPicker({
         </select>
       </label>
       <div className="flex items-center gap-1">
-        <button
+        <Button
           type="button"
-          className="btn btn-primary btn-sm"
+          variant="primary"
+          size="sm"
           onClick={onSave}
           disabled={!selectedLocationName || saving}
         >
           {saving ? "Saving…" : "Save location"}
-        </button>
+        </Button>
         {secondaryAction ? (
           <button
             type="button"

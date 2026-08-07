@@ -25,6 +25,8 @@ import type { TargetArea } from "@/shared/geo/types";
 import { resolveInitialConfigArea } from "./rankTrackingConfigArea";
 import { useConfigAreaLookup } from "./useConfigAreaLookup";
 import { KeywordSuggestionStep } from "./KeywordSuggestionStep";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type Props = {
   projectId: string;
@@ -247,9 +249,15 @@ export function RankTrackingConfigModal({
         <h2 id="rank-config-modal-title" className="text-lg font-semibold">
           {isEdit ? "Edit Domain Config" : "Add Domain"}
         </h2>
-        <button className="btn btn-ghost btn-sm btn-square" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="sm"
+          shape="square"
+          aria-label="Close"
+          onClick={onClose}
+        >
           <X className="size-4" />
-        </button>
+        </Button>
       </div>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
@@ -257,10 +265,11 @@ export function RankTrackingConfigModal({
           <label className="label">
             <span className="label-text font-medium">Target Domain</span>
           </label>
-          <input
+          <Input
+            passwordManagerIgnore
             type="text"
             placeholder="example.com"
-            className="input input-bordered w-full"
+            className="w-full"
             value={domain}
             onChange={(e) => setDomain(e.target.value)}
             onBlur={handleDomainBlur}
@@ -292,7 +301,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Language</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={languageCode}
             onChange={(e) => setLanguageCode(e.target.value)}
             disabled={languageOptions.length <= 1}
@@ -310,7 +319,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Devices</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={devices}
             onChange={(e) => {
               const value = e.target.value;
@@ -346,7 +355,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Schedule</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={schedule}
             onChange={(e) => {
               const value = e.target.value;
@@ -378,7 +387,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Search Depth</span>
           </label>
           <select
-            className="select select-bordered w-full"
+            className="app-select w-full"
             value={depthToPages(serpDepth)}
             onChange={(e) => setSerpDepth(pagesToDepth(Number(e.target.value)))}
           >
@@ -401,21 +410,18 @@ export function RankTrackingConfigModal({
         />
 
         <div className="flex justify-end gap-2 pt-2">
-          <button
-            type="button"
-            className="btn btn-ghost btn-sm"
-            onClick={onClose}
-          >
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             type="submit"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={isPending || !domain.trim()}
           >
             {isPending && <Loader2 className="size-3.5 animate-spin" />}
             {isEdit ? "Save Changes" : "Add Domain"}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

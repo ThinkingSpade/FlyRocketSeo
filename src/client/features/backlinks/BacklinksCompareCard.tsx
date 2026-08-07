@@ -6,6 +6,11 @@ import type {
   BacklinksCompareResult,
   BacklinksComparisonRow,
 } from "@/types/schemas/backlinks-compare";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Input } from "@cloudflare/kumo/components/input";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -40,9 +45,10 @@ function CompetitorChips({
   return (
     <div className="flex flex-wrap gap-1.5">
       {competitors.map((competitor) => (
-        <span
+        <Badge
           key={competitor}
-          className="badge badge-outline gap-1 py-2.5 font-normal"
+          variant="outline"
+          className="gap-1 py-2.5 font-normal"
         >
           {competitor}
           <button
@@ -53,7 +59,7 @@ function CompetitorChips({
           >
             <X className="size-3" />
           </button>
-        </span>
+        </Badge>
       ))}
     </div>
   );
@@ -80,9 +86,11 @@ function CompetitorInput({
         submit();
       }}
     >
-      <input
+      <Input
+        passwordManagerIgnore
         type="text"
-        className="input input-bordered input-sm min-w-0 flex-1"
+        size="sm"
+        className="min-w-0 flex-1"
         placeholder={
           disabled
             ? `Up to ${MAX_COMPARE_COMPETITORS} competitors`
@@ -93,14 +101,15 @@ function CompetitorInput({
         onChange={(event) => setDraft(event.target.value)}
         aria-label="Competitor domain"
       />
-      <button
+      <Button
         type="submit"
-        className="btn btn-ghost btn-sm gap-1"
+        variant="ghost"
+        size="sm"
         disabled={disabled || draft.trim() === ""}
       >
         <Plus className="size-4" />
         Add
-      </button>
+      </Button>
     </form>
   );
 }
@@ -289,8 +298,8 @@ export function BacklinksCompareCard({
   const atLimit = competitors.length >= MAX_COMPARE_COMPETITORS;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold">
             <InsightIcon icon={Swords} />
@@ -308,17 +317,16 @@ export function BacklinksCompareCard({
         <CompetitorInput disabled={atLimit} onAdd={onAdd} />
 
         <div className="flex flex-wrap items-center gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={!canCompare || isLoading}
             onClick={onCompare}
           >
-            {isLoading ? (
-              <span className="loading loading-spinner loading-xs" />
-            ) : null}
+            {isLoading ? <Loader size="sm" /> : null}
             {hasCompared ? "Compare again" : "Compare"}
-          </button>
+          </Button>
           {competitors.length === 0 ? (
             <span className="text-xs text-base-content/50">
               Add a competitor domain to enable the comparison.
@@ -327,7 +335,9 @@ export function BacklinksCompareCard({
         </div>
 
         {errorMessage ? (
-          <div className="alert alert-error py-2 text-sm">{errorMessage}</div>
+          <Banner variant="error" className="py-2 text-sm">
+            {errorMessage}
+          </Banner>
         ) : null}
 
         {result && result.rows.length > 0 ? (

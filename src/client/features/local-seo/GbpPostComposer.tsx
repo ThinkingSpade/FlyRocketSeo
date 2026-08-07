@@ -13,6 +13,8 @@ import {
   type GbpCallToActionType,
   type GbpPostValidationError,
 } from "./gbpPostSchedule";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
   { value: "BOOK", label: "Book" },
@@ -113,8 +115,8 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
   });
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={CalendarClock} tone="neutral" />
           Schedule a post
@@ -141,9 +143,10 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
           <span className="label-text pb-1 text-xs font-medium">
             Photo URL (optional)
           </span>
-          <input
+          <Input
+            passwordManagerIgnore
             type="text"
-            className="input input-bordered input-sm"
+            size="sm"
             value={mediaUrl}
             onChange={(event) => setMediaUrl(event.target.value)}
           />
@@ -155,7 +158,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
               Action button (optional)
             </span>
             <select
-              className="select select-bordered select-sm"
+              className="app-select app-select-sm"
               value={ctaType}
               onChange={(event) => setCtaType(parseCtaType(event.target.value))}
             >
@@ -172,9 +175,10 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
               <span className="label-text pb-1 text-xs font-medium">
                 Button URL
               </span>
-              <input
+              <Input
+                passwordManagerIgnore
                 type="text"
-                className="input input-bordered input-sm"
+                size="sm"
                 value={ctaUrl}
                 onChange={(event) => setCtaUrl(event.target.value)}
               />
@@ -186,9 +190,10 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
           <span className="label-text pb-1 text-xs font-medium">
             Publish at
           </span>
-          <input
+          <Input
+            passwordManagerIgnore
             type="datetime-local"
-            className="input input-bordered input-sm"
+            size="sm"
             value={scheduledAtLocal}
             onChange={(event) => setScheduledAtLocal(event.target.value)}
           />
@@ -217,34 +222,38 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
               </span>
             </p>
             <div className="flex gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn-sm"
+                variant="primary"
+                size="sm"
                 disabled={scheduleMutation.isPending}
                 onClick={() => scheduleMutation.mutate()}
               >
                 {scheduleMutation.isPending
                   ? "Scheduling…"
                   : "Yes, schedule it"}
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 onClick={() => setConfirming(false)}
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           </div>
         ) : (
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm w-fit"
+            variant="primary"
+            size="sm"
+            className="w-fit"
             disabled={!canSchedule}
             onClick={() => setConfirming(true)}
           >
             Schedule post
-          </button>
+          </Button>
         )}
       </div>
     </div>

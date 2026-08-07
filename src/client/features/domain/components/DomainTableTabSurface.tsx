@@ -2,6 +2,8 @@ import type { ReactNode } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TableLoadingRows } from "@/client/features/domain/components/TableLoadingRows";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type DomainTableExportAction = {
   label: string;
@@ -41,8 +43,10 @@ export function DomainTableTabSurface({
   return (
     <>
       <div className="flex items-center gap-2 px-4 py-2 border-b border-base-300">
-        <button
-          className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
+        <Button
+          size="sm"
+          variant={showFilters ? "secondary" : "ghost"}
+          aria-pressed={showFilters}
           onClick={onToggleFilters}
           title="Toggle filters"
           type="button"
@@ -50,11 +54,11 @@ export function DomainTableTabSurface({
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
-        </button>
+        </Button>
         <span className="text-sm text-base-content/60">
           {(totalCount ?? fallbackCount).toLocaleString()} {countLabel}
         </span>

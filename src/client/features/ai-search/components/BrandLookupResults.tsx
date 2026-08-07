@@ -8,6 +8,7 @@ import {
   PLATFORM_DOT_CLASS,
 } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type Props = {
   result: BrandLookupResult;
@@ -98,9 +99,7 @@ function BrandHeader({ result }: { result: BrandLookupResult }) {
         <h2 className="text-3xl font-semibold tracking-tight">
           {result.resolvedTarget}
         </h2>
-        <span className="badge badge-ghost badge-sm">
-          {result.detectedTargetType}
-        </span>
+        <Badge variant="neutral">{result.detectedTargetType}</Badge>
       </div>
       <p className="text-xs text-base-content/50">
         Updated {formatRelative(result.fetchedAt)}

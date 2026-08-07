@@ -7,6 +7,7 @@ import {
   computeTrafficConcentration,
   type PageKeyword,
 } from "./pageInsights";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 function formatCount(value: number | null | undefined): string {
   if (value == null) return "—";
@@ -25,8 +26,8 @@ export function TrafficConcentrationCard({
   if (!concentration) return null;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={Zap} tone="primary" />
           Traffic concentration
@@ -40,9 +41,9 @@ export function TrafficConcentrationCard({
               >
                 {row.keyword}
               </span>
-              <span className="badge badge-ghost badge-xs shrink-0 tabular-nums">
+              <Badge variant="neutral" className="shrink-0 tabular-nums">
                 #{row.position ?? "—"}
-              </span>
+              </Badge>
               <span className="h-2 flex-1 overflow-hidden rounded-full bg-base-200">
                 <span
                   className="block h-full rounded-full bg-primary/70"
@@ -75,8 +76,8 @@ export function StrikingDistanceCard({
   if (rows.length === 0) return null;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={Target} tone="warning" />
           Striking distance

@@ -6,6 +6,7 @@ import type {
   RankTrackingConfig,
 } from "@/types/schemas/rank-tracking";
 import { useRankTrackingLocationLabel } from "./useRankTrackingLocationLabel";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const COMPARE_PERIODS: ReadonlySet<string> = new Set([
   "1d",
@@ -83,7 +84,7 @@ export function RankTrackingDetailHeader({
           />
         )}
         <select
-          className="select select-bordered select-sm text-xs w-auto"
+          className="app-select app-select-sm text-xs w-auto"
           title="Comparison period"
           value={comparePeriod}
           onChange={(e) => {
@@ -97,17 +98,14 @@ export function RankTrackingDetailHeader({
           <option value="90d">vs 90 days ago</option>
         </select>
         <div className="hidden sm:block h-6 w-px bg-base-300" />
-        <button className="btn btn-sm gap-1" onClick={onEdit}>
+        <Button size="sm" onClick={onEdit}>
           <Settings className="size-3.5" />
           Configure
-        </button>
-        <button
-          className="btn btn-primary btn-sm gap-1"
-          onClick={onToggleAddKeywords}
-        >
+        </Button>
+        <Button variant="primary" size="sm" onClick={onToggleAddKeywords}>
           <Plus className="size-3.5" />
           Add Keywords
-        </button>
+        </Button>
       </div>
     </div>
   );

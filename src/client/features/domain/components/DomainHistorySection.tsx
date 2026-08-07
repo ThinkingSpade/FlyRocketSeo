@@ -1,6 +1,7 @@
 import { Clock, History, X } from "lucide-react";
 import { Globe } from "lucide-react";
 import type { DomainHistoryItem } from "@/client/features/domain/types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   history: DomainHistoryItem[];
@@ -69,13 +70,15 @@ export function DomainHistorySection({
                   day: "numeric",
                 })}
               </span>
-              <button
+              <Button
                 type="button"
-                className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 p-1"
+                variant="ghost"
+                size="xs"
+                className="opacity-0 group-hover:opacity-100 p-1"
                 onClick={() => onRemoveHistoryItem(item.timestamp)}
               >
                 <X className="size-3" />
-              </button>
+              </Button>
             </div>
           </div>
         ))}

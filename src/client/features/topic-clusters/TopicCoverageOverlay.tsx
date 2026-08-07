@@ -6,6 +6,7 @@ import {
   isProjectGscReport,
   type TopicCoverage,
 } from "@/client/features/search-performance/projectGscInsights";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export type PlanCoverage = {
   hub: TopicCoverage;
@@ -19,9 +20,9 @@ const COVERAGE_LABELS = {
 } as const;
 
 const COVERAGE_BADGES = {
-  covered: "badge-success",
-  missing: "badge-ghost",
-  cannibalized: "badge-warning",
+  covered: "success",
+  missing: "neutral",
+  cannibalized: "warning",
 } as const;
 
 export function useTopicPlanCoverage({
@@ -68,7 +69,6 @@ export function useTopicPlanCoverage({
 export function CoverageTag({ coverage }: { coverage: TopicCoverage }) {
   return (
     <span
-      className={`badge badge-sm ${COVERAGE_BADGES[coverage.status]}`}
       title={
         coverage.pages.length > 0
           ? coverage.pages.join("\n")
@@ -77,8 +77,10 @@ export function CoverageTag({ coverage }: { coverage: TopicCoverage }) {
             "No matching landing page among the Search Console rows retrieved for the last 28 days"
       }
     >
-      {COVERAGE_LABELS[coverage.status]} · {coverage.pageCount}{" "}
-      {coverage.pageCount === 1 ? "page" : "pages"}
+      <Badge variant={COVERAGE_BADGES[coverage.status]}>
+        {COVERAGE_LABELS[coverage.status]} · {coverage.pageCount}{" "}
+        {coverage.pageCount === 1 ? "page" : "pages"}
+      </Badge>
     </span>
   );
 }

@@ -9,6 +9,7 @@ import {
 import { AuthConfigErrorCard } from "@/client/components/AuthConfigErrorCard";
 import { captureClientError } from "@/client/lib/posthog";
 import { UnauthenticatedErrorCard } from "@/client/components/UnauthenticatedErrorCard";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter();
@@ -68,14 +69,20 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
     <div className="min-w-0 flex-1 p-4 flex flex-col items-center justify-center gap-6">
       <p className="text-center text-error">{message}</p>
       <div className="flex gap-2 items-center flex-wrap">
-        <button
+        {/* The two <Link>s below stay on DaisyUI deliberately: they are
+            TanStack Router links, and Kumo's Button has no `asChild`/`render`
+            escape hatch to lend its styling to another component. Migrating
+            them means either losing client-side routing or wrapping a Link in
+            a Button, and neither is worth it for two error-page controls. */}
+        <Button
+          variant="primary"
+          size="sm"
           onClick={() => {
             void router.invalidate();
           }}
-          className="btn btn-primary btn-sm"
         >
           Try Again
-        </button>
+        </Button>
         {isRoot ? (
           <Link to="/" className="btn btn-sm">
             Home

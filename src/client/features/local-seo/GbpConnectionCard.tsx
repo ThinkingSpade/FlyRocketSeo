@@ -14,6 +14,8 @@ import {
 import { startGbpLink } from "./startGbpLink";
 import { GbpLocationPicker } from "./GbpLocationPicker";
 import { NotConfiguredCard } from "./GbpNotConfiguredCard";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Connect/manage card for GBP writing. Three states, in order of precedence:
@@ -94,14 +96,14 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
     // established yet, only the boolean gate has -- a neutral loading state
     // is the honest thing to show while the live check is still in flight.
     return (
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
             <InsightIcon icon={MapPin} tone="neutral" />
             Google Business Profile writing
           </h2>
           <div className="flex items-center gap-2 text-sm text-base-content/50">
-            <span className="loading loading-spinner loading-sm" />
+            <Loader size="sm" />
             Checking…
           </div>
         </div>
@@ -113,8 +115,8 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={MapPin} tone="neutral" />
           Google Business Profile writing
@@ -122,7 +124,7 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
 
         {connectionQuery.isLoading ? (
           <div className="flex items-center gap-2 text-sm text-base-content/50">
-            <span className="loading loading-spinner loading-sm" />
+            <Loader size="sm" />
             Checking…
           </div>
         ) : connected && !picking ? (
@@ -180,14 +182,16 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
               Connect Google Business Profile to schedule posts and push fixes
               from the audit above straight to Google.
             </p>
-            <button
+            <Button
               type="button"
-              className="btn btn-outline btn-sm gap-1.5 w-fit"
+              variant="outline"
+              size="sm"
+              className="w-fit"
               onClick={() => void startGbpLink(window.location.href)}
             >
               <InsightIcon icon={MapPin} tone="neutral" />
               Connect Google Business Profile
-            </button>
+            </Button>
           </div>
         )}
       </div>
@@ -219,21 +223,19 @@ function ConnectedState({
         ) : null}
       </div>
       <div className="flex items-center gap-1">
-        <button
-          type="button"
-          className="btn btn-ghost btn-sm"
-          onClick={onChange}
-        >
+        <Button type="button" variant="ghost" size="sm" onClick={onChange}>
           Change location
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm text-error hover:bg-error/10"
+          variant="ghost"
+          size="sm"
+          className="text-error hover:bg-error/10"
           onClick={onDisconnect}
           disabled={disconnecting}
         >
           Disconnect
-        </button>
+        </Button>
       </div>
     </div>
   );

@@ -15,6 +15,7 @@ import type {
   PromptExplorerModelResult,
   PromptExplorerResult,
 } from "@/types/schemas/ai-search";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 type Props = {
   result: PromptExplorerResult;
@@ -109,9 +110,7 @@ function ModelResultCard({
                   <ExternalLink className="mt-1 size-3 shrink-0" />
                 </a>
                 {citation.matchedBrand && highlightBrand ? (
-                  <span className="badge badge-primary badge-xs">
-                    {highlightBrand}
-                  </span>
+                  <Badge variant="primary">{highlightBrand}</Badge>
                 ) : null}
               </li>
             ))}
@@ -166,9 +165,7 @@ function ModelHeader({
         {modelName ? (
           <code className="text-xs text-base-content/50">{modelName}</code>
         ) : null}
-        {status === "error" ? (
-          <span className="badge badge-error badge-sm">Error</span>
-        ) : null}
+        {status === "error" ? <Badge variant="error">Error</Badge> : null}
         <BrandMentionBadge
           mentioned={brandMentioned}
           highlightBrand={highlightBrand}

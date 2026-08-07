@@ -1,5 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { ShieldAlert, Wrench } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 export function SamSetupGate({
   errorMessage,
@@ -39,13 +41,9 @@ export function SamSetupGate({
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
-          <button
-            className="btn btn-primary"
-            onClick={onRetry}
-            disabled={isRefetching}
-          >
+          <Button variant="primary" onClick={onRetry} disabled={isRefetching}>
             {isRefetching ? "Confirming..." : "Confirm API Key"}
-          </button>
+          </Button>
           <a
             className="btn"
             href="https://openrouter.ai/settings/keys"
@@ -57,10 +55,10 @@ export function SamSetupGate({
         </div>
 
         {errorMessage ? (
-          <div className="alert alert-warning">
+          <Banner variant="alert">
             <ShieldAlert className="size-4 shrink-0" />
             <span>{errorMessage}</span>
-          </div>
+          </Banner>
         ) : null}
       </div>
     </section>

@@ -9,6 +9,7 @@ import {
   parseBrandTerms,
   type QueryTotals,
 } from "./brandedSplit";
+import { Input } from "@cloudflare/kumo/components/input";
 
 function formatCount(value: number): string {
   return value.toLocaleString();
@@ -53,8 +54,8 @@ export function BrandedSplitCard({
   const share = split.brandedClickShare;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
             <InsightIcon icon={Tags} tone="primary" />
@@ -62,9 +63,11 @@ export function BrandedSplitCard({
           </h2>
           <label className="flex items-center gap-2 text-xs text-base-content/60">
             Brand terms
-            <input
+            <Input
+              passwordManagerIgnore
               type="text"
-              className="input input-bordered input-xs w-56"
+              size="xs"
+              className="w-56"
               placeholder="brand, brand misspelling"
               value={termsInput}
               onChange={(event) => {

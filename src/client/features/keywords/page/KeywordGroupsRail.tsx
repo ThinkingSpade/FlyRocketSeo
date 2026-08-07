@@ -6,6 +6,7 @@ import {
   type KeywordGroupSort,
 } from "@/client/features/keywords/keywordGroups";
 import { formatCompactNumber } from "@/client/features/keywords/utils";
+import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 const COLLAPSED_GROUP_LIMIT = 30;
 
@@ -38,20 +39,15 @@ export function KeywordGroupsRail({
   return (
     <div className="hidden lg:flex w-44 shrink-0 flex-col overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="shrink-0 border-b border-base-300 px-3 py-2">
-        <div className="join w-full">
-          <button
-            className={`btn btn-xs join-item flex-1 ${sort === "count" ? "btn-active" : "btn-ghost"}`}
-            onClick={() => setSort("count")}
-          >
-            By number
-          </button>
-          <button
-            className={`btn btn-xs join-item flex-1 ${sort === "volume" ? "btn-active" : "btn-ghost"}`}
-            onClick={() => setSort("volume")}
-          >
-            By volume
-          </button>
-        </div>
+        <SegmentedToggle
+          showLabels
+          items={[
+            { value: "count", label: "By number" },
+            { value: "volume", label: "By volume" },
+          ]}
+          value={sort}
+          onChange={setSort}
+        />
       </div>
       <div className="min-h-0 flex-1 overflow-y-auto py-1">
         <button

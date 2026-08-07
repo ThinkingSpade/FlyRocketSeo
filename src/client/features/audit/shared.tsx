@@ -1,4 +1,5 @@
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function extractPathname(url: string): string {
   try {
@@ -36,36 +37,39 @@ export function formatStartedAt(dateStr: string): string {
 export function StatusBadge({ status }: { status: string }) {
   if (status === "running") {
     return (
-      <span className="badge badge-info badge-sm gap-1">
+      <Badge variant="info" className="gap-1">
         <Loader2 className="size-3 animate-spin" /> Running
-      </span>
+      </Badge>
     );
   }
 
   if (status === "completed") {
     return (
-      <span className="badge badge-outline badge-sm gap-1 text-success/80 border-success/30 bg-success/5">
+      <Badge
+        variant="outline"
+        className="gap-1 text-success/80 border-success/30 bg-success/5"
+      >
         <CheckCircle className="size-3" /> Done
-      </span>
+      </Badge>
     );
   }
 
   return (
-    <span className="badge badge-error badge-sm gap-1">
+    <Badge variant="error" className="gap-1">
       <AlertCircle className="size-3" /> Failed
-    </span>
+    </Badge>
   );
 }
 
 export function HttpStatusBadge({ code }: { code: number | null }) {
-  if (!code) return <span className="badge badge-ghost badge-sm">-</span>;
+  if (!code) return <Badge variant="neutral">-</Badge>;
   if (code >= 200 && code < 300) {
-    return <span className="badge badge-success badge-sm">{code}</span>;
+    return <Badge variant="success">{code}</Badge>;
   }
   if (code >= 300 && code < 400) {
-    return <span className="badge badge-warning badge-sm">{code}</span>;
+    return <Badge variant="warning">{code}</Badge>;
   }
-  return <span className="badge badge-error badge-sm">{code}</span>;
+  return <Badge variant="error">{code}</Badge>;
 }
 
 export function LighthouseScoreBadge({ score }: { score: number | null }) {
@@ -87,8 +91,8 @@ export function StatCard({
   className?: string;
 }) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body p-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col p-4 gap-2 text-sm">
         <p className="text-xs uppercase tracking-wide text-base-content/60">
           {label}
         </p>

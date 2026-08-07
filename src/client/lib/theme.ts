@@ -55,9 +55,21 @@ function applyThemePreference(themePreference: ThemePreference) {
     return;
   }
 
+  const themeName = resolveThemeName(themePreference);
+  document.documentElement.setAttribute("data-theme", themeName);
+  // Kumo's tokens resolve through `light-dark()` off `color-scheme`, which both
+  // DaisyUI themes here declare — so most of Kumo follows this toggle with no
+  // wiring at all. Four of its rules are the exception, and they are scoped to
+  // a `[data-mode="dark"]` ancestor instead: the skeleton shimmer, the
+  // date-picker calendar, and two code-block rules. Those are CSS that swaps a
+  // whole gradient or palette, which `light-dark()` cannot express.
+  //
+  // Without this attribute they silently keep their LIGHT values in dark mode —
+  // a black-on-dark shimmer, i.e. invisible. Setting it alongside `data-theme`
+  // is the whole fix, and it has to happen here so the two can never disagree.
   document.documentElement.setAttribute(
-    "data-theme",
-    resolveThemeName(themePreference),
+    "data-mode",
+    themeName === DARK_THEME_NAME ? "dark" : "light",
   );
 }
 
@@ -127,7 +139,9 @@ export const themePreferenceInitScript = `(() => {
     else if (p === "dark") t = ${JSON.stringify(DARK_THEME_NAME)};
     else t = window.matchMedia("(prefers-color-scheme: dark)").matches ? ${JSON.stringify(DARK_THEME_NAME)} : ${JSON.stringify(LIGHT_THEME_NAME)};
     document.documentElement.setAttribute("data-theme", t);
+    document.documentElement.setAttribute("data-mode", t === ${JSON.stringify(DARK_THEME_NAME)} ? "dark" : "light");
   } catch {
     document.documentElement.setAttribute("data-theme", ${JSON.stringify(LIGHT_THEME_NAME)});
+    document.documentElement.setAttribute("data-mode", "light");
   }
 })();`;

@@ -88,6 +88,9 @@ import type {
   SortOrder,
 } from "@/client/features/domain/types";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 type Props = {
   projectId: string;
@@ -716,9 +719,11 @@ export function DomainOverviewPage({
   const tabControls = routeState.domain ? (
     <div className="flex flex-col gap-2">
       <div>
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+          variant="ghost"
+          size="sm"
+          className="px-0 text-base-content/70 hover:bg-transparent"
           onClick={() => {
             searchTabs.setActiveTab(null);
             onShowRecentSearches();
@@ -726,7 +731,7 @@ export function DomainOverviewPage({
         >
           <ArrowLeft className="size-4" />
           Recent searches
-        </button>
+        </Button>
       </div>
       <SearchTabStrip
         projectId={projectId}
@@ -881,36 +886,29 @@ export function DomainOverviewPage({
           ) : null}
 
           {!state.overview.hasData ? (
-            <div className="alert alert-info">
+            <Banner variant="default">
               <span>
                 Not enough data for this domain yet. Try another domain or
                 include subdomains.
               </span>
-            </div>
+            </Banner>
           ) : null}
 
           <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
-              <div role="tablist" className="tabs tabs-border w-fit">
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={routeState.tab === "keywords"}
-                  className={`tab ${routeState.tab === "keywords" ? "tab-active" : ""}`}
-                  onClick={() => state.handleTabChange("keywords")}
-                >
-                  Top Keywords
-                </button>
-                <button
-                  type="button"
-                  role="tab"
-                  aria-selected={routeState.tab === "pages"}
-                  className={`tab ${routeState.tab === "pages" ? "tab-active" : ""}`}
-                  onClick={() => state.handleTabChange("pages")}
-                >
-                  Top Pages
-                </button>
-              </div>
+              <Tabs
+                variant="underline"
+                value={routeState.tab}
+                onValueChange={(next) => {
+                  if (next === "keywords" || next === "pages") {
+                    state.handleTabChange(next);
+                  }
+                }}
+                tabs={[
+                  { value: "keywords", label: "Top Keywords" },
+                  { value: "pages", label: "Top Pages" },
+                ]}
+              />
             </div>
 
             {routeState.tab === "keywords" ? (

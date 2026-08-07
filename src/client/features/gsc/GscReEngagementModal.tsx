@@ -8,6 +8,7 @@ import { captureClientEvent } from "@/client/lib/posthog";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getGscGrantStatus } from "@/serverFunctions/gsc";
 import { dismissGscNudge } from "@/serverFunctions/onboarding";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * One-time re-engagement prompt nudging users who finished onboarding *before*
@@ -112,9 +113,9 @@ export function GscReEngagementModal({
       </div>
 
       <div className="mt-2 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-        <button type="button" className="btn btn-ghost" onClick={handleDismiss}>
+        <Button type="button" variant="ghost" onClick={handleDismiss}>
           Maybe later
-        </button>
+        </Button>
         <button
           type="button"
           onClick={handleConnect}

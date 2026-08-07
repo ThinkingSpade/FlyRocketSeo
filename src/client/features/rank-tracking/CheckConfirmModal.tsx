@@ -7,6 +7,7 @@ import {
   KEYWORDS_PER_BATCH,
   SECONDS_PER_BATCH,
 } from "@/shared/rank-tracking";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function CheckConfirmModal({
   keywordCount,
@@ -72,9 +73,14 @@ export function CheckConfirmModal({
         </div>
       </button>
 
-      <button className="btn btn-ghost btn-sm self-center" onClick={onCancel}>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="self-center"
+        onClick={onCancel}
+      >
         Cancel
-      </button>
+      </Button>
     </Modal>
   );
 }

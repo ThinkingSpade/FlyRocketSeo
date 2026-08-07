@@ -29,6 +29,7 @@ import {
   locationCodesNeedingLookup,
   resolveRankTrackingLocationLabels,
 } from "./rankTrackingLocationLabel";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type ConfigSummary = Awaited<
   ReturnType<typeof getRankTrackingConfigSummaries>
@@ -125,17 +126,14 @@ export function RankTrackingDomainList({
   });
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-0 p-0">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-0 p-0 text-sm">
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <h2 className="text-sm font-semibold">Tracked Domains</h2>
-          <button
-            className="btn btn-primary btn-sm gap-1"
-            onClick={onAddDomain}
-          >
+          <Button variant="primary" size="sm" onClick={onAddDomain}>
             <Plus className="size-3.5" />
             Add Domain
-          </button>
+          </Button>
         </div>
         {(allSummaries.length >= FILTER_BAR_MIN_DOMAINS ||
           activeFilterCount > 0) && (
@@ -173,13 +171,14 @@ export function RankTrackingDomainList({
                   Try clearing search or adjusting filters.
                 </p>
               </div>
-              <button
-                className="btn btn-ghost btn-xs"
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setFilters(EMPTY_DOMAIN_LIST_FILTERS)}
                 disabled={activeFilterCount === 0}
               >
                 Clear filters
-              </button>
+              </Button>
             </div>
           ) : (
             filteredSummaries.map((summary) => (
@@ -211,20 +210,22 @@ export function RankTrackingDomainList({
             list. Ranking history is preserved.
           </p>
           <div className="flex justify-end gap-2">
-            <button
-              className="btn btn-ghost btn-sm"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setArchiveTarget(null)}
             >
               Cancel
-            </button>
-            <button
-              className="btn btn-error btn-sm gap-1"
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() => archiveMutation.mutate(archiveTarget.id)}
               disabled={archiveMutation.isPending}
             >
               <Archive className="size-3.5" />
               Archive
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
@@ -281,9 +282,11 @@ function DomainRow({
           </div>
         )}
       </div>
-      <button
+      <Button
         type="button"
-        className="btn btn-ghost btn-xs text-base-content/40 hover:text-error relative z-10"
+        variant="ghost"
+        size="xs"
+        className="text-base-content/40 hover:text-error relative z-10"
         title="Archive domain"
         onClick={(e) => {
           e.stopPropagation();
@@ -292,7 +295,7 @@ function DomainRow({
         }}
       >
         <Archive className="size-4" />
-      </button>
+      </Button>
       <ChevronRight className="size-4 shrink-0 text-base-content/40 pointer-events-none" />
     </div>
   );

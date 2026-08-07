@@ -6,6 +6,8 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 function formatCount(value: number | null): string {
   if (value == null) return "—";
@@ -33,8 +35,8 @@ export function DomainCompetitorsCard({
   const rows = (competitorsQuery.data?.rows ?? []).slice(0, 5);
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-xs uppercase tracking-wide text-base-content/60">
             Top organic competitors
@@ -48,16 +50,18 @@ export function DomainCompetitorsCard({
           </Link>
         </div>
         {!run.authorized ? (
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm self-start"
+            variant="primary"
+            size="sm"
+            className="self-start"
             onClick={() => run.authorize()}
           >
             Load competitors
-          </button>
+          </Button>
         ) : competitorsQuery.isLoading ? (
           <div className="flex justify-center py-4">
-            <span className="loading loading-dots loading-sm" />
+            <Loader size="sm" />
           </div>
         ) : competitorsQuery.isError ? (
           <InlineQueryError

@@ -25,6 +25,9 @@ import {
 import { useBrandLookupFilters } from "@/client/features/ai-search/useBrandLookupFilters";
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const DEFAULT_PAGES_SORT: SortingState = [{ id: "capturedVolume", desc: true }];
 const DEFAULT_QUERIES_SORT: SortingState = [
@@ -149,26 +152,17 @@ export function CitationTabsCard({
   return (
     <section className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
-        <div role="tablist" className="tabs tabs-border w-fit">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={queriesActive}
-            className={`tab ${queriesActive ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("queries")}
-          >
-            Queries
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pagesActive}
-            className={`tab ${pagesActive ? "tab-active" : ""}`}
-            onClick={() => setActiveTab("pages")}
-          >
-            Cited sources
-          </button>
-        </div>
+        <Tabs
+          variant="underline"
+          value={queriesActive ? "queries" : "pages"}
+          onValueChange={(next) => {
+            if (next === "queries" || next === "pages") setActiveTab(next);
+          }}
+          tabs={[
+            { value: "queries", label: "Queries" },
+            { value: "pages", label: "Cited sources" },
+          ]}
+        />
 
         <div className="dropdown dropdown-end">
           <div
@@ -209,20 +203,22 @@ export function CitationTabsCard({
       </div>
 
       <div className="flex items-center gap-2 border-b border-base-300 px-4 py-2">
-        <button
+        <Button
           type="button"
-          className={`btn btn-ghost btn-sm gap-1.5 ${filters.showFilters ? "btn-active" : ""}`}
+          size="sm"
+          variant={filters.showFilters ? "secondary" : "ghost"}
+          aria-pressed={filters.showFilters}
           onClick={() => filters.setShowFilters((current) => !current)}
           title="Toggle table filters"
         >
           <SlidersHorizontal className="size-3.5" />
           Filters
           {currentFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {currentFilterCount}
-            </span>
+            </Badge>
           ) : null}
-        </button>
+        </Button>
       </div>
 
       <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-2 text-xs text-base-content/60">

@@ -14,6 +14,7 @@ import {
   useProjectProfile,
   useSaveProjectProfile,
 } from "./useProjectProfile";
+import { Button } from "@cloudflare/kumo/components/button";
 
 /**
  * The editor for what a project's business actually is.
@@ -72,8 +73,8 @@ export function ProjectProfileCard({ projectId }: Props) {
   ) => setDraft((current) => ({ ...current, [key]: value }));
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold">
@@ -86,21 +87,24 @@ export function ProjectProfileCard({ projectId }: Props) {
               API.
             </p>
           </div>
-          <button
+          <Button
             type="button"
             aria-label="Close"
-            className="btn btn-ghost btn-xs btn-square text-base-content/40"
+            variant="ghost"
+            size="xs"
+            shape="square"
+            className="text-base-content/40"
             onClick={() => setOpen(false)}
           >
             <X className="size-3.5" />
-          </button>
+          </Button>
         </div>
 
         {aiAvailable ? (
           <div className="flex flex-wrap items-center gap-2">
-            <button
+            <Button
               type="button"
-              className="btn btn-sm gap-1.5"
+              size="sm"
               disabled={drafter.isPending}
               onClick={() => {
                 drafter.mutate(undefined, {
@@ -115,7 +119,7 @@ export function ProjectProfileCard({ projectId }: Props) {
               {drafter.isPending
                 ? "Reading the site…"
                 : "Draft this from their site"}
-            </button>
+            </Button>
             <span className="text-sm text-base-content/60">
               {drafter.isError
                 ? getStandardErrorMessage(
@@ -165,7 +169,7 @@ export function ProjectProfileCard({ projectId }: Props) {
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium">Where do they sell?</span>
           <select
-            className="select select-bordered w-full max-w-sm"
+            className="app-select w-full max-w-sm"
             value={draft.serviceAreaKind}
             onChange={(event) => {
               const next = event.target.value;
@@ -184,23 +188,25 @@ export function ProjectProfileCard({ projectId }: Props) {
         </label>
 
         <div className="flex items-center gap-2">
-          <button
+          <Button
             type="button"
-            className="btn btn-primary btn-sm"
+            variant="primary"
+            size="sm"
             disabled={save.isPending}
             onClick={() => {
               save.mutate(draft, { onSuccess: () => setOpen(false) });
             }}
           >
             {save.isPending ? "Saving…" : "Save"}
-          </button>
-          <button
+          </Button>
+          <Button
             type="button"
-            className="btn btn-ghost btn-sm"
+            variant="ghost"
+            size="sm"
             onClick={() => setOpen(false)}
           >
             Cancel
-          </button>
+          </Button>
           {save.isError ? (
             <span className="text-sm text-error">
               Couldn&apos;t save. Try again.
@@ -298,9 +304,9 @@ function ProfileSummary({
             </span>
           </p>
         </div>
-        <button type="button" className="btn btn-sm" onClick={onOpen}>
+        <Button type="button" size="sm" onClick={onOpen}>
           Describe this client
-        </button>
+        </Button>
       </div>
     );
   }
@@ -322,9 +328,9 @@ function ProfileSummary({
           </span>
         </p>
       </div>
-      <button type="button" className="btn btn-ghost btn-sm" onClick={onOpen}>
+      <Button type="button" variant="ghost" size="sm" onClick={onOpen}>
         Edit
-      </button>
+      </Button>
     </div>
   );
 }

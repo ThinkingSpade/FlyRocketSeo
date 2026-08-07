@@ -3,6 +3,7 @@ import { Clock, Globe, History, Search, X } from "lucide-react";
 import { DEFAULT_LOCATION_CODE } from "@/client/features/keywords/locations";
 import { LOCATIONS } from "@/client/features/keywords/utils";
 import type { KeywordResearchControllerState } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = {
   controller: KeywordResearchControllerState;
@@ -114,13 +115,15 @@ function SearchHistoryState({
                       day: "numeric",
                     })}
                   </span>
-                  <button
+                  <Button
                     type="button"
-                    className="btn btn-ghost btn-xs opacity-0 group-hover:opacity-100 p-1"
+                    variant="ghost"
+                    size="xs"
+                    className="opacity-0 group-hover:opacity-100 p-1"
                     onClick={() => removeHistoryItem(item.timestamp)}
                   >
                     <X className="size-3" />
-                  </button>
+                  </Button>
                 </div>
               </div>
             ))}

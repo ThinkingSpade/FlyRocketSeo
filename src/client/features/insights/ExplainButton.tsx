@@ -3,6 +3,8 @@ import { Sparkles } from "lucide-react";
 import { explainFindings } from "@/serverFunctions/insights";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { Verdict } from "./types";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 /**
  * Turns the verdict above it into prose, on demand.
@@ -54,19 +56,21 @@ export function ExplainButton({
           </p>
         </div>
       ) : (
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost btn-xs w-fit gap-1.5"
+          variant="ghost"
+          size="xs"
+          className="w-fit"
           disabled={explain.isPending}
           onClick={() => explain.mutate()}
         >
           {explain.isPending ? (
-            <span className="loading loading-spinner loading-xs" />
+            <Loader size="sm" />
           ) : (
             <Sparkles className="size-3.5 text-base-content/45" />
           )}
           Explain this in plain English
-        </button>
+        </Button>
       )}
 
       {explain.error ? (

@@ -20,6 +20,7 @@ import {
 import { computeKeywordTotals } from "@/client/features/keywords/keywordGroups";
 import { formatCompactNumber } from "@/client/features/keywords/utils";
 import { KeywordGroupsRail } from "./KeywordGroupsRail";
+import { FitRefinementButton } from "./FitRefinementButton";
 import { copyKeywordsAsMarkdown } from "@/client/features/keywords/state/keywordsMarkdown";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -41,9 +42,9 @@ import { TrackKeywordsModal } from "@/client/features/rank-tracking/TrackKeyword
 import { getLanguageCode } from "@/client/features/keywords/locations";
 import { geoMetricSuffix } from "@/client/features/geo/geoMetricLabel";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
-import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
-import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords/hooks/useKeywordResearchDifficultyBackfill";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -188,29 +189,31 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
   return (
     <div className="flex-1 flex flex-col min-w-0 border border-base-300 rounded-xl bg-base-100 overflow-hidden">
       <div className="shrink-0 flex items-center gap-2 px-4 py-2 border-b border-base-300">
-        <button
-          className={`btn btn-ghost btn-sm gap-1.5 ${showFilters ? "btn-active" : ""}`}
+        <Button
+          size="sm"
+          variant={showFilters ? "secondary" : "ghost"}
+          aria-pressed={showFilters}
           onClick={() => controller.setShowFilters((current) => !current)}
           title="Toggle table filters"
         >
           <SlidersHorizontal className="size-3.5" />
           Filters
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}
-            </span>
+            </Badge>
           ) : null}
-        </button>
+        </Button>
         <span className="text-sm text-base-content/60">
           {keywordCountLabel}
         </span>
         <FitRefinementButton controller={controller} />
         {controller.wrongFitCount > 0 ? (
-          <button
+          <Button
             type="button"
-            className={`btn btn-ghost btn-sm gap-1.5 ${
-              controller.hideWrongFit ? "btn-active" : ""
-            }`}
+            size="sm"
+            variant={controller.hideWrongFit ? "secondary" : "ghost"}
+            aria-pressed={controller.hideWrongFit}
             onClick={() => controller.setHideWrongFit((current) => !current)}
             title={
               controller.hideWrongFit
@@ -223,7 +226,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
             <span className="text-base-content/50 tabular-nums">
               {controller.wrongFitCount}
             </span>
-          </button>
+          </Button>
         ) : null}
         {filteredRows.length > 0 ? (
           <span
@@ -375,19 +378,20 @@ function DesktopFilters({
         <div className="flex items-center gap-2">
           <p className="text-sm font-semibold">Refine table results</p>
           {activeFilterCount > 0 ? (
-            <span className="badge badge-xs badge-primary border-0 text-primary-content">
+            <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount} active
-            </span>
+            </Badge>
           ) : null}
         </div>
-        <button
-          className="btn btn-xs btn-ghost gap-1"
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={controller.resetFilters}
           disabled={activeFilterCount === 0}
         >
           <RotateCcw className="size-3" />
           Clear all
-        </button>
+        </Button>
       </div>
 
       <DesktopFilterFields form={filtersForm} />
@@ -405,35 +409,3 @@ function DesktopFilters({
  * cannot reach, like "how to start a vending machine business" for an
  * operator whose profile only rules out selling.
  */
-function FitRefinementButton({
-  controller,
-}: {
-  controller: KeywordResearchControllerState;
-}) {
-  const aiAvailable = useAiExplainAvailable();
-  const { profile } = useProjectProfile(keywordsRoute.useParams().projectId);
-  const { fitRefinement } = controller;
-  if (!aiAvailable || profile.offer.trim() === "") return null;
-
-  const result = fitRefinement.data;
-  return (
-    <button
-      type="button"
-      className="btn btn-ghost btn-sm gap-1.5"
-      disabled={fitRefinement.isPending || controller.rows.length === 0}
-      onClick={controller.runFitRefinement}
-      title={
-        result
-          ? `${result.classified} newly checked${result.skipped > 0 ? `, ${result.skipped} over the per-run cap` : ""}`
-          : "Judge every keyword against this client's profile, not just the exclusion rules"
-      }
-    >
-      <Sparkles className="size-3.5 text-base-content/60" />
-      {fitRefinement.isPending
-        ? "Checking fit…"
-        : result
-          ? "Fit checked"
-          : "Check fit with AI"}
-    </button>
-  );
-}

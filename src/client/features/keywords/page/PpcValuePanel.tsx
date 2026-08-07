@@ -6,6 +6,8 @@ import {
   totalMonthlyCost,
   type PpcVerdict,
 } from "@/client/features/keywords/ppcValue";
+import type { ComponentProps } from "react";
+import { Badge } from "@cloudflare/kumo/components/badge";
 
 /**
  * The paid-search read on the current result set: what this traffic would cost
@@ -23,10 +25,13 @@ const VERDICT_LABEL: Record<PpcVerdict, string> = {
   balanced: "Either",
 };
 
-const VERDICT_CLASS: Record<PpcVerdict, string> = {
-  "rank-it": "badge-success",
-  "buy-it": "badge-warning",
-  balanced: "badge-ghost",
+const VERDICT_CLASS: Record<
+  PpcVerdict,
+  ComponentProps<typeof Badge>["variant"]
+> = {
+  "rank-it": "success",
+  "buy-it": "warning",
+  balanced: "neutral",
 };
 
 const VERDICT_HINT: Record<PpcVerdict, string> = {
@@ -51,8 +56,8 @@ export function PpcValuePanel({ rows }: { rows: KeywordResearchRow[] }) {
   const rankIt = keywords.filter((k) => k.verdict === "rank-it").length;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <InsightIcon icon={CircleDollarSign} />
           Buy vs rank
@@ -106,11 +111,12 @@ export function PpcValuePanel({ rows }: { rows: KeywordResearchRow[] }) {
                     {usd(keyword.monthlyCostUsd)}
                   </td>
                   <td>
-                    <span
-                      className={`badge badge-sm ${VERDICT_CLASS[keyword.verdict]}`}
-                      title={VERDICT_HINT[keyword.verdict]}
-                    >
-                      {VERDICT_LABEL[keyword.verdict]}
+                    {/* Wrapper carries the tooltip — Kumo's Badge takes no
+                        HTML attributes. */}
+                    <span title={VERDICT_HINT[keyword.verdict]}>
+                      <Badge variant={VERDICT_CLASS[keyword.verdict]}>
+                        {VERDICT_LABEL[keyword.verdict]}
+                      </Badge>
                     </span>
                   </td>
                 </tr>

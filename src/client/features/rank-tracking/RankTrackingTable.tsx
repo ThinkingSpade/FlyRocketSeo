@@ -26,6 +26,7 @@ import {
   type KeywordTrendTarget,
 } from "./KeywordTrendModal";
 import type { SelectionAnchor } from "@/client/components/table/tableSelection";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export function RankTrackingTable({
   totalCount,
@@ -209,14 +210,16 @@ export function RankTrackingTable({
             preserved but won't appear in the table.
           </p>
           <div className="flex justify-end gap-2">
-            <button
-              className="btn btn-ghost btn-sm"
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => setShowConfirm(false)}
             >
               Cancel
-            </button>
-            <button
-              className="btn btn-error btn-sm gap-1"
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
               onClick={() =>
                 removeMutation.mutate(selectedRows.map((r) => r.id))
               }
@@ -227,7 +230,7 @@ export function RankTrackingTable({
               )}
               Remove {selectedCount} keyword
               {selectedCount !== 1 ? "s" : ""}
-            </button>
+            </Button>
           </div>
         </Modal>
       )}
