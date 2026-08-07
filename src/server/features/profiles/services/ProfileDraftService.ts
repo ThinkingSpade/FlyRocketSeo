@@ -65,12 +65,14 @@ async function isDraftingAvailable(): Promise<boolean> {
 
 function requireKey(available: boolean): void {
   if (available) return;
-  // Same env var and PAYMENT_REQUIRED code ExplainService uses for its own
-  // missing-key path -- the shared error-code union has no BAD_REQUEST. The
-  // client hides the button whenever the runtime flag reads false, so this
-  // only fires if the key is removed between page load and click.
+  // Its OWN code, not PAYMENT_REQUIRED. That code renders as "An active
+  // hosted subscription is required before you can use FlyRocketSEO", which
+  // pointed a user with a configuration gap at a billing page that would not
+  // have fixed it. The client hides the button whenever the runtime flag
+  // reads false, so this only fires if the key is removed between page load
+  // and click.
   throw new AppError(
-    "PAYMENT_REQUIRED",
+    "MODEL_NOT_CONFIGURED",
     "Drafting a profile needs an OPENROUTER_API_KEY. Add it to your deployment, or fill the fields in yourself — everything else works without it.",
   );
 }
@@ -92,8 +94,8 @@ function parseJsonResponse(text: string): unknown {
     return JSON.parse(cleaned);
   } catch {
     throw new AppError(
-      "INTERNAL_ERROR",
-      "The model returned something we couldn't read. Try again, or fill the fields in yourself.",
+      "PROFILE_DRAFT_UNREADABLE",
+      "The model returned something we couldn't read.",
     );
   }
 }
@@ -107,8 +109,8 @@ async function draftFromSite(input: {
   const pages = await crawlSiteText(input.domain);
   if (pages.length === 0) {
     throw new AppError(
-      "INTERNAL_ERROR",
-      `We couldn't read ${input.domain} — it may block automated requests. Fill the fields in yourself and everything downstream still works.`,
+      "PROFILE_SITE_UNREADABLE",
+      `We couldn't read ${input.domain} — it may block automated requests.`,
     );
   }
 
@@ -127,8 +129,8 @@ async function draftFromSite(input: {
   const parsed = draftSchema.safeParse(parseJsonResponse(text));
   if (!parsed.success) {
     throw new AppError(
-      "INTERNAL_ERROR",
-      "The model's answer didn't match the expected shape. Try again, or fill the fields in yourself.",
+      "PROFILE_DRAFT_UNREADABLE",
+      "The model's answer didn't match the expected shape.",
     );
   }
   return parsed.data;
