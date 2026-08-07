@@ -187,6 +187,7 @@ export function PageExplorerPage({
                 Page URL
               </span>
               <Input
+                passwordManagerIgnore
                 type="text"
                 size="sm"
                 className="w-full"

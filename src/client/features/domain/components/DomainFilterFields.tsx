@@ -24,6 +24,7 @@ export function FilterTextInput({
     <label className="form-control gap-1.5">
       <FilterFieldLabel>{label}</FilterFieldLabel>
       <Input
+        passwordManagerIgnore
         size="sm"
         className="w-full bg-base-100"
         placeholder={placeholder}
@@ -47,6 +48,7 @@ export function FilterNumberInput({
 }) {
   return (
     <Input
+      passwordManagerIgnore
       size="xs"
       className="bg-base-100"
       type="text"

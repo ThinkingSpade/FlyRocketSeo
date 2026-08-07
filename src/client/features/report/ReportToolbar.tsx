@@ -35,6 +35,7 @@ export function ReportToolbar({
             Prepared by
           </span>
           <Input
+            passwordManagerIgnore
             size="sm"
             className="w-40"
             value={preparedBy}
@@ -47,6 +48,7 @@ export function ReportToolbar({
             Agency
           </span>
           <Input
+            passwordManagerIgnore
             size="sm"
             className="w-40"
             value={agency}

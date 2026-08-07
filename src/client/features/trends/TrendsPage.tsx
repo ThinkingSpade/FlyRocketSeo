@@ -422,6 +422,7 @@ export function TrendsPage({
                   Keywords (comma-separated, up to {MAX_TRENDS_KEYWORDS})
                 </span>
                 <Input
+                  passwordManagerIgnore
                   type="text"
                   size="sm"
                   className="w-full"

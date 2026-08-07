@@ -83,6 +83,7 @@ export function TeamPage() {
             }}
           >
             <Input
+              passwordManagerIgnore
               type="email"
               className="min-w-0 flex-1"
               placeholder="teammate@example.com"
@@ -111,6 +112,7 @@ export function TeamPage() {
             <div className="rounded-lg border border-base-300 bg-base-200/40 p-3">
               <div className="flex items-start gap-2">
                 <Input
+                  passwordManagerIgnore
                   size="sm"
                   className="min-w-0 flex-1 font-mono text-xs"
                   value={createdInvite.inviteUrl}

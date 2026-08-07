@@ -188,6 +188,7 @@ export function LocalSeoPage({
                 Business name (add a city for precision)
               </span>
               <Input
+                passwordManagerIgnore
                 type="text"
                 size="sm"
                 className="w-full"

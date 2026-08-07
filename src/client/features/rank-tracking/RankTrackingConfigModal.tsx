@@ -266,6 +266,7 @@ export function RankTrackingConfigModal({
             <span className="label-text font-medium">Target Domain</span>
           </label>
           <Input
+            passwordManagerIgnore
             type="text"
             placeholder="example.com"
             className="w-full"

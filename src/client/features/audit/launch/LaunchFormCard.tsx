@@ -108,6 +108,7 @@ function LaunchOptions({
         <launchForm.Field name="maxPagesInput">
           {(field) => (
             <Input
+              passwordManagerIgnore
               type="number"
               min={MIN_PAGES}
               max={maxPagesLimit}

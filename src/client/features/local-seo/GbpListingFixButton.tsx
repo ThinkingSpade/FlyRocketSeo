@@ -236,6 +236,7 @@ function CategoryFixForm({
   return (
     <div className="mt-1.5 space-y-1.5">
       <Input
+        passwordManagerIgnore
         type="text"
         size="xs"
         className="w-full"

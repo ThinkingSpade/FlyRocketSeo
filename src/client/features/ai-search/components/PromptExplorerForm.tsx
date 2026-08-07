@@ -135,6 +135,7 @@ export function PromptExplorerForm({
               Highlight brand (optional)
             </label>
             <Input
+              passwordManagerIgnore
               id="prompt-explorer-brand"
               type="text"
               className="w-full"

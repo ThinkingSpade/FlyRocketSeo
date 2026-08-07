@@ -299,6 +299,7 @@ export function TopicClustersPage({
                   Seed topic
                 </span>
                 <Input
+                  passwordManagerIgnore
                   type="text"
                   size="sm"
                   className="w-full"

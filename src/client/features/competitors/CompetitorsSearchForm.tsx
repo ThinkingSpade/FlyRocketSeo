@@ -31,6 +31,7 @@ export function CompetitorsSearchForm({
       <label className="form-control w-full sm:max-w-xs">
         <span className="label-text pb-1 text-xs font-medium">Your domain</span>
         <Input
+          passwordManagerIgnore
           type="text"
           size="sm"
           className="w-full"
@@ -45,6 +46,7 @@ export function CompetitorsSearchForm({
             Competitor domain
           </span>
           <Input
+            passwordManagerIgnore
             type="text"
             size="sm"
             className="w-full"

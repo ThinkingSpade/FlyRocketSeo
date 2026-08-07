@@ -271,6 +271,7 @@ function CompactRangeInput({
     <form.Field name={name}>
       {(field) => (
         <Input
+          passwordManagerIgnore
           size="xs"
           className="bg-base-100"
           placeholder={placeholder}

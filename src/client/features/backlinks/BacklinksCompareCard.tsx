@@ -87,6 +87,7 @@ function CompetitorInput({
       }}
     >
       <Input
+        passwordManagerIgnore
         type="text"
         size="sm"
         className="min-w-0 flex-1"

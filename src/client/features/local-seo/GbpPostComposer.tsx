@@ -144,6 +144,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
             Photo URL (optional)
           </span>
           <Input
+            passwordManagerIgnore
             type="text"
             size="sm"
             value={mediaUrl}
@@ -175,6 +176,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
                 Button URL
               </span>
               <Input
+                passwordManagerIgnore
                 type="text"
                 size="sm"
                 value={ctaUrl}
@@ -189,6 +191,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
             Publish at
           </span>
           <Input
+            passwordManagerIgnore
             type="datetime-local"
             size="sm"
             value={scheduledAtLocal}

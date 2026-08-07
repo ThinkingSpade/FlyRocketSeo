@@ -115,6 +115,7 @@ export function SeedKeywordField({
           Seed keyword
         </span>
         <Input
+          passwordManagerIgnore
           type="text"
           size="sm"
           value={value}

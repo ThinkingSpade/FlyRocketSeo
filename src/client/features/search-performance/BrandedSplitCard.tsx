@@ -64,6 +64,7 @@ export function BrandedSplitCard({
           <label className="flex items-center gap-2 text-xs text-base-content/60">
             Brand terms
             <Input
+              passwordManagerIgnore
               type="text"
               size="xs"
               className="w-56"

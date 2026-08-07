@@ -250,6 +250,7 @@ function TextFilter({
         {label}
       </span>
       <Input
+        passwordManagerIgnore
         size="sm"
         className="w-full bg-base-100"
         type={type}
@@ -281,6 +282,7 @@ function RangeFilter({
       </p>
       <div className="grid grid-cols-2 gap-2">
         <Input
+          passwordManagerIgnore
           size="xs"
           className="bg-base-100"
           type="number"
@@ -289,6 +291,7 @@ function RangeFilter({
           onChange={(event) => onMinChange(event.target.value)}
         />
         <Input
+          passwordManagerIgnore
           size="xs"
           className="bg-base-100"
           type="number"

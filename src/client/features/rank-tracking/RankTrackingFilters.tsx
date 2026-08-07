@@ -96,6 +96,7 @@ export function FilterPanel({
             Include
           </p>
           <Input
+            passwordManagerIgnore
             size="sm"
             className="w-full bg-base-100"
             placeholder="e.g. seo, tool"
@@ -108,6 +109,7 @@ export function FilterPanel({
             Exclude
           </p>
           <Input
+            passwordManagerIgnore
             size="sm"
             className="w-full bg-base-100"
             placeholder="e.g. free, cheap"
@@ -160,6 +162,7 @@ export function DomainListFilterBar({
             Search
           </span>
           <Input
+            passwordManagerIgnore
             size="sm"
             className="w-full bg-base-100"
             placeholder="Domain or website"
@@ -254,6 +257,7 @@ function RangeFilter({
       </p>
       <div className="grid grid-cols-2 gap-2">
         <Input
+          passwordManagerIgnore
           size="xs"
           className="bg-base-100"
           placeholder="Min"
@@ -262,6 +266,7 @@ function RangeFilter({
           onChange={(e) => onMinChange(e.target.value)}
         />
         <Input
+          passwordManagerIgnore
           size="xs"
           className="bg-base-100"
           placeholder="Max"

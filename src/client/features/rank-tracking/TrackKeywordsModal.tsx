@@ -258,6 +258,7 @@ export function TrackKeywordsModal({
                   <span className="label-text font-medium">Target domain</span>
                 </label>
                 <Input
+                  passwordManagerIgnore
                   type="text"
                   placeholder="example.com"
                   className="w-full"

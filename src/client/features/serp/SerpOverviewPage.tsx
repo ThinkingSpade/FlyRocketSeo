@@ -241,6 +241,7 @@ function SerpSearchForm({
                 Keyword
               </span>
               <Input
+                passwordManagerIgnore
                 type="text"
                 size="sm"
                 className="w-full"

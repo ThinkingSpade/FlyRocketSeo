@@ -88,6 +88,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
         <label className="flex flex-col gap-1.5 text-sm">
           <span className="font-medium">Name</span>
           <Input
+            passwordManagerIgnore
             type="text"
             value={name}
             onChange={(event) => setName(event.target.value)}
@@ -103,6 +104,7 @@ export function CreateProjectModal({ onClose }: { onClose: () => void }) {
             Domain <span className="text-base-content/50">(optional)</span>
           </span>
           <Input
+            passwordManagerIgnore
             type="text"
             value={domain}
             onChange={(event) => setDomain(event.target.value)}

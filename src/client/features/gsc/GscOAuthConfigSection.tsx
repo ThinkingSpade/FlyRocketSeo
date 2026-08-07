@@ -128,6 +128,7 @@ export function GscOAuthConfigSection() {
             <label className="flex flex-col gap-1.5">
               <span className="font-medium">Client ID</span>
               <Input
+                passwordManagerIgnore
                 type="text"
                 value={clientId}
                 onChange={(event) => setClientId(event.target.value)}

@@ -46,6 +46,7 @@ export function MobileFilters({
         <filtersForm.Field name="include">
           {(field) => (
             <Input
+              passwordManagerIgnore
               size="sm"
               className="bg-base-100"
               placeholder="Include terms (audit, checker)"
@@ -57,6 +58,7 @@ export function MobileFilters({
         <filtersForm.Field name="exclude">
           {(field) => (
             <Input
+              passwordManagerIgnore
               size="sm"
               className="bg-base-100"
               placeholder="Exclude terms (jobs, course)"
@@ -120,6 +122,7 @@ function MobileRangeInput({
     <form.Field name={name}>
       {(field) => (
         <Input
+          passwordManagerIgnore
           size="sm"
           className="bg-base-100"
           placeholder={placeholder}

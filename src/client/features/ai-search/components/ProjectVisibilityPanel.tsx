@@ -139,6 +139,7 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
       <label className="flex flex-col gap-1 text-xs text-base-content/60 sm:max-w-md">
         Compare competitors (optional, comma-separated)
         <Input
+          passwordManagerIgnore
           type="text"
           size="sm"
           className="w-full"

@@ -40,6 +40,7 @@ function FilterTextInput({
           handleChange: (v: string) => void;
         }) => (
           <Input
+            passwordManagerIgnore
             size="sm"
             className="w-full bg-base-100"
             placeholder={placeholder}
@@ -92,6 +93,7 @@ function CompactRangeInput({
         handleChange: (v: string) => void;
       }) => (
         <Input
+          passwordManagerIgnore
           size="xs"
           className="bg-base-100"
           placeholder={placeholder}

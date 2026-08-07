@@ -103,6 +103,7 @@ function SiteForm({ projectId }: { projectId: string }) {
           <label className="block space-y-1">
             <span className="text-sm font-medium">Your website</span>
             <Input
+              passwordManagerIgnore
               type="text"
               className="w-full"
               placeholder="example.com"
