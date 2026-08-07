@@ -215,9 +215,8 @@ export function TrackKeywordsModal({
         </div>
       ) : (
         <>
-          {/* `segmented`, not `underline`: this is a choice between two
-              mutually exclusive forms inside a modal, which is what the old
-              `tabs-boxed` was saying. The page-level strips are underline. */}
+          {/* `segmented`, matching every other strip in the app — and what the
+              old `tabs-boxed` was already reaching for. */}
           {hasConfigs ? (
             <Tabs
               variant="segmented"

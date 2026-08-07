@@ -353,7 +353,7 @@ export function CompetitorsPage({
       <div className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
         <div className="border-b border-base-300 px-4 py-3">
           <Tabs
-            variant="underline"
+            variant="segmented"
             value={tab}
             onValueChange={(next) => {
               // Kumo hands back a plain string; resolve it against the source

@@ -13,6 +13,14 @@
    the whole UI to tighten a step until the migration finishes. */
 @source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
 @import "@cloudflare/kumo/styles/tailwind";
+/* Kumo's semantic tokens (--color-kumo-recessed, -fill, -brand, the badge and
+   banner palettes) live in theme-kumo.css, which its tailwind entry reaches
+   only through a nested relative @import inside node_modules. Tailwind does not
+   follow that chain, so without this line the tokens never enter the theme and
+   every `bg-kumo-*` utility silently fails to generate — segmented tabs render
+   with no track and an invisible active pill, and Badge/Banner variants lose
+   their colours. Imported explicitly so the theme is actually complete. */
+@import "@cloudflare/kumo/styles/theme-kumo";
 @import "tailwindcss";
 /* Leaflet map chrome for the Local Rank Grid. */
 @import "leaflet/dist/leaflet.css";
