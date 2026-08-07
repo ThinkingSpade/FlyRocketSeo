@@ -51,8 +51,8 @@ export function LighthouseIssuesHeader({
         </span>
       </div>
 
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body py-5 gap-4">
+      <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+        <div className="flex flex-auto flex-col py-5 gap-4 text-sm">
           <div className="space-y-1">
             <h1 className="text-2xl font-semibold">Lighthouse Issues</h1>
             <p className="text-sm text-base-content/70 break-all">

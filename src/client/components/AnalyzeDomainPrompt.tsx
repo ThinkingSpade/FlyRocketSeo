@@ -34,8 +34,8 @@ export function AnalyzeDomainPrompt({
   if (!domain) return null;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-5">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-5 text-sm">
         <div>
           <h2 className="text-base font-semibold">{title}</h2>
           <p className="mt-0.5 max-w-2xl text-sm text-base-content/60">

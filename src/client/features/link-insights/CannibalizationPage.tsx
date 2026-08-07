@@ -87,8 +87,8 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       ) : null}
 
       {data && !data.connected ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Connect Search Console first</p>
             <p className="max-w-md text-sm text-base-content/60">
               Cannibalization detection is built from your own Search Console
@@ -112,8 +112,8 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
           absence cannot render the confident sentence, because the caller never
           gets the chance to supply it. */}
       {data?.connected && rows.length === 0 ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-6">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-6 gap-2 text-sm">
             <QueryStateBoundary
               state={resolveQueryState({
                 isPending: false,
@@ -142,9 +142,9 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       {rows.map((row) => (
         <div
           key={row.query}
-          className="card border border-base-300 bg-base-100"
+          className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
         >
-          <div className="card-body gap-3 p-4">
+          <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <span className="inline-flex items-center gap-2">
                 <Badge variant="outline">{row.query}</Badge>

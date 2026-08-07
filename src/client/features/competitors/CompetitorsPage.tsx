@@ -193,8 +193,8 @@ export function CompetitorsPage({
         />
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <CompetitorsSearchForm
             targetInput={targetInput}
             competitorInput={competitorInput}

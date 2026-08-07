@@ -54,8 +54,8 @@ export function NextStepsCard({
   const aiExplainAvailable = useAiExplainAvailable();
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <h2 className="flex items-start gap-1.5 text-sm font-semibold">
           <InsightIcon icon={Icon} tone={TONE_STYLE[verdict.tone]} />
           <span className="font-normal text-base-content/80">

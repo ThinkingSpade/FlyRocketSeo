@@ -21,9 +21,9 @@ export function LaunchFormCard({
   maxPagesLimit,
 }: Props) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-4">
-        <h2 className="card-title text-base">Start New Audit</h2>
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+        <h2 className="text-base font-semibold">Start New Audit</h2>
 
         <form
           className="grid grid-cols-1 gap-3 lg:grid-cols-12 lg:items-center"

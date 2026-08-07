@@ -224,8 +224,8 @@ function SerpSearchForm({
   onSubmit: (keyword: string) => void;
 }) {
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <form
           className="flex flex-col gap-3 sm:flex-row sm:items-start"
           onSubmit={(event) => {
@@ -719,8 +719,8 @@ export function SerpOverviewPage({
       ) : null}
 
       {runInput == null && !restoredRun ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Enter a keyword to get started</p>
             <p className="max-w-md text-sm text-base-content/60">
               Analyze any SERP to size up the competition before you target a
@@ -778,8 +778,8 @@ export function SerpOverviewPage({
           />
 
           {result.paaQuestions.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="flex items-center gap-1.5 text-sm font-semibold">
                   <InsightIcon icon={HelpCircle} tone="info" />
                   People also ask
@@ -829,7 +829,7 @@ function SerpResultsTable({
   );
 
   return (
-    <div className="card border border-base-300 bg-base-100">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="overflow-x-auto">
         <table className="table table-sm">
           <thead>

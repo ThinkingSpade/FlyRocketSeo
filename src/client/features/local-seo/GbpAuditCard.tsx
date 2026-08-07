@@ -61,8 +61,8 @@ export function GbpAuditCard({
   const orderedChecks = orderChecksForDisplay(audit.checks);
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-start gap-4">
           <div className="w-32 shrink-0">
             <InsightTile

@@ -57,8 +57,8 @@ export function KeywordResearchSearchBar({
   const { controlsForm, handleSearchSubmit, isLoading } = controller;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-6 text-sm">
         <form
           className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:items-start lg:gap-2"
           onSubmit={handleSearchSubmit}

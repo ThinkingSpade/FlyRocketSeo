@@ -60,8 +60,8 @@ function BreakdownList({
   const max = Math.max(...rows.map((row) => row.value));
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <InsightIcon icon={icon} />
           {title}
@@ -168,8 +168,8 @@ export function LinkVelocityCard({
   const sign = velocity.netPerMonth > 0 ? "+" : "";
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <InsightIcon icon={Activity} />
           Link velocity
@@ -226,8 +226,8 @@ export function BrokenLinkReclaimCard({
   const atStake = countLinksAtStake(targets);
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
           <InsightIcon icon={Wrench} />
           Broken pages worth reclaiming

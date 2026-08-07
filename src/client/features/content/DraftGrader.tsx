@@ -126,8 +126,8 @@ export function DraftGrader({
   });
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div className="flex items-baseline justify-between gap-2">
           <h2 className="text-sm font-semibold">Grade your draft</h2>
           {score != null ? (

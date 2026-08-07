@@ -47,8 +47,8 @@ export function ClusterPlanBody({
   return (
     <>
       {plan.hub.length > 0 ? (
-        <div className="card border border-primary/40 bg-base-100">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl border border-primary/40 bg-base-100">
+          <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <div className="flex items-baseline justify-between gap-2">
               <div>
                 <h2 className="text-sm font-semibold">
@@ -90,9 +90,9 @@ export function ClusterPlanBody({
           return (
             <div
               key={cluster.name}
-              className="card border border-base-300 bg-base-100"
+              className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
             >
-              <div className="card-body gap-2 p-4">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="flex items-center gap-1.5 font-semibold">
                     <span title="Priority from volume weighed against difficulty — write P1 clusters first">

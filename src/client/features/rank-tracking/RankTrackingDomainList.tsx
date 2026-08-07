@@ -126,8 +126,8 @@ export function RankTrackingDomainList({
   });
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-0 p-0">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-0 p-0 text-sm">
         <div className="flex items-center justify-between px-5 pt-4 pb-3">
           <h2 className="text-sm font-semibold">Tracked Domains</h2>
           <Button variant="primary" size="sm" onClick={onAddDomain}>

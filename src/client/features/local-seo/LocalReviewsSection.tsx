@@ -112,8 +112,8 @@ export function LocalReviewsSection({
         <ReviewAnalyticsCards reviews={outcome.items} />
       ) : null}
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold">Latest reviews</h2>
             <Button

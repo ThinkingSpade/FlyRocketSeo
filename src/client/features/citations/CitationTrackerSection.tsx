@@ -279,8 +279,8 @@ export function CitationTrackerSection({
     : null;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-xl">
             <h2 className="flex items-center gap-1.5 text-sm font-semibold">

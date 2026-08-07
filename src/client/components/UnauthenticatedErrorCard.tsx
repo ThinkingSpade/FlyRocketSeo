@@ -31,16 +31,16 @@ export function UnauthenticatedErrorCard({
   }
 
   return (
-    <div className="card w-full max-w-md bg-base-100 border border-base-300 shadow-xl">
-      <div className="card-body gap-4">
-        <h2 className="card-title">Authentication required</h2>
+    <div className="relative flex flex-col rounded-xl w-full max-w-md bg-base-100 border border-base-300 shadow-xl">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+        <h2 className="text-base font-semibold">Authentication required</h2>
         <p className="text-sm text-base-content/70">{message}</p>
         <p className="text-sm text-base-content/70">
           This deployment uses external authentication. Refresh your access
           session, then try again.
         </p>
         {onRetry ? (
-          <div className="card-actions justify-end">
+          <div className="flex flex-wrap items-center gap-2 justify-end">
             <Button variant="primary" size="sm" onClick={onRetry}>
               Try Again
             </Button>

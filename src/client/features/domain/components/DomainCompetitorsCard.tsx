@@ -35,8 +35,8 @@ export function DomainCompetitorsCard({
   const rows = (competitorsQuery.data?.rows ?? []).slice(0, 5);
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-xs uppercase tracking-wide text-base-content/60">
             Top organic competitors

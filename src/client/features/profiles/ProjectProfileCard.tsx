@@ -73,8 +73,8 @@ export function ProjectProfileCard({ projectId }: Props) {
   ) => setDraft((current) => ({ ...current, [key]: value }));
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <div className="flex items-start justify-between gap-3">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold">

@@ -15,9 +15,9 @@ export function AuthConfigErrorCard({
   onRetry,
 }: AuthConfigErrorCardProps) {
   return (
-    <div className="card w-full max-w-2xl bg-base-100 border border-base-300 shadow-xl">
-      <div className="card-body gap-4">
-        <h2 className="card-title gap-2">
+    <div className="relative flex flex-col rounded-xl w-full max-w-2xl bg-base-100 border border-base-300 shadow-xl">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+        <h2 className="text-base font-semibold gap-2">
           <ShieldAlert className="size-5 text-error" />
           Authentication setup required
         </h2>
@@ -35,7 +35,7 @@ export function AuthConfigErrorCard({
           <code className="ml-1">BETTER_AUTH_URL</code>.
         </p>
 
-        <div className="card-actions justify-end">
+        <div className="flex flex-wrap items-center gap-2 justify-end">
           {onRetry ? (
             <Button variant="ghost" size="sm" onClick={onRetry}>
               Try Again

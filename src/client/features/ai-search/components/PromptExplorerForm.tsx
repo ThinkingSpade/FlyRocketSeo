@@ -69,9 +69,9 @@ export function PromptExplorerForm({
   return (
     <form
       onSubmit={onSubmit}
-      className="card border border-base-300 bg-base-100"
+      className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
     >
-      <div className="card-body gap-5">
+      <div className="flex flex-auto flex-col gap-5 p-6 text-sm">
         <div className="space-y-1.5">
           <label
             className="block text-sm font-medium"

@@ -313,8 +313,8 @@ export function LocalRankGridPage({
         </p>
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-2 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
           <form
             className="flex flex-col gap-3 lg:flex-row lg:items-end"
             onSubmit={(event) => {
@@ -478,8 +478,8 @@ export function LocalRankGridPage({
       ) : null}
 
       {!keyword ? (
-        <div className="card border border-base-300 bg-base-100">
-          <div className="card-body gap-3 p-5">
+        <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+          <div className="flex flex-auto flex-col gap-3 p-5 text-sm">
             <div>
               <h2 className="text-base font-semibold">
                 Map your local visibility

@@ -25,8 +25,8 @@ export function BriefTargets({
       : "No data";
   return (
     <div className="grid gap-3 sm:grid-cols-3">
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-1 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-1 p-4 text-sm">
           <span className="text-xs font-medium uppercase tracking-wide text-base-content/50">
             Target length
           </span>
@@ -45,8 +45,8 @@ export function BriefTargets({
           )}
         </div>
       </div>
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-1 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-1 p-4 text-sm">
           <span className="text-xs font-medium uppercase tracking-wide text-base-content/50">
             Structure
           </span>
@@ -64,8 +64,8 @@ export function BriefTargets({
           )}
         </div>
       </div>
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-1 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-1 p-4 text-sm">
           <span className="text-xs font-medium uppercase tracking-wide text-base-content/50">
             Questions to answer
           </span>

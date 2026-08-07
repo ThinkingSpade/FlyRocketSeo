@@ -114,8 +114,8 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
       ) : null}
 
       {data && !data.connected ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Connect Search Console first</p>
             <p className="max-w-md text-sm text-base-content/60">
               Link opportunities are built from your own Search Console data.
@@ -137,8 +137,8 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
           capped pull it replaces the confident sentence rather than appending a
           caveat to it. */}
       {data?.connected && opportunities.length === 0 ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-6">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-6 gap-2 text-sm">
             <QueryStateBoundary
               state={resolveQueryState({
                 isPending: false,
@@ -167,9 +167,9 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
       {opportunities.map((opportunity) => (
         <div
           key={opportunity.query}
-          className="card border border-base-300 bg-base-100"
+          className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
         >
-          <div className="card-body gap-3 p-4">
+          <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
               <div>
                 <span className="text-sm text-base-content/60">

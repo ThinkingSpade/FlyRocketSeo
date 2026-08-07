@@ -255,8 +255,8 @@ export function TopicClustersPage({
 
       <TargetAreaBanner projectId={projectId} />
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
@@ -402,8 +402,8 @@ export function TopicClustersPage({
       ) : null}
 
       {runInput == null && !restoredRun ? (
-        <div className="card border border-dashed border-base-300">
-          <div className="card-body items-center py-12 text-center">
+        <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+          <div className="flex flex-auto flex-col items-center py-12 text-center gap-2">
             <p className="font-medium">Enter a topic to plan a cluster</p>
             <p className="max-w-md text-sm text-base-content/60">
               Hub-and-spoke content is how sites own a topic: one pillar page

@@ -94,7 +94,7 @@ function SummaryStatsGrid({
 
   return (
     <div className={cardClassName}>
-      <div className="card-body p-4 xl:h-full">
+      <div className="flex flex-auto flex-col p-4 xl:h-full gap-2 text-sm">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:gap-y-6">
           {summaryStats.map((item) => (
             <div key={item.label}>
@@ -148,8 +148,8 @@ function TrendCard({
   title: string;
 }) {
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div>
           <h2 className="text-sm font-medium">{title}</h2>
           <p className="text-xs text-base-content/55">{description}</p>

@@ -34,8 +34,14 @@ export function AppCard({
   flush?: boolean;
 }) {
   return (
-    <div className="card overflow-hidden border border-base-300 bg-base-100">
-      {flush ? children : <div className="card-body gap-3 p-4">{children}</div>}
+    <div className="relative flex flex-col rounded-xl overflow-hidden border border-base-300 bg-base-100">
+      {flush ? (
+        children
+      ) : (
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
+          {children}
+        </div>
+      )}
     </div>
   );
 }

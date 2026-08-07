@@ -428,8 +428,8 @@ export function ContentOptimizerPage({
       <ContentOptimizerHeading scope={targetAreaScope} />
       <TargetAreaBanner projectId={projectId} />
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
@@ -600,8 +600,8 @@ export function ContentOptimizerPage({
       {brief ? (
         <>
           {competitorUrls.length > 0 && !competitorsAuthorized ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body flex-row items-center justify-between gap-3 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col flex-row items-center justify-between gap-3 p-4 text-sm">
                 <div>
                   <h2 className="text-sm font-semibold">
                     Competitor outlines are a separate paid analysis
@@ -633,8 +633,8 @@ export function ContentOptimizerPage({
           />
 
           {brief.terms.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="text-sm font-semibold">
                   {effectiveGeo
                     ? formatGeoMetricLabel(
@@ -666,8 +666,8 @@ export function ContentOptimizerPage({
           ) : null}
 
           {brief.paaQuestions.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="text-sm font-semibold">Questions to answer</h2>
                 <ul className="list-inside list-disc space-y-1 text-sm text-base-content/80">
                   {brief.paaQuestions.map((question) => (
@@ -679,8 +679,8 @@ export function ContentOptimizerPage({
           ) : null}
 
           {headingIdeas.length > 0 ? (
-            <div className="card border border-base-300 bg-base-100">
-              <div className="card-body gap-2 p-4">
+            <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+              <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="text-sm font-semibold">
                   Subtopics the top pages cover
                 </h2>
@@ -695,7 +695,7 @@ export function ContentOptimizerPage({
             </div>
           ) : null}
 
-          <div className="card border border-base-300 bg-base-100">
+          <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
             {effectiveGeo?.competitors.scope === "local" ? (
               <p className="px-4 pt-3 text-xs text-base-content/45">
                 Ranking pages · {effectiveGeo.competitors.label}

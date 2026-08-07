@@ -81,8 +81,8 @@ export function TrendsInsightsTable({
   );
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={Activity} tone="primary" />
           Momentum &amp; seasonality
@@ -169,8 +169,8 @@ export function TrendsSeasonalHeatmap({
   if (!rows) return null;
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-2 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={CalendarDays} tone="info" />
           Seasonal heatmap

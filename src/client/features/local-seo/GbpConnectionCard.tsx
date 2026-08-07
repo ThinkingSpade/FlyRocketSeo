@@ -96,8 +96,8 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
     // established yet, only the boolean gate has -- a neutral loading state
     // is the honest thing to show while the live check is still in flight.
     return (
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
             <InsightIcon icon={MapPin} tone="neutral" />
             Google Business Profile writing
@@ -115,8 +115,8 @@ export function GbpConnectionCard({ projectId }: { projectId: string }) {
   }
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-3 p-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
           <InsightIcon icon={MapPin} tone="neutral" />
           Google Business Profile writing

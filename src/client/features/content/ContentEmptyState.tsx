@@ -57,8 +57,8 @@ export function ContentEmptyState({
   return (
     <div className="space-y-3">
       {historyLoaded && history.length > 0 ? (
-        <div className="card border border-base-300 bg-base-100">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+          <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <h2 className="flex items-center gap-1.5 text-sm font-semibold">
               <InsightIcon icon={Clock} />
               Recent briefs
@@ -94,8 +94,8 @@ export function ContentEmptyState({
         </div>
       ) : null}
 
-      <div className="card border border-dashed border-base-300">
-        <div className="card-body gap-3 p-6">
+      <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+        <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
           <div className="text-center">
             <p className="font-medium">Enter a keyword to build a brief</p>
             <p className="mx-auto max-w-md text-sm text-base-content/60">

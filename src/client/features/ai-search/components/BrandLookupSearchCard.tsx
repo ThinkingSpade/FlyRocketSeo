@@ -43,8 +43,8 @@ export function BrandLookupSearchCard({
   const competitorsError = validationError?.field === "competitors";
 
   return (
-    <div className="card border border-base-300 bg-base-100">
-      <div className="card-body gap-4">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <label

@@ -159,8 +159,8 @@ export function PageExplorerPage({
         </p>
       </div>
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-end"
             onSubmit={(event) => {
@@ -293,8 +293,8 @@ export function PageExplorerPage({
             }}
             isBusy={pageQuery.isFetching}
           />
-          <div className="card border border-dashed border-base-300">
-            <div className="card-body items-center py-8 text-center">
+          <div className="relative flex flex-col rounded-xl border border-dashed border-base-300">
+            <div className="flex flex-auto flex-col items-center py-8 text-center gap-2">
               <p className="max-w-md text-sm text-base-content/60">
                 Great for reverse-engineering a competitor page that outranks
                 you — see exactly which keywords it wins and how strong its

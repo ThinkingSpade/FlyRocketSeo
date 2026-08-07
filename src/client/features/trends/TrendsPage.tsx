@@ -385,8 +385,8 @@ export function TrendsPage({
 
       <TrendingOpportunitiesCard projectId={projectId} />
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body gap-3 p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
           <form
             className="flex flex-col gap-3 sm:flex-row sm:items-start"
             onSubmit={(event) => {
@@ -493,8 +493,8 @@ export function TrendsPage({
         />
       ) : null}
 
-      <div className="card border border-base-300 bg-base-100">
-        <div className="card-body p-4">
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col p-4 gap-2 text-sm">
           {runKeywords == null && !restoredRun ? (
             <div className="px-4 py-12 text-center text-sm text-base-content/60">
               {enteredKeywords.length > 0

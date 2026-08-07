@@ -79,8 +79,8 @@ export function AuditComparison({
   if (comparableRuns.length === 0) return null;
 
   return (
-    <div className="card bg-base-100 border border-base-300">
-      <div className="card-body gap-3">
+    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+      <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <h3 className="text-base font-medium">Compare to previous run</h3>
           <div className="flex items-center gap-2">

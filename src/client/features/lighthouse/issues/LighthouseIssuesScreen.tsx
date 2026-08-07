@@ -93,8 +93,8 @@ export function LighthouseIssuesScreen(props: LighthouseIssuesScreenProps) {
           severityCounts={severityCounts}
         />
 
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-4">
+        <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+          <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
             {issuesQuery.isError ? (
               <Banner variant="error">
                 <AlertCircle className="size-4" />
