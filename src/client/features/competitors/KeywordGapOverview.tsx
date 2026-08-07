@@ -126,13 +126,25 @@ export function KeywordGapOverview({
                 {meta.label}
               </span>
             </div>
+            {/* Only the ACTIVE mode is ever fetched — the other two are
+                separately metered and must not auto-run. But a disabled query
+                stays `isPending` forever, so they used to sit on loading dots
+                indefinitely, which reads as "still working" rather than "not
+                run". Distinguish the two: dots only while genuinely fetching,
+                otherwise say it needs a run. */}
             <div className="mt-1.5 text-xl font-semibold tabular-nums">
-              {query.isPending ? (
+              {query.isFetching ? (
                 <Loader size="sm" />
+              ) : query.isError ? (
+                <span className="text-sm font-normal text-base-content/60">
+                  Couldn&rsquo;t load
+                </span>
               ) : count != null ? (
                 count.toLocaleString()
               ) : (
-                "—"
+                <span className="text-sm font-normal text-base-content/50">
+                  Select to run
+                </span>
               )}
             </div>
             <div className="mt-0.5 text-xs text-base-content/50">

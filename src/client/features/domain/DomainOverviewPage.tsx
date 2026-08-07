@@ -358,7 +358,7 @@ function useDomainOverviewState({
   // paid for, and can never trigger a metered fetch.
   // Which past run the user is looking at; null means "the most recent".
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const { restored } = useAutoRestoredRun({
+  const { restored, expired: restoreExpired } = useAutoRestoredRun({
     projectId,
     feature: RUN_FEATURES.domainOverview,
     schema: domainOverviewResultSchema,
@@ -569,6 +569,8 @@ function useDomainOverviewState({
     overview,
     /** Set when `overview` came from a stored past run rather than a live one. */
     restoredRun,
+    /** Set when a past run EXISTS but its stored result has aged out. */
+    restoreExpired,
     selectedRunId,
     setSelectedRunId,
     refetchOverview: overviewQuery.refetch,
@@ -790,6 +792,16 @@ export function DomainOverviewPage({
             }}
             isBusy={state.isLoading}
           />
+          {/* A run whose stored result is gone is NOT the same as never having
+              used this tab, but both used to render exactly this prompt. Say
+              which it was, so the blank screen stops looking like a bug. */}
+          {state.restoreExpired ? (
+            <div className="rounded-lg border border-base-300 bg-base-200/40 px-4 py-3 text-sm text-base-content/70">
+              Your last run ({state.restoreExpired.label}) is too old to re-open
+              — stored results are kept for 90 days. Running it again will
+              refresh it.
+            </div>
+          ) : null}
           <DomainHistorySection
             history={state.history}
             historyLoaded={state.historyLoaded}

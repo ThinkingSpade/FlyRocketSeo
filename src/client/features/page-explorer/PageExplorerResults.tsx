@@ -54,15 +54,29 @@ export function PageExplorerResults({
           hint={`Top ${result.keywords.length} shown`}
           tone="info"
         />
+        {/* The backlink lookup is a separate best-effort subcall, so these two
+            tiles showed a dash both when the page genuinely has no backlink
+            data and when the call FAILED. `backlinksStatus` separates them, so
+            a failure now says so instead of quietly reading as zero. */}
         <InsightTile
           icon={Link2}
           label="Backlinks"
           value={formatCount(result.backlinks?.backlinks)}
+          hint={
+            result.backlinksStatus === "error"
+              ? "Backlink data couldn't be loaded"
+              : undefined
+          }
         />
         <InsightTile
           icon={Network}
           label="Ref. domains"
           value={formatCount(result.backlinks?.referringDomains)}
+          hint={
+            result.backlinksStatus === "error"
+              ? "Backlink data couldn't be loaded"
+              : undefined
+          }
         />
         <InsightTile
           icon={Award}

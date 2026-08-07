@@ -43,6 +43,12 @@ import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
+/** Derived from a module constant, so it is built once rather than per render. */
+const COMPETITORS_TAB_ITEMS = COMPETITORS_TABS.map(({ tab, label }) => ({
+  value: tab,
+  label,
+}));
+
 type CompetitorsSearchState = {
   target: string;
   competitor: string;
@@ -356,10 +362,7 @@ export function CompetitorsPage({
               const selected = COMPETITORS_TABS.find((t) => t.tab === next);
               if (selected) updateSearch({ tab: selected.tab, page: 1 });
             }}
-            tabs={COMPETITORS_TABS.map(({ tab: tabId, label }) => ({
-              value: tabId,
-              label,
-            }))}
+            tabs={COMPETITORS_TAB_ITEMS}
           />
         </div>
 
@@ -368,6 +371,14 @@ export function CompetitorsPage({
           target={target}
           competitor={competitor}
           competitorRows={competitorRows}
+          competitorsState={{
+            isError: competitorsQuery.isError,
+            isFetching: competitorsQuery.isFetching,
+            // A restored past run is a real answer too, even though no live
+            // query ran for it.
+            hasResult:
+              competitorsQuery.data != null || restored?.result != null,
+          }}
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}
           onCompareCompetitor={(domain) => {
