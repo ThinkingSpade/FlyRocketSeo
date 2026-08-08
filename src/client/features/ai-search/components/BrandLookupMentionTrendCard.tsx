@@ -1,32 +1,80 @@
 import { useMemo } from "react";
+import { Chart } from "@cloudflare/kumo/components/chart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import { formatCount } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
-import { CHART_AXIS_TICK_SM } from "@/client/components/chart/chartTheme";
 
 type Props = {
   result: BrandLookupResult;
 };
 
 export function BrandLookupMentionTrendCard({ result }: Props) {
-  const chartData = useMemo(
-    () =>
-      result.monthlyVolume.map((entry) => ({
-        label: `${entry.year}-${String(entry.month).padStart(2, "0")}`,
-        volume: entry.volume ?? 0,
-      })),
-    [result.monthlyVolume],
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
+
+  const { labels, values } = useMemo(() => {
+    const rows = result.monthlyVolume.map((entry) => ({
+      label: `${entry.year}-${String(entry.month).padStart(2, "0")}`,
+      volume: entry.volume ?? 0,
+    }));
+    return {
+      labels: rows.map((row) => row.label),
+      values: rows.map((row) => row.volume),
+    };
+  }, [result.monthlyVolume]);
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        // ECharts tooltips are formatted, not rendered — there is no React
+        // subtree to hand it. `formatter` returns a string, so the markup that
+        // used to be a component is a template here, using the same tokens the
+        // rest of the app does so it still matches its surroundings.
+        formatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          return [
+            `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
+            `<div style="font-size:13px;font-weight:500">${formatCount(first.value ?? 0)} mentions</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        // A category axis, not a time axis: these labels are "2026-03" month
+        // buckets, not instants, and spacing them by real elapsed time would
+        // put uneven gaps between months of different lengths.
+        type: "category" as const,
+        data: labels,
+        boundaryGap: false,
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        minInterval: 1,
+      },
+      series: [
+        {
+          type: "line" as const,
+          data: values,
+          smooth: true,
+          symbol: "none" as const,
+          lineStyle: { width: 2, color: theme.brand },
+          itemStyle: { color: theme.brand },
+        },
+      ],
+    }),
+    [base, labels, values, theme.brand],
   );
 
-  if (chartData.length === 0) {
+  if (labels.length === 0) {
     return (
       <div className="flex h-56 items-center justify-center text-sm text-base-content/60">
         Not enough historical data yet.
@@ -35,62 +83,11 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
   }
 
   return (
-    <div className="h-56">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={chartData}
-          margin={{ top: 12, right: 12, bottom: 4, left: 0 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="currentColor"
-            opacity={0.12}
-          />
-          <XAxis
-            dataKey="label"
-            tick={CHART_AXIS_TICK_SM}
-            tickLine={false}
-            axisLine={false}
-          />
-          <YAxis
-            tick={CHART_AXIS_TICK_SM}
-            tickLine={false}
-            axisLine={false}
-            allowDecimals={false}
-          />
-          <Tooltip
-            content={<MentionTooltip />}
-            cursor={{ stroke: "currentColor", strokeOpacity: 0.2 }}
-          />
-          <Line
-            type="monotone"
-            dataKey="volume"
-            stroke="hsl(220 70% 50%)"
-            strokeWidth={2}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
-  );
-}
-
-function MentionTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ value: number }>;
-  label?: string;
-}) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
-      <p className="text-xs text-base-content/60">{label}</p>
-      <p className="text-sm font-medium tabular-nums">
-        {formatCount(payload[0].value)} mentions
-      </p>
-    </div>
+    <Chart
+      echarts={echarts}
+      options={options}
+      height={224}
+      isDarkMode={theme.isDark}
+    />
   );
 }
