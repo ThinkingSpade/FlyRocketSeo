@@ -39,6 +39,11 @@ type ChartTheme = {
   brand: string;
   /** Panel behind the chart, for tooltip backgrounds. */
   surface: string;
+  /** Top and bottom stops of the gradient under an area series. Read from the
+   *  --trend-fill-*-opacity tokens the Recharts charts already used, so an
+   *  area chart's fill is unchanged by the swap. */
+  brandFillStart: string;
+  brandFillEnd: string;
   /** True when the dark theme is active — Kumo's Chart takes this directly. */
   isDark: boolean;
 };
@@ -48,6 +53,8 @@ const FALLBACK: ChartTheme = {
   line: "rgba(23, 32, 51, 0.12)",
   brand: "rgb(73, 52, 199)",
   surface: "rgb(255, 255, 255)",
+  brandFillStart: "rgba(73, 52, 199, 0.32)",
+  brandFillEnd: "rgba(73, 52, 199, 0.05)",
   isDark: false,
 };
 
@@ -60,6 +67,15 @@ function resolve(probe: HTMLElement, expression: string, fallback: string) {
   if (probe.style.color === "") return fallback;
   const value = getComputedStyle(probe).color;
   return value === "" ? fallback : value;
+}
+
+function readNumber(
+  styles: CSSStyleDeclaration,
+  name: string,
+  fallback: number,
+) {
+  const parsed = Number.parseFloat(styles.getPropertyValue(name));
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
 let cached: ChartTheme = FALLBACK;
@@ -79,7 +95,9 @@ function readTheme(): ChartTheme {
   probe.style.display = "none";
   root.appendChild(probe);
   try {
+    const styles = getComputedStyle(root);
     const text = resolve(probe, "var(--color-base-content)", FALLBACK.text);
+    const brand = resolve(probe, "var(--color-primary)", FALLBACK.brand);
     cached = {
       text,
       // Matches the 12% grid opacity the Recharts charts used, so the two read
@@ -89,8 +107,21 @@ function readTheme(): ChartTheme {
         `color-mix(in oklab, ${text} 12%, transparent)`,
         FALLBACK.line,
       ),
-      brand: resolve(probe, "var(--color-primary)", FALLBACK.brand),
+      brand,
       surface: resolve(probe, "var(--color-base-100)", FALLBACK.surface),
+      // These two tokens are plain numbers rather than colours, so unlike the
+      // colours above they can be read straight off the custom property — a
+      // literal's specified value is its resolved one.
+      brandFillStart: resolve(
+        probe,
+        `color-mix(in oklab, ${brand} ${readNumber(styles, "--trend-fill-start-opacity", 0.32) * 100}%, transparent)`,
+        FALLBACK.brandFillStart,
+      ),
+      brandFillEnd: resolve(
+        probe,
+        `color-mix(in oklab, ${brand} ${readNumber(styles, "--trend-fill-end-opacity", 0.05) * 100}%, transparent)`,
+        FALLBACK.brandFillEnd,
+      ),
       isDark: key.endsWith("-dark"),
     };
     cacheKey = key;
