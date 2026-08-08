@@ -55,6 +55,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -703,16 +704,16 @@ export function ContentOptimizerPage({
               </p>
             ) : null}
             <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th className="w-14">#</th>
-                    <th>Ranking page</th>
-                    <th className="text-right">Words</th>
-                    <th className="text-right">H2s</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head className="w-14">#</Table.Head>
+                    <Table.Head>Ranking page</Table.Head>
+                    <Table.Head className="text-right">Words</Table.Head>
+                    <Table.Head className="text-right">H2s</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {brief.competitors.map((competitor) => {
                     const analysis = competitor.url
                       ? analysisByUrl.get(competitor.url)
@@ -721,11 +722,11 @@ export function ContentOptimizerPage({
                       ? failedUrls.has(competitor.url)
                       : false;
                     return (
-                      <tr key={`${competitor.rank}-${competitor.url}`}>
-                        <td className="align-top tabular-nums">
+                      <Table.Row key={`${competitor.rank}-${competitor.url}`}>
+                        <Table.Cell className="align-top tabular-nums">
                           {competitor.rank ?? "—"}
-                        </td>
-                        <td className="max-w-xl align-top">
+                        </Table.Cell>
+                        <Table.Cell className="max-w-xl align-top">
                           <a
                             href={competitor.url ?? undefined}
                             target="_blank"
@@ -737,8 +738,8 @@ export function ContentOptimizerPage({
                           <div className="line-clamp-1 text-xs text-success/80">
                             {competitor.url}
                           </div>
-                        </td>
-                        <td className="text-right align-top tabular-nums">
+                        </Table.Cell>
+                        <Table.Cell className="text-right align-top tabular-nums">
                           {analysisFailed ? (
                             <span
                               className="text-base-content/40"
@@ -754,8 +755,8 @@ export function ContentOptimizerPage({
                           ) : (
                             "—"
                           )}
-                        </td>
-                        <td className="text-right align-top tabular-nums">
+                        </Table.Cell>
+                        <Table.Cell className="text-right align-top tabular-nums">
                           {analysisFailed ? (
                             <span
                               className="text-base-content/40"
@@ -769,12 +770,12 @@ export function ContentOptimizerPage({
                           ) : (
                             (analysis?.h2.length ?? "—")
                           )}
-                        </td>
-                      </tr>
+                        </Table.Cell>
+                      </Table.Row>
                     );
                   })}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table>
             </div>
           </div>
 

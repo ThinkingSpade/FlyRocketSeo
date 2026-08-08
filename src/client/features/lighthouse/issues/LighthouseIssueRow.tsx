@@ -9,6 +9,7 @@ import {
 import type { LighthouseIssue } from "./types";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Table } from "@cloudflare/kumo/components/table";
 
 export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
   const [open, setOpen] = useState(false);
@@ -16,24 +17,24 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
 
   return (
     <>
-      <tr
+      <Table.Row
         className={`hover:bg-base-200/50 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
         onClick={() => hasDetails && setOpen(!open)}
       >
-        <td className="py-3 pl-4 pr-2">
+        <Table.Cell className="py-3 pl-4 pr-2">
           {hasDetails ? (
             <ChevronRight
               className={`size-3.5 text-base-content/40 transition-transform ${open ? "rotate-90" : ""}`}
             />
           ) : null}
-        </td>
-        <td className="py-3 pr-3">
+        </Table.Cell>
+        <Table.Cell className="py-3 pr-3">
           <Badge variant={severityVariant(issue.severity)}>
             {severityIcon(issue.severity)}
             {issue.severity}
           </Badge>
-        </td>
-        <td className="py-3 pr-3">
+        </Table.Cell>
+        <Table.Cell className="py-3 pr-3">
           <div>
             <p className="font-medium text-sm leading-snug">{issue.title}</p>
             {issue.displayValue ? (
@@ -42,11 +43,11 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
               </p>
             ) : null}
           </div>
-        </td>
-        <td className="py-3 pr-3 hidden sm:table-cell">
+        </Table.Cell>
+        <Table.Cell className="py-3 pr-3 hidden sm:table-cell">
           <span className="text-xs text-base-content/50">{issue.category}</span>
-        </td>
-        <td className="py-3 pr-3 hidden md:table-cell text-right">
+        </Table.Cell>
+        <Table.Cell className="py-3 pr-3 hidden md:table-cell text-right">
           {issue.impactMs != null || issue.impactBytes != null ? (
             <span className="text-xs tabular-nums text-base-content/50">
               {issue.impactMs ? formatMs(issue.impactMs) : null}
@@ -54,18 +55,18 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
               {issue.impactBytes ? formatBytes(issue.impactBytes) : null}
             </span>
           ) : null}
-        </td>
-        <td className="py-3 pr-4 text-right">
+        </Table.Cell>
+        <Table.Cell className="py-3 pr-4 text-right">
           {issue.score != null ? (
             <span className="text-xs tabular-nums text-base-content/50">
               {issue.score}
             </span>
           ) : null}
-        </td>
-      </tr>
+        </Table.Cell>
+      </Table.Row>
       {open ? (
-        <tr className="!bg-transparent">
-          <td colSpan={6} className="pb-4 pt-2 pl-[8.5rem] pr-4">
+        <Table.Row className="!bg-transparent">
+          <Table.Cell colSpan={6} className="pb-4 pt-2 pl-[8.5rem] pr-4">
             <div className="space-y-3">
               {issue.description ? (
                 <div className="text-sm text-base-content/70 leading-relaxed">
@@ -90,8 +91,8 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
                 </details>
               ) : null}
             </div>
-          </td>
-        </tr>
+          </Table.Cell>
+        </Table.Row>
       ) : null}
     </>
   );

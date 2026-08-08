@@ -74,6 +74,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -832,29 +833,29 @@ function SerpResultsTable({
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="overflow-x-auto">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th className="w-14">#</th>
-              <th>Result</th>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head className="w-14">#</Table.Head>
+              <Table.Head>Result</Table.Head>
               {trafficShare ? (
-                <th
+                <Table.Head
                   className="text-right"
                   title="Estimated monthly clicks for this result: search volume × a standard CTR-by-position curve"
                 >
                   {formatGeoMetricLabel("Est. clicks", geo.volume)}
-                </th>
+                </Table.Head>
               ) : null}
-              <th className="text-right">DR</th>
-              <th
+              <Table.Head className="text-right">DR</Table.Head>
+              <Table.Head
                 className="text-right"
                 title="Estimated monthly organic traffic for the whole domain"
               >
                 {formatGeoMetricLabel("Domain traffic", geo.domainAnalytics)}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {result.results.map((item) => {
               const estimate =
                 item.rank != null ? trafficShare?.get(item.rank) : undefined;
@@ -867,8 +868,8 @@ function SerpResultsTable({
                 { ownDomainRating },
               );
               return (
-                <tr key={`${item.rank}-${item.url}`}>
-                  <td className="align-top">
+                <Table.Row key={`${item.rank}-${item.url}`}>
+                  <Table.Cell className="align-top">
                     <div className="flex items-center gap-1 tabular-nums">
                       {item.rank ?? "—"}
                       {item.isNew ? (
@@ -879,8 +880,8 @@ function SerpResultsTable({
                         <ArrowDown className="size-3 text-error" />
                       ) : null}
                     </div>
-                  </td>
-                  <td className="max-w-xl align-top">
+                  </Table.Cell>
+                  <Table.Cell className="max-w-xl align-top">
                     <a
                       href={item.url ?? undefined}
                       target="_blank"
@@ -902,9 +903,9 @@ function SerpResultsTable({
                         {item.description}
                       </div>
                     ) : null}
-                  </td>
+                  </Table.Cell>
                   {trafficShare ? (
-                    <td className="text-right align-top">
+                    <Table.Cell className="text-right align-top">
                       <div className="tabular-nums">
                         {estimate ? formatCount(estimate.clicks) : "—"}
                       </div>
@@ -918,21 +919,21 @@ function SerpResultsTable({
                           />
                         </div>
                       ) : null}
-                    </td>
+                    </Table.Cell>
                   ) : null}
-                  <td className="text-right align-top tabular-nums">
+                  <Table.Cell className="text-right align-top tabular-nums">
                     {item.domain != null && ratings?.[item.domain] != null
                       ? ratings[item.domain]
                       : "—"}
-                  </td>
-                  <td className="text-right align-top tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell className="text-right align-top tabular-nums">
                     {formatCount(item.domainEtv)}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               );
             })}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
     </div>
   );

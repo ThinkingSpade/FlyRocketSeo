@@ -17,6 +17,7 @@ import {
   type ContentGroupRow,
 } from "./contentGroups";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type TrendFilter = "all" | "growing" | "decaying";
 
@@ -283,21 +284,23 @@ export function ContentPerformanceTab({
                 </p>
               ) : null}
               <div className="mt-2 overflow-x-auto">
-                <table className="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Group</th>
-                      <th className="text-right">Pages</th>
-                      <th className="text-right">Clicks</th>
-                      <th className="text-right">Impressions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.Head>Group</Table.Head>
+                      <Table.Head className="text-right">Pages</Table.Head>
+                      <Table.Head className="text-right">Clicks</Table.Head>
+                      <Table.Head className="text-right">
+                        Impressions
+                      </Table.Head>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
                     {filteredGroups.map((group) => (
                       <ContentGroupRowView key={group.key} group={group} />
                     ))}
-                  </tbody>
-                </table>
+                  </Table.Body>
+                </Table>
               </div>
             </QueryStateBoundary>
           </div>

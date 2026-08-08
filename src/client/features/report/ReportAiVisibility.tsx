@@ -1,4 +1,5 @@
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * Client Report chapter: the project's AI-search visibility, read from the
@@ -79,40 +80,40 @@ export function ReportAiVisibility({
             Share of voice vs. competitors
           </h3>
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Brand</th>
-                  <th className="text-right">AI mentions</th>
-                  <th className="text-right">Share</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Brand</Table.Head>
+                  <Table.Head className="text-right">AI mentions</Table.Head>
+                  <Table.Head className="text-right">Share</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {sovEntries.map((entry) => (
-                  <tr
+                  <Table.Row
                     key={entry.label}
                     className={entry.isTarget ? "font-semibold" : undefined}
                   >
-                    <td>
+                    <Table.Cell>
                       {entry.label}
                       {entry.isTarget ? (
                         <span className="ml-2 text-xs font-normal text-base-content/50">
                           you
                         </span>
                       ) : null}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {count(entry.mentions)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {entry.sharePct == null
                         ? "—"
                         : `${Math.round(entry.sharePct)}%`}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </div>
       ) : null}
@@ -121,32 +122,32 @@ export function ReportAiVisibility({
         <div>
           <h3 className="mb-1.5 text-base font-semibold">Top cited pages</h3>
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Page</th>
-                  <th>Platform</th>
-                  <th className="text-right">Mentions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Page</Table.Head>
+                  <Table.Head>Platform</Table.Head>
+                  <Table.Head className="text-right">Mentions</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {topPages.map((page) => (
-                  <tr key={`${page.platform}-${page.url}`}>
-                    <td className="max-w-[18rem]">
+                  <Table.Row key={`${page.platform}-${page.url}`}>
+                    <Table.Cell className="max-w-[18rem]">
                       <span className="line-clamp-1">
                         {page.domain ?? page.url}
                       </span>
-                    </td>
-                    <td className="text-base-content/70">
+                    </Table.Cell>
+                    <Table.Cell className="text-base-content/70">
                       {PLATFORM_LABEL[page.platform]}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {count(page.mentions)}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </div>
       ) : null}

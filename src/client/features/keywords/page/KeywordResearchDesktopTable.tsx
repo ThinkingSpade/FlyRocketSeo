@@ -312,7 +312,7 @@ export function KeywordResearchDesktopTable({
       ) : (
         <AppDataTable
           table={table}
-          className="table table-xs min-w-max md:w-full"
+          className="min-w-max md:w-full"
           wrapperClassName="h-full overflow-auto"
           getRowProps={(row) => ({
             className: `cursor-pointer border-b border-base-200 hover:bg-base-200/50 ${

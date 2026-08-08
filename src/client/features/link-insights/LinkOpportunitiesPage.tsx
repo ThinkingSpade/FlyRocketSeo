@@ -14,6 +14,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type PresenceResult = {
   linksToTarget: boolean;
@@ -194,18 +195,20 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Link from</th>
-                    <th className="text-right">Its impressions for query</th>
-                    <th className="text-right">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>Link from</Table.Head>
+                    <Table.Head className="text-right">
+                      Its impressions for query
+                    </Table.Head>
+                    <Table.Head className="text-right">Status</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {opportunity.sources.map((source) => (
-                    <tr key={source.page}>
-                      <td className="max-w-md">
+                    <Table.Row key={source.page}>
+                      <Table.Cell className="max-w-md">
                         <a
                           href={source.page}
                           target="_blank"
@@ -217,21 +220,21 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
                           </span>
                           <ExternalLink className="size-3 shrink-0 text-base-content/40" />
                         </a>
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {source.impressions.toLocaleString()}
-                      </td>
-                      <td className="text-right">
+                      </Table.Cell>
+                      <Table.Cell className="text-right">
                         <PresenceBadge
                           presence={presenceByKey.get(
                             `${source.page}→${opportunity.target.page}|${opportunity.query}`,
                           )}
                         />
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   ))}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table>
             </div>
           </div>
         </div>

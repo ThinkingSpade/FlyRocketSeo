@@ -5,6 +5,7 @@ import { formatDate, StatusBadge } from "@/client/features/audit/shared";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
+import { Table } from "@cloudflare/kumo/components/table";
 
 export function AuditHistorySection({
   projectId,
@@ -58,44 +59,48 @@ export function AuditHistorySection({
       <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
         <h2 className="text-base font-semibold">Previous Audits</h2>
         <div className="overflow-x-auto">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>URL</th>
-                <th>Status</th>
-                <th>Pages</th>
-                <th>Lighthouse</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>Date</Table.Head>
+                <Table.Head>URL</Table.Head>
+                <Table.Head>Status</Table.Head>
+                <Table.Head>Pages</Table.Head>
+                <Table.Head>Lighthouse</Table.Head>
+                <Table.Head></Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {history.map((audit) => (
-                <tr key={audit.id} className="hover group">
-                  <td className="text-xs text-base-content/70">
+                <Table.Row key={audit.id} className="hover group">
+                  <Table.Cell className="text-xs text-base-content/70">
                     {formatDate(audit.startedAt)}
-                  </td>
-                  <td className="max-w-[220px] truncate">{audit.startUrl}</td>
-                  <td>
+                  </Table.Cell>
+                  <Table.Cell className="max-w-[220px] truncate">
+                    {audit.startUrl}
+                  </Table.Cell>
+                  <Table.Cell>
                     <StatusBadge status={audit.status} />
-                  </td>
-                  <td>{audit.pagesTotal || audit.pagesCrawled}</td>
-                  <td>
+                  </Table.Cell>
+                  <Table.Cell>
+                    {audit.pagesTotal || audit.pagesCrawled}
+                  </Table.Cell>
+                  <Table.Cell>
                     {audit.ranLighthouse ? (
                       <Badge variant="neutral">Yes</Badge>
                     ) : null}
-                  </td>
-                  <td>
+                  </Table.Cell>
+                  <Table.Cell>
                     <HistoryActions
                       projectId={projectId}
                       auditId={audit.id}
                       onDelete={onDelete}
                     />
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </div>
       </div>
     </div>

@@ -9,6 +9,7 @@ import type {
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * The three competitive drill-downs that sit under the comparison table: who
@@ -119,23 +120,26 @@ export function LinkIntersectCard({
       {rows.length > 0 ? (
         <>
           <div className="overflow-x-auto">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Referring domain</th>
-                  <th className="text-right">Links to</th>
-                  <th className="text-right">DR</th>
-                  <th className="text-right">Backlinks</th>
-                  <th className="text-right">Spam</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Referring domain</Table.Head>
+                  <Table.Head className="text-right">Links to</Table.Head>
+                  <Table.Head className="text-right">DR</Table.Head>
+                  <Table.Head className="text-right">Backlinks</Table.Head>
+                  <Table.Head className="text-right">Spam</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {rows.map((row) => (
-                  <tr key={row.domain}>
-                    <td className="max-w-xs truncate" title={row.domain}>
+                  <Table.Row key={row.domain}>
+                    <Table.Cell
+                      className="max-w-xs truncate"
+                      title={row.domain}
+                    >
                       {row.domain}
-                    </td>
-                    <td
+                    </Table.Cell>
+                    <Table.Cell
                       className="text-right tabular-nums"
                       title={row.linkedTo.join(", ")}
                     >
@@ -148,14 +152,14 @@ export function LinkIntersectCard({
                       >
                         {row.competitorsLinked} of {competitorCount}
                       </span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatNumber(row.rank)}
-                    </td>
-                    <td className="text-right tabular-nums text-base-content/60">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums text-base-content/60">
                       {formatNumber(row.backlinks)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       <span
                         className={
                           row.spamScore != null && row.spamScore >= 40
@@ -165,11 +169,11 @@ export function LinkIntersectCard({
                       >
                         {formatNumber(row.spamScore)}
                       </span>
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-xs text-base-content/50">
@@ -365,28 +369,32 @@ export function ReferringNetworksCard({
             )}
           </p>
           <div className="overflow-x-auto">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Subnet</th>
-                  <th className="text-right">Referring domains</th>
-                  <th className="text-right">Backlinks</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Subnet</Table.Head>
+                  <Table.Head className="text-right">
+                    Referring domains
+                  </Table.Head>
+                  <Table.Head className="text-right">Backlinks</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {rows.map((row) => (
-                  <tr key={row.networkAddress}>
-                    <td className="tabular-nums">{row.networkAddress}</td>
-                    <td className="text-right tabular-nums">
+                  <Table.Row key={row.networkAddress}>
+                    <Table.Cell className="tabular-nums">
+                      {row.networkAddress}
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatNumber(row.referringDomains)}
-                    </td>
-                    <td className="text-right tabular-nums text-base-content/60">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums text-base-content/60">
                       {formatNumber(row.backlinks)}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </>
       ) : null}

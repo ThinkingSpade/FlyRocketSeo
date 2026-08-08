@@ -13,6 +13,7 @@ import {
   Tile,
   type GscRow,
 } from "@/client/features/report/ReportPrimitives";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /** Presentational sections for the Client Report, split from the page so each
  *  file stays readable. Everything here renders from already-fetched data. */
@@ -203,34 +204,34 @@ export function ReportBody({
           subtitle="Keywords ranking 5–20 where focused improvements move real traffic."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th>Page</th>
-                  <th className="text-right">Position</th>
-                  <th className="text-right">Impressions</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Keyword</Table.Head>
+                  <Table.Head>Page</Table.Head>
+                  <Table.Head className="text-right">Position</Table.Head>
+                  <Table.Head className="text-right">Impressions</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {gsc.strikingDistance.slice(0, 10).map((row) => (
-                  <tr key={row.query}>
-                    <td className="max-w-xs">
+                  <Table.Row key={row.query}>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{row.query}</span>
-                    </td>
-                    <td className="max-w-xs">
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{toPath(row.page)}</span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {Math.round(row.position)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.impressions)}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}
@@ -241,34 +242,36 @@ export function ReportBody({
           subtitle="Queries where multiple pages compete — consolidating each onto its winner recovers rankings."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th className="text-right">Competing pages</th>
-                  <th>Recommended winner</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Keyword</Table.Head>
+                  <Table.Head className="text-right">
+                    Competing pages
+                  </Table.Head>
+                  <Table.Head>Recommended winner</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {insights.cannibalization.slice(0, 5).map((row) => (
-                  <tr key={row.query}>
-                    <td className="max-w-xs">
+                  <Table.Row key={row.query}>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{row.query}</span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.pages.length}
-                    </td>
-                    <td className="max-w-xs">
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">
                         {toPath(
                           row.pages.find((page) => page.isWinner)?.page ?? "—",
                         )}
                       </span>
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}

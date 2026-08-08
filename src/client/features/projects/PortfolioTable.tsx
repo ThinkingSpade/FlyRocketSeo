@@ -264,7 +264,6 @@ export function PortfolioTable({
   return (
     <AppDataTable
       table={table}
-      className="table table-sm"
       wrapperClassName="overflow-x-auto rounded-lg border border-base-300 bg-base-100"
       getRowProps={(row) => ({
         className: "cursor-pointer hover:bg-base-200/40",

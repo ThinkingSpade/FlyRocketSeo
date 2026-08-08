@@ -155,7 +155,6 @@ export function PagesTable({ pages }: { pages: AuditResultsData["pages"] }) {
       ) : null}
       <AppDataTable
         table={table}
-        className="table table-sm"
         empty={<EmptyTableMessage label="No pages match these filters." />}
       />
     </div>
@@ -232,7 +231,6 @@ export function PerformanceTable({
       ) : null}
       <AppDataTable
         table={table}
-        className="table table-sm"
         empty={
           <EmptyTableMessage label="No performance results match these filters." />
         }

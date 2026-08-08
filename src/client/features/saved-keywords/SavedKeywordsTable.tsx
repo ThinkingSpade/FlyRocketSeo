@@ -131,7 +131,6 @@ export function SavedKeywordsTable({
   return (
     <AppDataTable
       table={table}
-      className="table table-sm"
       isLoading={isLoading}
       loading={<SavedKeywordsSkeleton />}
       empty={<SavedKeywordsEmptyState hasActiveFilters={hasActiveFilters} />}

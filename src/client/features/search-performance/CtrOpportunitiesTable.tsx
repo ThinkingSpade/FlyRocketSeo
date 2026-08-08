@@ -3,6 +3,7 @@ import {
   type QuerySamplingEvidence,
 } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type CtrRow = {
   query: string;
@@ -56,47 +57,47 @@ export function CtrOpportunitiesTable({
       emptyBody="Every well-ranking query is earning a healthy share of the clicks available at its position."
     >
       <div className="overflow-x-auto">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>Query</th>
-              <th>Page</th>
-              <th className="text-right">Position</th>
-              <th className="text-right">Impressions</th>
-              <th className="text-right">CTR</th>
-              <th
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Query</Table.Head>
+              <Table.Head>Page</Table.Head>
+              <Table.Head className="text-right">Position</Table.Head>
+              <Table.Head className="text-right">Impressions</Table.Head>
+              <Table.Head className="text-right">CTR</Table.Head>
+              <Table.Head
                 className="text-right"
                 title="Estimated clicks lost per period"
               >
                 Missed clicks
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {rows.map((row) => (
-              <tr key={`${row.query}::${row.page}`}>
-                <td className="max-w-xs">
+              <Table.Row key={`${row.query}::${row.page}`}>
+                <Table.Cell className="max-w-xs">
                   <span className="line-clamp-1">{row.query}</span>
-                </td>
-                <td className="max-w-xs">
+                </Table.Cell>
+                <Table.Cell className="max-w-xs">
                   <span className="line-clamp-1">{toPath(row.page)}</span>
-                </td>
-                <td className="text-right tabular-nums">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums">
                   {row.position.toFixed(1)}
-                </td>
-                <td className="text-right tabular-nums">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums">
                   {row.impressions.toLocaleString()}
-                </td>
-                <td className="text-right tabular-nums">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums">
                   {(row.ctr * 100).toFixed(1)}%
-                </td>
-                <td className="text-right font-medium tabular-nums text-warning">
+                </Table.Cell>
+                <Table.Cell className="text-right font-medium tabular-nums text-warning">
                   ~{row.missedClicks.toLocaleString()}
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
         {/* Kept as guidance, softened from a diagnosis. Search Console reports
           clicks, impressions and position — never WHY someone didn't click. A
           featured snippet answering the query, brand preference, or a title that

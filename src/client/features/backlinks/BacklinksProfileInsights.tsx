@@ -15,6 +15,7 @@ import type {
   BacklinksReferringDomainsData,
 } from "./backlinksPageTypes";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * Four reads on the link profile that cost nothing extra: each derives from
@@ -271,34 +272,37 @@ export function ToxicLinksCard({
         since disavowing a good link costs ranking.
       </p>
       <div className="overflow-x-auto">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>Domain</th>
-              <th className="text-right">Spam score</th>
-              <th className="text-right">DR</th>
-              <th className="text-right">Backlinks</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Domain</Table.Head>
+              <Table.Head className="text-right">Spam score</Table.Head>
+              <Table.Head className="text-right">DR</Table.Head>
+              <Table.Head className="text-right">Backlinks</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {preview.map((candidate) => (
-              <tr key={candidate.domain}>
-                <td className="max-w-md truncate" title={candidate.domain}>
+              <Table.Row key={candidate.domain}>
+                <Table.Cell
+                  className="max-w-md truncate"
+                  title={candidate.domain}
+                >
                   {candidate.domain}
-                </td>
-                <td className="text-right tabular-nums font-medium text-error">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums font-medium text-error">
                   {candidate.spamScore}
-                </td>
-                <td className="text-right tabular-nums text-base-content/60">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums text-base-content/60">
                   {candidate.rank ?? "—"}
-                </td>
-                <td className="text-right tabular-nums text-base-content/60">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums text-base-content/60">
                   {formatNumber(candidate.backlinks)}
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
       {audit.candidates.length > preview.length ? (
         <p className="text-xs text-base-content/40">

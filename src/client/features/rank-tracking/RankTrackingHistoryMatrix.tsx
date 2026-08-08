@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * "By date" view: keyword rows × recent check columns, each cell the position
@@ -52,45 +53,47 @@ export function RankTrackingHistoryMatrix({
 
   return (
     <div className="overflow-x-auto rounded-lg border border-base-300">
-      <table className="table table-sm">
-        <thead>
-          <tr>
+      <Table>
+        <Table.Header>
+          <Table.Row>
             {/* Unconstrained keyword column absorbs the slack when only a few
                 check columns exist, so sparse history doesn't stretch oddly. */}
-            <th className="sticky left-0 z-10 bg-base-100 w-full">Keyword</th>
+            <Table.Head className="sticky left-0 z-10 bg-base-100 w-full">
+              Keyword
+            </Table.Head>
             {runs.map((r) => (
-              <th
+              <Table.Head
                 key={r.runId}
                 className="w-24 whitespace-nowrap text-right text-xs font-medium text-base-content/60"
               >
                 {formatDate(r.checkedAt)}
-              </th>
+              </Table.Head>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {keywords.map((kw) => {
             const byRun = cellByKeyword.get(kw.trackingKeywordId);
             return (
-              <tr key={kw.trackingKeywordId}>
-                <td className="sticky left-0 z-10 bg-base-100 whitespace-nowrap font-medium">
+              <Table.Row key={kw.trackingKeywordId}>
+                <Table.Cell className="sticky left-0 z-10 bg-base-100 whitespace-nowrap font-medium">
                   {kw.keyword}
-                </td>
+                </Table.Cell>
                 {runs.map((r, i) => {
                   const position = byRun?.get(r.runId) ?? null;
                   const previous =
                     i > 0 ? (byRun?.get(runs[i - 1].runId) ?? null) : undefined;
                   return (
-                    <td key={r.runId} className="text-right">
+                    <Table.Cell key={r.runId} className="text-right">
                       <MatrixCell position={position} previous={previous} />
-                    </td>
+                    </Table.Cell>
                   );
                 })}
-              </tr>
+              </Table.Row>
             );
           })}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     </div>
   );
 }

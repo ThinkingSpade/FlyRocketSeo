@@ -373,7 +373,7 @@ export function KeywordSuggestionStep({
 
       <AppDataTable
         table={table}
-        className="table table-xs table-pin-rows w-full"
+        className="w-full"
         wrapperClassName="overflow-y-auto max-h-[400px] border border-base-300 rounded-lg"
         stickyHeader
         getRowProps={(row) => ({

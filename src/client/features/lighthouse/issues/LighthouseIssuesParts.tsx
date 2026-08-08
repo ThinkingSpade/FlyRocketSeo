@@ -21,6 +21,7 @@ import { categoryTabs } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
+import { Table } from "@cloudflare/kumo/components/table";
 
 export function LighthouseIssuesHeader({
   backLabel,
@@ -327,7 +328,7 @@ export function LighthouseIssueList({
     );
   }
   return (
-    <table className="table table-sm w-full table-fixed">
+    <Table className="w-full" layout="fixed">
       <colgroup>
         <col className="w-8" />
         <col className="w-24" />
@@ -336,26 +337,28 @@ export function LighthouseIssueList({
         <col className="w-28 hidden md:table-column" />
         <col className="w-14" />
       </colgroup>
-      <thead>
-        <tr className="text-xs text-base-content/50 uppercase tracking-wide border-b border-base-300">
-          <th />
-          <th className="font-medium">Severity</th>
-          <th className="font-medium">Issue</th>
-          <th className="font-medium hidden sm:table-cell">Category</th>
-          <th className="font-medium hidden md:table-cell text-right">
+      <Table.Header>
+        <Table.Row className="text-xs text-base-content/50 uppercase tracking-wide border-b border-base-300">
+          <Table.Head />
+          <Table.Head className="font-medium">Severity</Table.Head>
+          <Table.Head className="font-medium">Issue</Table.Head>
+          <Table.Head className="font-medium hidden sm:table-cell">
+            Category
+          </Table.Head>
+          <Table.Head className="font-medium hidden md:table-cell text-right">
             Impact
-          </th>
-          <th className="font-medium text-right">Score</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-base-300/60">
+          </Table.Head>
+          <Table.Head className="font-medium text-right">Score</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body className="divide-y divide-base-300/60">
         {issues.map((issue, issueIndex) => (
           <LighthouseIssueRow
             key={`${issue.category}-${issue.auditKey}-${issueIndex}`}
             issue={issue}
           />
         ))}
-      </tbody>
-    </table>
+      </Table.Body>
+    </Table>
   );
 }

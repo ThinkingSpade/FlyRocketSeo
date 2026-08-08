@@ -16,6 +16,7 @@ import {
 } from "./RankTrackingTrendChart";
 import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
@@ -189,16 +190,16 @@ export function KeywordTrendModal({
           </div>
 
           <div className="max-h-64 overflow-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead className="sticky top-0 bg-base-100">
-                <tr>
-                  <th>Date</th>
-                  {devices.length > 1 && <th>Device</th>}
-                  <th>Position</th>
-                  <th>Δ vs previous check</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header className="sticky top-0 bg-base-100">
+                <Table.Row>
+                  <Table.Head>Date</Table.Head>
+                  {devices.length > 1 && <Table.Head>Device</Table.Head>}
+                  <Table.Head>Position</Table.Head>
+                  <Table.Head>Δ vs previous check</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {historyRows.map((r, idx) => {
                   // No prior ranking to compare against (first check, or the
                   // previous check was unranked): show the lone position as a
@@ -207,16 +208,16 @@ export function KeywordTrendModal({
                   const noPrevious =
                     r.position !== null && r.previousPosition === null;
                   return (
-                    <tr key={`${r.device}-${r.checkedAt}-${idx}`}>
-                      <td className="whitespace-nowrap text-xs">
+                    <Table.Row key={`${r.device}-${r.checkedAt}-${idx}`}>
+                      <Table.Cell className="whitespace-nowrap text-xs">
                         {new Date(r.checkedAt).toLocaleDateString()}
-                      </td>
+                      </Table.Cell>
                       {devices.length > 1 && (
-                        <td className="text-xs">
+                        <Table.Cell className="text-xs">
                           {DEVICE_STYLE[r.device].label}
-                        </td>
+                        </Table.Cell>
                       )}
-                      <td>
+                      <Table.Cell>
                         {r.position === null ? (
                           <span className="text-base-content/40 text-xs">
                             Not in top {serpDepth}
@@ -226,8 +227,8 @@ export function KeywordTrendModal({
                             {r.position}
                           </span>
                         )}
-                      </td>
-                      <td>
+                      </Table.Cell>
+                      <Table.Cell>
                         {noPrevious ? (
                           // Invisible placeholders matching the "before → after"
                           // layout so the lone pill lines up under the position
@@ -251,12 +252,12 @@ export function KeywordTrendModal({
                             }}
                           />
                         )}
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   );
                 })}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </>
       )}

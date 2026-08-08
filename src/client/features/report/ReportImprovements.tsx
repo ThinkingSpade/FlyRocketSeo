@@ -1,6 +1,7 @@
 import { formatCount, toPath } from "@/client/features/report/reportModel";
 import { StatBlock } from "@/client/features/report/ReportChrome";
 import { describeOnPageStatus } from "@/client/features/report/onPageStatus";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * The "what's wrong and what's worth doing" chapters of the Client Report:
@@ -69,34 +70,34 @@ export function OnPageOptimizations({
         that need no new content — only edits to pages that already exist.
       </p>
       <div className="overflow-x-auto rounded-lg border border-base-300">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>Optimization type</th>
-              <th>Why it matters</th>
-              <th className="text-right">Priority</th>
-              <th className="text-right">Pages affected</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Optimization type</Table.Head>
+              <Table.Head>Why it matters</Table.Head>
+              <Table.Head className="text-right">Priority</Table.Head>
+              <Table.Head className="text-right">Pages affected</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {found.map((issue) => (
-              <tr key={issue.key}>
-                <td className="font-medium">{issue.label}</td>
-                <td className="max-w-sm text-base-content/70">
+              <Table.Row key={issue.key}>
+                <Table.Cell className="font-medium">{issue.label}</Table.Cell>
+                <Table.Cell className="max-w-sm text-base-content/70">
                   <span className="line-clamp-1">{issue.description}</span>
-                </td>
-                <td
+                </Table.Cell>
+                <Table.Cell
                   className={`text-right text-xs font-medium ${SEVERITY_TONE[issue.severity]}`}
                 >
                   {SEVERITY_LABEL[issue.severity]}
-                </td>
-                <td className="text-right font-semibold tabular-nums">
+                </Table.Cell>
+                <Table.Cell className="text-right font-semibold tabular-nums">
                   {formatCount(issue.pageCount)}
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
     </>
   );
@@ -130,34 +131,34 @@ export function ContentMovers({ rows }: { rows: MoverRow[] }) {
         what the next piece of content should be about.
       </p>
       <div className="overflow-x-auto rounded-lg border border-base-300">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>Page</th>
-              <th className="text-right">Clicks</th>
-              <th className="text-right">Gained</th>
-              <th className="text-right">Impressions</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Page</Table.Head>
+              <Table.Head className="text-right">Clicks</Table.Head>
+              <Table.Head className="text-right">Gained</Table.Head>
+              <Table.Head className="text-right">Impressions</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {rows.map((row) => (
-              <tr key={row.page}>
-                <td className="max-w-md">
+              <Table.Row key={row.page}>
+                <Table.Cell className="max-w-md">
                   <span className="line-clamp-1">{toPath(row.page)}</span>
-                </td>
-                <td className="text-right tabular-nums">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums">
                   {formatCount(row.clicks)}
-                </td>
-                <td className="text-right font-medium tabular-nums text-success">
+                </Table.Cell>
+                <Table.Cell className="text-right font-medium tabular-nums text-success">
                   +{formatCount(row.clicksDelta)}
-                </td>
-                <td className="text-right tabular-nums text-base-content/70">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums text-base-content/70">
                   {formatCount(row.impressions)}
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
     </>
   );
@@ -203,30 +204,30 @@ export function ApprovedFixesSection({ fixes }: { fixes: ApprovedFix[] }) {
         period ({summary}). Each is a specific rewrite ready to publish.
       </p>
       <div className="overflow-x-auto rounded-lg border border-base-300">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>Page</th>
-              <th>Element</th>
-              <th>Approved change</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Page</Table.Head>
+              <Table.Head>Element</Table.Head>
+              <Table.Head>Approved change</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {fixes.slice(0, 15).map((fix) => (
-              <tr key={fix.id}>
-                <td className="max-w-[12rem]">
+              <Table.Row key={fix.id}>
+                <Table.Cell className="max-w-[12rem]">
                   <span className="line-clamp-1">{toPath(fix.url)}</span>
-                </td>
-                <td className="text-base-content/70">
+                </Table.Cell>
+                <Table.Cell className="text-base-content/70">
                   {FIX_ELEMENT_LABEL[fix.element] ?? fix.element}
-                </td>
-                <td className="max-w-sm">
+                </Table.Cell>
+                <Table.Cell className="max-w-sm">
                   <span className="line-clamp-1">{fix.suggestedValue}</span>
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
       {fixes.length > 15 ? (
         <p className="text-xs text-base-content/50">
@@ -290,24 +291,24 @@ export function BacklinkProfileBlock({
 
       {topDomains.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-base-300">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Top linking sites</th>
-                <th className="text-right">Backlinks</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>Top linking sites</Table.Head>
+                <Table.Head className="text-right">Backlinks</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {topDomains.map((row) => (
-                <tr key={row.domain ?? "—"}>
-                  <td>{row.domain ?? "—"}</td>
-                  <td className="text-right tabular-nums">
+                <Table.Row key={row.domain ?? "—"}>
+                  <Table.Cell>{row.domain ?? "—"}</Table.Cell>
+                  <Table.Cell className="text-right tabular-nums">
                     {formatCount(row.backlinks)}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </div>
       ) : null}
     </>
