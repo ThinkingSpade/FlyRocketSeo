@@ -3,7 +3,7 @@ import { MoreHorizontal, ScanSearch, Trash2 } from "lucide-react";
 import type { getAuditHistory } from "@/serverFunctions/audit";
 import { formatDate, StatusBadge } from "@/client/features/audit/shared";
 import { Badge } from "@cloudflare/kumo/components/badge";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 export function AuditHistorySection({
@@ -117,7 +117,7 @@ function HistoryActions({
         to="/p/$projectId/audit"
         params={{ projectId }}
         search={{ auditId, tab: "pages" }}
-        className="btn btn-primary btn-xs"
+        className={buttonVariants({ variant: "primary", size: "xs" })}
       >
         View
       </Link>

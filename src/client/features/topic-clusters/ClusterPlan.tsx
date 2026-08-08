@@ -135,7 +135,7 @@ export function ClusterPlan({
           </Badge>
         ) : null}
         <div className="flex-1" />
-        <Button size="xs" className="btn-soft" onClick={handleCopyPlan}>
+        <Button size="xs" variant="secondary" onClick={handleCopyPlan}>
           <Sparkles className="size-3" /> Copy plan for AI
         </Button>
       </div>

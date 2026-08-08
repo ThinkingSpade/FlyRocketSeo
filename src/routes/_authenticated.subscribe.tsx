@@ -162,15 +162,16 @@ function SubscribePage() {
           )}
         </p>
 
-        <button
+        <Button
           type="button"
-          className="btn btn-soft w-full"
+          variant="secondary"
+          className="w-full"
           onClick={() => {
             void customerQuery.refetch();
           }}
         >
           Try again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -245,13 +246,14 @@ function SubscribePage() {
 
         {error ? <p className="text-sm text-error">{error}</p> : null}
 
-        <button
-          className="btn btn-soft w-full"
+        <Button
+          variant="secondary"
+          className="w-full"
           disabled={isAttaching}
           onClick={() => void handleSubscribe()}
         >
           {isAttaching ? "Redirecting..." : "Subscribe"}
-        </button>
+        </Button>
 
         <p className="text-center text-xs text-base-content/50">
           <span

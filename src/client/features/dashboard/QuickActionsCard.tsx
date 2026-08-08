@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Zap } from "lucide-react";
 import { DashboardCard, useProjectNavLinks } from "./dashboardShared";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 // The main tools, pulled straight from the project nav so labels/routes stay
 // in sync with the sidebar.
@@ -23,7 +24,7 @@ export function QuickActionsCard({ projectId }: { projectId: string }) {
           <Link
             key={label}
             {...linkProps}
-            className="btn btn-ghost btn-sm h-auto min-h-0 flex-col items-center gap-1.5 border border-base-300 py-3 font-normal"
+            className={`${buttonVariants({ variant: "ghost", size: "sm" })} h-auto min-h-0 flex-col items-center gap-1.5 border border-base-300 py-3 font-normal`}
           >
             <Icon className="size-4 text-base-content/70" />
             <span className="text-xs">{label}</span>

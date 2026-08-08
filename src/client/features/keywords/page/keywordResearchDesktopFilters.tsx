@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import type { KeywordResearchControllerState } from "./types";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Input } from "@cloudflare/kumo/components/input";
 
 function FilterTextInput({
@@ -163,7 +163,7 @@ export function SerpPanelActions({
         to="/p/$projectId/serp"
         params={{ projectId }}
         search={{ q: keyword }}
-        className="btn btn-ghost btn-xs"
+        className={buttonVariants({ variant: "ghost", size: "xs" })}
       >
         Full SERP
       </Link>
@@ -171,7 +171,7 @@ export function SerpPanelActions({
         to="/p/$projectId/content"
         params={{ projectId }}
         search={{ q: keyword }}
-        className="btn btn-ghost btn-xs"
+        className={buttonVariants({ variant: "ghost", size: "xs" })}
       >
         Build brief
       </Link>
@@ -179,7 +179,7 @@ export function SerpPanelActions({
         to="/p/$projectId/trends"
         params={{ projectId }}
         search={{ q: keyword }}
-        className="btn btn-ghost btn-xs"
+        className={buttonVariants({ variant: "ghost", size: "xs" })}
       >
         Trends
       </Link>

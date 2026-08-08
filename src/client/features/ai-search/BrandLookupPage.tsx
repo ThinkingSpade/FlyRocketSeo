@@ -27,6 +27,7 @@ import {
 import { detectTarget } from "@/shared/targetDetection";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = {
   projectId: string;
@@ -262,7 +263,7 @@ function BrandLookupPageInner({
                   params={{ projectId }}
                   search={{ q: undefined, c: undefined }}
                   replace
-                  className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+                  className={`${buttonVariants({ variant: "ghost", size: "sm" })} gap-2 px-0 text-base-content/70 hover:bg-transparent`}
                 >
                   <ArrowLeft className="size-4" />
                   Recent searches

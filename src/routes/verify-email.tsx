@@ -12,6 +12,7 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 const verificationIssueSchema = z
   .enum(["invalid_token", "token_expired", "user_not_found", "unknown"])
@@ -221,7 +222,7 @@ function VerifyEmailPage() {
             <Link
               to="/sign-in"
               search={getSignInSearch(redirectTo)}
-              className="btn btn-soft w-full"
+              className={`${buttonVariants({ variant: "secondary" })} w-full`}
             >
               Back to sign in
             </Link>
@@ -237,14 +238,15 @@ function VerifyEmailPage() {
                 <span>{resendError}</span>
               </div>
             ) : null}
-            <button
+            <Button
               type="button"
-              className="btn btn-soft w-full"
+              variant="secondary"
+              className="w-full"
               onClick={() => void handleResend()}
               disabled={isResending}
             >
               {isResending ? "Sending email..." : "Resend email"}
-            </button>
+            </Button>
           </div>
         ) : null}
       </AuthPageCard>

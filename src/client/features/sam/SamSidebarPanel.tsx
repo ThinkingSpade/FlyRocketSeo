@@ -122,7 +122,7 @@ export function SamSidebarPanel({
           type="button"
           variant="ghost"
           size="sm"
-          className="btn-block justify-start font-normal text-base-content/70 hover:text-base-content"
+          className="w-full justify-start font-normal text-base-content/70 hover:text-base-content"
           disabled={createSession.isPending}
           onClick={() => createSession.mutate()}
         >

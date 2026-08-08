@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { DOMAIN_KEYWORDS_PAGE_SIZES } from "@/types/schemas/domain";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = {
   page: number;
@@ -117,7 +118,14 @@ function PageLink({
       })}
       aria-label={label}
       aria-disabled={disabled}
-      className={`btn btn-ghost btn-sm btn-square ${disabled ? "btn-disabled" : ""}`}
+      // A router Link, not a button, so it takes the class string rather than
+      // the component. `btn-disabled` has no Kumo equivalent because Kumo's
+      // disabled styling comes from the real `disabled` attribute, which an
+      // anchor cannot carry — aria-disabled above plus the click guard below
+      // are what actually disable this, and the opacity now says so.
+      className={`${buttonVariants({ variant: "ghost", size: "sm", shape: "square" })} ${
+        disabled ? "pointer-events-none opacity-50" : ""
+      }`}
       onClick={(event) => {
         if (disabled) {
           event.preventDefault();

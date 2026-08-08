@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { Sparkles, type LucideIcon } from "lucide-react";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = {
   feature: string;
@@ -25,7 +26,7 @@ export function AiSearchPaidPlanGate({ feature, description, bullets }: Props) {
         <Link
           to={SUBSCRIBE_ROUTE}
           search={{ upgrade: true }}
-          className="btn btn-primary shrink-0"
+          className={`${buttonVariants({ variant: "primary" })} shrink-0`}
         >
           Upgrade
         </Link>

@@ -18,6 +18,7 @@ import {
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export const Route = createFileRoute("/_app/billing")({
   beforeLoad: () => {
@@ -83,15 +84,16 @@ function BillingPage() {
             "We couldn't load your billing details right now. Please try again.",
           )}
         </p>
-        <button
+        <Button
           type="button"
-          className="btn btn-soft btn-sm"
+          variant="secondary"
+          size="sm"
           onClick={() => {
             void customerQuery.refetch();
           }}
         >
           Try again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -193,8 +195,10 @@ function BillingPage() {
                   </li>
                 ))}
               </ul>
-              <button
-                className="btn btn-soft btn-sm w-full"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full"
                 disabled={isPending}
                 onClick={() =>
                   void runAction(
@@ -209,11 +213,13 @@ function BillingPage() {
                 }
               >
                 Upgrade Plan
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              className="btn btn-soft btn-sm w-full"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
               disabled={isPending}
               onClick={() =>
                 void runAction(
@@ -226,7 +232,7 @@ function BillingPage() {
               }
             >
               Manage subscription
-            </button>
+            </Button>
           )}
         </div>
 
@@ -262,8 +268,10 @@ function BillingPage() {
               ) : null}
             </div>
 
-            <button
-              className="btn btn-soft btn-sm w-full"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
               disabled={isPending || !isValidTopUp}
               onClick={() =>
                 void runAction(
@@ -286,7 +294,7 @@ function BillingPage() {
               }
             >
               Buy credits
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

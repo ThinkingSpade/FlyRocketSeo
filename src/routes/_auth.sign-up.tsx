@@ -21,6 +21,7 @@ import {
   HOSTED_PASSWORD_MIN_LENGTH,
 } from "@/lib/auth-options";
 import { z } from "zod";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const signUpSchema = z
   .object({
@@ -344,8 +345,9 @@ function SignUpPage() {
                   {errorMessage ? (
                     <p className="text-sm text-error">{errorMessage}</p>
                   ) : null}
-                  <button
-                    className="btn btn-soft w-full"
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     disabled={
                       !isHostedMode ||
                       isSubmitting ||
@@ -353,7 +355,7 @@ function SignUpPage() {
                     }
                   >
                     {isSubmitting ? "Creating account..." : "Create account"}
-                  </button>
+                  </Button>
                 </>
               );
             }}

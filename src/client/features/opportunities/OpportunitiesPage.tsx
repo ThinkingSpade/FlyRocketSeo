@@ -30,6 +30,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
@@ -217,7 +218,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/search-performance"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-3"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
             >
               Connect Search Console
             </Link>
@@ -271,7 +272,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/audit"
               params={{ projectId }}
-              className="btn btn-ghost btn-xs"
+              className={buttonVariants({ variant: "ghost", size: "xs" })}
             >
               Open Site Audit
             </Link>
@@ -309,7 +310,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/audit"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-3"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
             >
               Run a site audit
             </Link>
@@ -395,7 +396,7 @@ function OpportunityRow({
           <Link
             to="/p/$projectId/cannibalization"
             params={{ projectId }}
-            className="btn btn-ghost btn-xs"
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             Review
           </Link>
@@ -403,7 +404,7 @@ function OpportunityRow({
           <Link
             to="/p/$projectId/search-performance"
             params={{ projectId }}
-            className="btn btn-ghost btn-xs"
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             Review
           </Link>
@@ -412,7 +413,7 @@ function OpportunityRow({
             to="/p/$projectId/content"
             params={{ projectId }}
             search={{ q: row.query }}
-            className="btn btn-ghost btn-xs"
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             Build brief
           </Link>

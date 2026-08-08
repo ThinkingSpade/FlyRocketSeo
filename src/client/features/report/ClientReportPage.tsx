@@ -4,7 +4,7 @@ import { ReportToolbar } from "@/client/features/report/ReportToolbar";
 import { ReportCover } from "@/client/features/report/ReportChrome";
 import { ReportPages } from "@/client/features/report/ReportPages";
 import { useClientReportData } from "@/client/features/report/useClientReportData";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 
@@ -113,7 +113,7 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
                 to="/p/$projectId/domain"
                 params={{ projectId }}
                 search={{ domain: data.domain ?? undefined }}
-                className="btn btn-sm"
+                className={buttonVariants({ size: "sm" })}
               >
                 Refresh domain overview
               </Link>
@@ -123,7 +123,7 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
                 to="/p/$projectId/backlinks"
                 params={{ projectId }}
                 search={{ target: data.domain ?? undefined }}
-                className="btn btn-sm"
+                className={buttonVariants({ size: "sm" })}
               >
                 Refresh backlinks
               </Link>

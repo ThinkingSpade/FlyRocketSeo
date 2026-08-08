@@ -6,7 +6,7 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 
 function formatCount(value: number | null): string {
@@ -44,7 +44,7 @@ export function DomainCompetitorsCard({
           <Link
             to="/p/$projectId/competitors"
             params={{ projectId }}
-            className="btn btn-ghost btn-xs"
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             Full analysis
           </Link>

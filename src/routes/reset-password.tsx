@@ -14,6 +14,7 @@ import {
   HOSTED_PASSWORD_MIN_LENGTH,
 } from "@/lib/auth-options";
 import { z } from "zod";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 const resetPasswordSchema = z
   .object({
@@ -190,7 +191,7 @@ function ResetPasswordPage() {
                       ? "/sign-in"
                       : `/sign-in?redirect=${encodeURIComponent(redirectTo)}`
                   }
-                  className="btn btn-soft w-full"
+                  className={`${buttonVariants({ variant: "secondary" })} w-full`}
                 >
                   Continue to sign in
                 </a>
@@ -198,7 +199,7 @@ function ResetPasswordPage() {
                 <Link
                   to="/forgot-password"
                   search={getSignInSearch(redirectTo)}
-                  className="btn btn-soft w-full"
+                  className={`${buttonVariants({ variant: "secondary" })} w-full`}
                 >
                   Request a new reset link
                 </Link>
@@ -267,12 +268,13 @@ function ResetPasswordPage() {
                   {errorMessage ? (
                     <p className="text-sm text-error">{errorMessage}</p>
                   ) : null}
-                  <button
-                    className="btn btn-soft w-full"
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     disabled={isSubmitting}
                   >
                     {isSubmitting ? "Updating password..." : "Update password"}
-                  </button>
+                  </Button>
                 </form>
               )}
             </AuthPageCard>

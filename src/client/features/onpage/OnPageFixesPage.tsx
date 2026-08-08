@@ -28,7 +28,7 @@ import {
 } from "@/serverFunctions/onPage";
 import { getAuditHistory } from "@/serverFunctions/audit";
 import { getGscConnection } from "@/serverFunctions/gsc";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 type StatusValue = "all" | OnPageStatus;
 
@@ -218,7 +218,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/audit"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-4"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-4`}
             >
               Open Site Audit
             </Link>

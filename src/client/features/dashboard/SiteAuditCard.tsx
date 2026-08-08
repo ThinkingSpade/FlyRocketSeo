@@ -9,6 +9,7 @@ import {
   DashboardCard,
   useProjectNavLinks,
 } from "./dashboardShared";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 function AuditSkeleton() {
   return (
@@ -45,7 +46,10 @@ export function SiteAuditCard({ projectId }: { projectId: string }) {
       ) : latest === null ? (
         <CardEmpty>
           <p>No audits yet.</p>
-          <Link {...auditLink} className="btn btn-primary btn-sm mt-3">
+          <Link
+            {...auditLink}
+            className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
+          >
             Run your first site audit
           </Link>
         </CardEmpty>

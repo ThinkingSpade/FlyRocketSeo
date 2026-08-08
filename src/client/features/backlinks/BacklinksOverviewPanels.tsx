@@ -10,6 +10,7 @@ import type { BacklinksOverviewData } from "./backlinksPageTypes";
 import { formatRelativeTimestamp } from "./backlinksPageUtils";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type SummaryStat = { label: string; value: string; description: string };
 
@@ -38,7 +39,7 @@ export function BacklinksOverviewPanels({
             order: undefined,
           }}
           replace
-          className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+          className={`${buttonVariants({ variant: "ghost", size: "sm" })} gap-2 px-0 text-base-content/70 hover:bg-transparent`}
         >
           <ArrowLeft className="size-4" />
           Recent searches

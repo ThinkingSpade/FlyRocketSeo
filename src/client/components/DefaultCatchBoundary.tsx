@@ -9,7 +9,7 @@ import {
 import { AuthConfigErrorCard } from "@/client/components/AuthConfigErrorCard";
 import { captureClientError } from "@/client/lib/posthog";
 import { UnauthenticatedErrorCard } from "@/client/components/UnauthenticatedErrorCard";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
   const router = useRouter();
@@ -84,13 +84,13 @@ export function DefaultCatchBoundary({ error }: ErrorComponentProps) {
           Try Again
         </Button>
         {isRoot ? (
-          <Link to="/" className="btn btn-sm">
+          <Link to="/" className={buttonVariants({ size: "sm" })}>
             Home
           </Link>
         ) : (
           <Link
             to="/"
-            className="btn btn-sm"
+            className={buttonVariants({ size: "sm" })}
             onClick={(e) => {
               e.preventDefault();
               window.history.back();

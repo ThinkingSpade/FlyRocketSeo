@@ -18,6 +18,7 @@ import {
   pointsDelta,
   useProjectNavLinks,
 } from "./dashboardShared";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 export function RankTrackingCard({ projectId }: { projectId: string }) {
   const nav = useProjectNavLinks(projectId);
@@ -71,7 +72,10 @@ export function RankTrackingCard({ projectId }: { projectId: string }) {
       ) : summaries.length === 0 || primary === null ? (
         <CardEmpty>
           <p>No tracked domains yet.</p>
-          <Link {...rankLink} className="btn btn-primary btn-sm mt-3">
+          <Link
+            {...rankLink}
+            className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
+          >
             Start tracking rankings
           </Link>
         </CardEmpty>

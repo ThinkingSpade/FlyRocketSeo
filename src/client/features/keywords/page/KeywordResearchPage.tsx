@@ -38,7 +38,7 @@ import {
 import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
 import { AppPageShell } from "@/client/components/AppPageShell";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = Omit<KeywordResearchControllerInput, "onFormSubmit">;
 type KeywordSearchTab = SearchTab & { input: KeywordSearchTabInput };
@@ -389,7 +389,7 @@ function KeywordResearchContent({
             <p className="text-sm">{controller.researchError}</p>
           </div>
           {isCreditsError ? (
-            <Link to={BILLING_ROUTE} className="btn btn-sm">
+            <Link to={BILLING_ROUTE} className={buttonVariants({ size: "sm" })}>
               Go to Billing
             </Link>
           ) : (

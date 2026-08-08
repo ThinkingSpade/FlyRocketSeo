@@ -16,7 +16,7 @@ import {
   setGscSite,
 } from "@/serverFunctions/gsc";
 import type { GscAccessFailureReason } from "@/shared/gsc";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 
 const GRANT_STATUS_KEY = ["gscGrantStatus"];
@@ -313,7 +313,7 @@ function BrokenState({
             href={notice.action.href}
             target="_blank"
             rel="noreferrer"
-            className="btn btn-sm"
+            className={buttonVariants({ size: "sm" })}
           >
             {notice.action.label}
           </a>

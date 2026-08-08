@@ -39,6 +39,7 @@ import {
   type PerformanceRowData,
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 const pageColumnHelper = createColumnHelper<PageRow>();
 const performanceColumnHelper = createColumnHelper<PerformanceRowData>();
@@ -358,7 +359,7 @@ function buildPerformanceColumns({
       cell: ({ row }) =>
         row.original.r2Key && !isLighthouseFailure(row.original) ? (
           <Link
-            className="btn btn-primary btn-xs"
+            className={buttonVariants({ variant: "primary", size: "xs" })}
             to="/p/$projectId/audit/issues/$resultId"
             params={{ projectId, resultId: row.original.id }}
             search={{ auditId, category: "performance" }}

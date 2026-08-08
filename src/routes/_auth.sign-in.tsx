@@ -12,6 +12,7 @@ import { captureClientEvent } from "@/client/lib/posthog";
 import { authClient } from "@/lib/auth-client";
 import { getSignInSearch, getVerifyEmailSearch } from "@/lib/auth-redirect";
 import { z } from "zod";
+import { Button } from "@cloudflare/kumo/components/button";
 
 const signInSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -238,12 +239,13 @@ function SignInPage() {
                   {errorMessage ? (
                     <p className="text-sm text-error">{errorMessage}</p>
                   ) : null}
-                  <button
-                    className="btn btn-soft w-full"
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     disabled={!isHostedMode || isSubmitting}
                   >
                     {isSubmitting ? "Signing in..." : "Sign in"}
-                  </button>
+                  </Button>
                 </>
               );
             }}

@@ -8,6 +8,7 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { exportBackup } from "@/serverFunctions/backup";
 import { GscOAuthConfigSection } from "@/client/features/gsc/GscOAuthConfigSection";
 import { GeoLocationSeedSection } from "@/client/features/geo/GeoLocationSeedSection";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -155,9 +156,11 @@ function SettingsPage() {
                   sessions.
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
-                className="btn btn-sm btn-outline gap-2"
+                variant="outline"
+                size="sm"
+                className="gap-2"
                 onClick={() => void handleDownloadBackup()}
                 disabled={isExportingBackup}
               >
@@ -167,7 +170,7 @@ function SettingsPage() {
                   <Download className="size-4" />
                 )}
                 {isExportingBackup ? "Preparing…" : "Download"}
-              </button>
+              </Button>
             </div>
           </section>
         ) : null}

@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { AlertTriangle, ExternalLink } from "lucide-react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
 function SeoApiStatusBanners({
@@ -132,7 +132,7 @@ const MissingSeoSetupModal = React.forwardRef<
           </Button>
           <Link
             {...dataforseoHelpLinkOptions}
-            className="btn btn-primary"
+            className={buttonVariants({ variant: "primary" })}
             onClick={onClose}
           >
             Open setup guide

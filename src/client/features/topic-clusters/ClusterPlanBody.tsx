@@ -11,6 +11,7 @@ import {
 } from "@/client/features/topic-clusters/TopicCoverageOverlay";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 const PRIORITY_BADGES: Record<
   ClusterPriority,
@@ -64,7 +65,7 @@ export function ClusterPlanBody({
                 to="/p/$projectId/content"
                 params={{ projectId }}
                 search={{ q: plan.topic, loc: plan.locationCode }}
-                className="btn btn-primary btn-xs gap-1"
+                className={`${buttonVariants({ variant: "primary", size: "xs" })} gap-1`}
               >
                 <NotebookPen className="size-3" /> Build brief
               </Link>
@@ -137,7 +138,7 @@ export function ClusterPlanBody({
                     to="/p/$projectId/content"
                     params={{ projectId }}
                     search={{ q: topKeyword, loc: plan.locationCode }}
-                    className="btn btn-soft btn-xs gap-1"
+                    className={`${buttonVariants({ variant: "secondary", size: "xs" })} gap-1`}
                   >
                     <NotebookPen className="size-3" /> Build brief
                   </Link>
@@ -145,7 +146,7 @@ export function ClusterPlanBody({
                     to="/p/$projectId/serp"
                     params={{ projectId }}
                     search={{ q: topKeyword, loc: plan.locationCode }}
-                    className="btn btn-ghost btn-xs"
+                    className={buttonVariants({ variant: "ghost", size: "xs" })}
                   >
                     View SERP
                   </Link>

@@ -18,6 +18,7 @@ import {
   summarizeProjectKeywords,
   type RankedQuery,
 } from "./projectKeywords";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 function Tile({ label, value }: { label: string; value: number }) {
   return (
@@ -180,7 +181,10 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
           />
         </div>
 
-        <Link {...gscLink} className="btn btn-ghost btn-sm mt-3">
+        <Link
+          {...gscLink}
+          className={`${buttonVariants({ variant: "ghost", size: "sm" })} mt-3`}
+        >
           See all queries
         </Link>
       </QueryStateBoundary>

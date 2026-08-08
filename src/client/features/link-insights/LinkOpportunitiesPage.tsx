@@ -13,6 +13,7 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type PresenceResult = {
   linksToTarget: boolean;
@@ -123,7 +124,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/search-performance"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-2"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-2`}
             >
               Go to GSC Insights
             </Link>

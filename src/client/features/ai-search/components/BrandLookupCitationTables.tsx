@@ -14,6 +14,7 @@ import {
 import { formatUrlForDisplay } from "@/client/components/table/url";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type TopPageRow = BrandLookupResult["topPages"][number];
 type TopQueryRow = BrandLookupResult["topQueries"][number];
@@ -326,7 +327,7 @@ export function buildTopQueriesColumns({
             to="/p/$projectId/prompt-explorer"
             params={{ projectId }}
             search={{ q: row.original.question, hb: brand || undefined }}
-            className="btn btn-ghost btn-xs gap-1"
+            className={`${buttonVariants({ variant: "ghost", size: "xs" })} gap-1`}
             aria-label="Run this prompt in Prompt Explorer"
           >
             <Sparkles className="size-3.5" />
