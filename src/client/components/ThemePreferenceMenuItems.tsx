@@ -1,4 +1,5 @@
 import { Monitor, Moon, Sun } from "lucide-react";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 
 const THEME_OPTIONS: {
@@ -11,50 +12,55 @@ const THEME_OPTIONS: {
   { value: "dark", label: "Dark", icon: Moon },
 ];
 
+/**
+ * The theme picker inside the account menu.
+ *
+ * This was a hand-rolled radiogroup — three icon buttons in a segmented row,
+ * with DaisyUI `tooltip` supplying the only label each one had. It is now a
+ * real menu radio group, which is what it always was semantically.
+ *
+ * That trades a compact icon row for three labelled rows, and the extra height
+ * is worth it: the icon-only version relied on a hover tooltip to say what the
+ * buttons did, so it told a touch user nothing and a screen-reader user only
+ * what `aria-label` repeated. Base UI also brings the arrow-key roving focus
+ * the old div-of-buttons never had.
+ */
 export function ThemePreferenceMenuItems() {
   const { themePreference, setThemePreference } = useThemePreference();
 
   return (
     <>
-      <li className="menu-title pt-2">
-        <span>Theme</span>
-      </li>
-
-      <li>
-        <div
-          role="radiogroup"
-          aria-label="Theme preference"
-          className="flex gap-0.5 rounded-lg bg-base-200 p-0.5"
-        >
-          {THEME_OPTIONS.map((option) => {
-            const isActive = option.value === themePreference;
-            const Icon = option.icon;
-
-            return (
-              <div
-                key={option.value}
-                className="tooltip tooltip-bottom flex flex-1 before:whitespace-nowrap"
-                data-tip={option.label}
-              >
-                <button
-                  type="button"
-                  role="radio"
-                  aria-checked={isActive}
-                  aria-label={option.label}
-                  className={`flex flex-1 cursor-pointer items-center justify-center rounded-md px-2.5 py-1.5 transition-colors ${
-                    isActive
-                      ? "bg-base-100 text-base-content shadow-sm"
-                      : "text-base-content/50 hover:text-base-content/80"
-                  }`}
-                  onClick={() => setThemePreference(option.value)}
-                >
-                  <Icon className="size-4" />
-                </button>
-              </div>
-            );
-          })}
-        </div>
-      </li>
+      <DropdownMenu.RadioGroup
+        value={themePreference}
+        onValueChange={(next) => {
+          // Base UI types the value as unknown/any. Resolving it against the
+          // option list recovers ThemePreference without an assertion, which
+          // the lint config forbids, and ignores anything that is not ours.
+          const selected = THEME_OPTIONS.find(
+            (option) => option.value === next,
+          );
+          if (selected) setThemePreference(selected.value);
+        }}
+      >
+        {/* Inside the RadioGroup, not beside it. Base UI's group label reads
+            its context from an enclosing Group/RadioGroup and throws without
+            one ("MenuGroupContext is missing"), which took the whole account
+            menu down. Nesting it is also what makes the label name the radio
+            group for assistive tech. */}
+        <DropdownMenu.Label>Theme</DropdownMenu.Label>
+        {THEME_OPTIONS.map(({ value, label, icon: Icon }) => (
+          <DropdownMenu.RadioItem
+            key={value}
+            value={value}
+            icon={Icon}
+            // Stay open on pick. Choosing a theme is something people compare —
+            // closing the menu would mean reopening it to try the other two.
+            closeOnClick={false}
+          >
+            {label}
+          </DropdownMenu.RadioItem>
+        ))}
+      </DropdownMenu.RadioGroup>
     </>
   );
 }

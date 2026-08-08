@@ -22,13 +22,13 @@ import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 import { SamSidebarPanel } from "@/client/features/sam/SamSidebarPanel";
 import { DataforseoBalanceIndicator } from "@/client/components/DataforseoBalanceIndicator";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
-import { closeDropdown } from "@/client/lib/dropdown";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { useBillingMode } from "@/client/features/billing/useBillingMode";
 import { BILLING_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 interface SidebarProps {
   projectId: string | null;
@@ -228,11 +228,6 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
   const billingMode = useBillingMode();
   const email = session?.user?.email;
 
-  const closeMenu = () => {
-    closeDropdown();
-    onNavigate?.();
-  };
-
   return (
     <div className="shrink-0 border-t border-base-300 px-2 py-2 pb-safe">
       <button
@@ -243,7 +238,12 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="truncate">Search</span>
-        <kbd className="kbd kbd-xs ml-auto text-base-content/50">⌘K</kbd>
+        {/* Was DaisyUI's `kbd kbd-xs`. Kumo has no standalone key cap — its
+            Shortcut part only exists inside a dropdown — so this is the same
+            treatment written in plain utilities. */}
+        <kbd className="ml-auto rounded border border-base-300 bg-base-100 px-1.5 py-0.5 font-sans text-[10px] text-base-content/50">
+          ⌘K
+        </kbd>
       </button>
 
       {!isHostedMode ? <DataforseoBalanceIndicator /> : null}
@@ -263,57 +263,55 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
       />
 
       {email ? (
-        <div className="dropdown dropdown-top w-full">
-          <button
-            type="button"
-            tabIndex={0}
-            className={`${navItemClass} w-full`}
-            aria-label="Open account menu"
-          >
-            <User className="h-4 w-4 shrink-0" />
-            <span className="truncate" data-ph-mask>
-              {email}
-            </span>
-          </button>
-          <ul
-            tabIndex={0}
-            className="dropdown-content z-30 menu mb-1 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-          >
-            <li>
-              <Link to="/settings" onClick={closeMenu}>
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </li>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            // `render` rather than children: Trigger is itself a button, so
+            // nesting one inside it would be invalid markup.
+            render={
+              <button
+                type="button"
+                className={`${navItemClass} w-full`}
+                aria-label="Open account menu"
+              >
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate" data-ph-mask>
+                  {email}
+                </span>
+              </button>
+            }
+          />
+          {/* side="top" is what `dropdown-top` used to do — this sits at the
+              bottom of the sidebar, so the menu has to open upward. */}
+          <DropdownMenu.Content side="top" align="start" sideOffset={4}>
+            <DropdownMenu.LinkItem
+              icon={Settings}
+              render={<Link to="/settings" onClick={onNavigate} />}
+            >
+              Settings
+            </DropdownMenu.LinkItem>
             {isHostedMode && billingMode !== "disabled" ? (
-              <li>
-                <Link to={BILLING_ROUTE} onClick={closeMenu}>
-                  <CreditCard className="h-4 w-4" />
-                  Billing
-                </Link>
-              </li>
+              <DropdownMenu.LinkItem
+                icon={CreditCard}
+                render={<Link to={BILLING_ROUTE} onClick={onNavigate} />}
+              >
+                Billing
+              </DropdownMenu.LinkItem>
             ) : null}
             <ThemePreferenceMenuItems />
             {isHostedMode ? (
               <>
-                <li
-                  aria-hidden
-                  className="pointer-events-none my-1 h-px bg-base-300 p-0"
-                />
-                <li>
-                  <button
-                    type="button"
-                    className="text-error"
-                    onClick={() => signOutAndRedirect()}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign out
-                  </button>
-                </li>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item
+                  variant="danger"
+                  icon={LogOut}
+                  onClick={() => signOutAndRedirect()}
+                >
+                  Sign out
+                </DropdownMenu.Item>
               </>
             ) : null}
-          </ul>
-        </div>
+          </DropdownMenu.Content>
+        </DropdownMenu>
       ) : (
         <SidebarNavLink
           icon={Settings}
