@@ -92,7 +92,6 @@
     "better-auth": "^1.6.22",
     "cheerio": "^1.2.0",
     "cloudflare": "^5.2.0",
-    "daisyui": "^5.5.5",
     "dataforseo-client": "^2.0.19",
     "drizzle-orm": "^0.45.2",
     "echarts": "^6.1.0",

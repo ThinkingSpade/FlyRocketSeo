@@ -95,9 +95,6 @@ importers:
       cloudflare:
         specifier: ^5.2.0
         version: 5.2.0
-      daisyui:
-        specifier: ^5.5.5
-        version: 5.5.19
       dataforseo-client:
         specifier: ^2.0.19
         version: 2.0.19
@@ -3172,9 +3169,6 @@ packages:
   d3-timer@3.0.1:
     resolution: {integrity: sha512-ndfJ/JxxMd3nw31uyKoY2naivF+r29V+Lc0svZxe1JvvIRmi8hUsrMvdOwgS1o6uBHmiz91geQ0ylPP0aj1VUA==}
     engines: {node: '>=12'}
-
-  daisyui@5.5.19:
-    resolution: {integrity: sha512-pbFAkl1VCEh/MPCeclKL61I/MqRIFFhNU7yiXoDDRapXN4/qNCoMxeCCswyxEEhqL5eiTTfwHvucFtOE71C9sA==}
 
   data-uri-to-buffer@4.0.1:
     resolution: {integrity: sha512-0R9ikRb668HB7QDxT1vkpuUBtqc53YyAwMwGeUFKRojY/NWKvdZ+9UYtRfGmhqNbRkTSVpMbmyhXipFFv2cb/A==}
@@ -8007,8 +8001,6 @@ snapshots:
       d3-array: 3.2.4
 
   d3-timer@3.0.1: {}
-
-  daisyui@5.5.19: {}
 
   data-uri-to-buffer@4.0.1: {}
 

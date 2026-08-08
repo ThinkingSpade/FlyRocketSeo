@@ -14,6 +14,17 @@
 @source "../../../node_modules/@cloudflare/kumo/dist/**/*.{js,jsx,ts,tsx}";
 @import "@cloudflare/kumo/styles/tailwind";
 @import "tailwindcss";
+
+/* Point the `dark:` variant at this app's theme instead of the OS preference.
+
+   Tailwind's default `dark:` is `prefers-color-scheme: dark`, but the theme
+   here is a user choice stored in localStorage and written to data-theme — the
+   two disagree whenever someone picks light on a dark-mode machine, or the
+   reverse. Kumo only uses `dark:` in five places (its palette is otherwise
+   light-dark(), which reads color-scheme and is therefore already correct),
+   but those five would have styled themselves from the OS while everything
+   around them followed the toggle. */
+@custom-variant dark (&:where([data-theme="flyrocketseo-dark"], [data-theme="flyrocketseo-dark"] *));
 /* Leaflet map chrome for the Local Rank Grid. */
 @import "leaflet/dist/leaflet.css";
 
@@ -46,80 +57,79 @@
   --trend-tooltip-shadow: oklch(0% 0 0 / 0.1);
 }
 
-@plugin "daisyui" {
-  /* @property isn't supported by some browsers and gives a noisy warning https://github.com/saadeghi/daisyui/issues/3882 */
-  exclude: properties;
-}
+/* The palette. One block, and the only one.
+   ---------------------------------------------------------------------------
+   DaisyUI is gone, and with it the two @plugin "daisyui/theme" blocks that
+   defined these names. The names stay, because 2,468 usages across the app
+   spell colour this way -- text-base-content alone appears 1,120 times -- and
+   renaming those would be a large mechanical diff with no visual result. What
+   changed is where the values come from: each is now an alias onto Kumo's
+   ramp, so there is one source of truth instead of two palettes kept agreeing.
 
-/* Light theme */
-@plugin "daisyui/theme" {
-  name: "flyrocketseo";
-  default: true;
-  prefersdark: false;
-  color-scheme: light;
-  --color-base-100: #ffffff;
-  --color-base-200: #f5f7fb;
-  --color-base-300: #e2e7f0;
-  --color-base-content: #172033;
-  --color-primary: #4934c7;
+   Light and dark need no separate blocks any more. Kumo's tokens are written
+   with light-dark(), which resolves off the color-scheme the two theme classes
+   below set, so an alias inherits both modes for free.
+
+   TO RE-THEME THE APP, CHANGE --color-primary. It is the only brand-carrying
+   entry here; everything else is a neutral or a status colour that should not
+   move with a logo. It points at --color-kumo-brand, set in the FlyRocketSEO
+   identity block further down.
+
+   The status colours now come from Kumo rather than the old hand-picked hexes.
+   That closes the split this migration has been carrying: a DaisyUI alert and
+   a Kumo banner rendered two different reds, and the note in the identity
+   block said the drift would end when the last DaisyUI component went. It
+   just did. */
+@theme {
+  /* Surfaces */
+  --color-base-100: var(--color-kumo-base); /* cards, panels, popovers */
+  --color-base-200: var(--color-kumo-canvas); /* the page behind them */
+  --color-base-300: var(--color-kumo-hairline); /* borders, dividers, wells */
+
+  /* Body text. Kumo expresses this in its --text-color-* namespace, which only
+     generates text-* utilities; this app also writes bg-base-content and
+     border-base-content, so it needs a --color-* entry and takes Kumo's
+     resolved values directly. */
+  --color-base-content: light-dark(oklch(21% 0.006 285.885), oklch(97% 0 0));
+
+  /* Brand */
+  --color-primary: var(--color-kumo-brand);
   --color-primary-content: #ffffff;
-  --color-secondary: #087a70;
-  --color-secondary-content: #ffffff;
-  --color-accent: #c2410c;
-  --color-accent-content: #ffffff;
-  --color-neutral: #243047;
-  --color-neutral-content: #ffffff;
-  --color-info: #0b6e99;
-  --color-info-content: #ffffff;
-  --color-success: #087a55;
-  --color-success-content: #ffffff;
-  --color-warning: #8a5200;
-  --color-warning-content: #ffffff;
-  --color-error: #b42318;
-  --color-error-content: #ffffff;
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.75rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
+
+  /* Status */
+  --color-error: var(--color-kumo-danger);
+  --color-info: var(--color-kumo-info);
+  --color-success: var(--color-kumo-success);
+  --color-warning: var(--color-kumo-warning);
+  --color-neutral: var(--color-kumo-contrast);
 }
 
-/* Dark theme - auto-activates via prefers-color-scheme */
-@plugin "daisyui/theme" {
-  name: "flyrocketseo-dark";
-  prefersdark: true;
+/* The theme classes now carry only color-scheme. That is all Kumo ever needed
+   from them: light-dark() reads it, so this one switch drives the whole
+   palette above.
+
+   The :root default is not redundant, and leaving it out is a real failure.
+   light-dark() is INVALID when no color-scheme is in effect — not "falls back
+   to light", invalid — so every token above would compute to transparent and
+   the app would render as unstyled text on white. DaisyUI's `default: true`
+   theme used to cover that case by applying at :root unconditionally; nothing
+   did after it was removed.
+
+   `light dark` rather than `light`, so that a document which somehow never
+   gets a data-theme still follows the OS preference — which is what the old
+   theme's `prefersdark` did. The inline script in <head> sets data-theme
+   before first paint, so this should never be the one in effect; it is here
+   for when it is. */
+:root {
+  color-scheme: light dark;
+}
+
+[data-theme="flyrocketseo"] {
+  color-scheme: light;
+}
+
+[data-theme="flyrocketseo-dark"] {
   color-scheme: dark;
-  --color-base-100: #131c2b;
-  --color-base-200: #0b1120;
-  --color-base-300: #263247;
-  --color-base-content: #eaf0fa;
-  --color-primary: #a89bff;
-  --color-primary-content: #14102e;
-  --color-secondary: #4fd1be;
-  --color-secondary-content: #062b27;
-  --color-accent: #ff9a62;
-  --color-accent-content: #351405;
-  --color-neutral: #cbd5e1;
-  --color-neutral-content: #172033;
-  --color-info: #67c7f2;
-  --color-info-content: #062636;
-  --color-success: #55d6a0;
-  --color-success-content: #052a1d;
-  --color-warning: #f6c453;
-  --color-warning-content: #321f00;
-  --color-error: #ff8a80;
-  --color-error-content: #3b0a06;
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.75rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
 }
 
 html,
@@ -150,16 +160,6 @@ body {
   }
 }
 
-/* Global input focus styling - use primary color instead of default ring */
-.input:focus,
-.input:focus-visible,
-.textarea:focus,
-.textarea:focus-visible {
-  outline: none;
-  border-color: var(--color-primary);
-  background-color: color-mix(in oklab, var(--color-primary) 10%, transparent);
-}
-
 /* Safe area utilities for mobile devices */
 @layer utilities {
   .pb-safe {
@@ -170,18 +170,6 @@ body {
   }
 }
 
-/* Override DaisyUI dock's fixed positioning to use flex layout instead */
-/* This allows the TabBar to work correctly with Safari's browser toolbar */
-.dock {
-  position: relative;
-  bottom: auto;
-  left: auto;
-  right: auto;
-  border-top: none;
-  height: 4rem;
-  padding-bottom: 0;
-}
-
 /* Touch device optimizations */
 @media (pointer: coarse) {
   html {
@@ -190,39 +178,6 @@ body {
   body {
     touch-action: pan-x pan-y;
   }
-}
-
-/* Dark mode: neutral interactive surfaces should lift above the panel, not
-   sink below it. DaisyUI derives default buttons and the tabs-box well from
-   base-200, which is darker than the base-100 content panel in dark mode,
-   so they read as sunken/disabled. Colored variants (primary, error, ...)
-   set their own --btn-color and are excluded. */
-html[data-theme="flyrocketseo-dark"]
-  .btn:not(
-    .btn-primary,
-    .btn-error,
-    .btn-neutral,
-    .btn-ghost,
-    .btn-outline,
-    .btn-soft
-  ) {
-  --btn-color: var(--color-base-300);
-}
-
-/* Light mode: the base-200 default button is nearly invisible on the
-   base-100 content panel; use a white surface with a visible border,
-   matching inputs/selects. */
-html[data-theme="flyrocketseo"]
-  .btn:not(
-    .btn-primary,
-    .btn-error,
-    .btn-neutral,
-    .btn-ghost,
-    .btn-outline,
-    .btn-soft
-  ) {
-  --btn-color: var(--color-base-100);
-  --btn-border: var(--color-base-300);
 }
 
 /* Tag chip colors — muted background + readable text in both themes.
@@ -569,6 +524,14 @@ table :is(td, th) {
 [data-kumo-component="Switch"][aria-checked="true"] {
   background-color: var(--color-kumo-brand);
   --tw-ring-color: var(--color-kumo-brand-hover);
+}
+
+/* The thumb too: Kumo paints it `dark:bg-blue-300`, so in dark mode the knob
+   came back Cloudflare blue on top of the brand-coloured track. It should be
+   the neutral surface colour in both modes, which is what it already is in
+   light. */
+[data-kumo-component="Switch"] > * {
+  background-color: var(--color-kumo-base);
 }
 
 /* Skeleton placeholders — restoring the base colour Kumo's reset removed.
