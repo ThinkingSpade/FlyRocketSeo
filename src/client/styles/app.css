@@ -536,6 +536,41 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
   transition-duration: 60ms;
 }
 
+/* Table density — putting back what Kumo's default padding took away.
+
+   Kumo styles cells with `[&_td]:p-3`, i.e. 12px on every side. Every table in
+   this app was previously `table-sm` (8px) or `table-xs` (4px), because an SEO
+   tool's tables are long lists someone scans — a keyword table at 12px shows
+   roughly half the rows per screen. That is the opposite of the density the
+   reference dashboard is liked for.
+
+   Only the vertical padding is tightened. The 12px horizontal is Kumo's and is
+   right: columns need the separation, rows do not.
+
+   Unlayered on purpose. `[&_td]:p-3` is an arbitrary-variant utility and lives
+   in Tailwind's utilities layer, and an unlayered rule outranks a layered one
+   regardless of source order — the same cascade rule the skeleton fix below
+   depends on. A `@layer components` version of this silently loses. The cost is
+   that a table wanting Kumo's roomier default cannot ask for it with a utility;
+   it would need its own unlayered rule here. */
+table :is(td, th) {
+  padding-block: 0.375rem;
+}
+
+/* Kumo's Switch does not read the brand token.
+
+   Its track is hardcoded `bg-blue-500` / `ring-blue-600` — Tailwind's literal
+   blue, not `--color-kumo-brand` — so remapping the brand elsewhere in this
+   file reaches the buttons, the links and the tab indicator, but leaves every
+   toggle Cloudflare blue. This is a gap in Kumo rather than in our mapping.
+
+   Targeted through Kumo's own `data-kumo-component` hook, and unlayered for the
+   same cascade reason as the rule above. */
+[data-kumo-component="Switch"][aria-checked="true"] {
+  background-color: var(--color-kumo-brand);
+  --tw-ring-color: var(--color-kumo-brand-hover);
+}
+
 /* Skeleton placeholders — restoring the base colour Kumo's reset removed.
 
    Two libraries here define `.skeleton`. DaisyUI's paints a solid

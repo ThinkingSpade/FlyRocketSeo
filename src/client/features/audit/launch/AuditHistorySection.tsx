@@ -71,8 +71,14 @@ export function AuditHistorySection({
               </Table.Row>
             </Table.Header>
             <Table.Body>
+              {/* `hover` was DaisyUI's row modifier and only ever worked inside
+                  `.table`; Kumo's rows have no hover of their own, so it has to
+                  be a real utility now. */}
               {history.map((audit) => (
-                <Table.Row key={audit.id} className="hover group">
+                <Table.Row
+                  key={audit.id}
+                  className="group hover:bg-base-200/50"
+                >
                   <Table.Cell className="text-xs text-base-content/70">
                     {formatDate(audit.startedAt)}
                   </Table.Cell>
