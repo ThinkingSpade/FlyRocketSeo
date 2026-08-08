@@ -27,6 +27,7 @@ import {
   useSeedSuggestions,
 } from "@/client/features/dashboard/SeedKeywordField";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 /**
  * Runs the project's analyses in one go, so a new project stops being a grid of
@@ -303,12 +304,10 @@ export function AnalyzeProjectCard({
           const blocked = analysis.needsKeyword && keyword === "";
           return (
             <li key={analysis.key} className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
+              <Checkbox
                 checked={selected.has(analysis.key) && !blocked}
                 disabled={running || blocked}
-                onChange={() => toggle(analysis.key)}
+                onCheckedChange={() => toggle(analysis.key)}
                 aria-label={analysis.label}
               />
               <div className="min-w-0 flex-1">

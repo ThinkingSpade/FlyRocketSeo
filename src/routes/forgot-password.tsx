@@ -11,6 +11,7 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -119,9 +120,9 @@ function ForgotPasswordPage() {
 
                       return (
                         <div>
-                          <input
+                          <Input
                             type="email"
-                            className="input input-bordered w-full"
+                            className="w-full"
                             placeholder="Email address..."
                             value={field.state.value}
                             onChange={(event) =>

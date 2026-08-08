@@ -15,6 +15,7 @@ import {
   useSaveProjectProfile,
 } from "./useProjectProfile";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InputArea } from "@cloudflare/kumo/components/input";
 
 /**
  * The editor for what a project's business actually is.
@@ -268,8 +269,8 @@ function ProfileField({
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium">{label}</span>
-      <textarea
-        className="textarea textarea-bordered w-full text-sm leading-6"
+      <InputArea
+        className="w-full text-sm leading-6"
         rows={rows}
         placeholder={placeholder}
         value={value}

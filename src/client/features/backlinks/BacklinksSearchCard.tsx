@@ -14,6 +14,7 @@ import {
 } from "./backlinksSearchScope";
 import { Button } from "@cloudflare/kumo/components/button";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
 
@@ -142,13 +143,13 @@ export function BacklinksSearchCard({
                   const targetError = getFieldError(field.state.meta.errors);
 
                   return (
-                    <label
-                      className={`input input-bordered flex flex-1 items-center gap-2 ${targetError ? "input-error" : ""}`}
-                    >
-                      <Search className="size-4 text-base-content/60" />
-                      <input
+                    <div className="relative flex flex-1 items-center">
+                      <Search className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+                      <Input
                         placeholder="Enter a domain or URL"
                         value={field.state.value}
+                        variant={targetError ? "error" : "default"}
+                        className="w-full pl-9"
                         onChange={(event) => {
                           const nextTarget = event.target.value;
                           field.handleChange(nextTarget);
@@ -160,7 +161,7 @@ export function BacklinksSearchCard({
                           }
                         }}
                       />
-                    </label>
+                    </div>
                   );
                 }}
               </form.Field>

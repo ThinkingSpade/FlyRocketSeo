@@ -183,9 +183,7 @@ export function PageExplorerPage({
             }}
           >
             <label className="form-control w-full sm:max-w-xl">
-              <span className="label-text pb-1 text-xs font-medium">
-                Page URL
-              </span>
+              <span className="pb-1 text-xs font-medium">Page URL</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -197,9 +195,7 @@ export function PageExplorerPage({
               />
             </label>
             <label className="form-control w-full sm:max-w-56">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={locationInput}

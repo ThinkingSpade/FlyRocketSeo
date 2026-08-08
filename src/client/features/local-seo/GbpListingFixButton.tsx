@@ -10,7 +10,7 @@ import {
   searchGbpCategories,
 } from "@/serverFunctions/gbp";
 import { Button } from "@cloudflare/kumo/components/button";
-import { Input } from "@cloudflare/kumo/components/input";
+import { Input, InputArea } from "@cloudflare/kumo/components/input";
 
 /** The only two GBP Audit checks (gbpAudit.ts) this can actually fix. Every
  *  other check either isn't a listing field (reviews, rating, owner
@@ -139,8 +139,9 @@ function DescriptionFixForm({
 
   return (
     <div className="mt-1.5 space-y-1.5">
-      <textarea
-        className="textarea textarea-bordered textarea-xs w-full"
+      <InputArea
+        size="xs"
+        className="w-full"
         rows={3}
         placeholder="What does this business do, where, and what sets it apart?"
         value={description}

@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Markdown } from "@/client/components/Markdown";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InputArea } from "@cloudflare/kumo/components/input";
 
 // Shared rendering for the chat agents (onboarding + SAM). The chats differ
 // only in which tools are available and how tool names become labels
@@ -246,8 +247,8 @@ export function ChatMessage({
       };
       return (
         <div className="flex flex-col items-end gap-1.5 pl-8 sm:pl-16">
-          <textarea
-            className="textarea textarea-bordered w-full max-w-xl text-sm"
+          <InputArea
+            className="w-full max-w-xl text-sm"
             rows={Math.min(6, Math.max(2, draft.split("\n").length))}
             value={draft}
             autoFocus

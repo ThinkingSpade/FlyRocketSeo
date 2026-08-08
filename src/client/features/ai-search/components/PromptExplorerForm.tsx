@@ -12,7 +12,8 @@ import {
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
 import { Button } from "@cloudflare/kumo/components/button";
-import { Input } from "@cloudflare/kumo/components/input";
+import { Input, InputArea } from "@cloudflare/kumo/components/input";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 type FormValues = {
   prompt: string;
@@ -79,11 +80,10 @@ export function PromptExplorerForm({
           >
             Prompt
           </label>
-          <textarea
+          <InputArea
             id="prompt-explorer-prompt"
-            className={`textarea textarea-bordered w-full resize-none ${
-              promptOverLimit ? "textarea-error" : ""
-            }`}
+            className="w-full resize-none"
+            variant={promptOverLimit ? "error" : "default"}
             rows={3}
             value={form.prompt}
             maxLength={PROMPT_EXPLORER_MAX_PROMPT_LENGTH + 50}
@@ -155,18 +155,14 @@ export function PromptExplorerForm({
               {PROMPT_EXPLORER_MODELS.map((model) => {
                 const isActive = form.models.includes(model);
                 return (
-                  <label
+                  <Checkbox
                     key={model}
-                    className="flex cursor-pointer items-center gap-2"
-                  >
-                    <input
-                      type="checkbox"
-                      className="checkbox checkbox-sm"
-                      checked={isActive}
-                      onChange={() => toggleModel(model)}
-                    />
-                    <span className="text-sm">{formatModelLabel(model)}</span>
-                  </label>
+                    checked={isActive}
+                    onCheckedChange={() => toggleModel(model)}
+                    label={
+                      <span className="text-sm">{formatModelLabel(model)}</span>
+                    }
+                  />
                 );
               })}
             </div>
@@ -175,17 +171,15 @@ export function PromptExplorerForm({
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-base-300 pt-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
-                checked={form.webSearch}
-                onChange={(event) => onWebSearchChange(event.target.checked)}
-              />
-              <span className="text-sm">
-                Allow web search (more current answers)
-              </span>
-            </label>
+            <Checkbox
+              checked={form.webSearch}
+              onCheckedChange={(checked) => onWebSearchChange(checked)}
+              label={
+                <span className="text-sm">
+                  Allow web search (more current answers)
+                </span>
+              }
+            />
             <select
               id="prompt-explorer-country"
               aria-label="Web search location"

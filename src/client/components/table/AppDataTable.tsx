@@ -22,6 +22,7 @@ import {
   type SelectionAnchor,
 } from "./tableSelection";
 import { Table as KumoTable } from "@cloudflare/kumo/components/table";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 type AppColumnMeta<TData> = {
   headerClassName?: string;
@@ -69,11 +70,10 @@ export function makeSelectionColumn<TData>(
     size: 32,
     enableSorting: false,
     header: ({ table }) => (
-      <input
-        type="checkbox"
-        className="checkbox checkbox-xs [--radius-selector:0.25rem]"
+      <Checkbox
         checked={table.getIsAllRowsSelected()}
-        onChange={table.getToggleAllRowsSelectedHandler()}
+        indeterminate={table.getIsSomeRowsSelected()}
+        onCheckedChange={(checked) => table.toggleAllRowsSelected(checked)}
         aria-label="Select all rows"
       />
     ),
@@ -94,13 +94,20 @@ function SelectionCheckbox<TData>({
 }) {
   const rangeHandledRef = useRef(false);
   return (
-    <input
-      type="checkbox"
-      className="checkbox checkbox-xs [--radius-selector:0.25rem]"
-      checked={row.getIsSelected()}
-      aria-label="Select row"
-      onClick={(event) => {
-        event.stopPropagation();
+    // Shift-click range selection needs to read shiftKey BEFORE the toggle
+    // decision, and Kumo's CheckboxProps is a narrowed type that does not carry
+    // onClick — so the handlers live on a wrapper instead.
+    //
+    // mousedown, not click: it fires before the checkbox changes, which is the
+    // ordering the ref-suppression depends on. Capture-phase click would also
+    // fire early, but stopPropagation there would stop the event reaching the
+    // checkbox at all and nothing would ever toggle.
+    //
+    // The separate onClick exists only to keep the row underneath from
+    // navigating, which is what the old stopPropagation was for.
+    <span
+      className="inline-flex"
+      onMouseDown={(event) => {
         rangeHandledRef.current = applyShiftRangeSelection(
           event,
           row,
@@ -108,14 +115,20 @@ function SelectionCheckbox<TData>({
           anchorRef,
         );
       }}
-      onChange={(event) => {
-        if (rangeHandledRef.current) {
-          rangeHandledRef.current = false;
-          return;
-        }
-        row.getToggleSelectedHandler()(event);
-      }}
-    />
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Checkbox
+        checked={row.getIsSelected()}
+        aria-label="Select row"
+        onCheckedChange={(checked) => {
+          if (rangeHandledRef.current) {
+            rangeHandledRef.current = false;
+            return;
+          }
+          row.toggleSelected(checked);
+        }}
+      />
+    </span>
   );
 }
 

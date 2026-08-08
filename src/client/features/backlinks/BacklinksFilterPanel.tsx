@@ -10,6 +10,7 @@ import {
 } from "./backlinksFilterTypes";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 /** Stands in for the filter model's empty-string "no filter" value. */
 const ALL_FILTER = "all";
@@ -283,28 +284,20 @@ function BacklinksToggleControls({
           Visibility
         </p>
         <div className="flex items-center gap-3">
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-xs"
-              checked={draft.hideLost === "true"}
-              onChange={(event) =>
-                setValue("hideLost", event.target.checked ? "true" : "")
-              }
-            />
-            <span className="text-xs">Hide lost</span>
-          </label>
-          <label className="flex items-center gap-1.5 cursor-pointer">
-            <input
-              type="checkbox"
-              className="checkbox checkbox-xs"
-              checked={draft.hideBroken === "true"}
-              onChange={(event) =>
-                setValue("hideBroken", event.target.checked ? "true" : "")
-              }
-            />
-            <span className="text-xs">Hide broken</span>
-          </label>
+          <Checkbox
+            checked={draft.hideLost === "true"}
+            onCheckedChange={(checked) =>
+              setValue("hideLost", checked ? "true" : "")
+            }
+            label={<span className="text-xs">Hide lost</span>}
+          />
+          <Checkbox
+            checked={draft.hideBroken === "true"}
+            onCheckedChange={(checked) =>
+              setValue("hideBroken", checked ? "true" : "")
+            }
+            label={<span className="text-xs">Hide broken</span>}
+          />
         </div>
       </div>
     </div>

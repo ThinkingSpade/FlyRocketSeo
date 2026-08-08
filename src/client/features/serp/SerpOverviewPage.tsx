@@ -183,7 +183,7 @@ function AnalyzeButton({
     <div className="form-control">
       <span
         aria-hidden="true"
-        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+        className="hidden pb-1 text-xs font-medium invisible sm:block"
       >
         Analyze
       </span>
@@ -238,9 +238,7 @@ function SerpSearchForm({
         >
           <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
             <label className="form-control w-full">
-              <span className="label-text pb-1 text-xs font-medium">
-                Keyword
-              </span>
+              <span className="pb-1 text-xs font-medium">Keyword</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -265,9 +263,7 @@ function SerpSearchForm({
             />
           </div>
           <label className="form-control w-full sm:max-w-56">
-            <span className="label-text pb-1 text-xs font-medium">
-              Location
-            </span>
+            <span className="pb-1 text-xs font-medium">Location</span>
             <select
               className="app-select app-select-sm w-full"
               value={locationInput}

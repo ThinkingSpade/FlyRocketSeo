@@ -14,7 +14,7 @@ import {
   type GbpPostValidationError,
 } from "./gbpPostSchedule";
 import { Button } from "@cloudflare/kumo/components/button";
-import { Input } from "@cloudflare/kumo/components/input";
+import { Input, InputArea } from "@cloudflare/kumo/components/input";
 
 const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
   { value: "BOOK", label: "Book" },
@@ -123,11 +123,11 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         </h2>
 
         <label className="form-control">
-          <span className="label-text pb-1 text-xs font-medium">
+          <span className="pb-1 text-xs font-medium">
             What&apos;s the post about?
           </span>
-          <textarea
-            className="textarea textarea-bordered textarea-sm"
+          <InputArea
+            size="sm"
             rows={3}
             value={content}
             onChange={(event) => setContent(event.target.value)}
@@ -140,9 +140,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         </label>
 
         <label className="form-control">
-          <span className="label-text pb-1 text-xs font-medium">
-            Photo URL (optional)
-          </span>
+          <span className="pb-1 text-xs font-medium">Photo URL (optional)</span>
           <Input
             passwordManagerIgnore
             type="text"
@@ -154,7 +152,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="form-control">
-            <span className="label-text pb-1 text-xs font-medium">
+            <span className="pb-1 text-xs font-medium">
               Action button (optional)
             </span>
             <select
@@ -172,9 +170,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
           </label>
           {ctaType && ctaType !== "CALL" ? (
             <label className="form-control">
-              <span className="label-text pb-1 text-xs font-medium">
-                Button URL
-              </span>
+              <span className="pb-1 text-xs font-medium">Button URL</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -187,9 +183,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         </div>
 
         <label className="form-control w-fit">
-          <span className="label-text pb-1 text-xs font-medium">
-            Publish at
-          </span>
+          <span className="pb-1 text-xs font-medium">Publish at</span>
           <Input
             passwordManagerIgnore
             type="datetime-local"

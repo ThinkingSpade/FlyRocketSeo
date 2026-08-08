@@ -19,6 +19,7 @@ import {
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 export const Route = createFileRoute("/_app/billing")({
   beforeLoad: () => {
@@ -250,13 +251,14 @@ function BillingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-base-content/60">$</span>
-                <input
+                <Input
                   type="number"
                   min={10}
                   max={99}
                   step={1}
                   inputMode="numeric"
-                  className="input input-bordered input-sm w-full"
+                  size="sm"
+                  className="w-full"
                   value={topUpAmount}
                   onChange={(e) => setTopUpAmount(e.target.value)}
                 />

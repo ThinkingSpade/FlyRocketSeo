@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth-options";
 import { z } from "zod";
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const resetPasswordSchema = z
   .object({
@@ -217,9 +218,9 @@ function ResetPasswordPage() {
 
                       return (
                         <div>
-                          <input
+                          <Input
                             type="password"
-                            className="input input-bordered w-full"
+                            className="w-full"
                             placeholder="New password..."
                             value={field.state.value}
                             onChange={(event) =>
@@ -244,9 +245,9 @@ function ResetPasswordPage() {
 
                       return (
                         <div>
-                          <input
+                          <Input
                             type="password"
-                            className="input input-bordered w-full"
+                            className="w-full"
                             placeholder="Confirm new password..."
                             value={field.state.value}
                             onChange={(event) =>

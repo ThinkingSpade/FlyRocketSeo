@@ -6,6 +6,7 @@ import { MAX_TRACKED_KEYWORD_LENGTH } from "@/shared/rank-tracking";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Loader2 } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InputArea } from "@cloudflare/kumo/components/input";
 
 export function AddKeywordsPanel({
   configId,
@@ -33,8 +34,9 @@ export function AddKeywordsPanel({
   const isPending = mutation.isPending;
   return (
     <div className="flex gap-2 items-end">
-      <textarea
-        className="textarea textarea-bordered textarea-sm flex-1"
+      <InputArea
+        size="sm"
+        className="flex-1"
         rows={3}
         placeholder="Enter keywords, one per line"
         value={keywordInput}

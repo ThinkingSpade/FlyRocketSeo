@@ -78,7 +78,7 @@ function PlanClustersButton({
     <div className="form-control">
       <span
         aria-hidden="true"
-        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+        className="hidden pb-1 text-xs font-medium invisible sm:block"
       >
         Plan clusters
       </span>
@@ -295,9 +295,7 @@ export function TopicClustersPage({
           >
             <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
               <label className="form-control w-full">
-                <span className="label-text pb-1 text-xs font-medium">
-                  Seed topic
-                </span>
+                <span className="pb-1 text-xs font-medium">Seed topic</span>
                 <Input
                   passwordManagerIgnore
                   type="text"
@@ -322,9 +320,7 @@ export function TopicClustersPage({
               />
             </div>
             <label className="form-control w-full sm:max-w-56">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={locationInput}

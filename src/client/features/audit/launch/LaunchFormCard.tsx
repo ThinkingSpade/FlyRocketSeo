@@ -38,20 +38,21 @@ export function LaunchFormCard({
               const urlError = getFieldError(field.state.meta.errors);
 
               return (
-                <label
-                  className={`input input-bordered w-full lg:col-span-9 ${urlError ? "input-error" : ""}`}
-                >
-                  <input
-                    placeholder="https://example.com"
-                    value={field.state.value}
-                    onChange={(event) => {
-                      field.handleChange(event.target.value);
-                      if (launchForm.state.errorMap.onSubmit) {
-                        launchForm.setErrorMap({ onSubmit: undefined });
-                      }
-                    }}
-                  />
-                </label>
+                // DaisyUI 5 styled the <label> as the field and left the inner
+                // <input> bare. Kumo styles the input itself, so the wrapper
+                // has nothing left to do.
+                <Input
+                  className="w-full lg:col-span-9"
+                  variant={urlError ? "error" : "default"}
+                  placeholder="https://example.com"
+                  value={field.state.value}
+                  onChange={(event) => {
+                    field.handleChange(event.target.value);
+                    if (launchForm.state.errorMap.onSubmit) {
+                      launchForm.setErrorMap({ onSubmit: undefined });
+                    }
+                  }}
+                />
               );
             }}
           </launchForm.Field>

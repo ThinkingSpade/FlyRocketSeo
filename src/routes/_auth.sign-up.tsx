@@ -22,6 +22,7 @@ import {
 } from "@/lib/auth-options";
 import { z } from "zod";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const signUpSchema = z
   .object({
@@ -232,9 +233,9 @@ function SignUpPage() {
 
               return (
                 <div>
-                  <input
+                  <Input
                     type="text"
-                    className="input input-bordered w-full"
+                    className="w-full"
                     placeholder="Name (optional)..."
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -255,9 +256,9 @@ function SignUpPage() {
 
               return (
                 <div>
-                  <input
+                  <Input
                     type="email"
-                    className="input input-bordered w-full"
+                    className="w-full"
                     placeholder="Email address..."
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -279,9 +280,9 @@ function SignUpPage() {
 
               return (
                 <div>
-                  <input
+                  <Input
                     type="password"
-                    className="input input-bordered w-full"
+                    className="w-full"
                     placeholder="Password..."
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -305,9 +306,9 @@ function SignUpPage() {
 
               return (
                 <div>
-                  <input
+                  <Input
                     type="password"
-                    className="input input-bordered w-full"
+                    className="w-full"
                     placeholder="Confirm password..."
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}

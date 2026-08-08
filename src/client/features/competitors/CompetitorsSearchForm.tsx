@@ -29,7 +29,7 @@ export function CompetitorsSearchForm({
       }}
     >
       <label className="form-control w-full sm:max-w-xs">
-        <span className="label-text pb-1 text-xs font-medium">Your domain</span>
+        <span className="pb-1 text-xs font-medium">Your domain</span>
         <Input
           passwordManagerIgnore
           type="text"
@@ -42,9 +42,7 @@ export function CompetitorsSearchForm({
       </label>
       {needsCompetitor ? (
         <label className="form-control w-full sm:max-w-xs">
-          <span className="label-text pb-1 text-xs font-medium">
-            Competitor domain
-          </span>
+          <span className="pb-1 text-xs font-medium">Competitor domain</span>
           <Input
             passwordManagerIgnore
             type="text"

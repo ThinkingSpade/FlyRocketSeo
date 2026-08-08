@@ -184,7 +184,7 @@ export function LocalSeoPage({
             }}
           >
             <label className="form-control w-full">
-              <span className="label-text pb-1 text-xs font-medium">
+              <span className="pb-1 text-xs font-medium">
                 Business name (add a city for precision)
               </span>
               <Input

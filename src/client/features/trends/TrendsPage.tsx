@@ -194,7 +194,7 @@ function CompareButton({
     <div className="form-control">
       <span
         aria-hidden="true"
-        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+        className="hidden pb-1 text-xs font-medium invisible sm:block"
       >
         Compare
       </span>
@@ -418,7 +418,7 @@ export function TrendsPage({
           >
             <div className="flex w-full flex-col gap-1.5 sm:max-w-xl">
               <label className="form-control w-full">
-                <span className="label-text pb-1 text-xs font-medium">
+                <span className="pb-1 text-xs font-medium">
                   Keywords (comma-separated, up to {MAX_TRENDS_KEYWORDS})
                 </span>
                 <Input

@@ -323,9 +323,7 @@ export function LocalRankGridPage({
             }}
           >
             <label className="form-control w-full lg:max-w-xs">
-              <span className="label-text pb-1 text-xs font-medium">
-                Keyword
-              </span>
+              <span className="pb-1 text-xs font-medium">Keyword</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -337,9 +335,7 @@ export function LocalRankGridPage({
               />
             </label>
             <label className="form-control w-full lg:max-w-xs">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -351,9 +347,7 @@ export function LocalRankGridPage({
               />
             </label>
             <label className="form-control w-28">
-              <span className="label-text pb-1 text-xs font-medium">
-                Radius
-              </span>
+              <span className="pb-1 text-xs font-medium">Radius</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={radiusInput}
@@ -367,7 +361,7 @@ export function LocalRankGridPage({
               </select>
             </label>
             <label className="form-control w-28">
-              <span className="label-text pb-1 text-xs font-medium">Grid</span>
+              <span className="pb-1 text-xs font-medium">Grid</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={gridInput}
