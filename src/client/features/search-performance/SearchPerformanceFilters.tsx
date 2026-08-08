@@ -124,7 +124,7 @@ export function SearchPerformanceFilters({
         ))}
       </select>
       <TableExportMenu
-        buttonClassName="btn btn-ghost btn-sm gap-1"
+        variant="ghost"
         actions={[
           {
             label: "Export to Sheets",

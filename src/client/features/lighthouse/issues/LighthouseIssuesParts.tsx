@@ -20,6 +20,7 @@ import { categoryLabel } from "./utils";
 import { categoryTabs } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 export function LighthouseIssuesHeader({
   backLabel,
@@ -193,42 +194,42 @@ function ExportMenu({
   visibleIssues: LighthouseIssue[];
 }) {
   return (
-    <div className="dropdown dropdown-end">
-      <div tabIndex={0} role="button" className="btn btn-sm gap-1">
-        <Download className="size-4" />
-        Export
-        <ChevronDown className="size-3 opacity-60" />
-      </div>
-      <ul
-        tabIndex={0}
-        className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-72"
-      >
-        <li className="menu-title">
-          <span>Export to Sheets</span>
-        </li>
-        <li>
-          <button
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button size="sm">
+            <Download className="size-4" />
+            Export
+            <ChevronDown className="size-3 opacity-60" />
+          </Button>
+        }
+      />
+      {/* Every Label sits inside its own Group. Base UI reads the label from
+          group context and throws without one — the flat `menu-title` list
+          this replaces has no equivalent. */}
+      <DropdownMenu.Content align="end" className="w-72">
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Export to Sheets</DropdownMenu.Label>
+          <DropdownMenu.Item
+            icon={Sheet}
             disabled={!visibleIssues.length}
             onClick={() => onExportSheets(visibleIssues, "current")}
           >
-            <Sheet className="size-4" />
             Open in Sheets — {categoryLabelLower}
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            icon={Sheet}
             disabled={!allIssues.length}
             onClick={() => onExportSheets(allIssues, "all")}
           >
-            <Sheet className="size-4" />
             Open in Sheets — all actionable
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Copy</span>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Copy</DropdownMenu.Label>
+          <DropdownMenu.Item
+            icon={Copy}
             disabled={isBusy}
             onClick={() =>
               onCopy(
@@ -237,77 +238,72 @@ function ExportMenu({
               )
             }
           >
-            <Copy className="size-4" />
             Copy {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            icon={Copy}
             disabled={isBusy}
             onClick={() =>
               onCopy({ mode: "issues" }, "Copied all actionable issues")
             }
           >
-            <Copy className="size-4" />
             Copy all actionable issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            icon={Copy}
             disabled={isBusy}
             onClick={() =>
               onCopy({ mode: "full" }, "Copied saved Lighthouse payload")
             }
           >
-            <Copy className="size-4" />
             Copy saved Lighthouse payload
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Download JSON</span>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Download JSON</DropdownMenu.Label>
+          <DropdownMenu.Item
+            inset
             disabled={isBusy}
             onClick={() => onExport(exportCurrentCategory)}
           >
             Download {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            inset
             disabled={isBusy}
             onClick={() => onExport({ mode: "issues" })}
           >
             Download all actionable issues
-          </button>
-        </li>
-        <li>
-          <button disabled={isBusy} onClick={() => onExport({ mode: "full" })}>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            inset
+            disabled={isBusy}
+            onClick={() => onExport({ mode: "full" })}
+          >
             Download saved Lighthouse payload
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Download CSV</span>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Download CSV</DropdownMenu.Label>
+          <DropdownMenu.Item
+            inset
             disabled={!visibleIssues.length}
             onClick={() => onExportCsv(visibleIssues, "current")}
           >
             Download {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            inset
             disabled={!allIssues.length}
             onClick={() => onExportCsv(allIssues, "all")}
           >
             Download all actionable issues
-          </button>
-        </li>
-      </ul>
-    </div>
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }
 

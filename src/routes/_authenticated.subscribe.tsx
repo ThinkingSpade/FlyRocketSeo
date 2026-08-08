@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
 import { ArrowRight, Settings, User } from "lucide-react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
+import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -294,42 +296,40 @@ function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
 
   return (
     <div className="fixed top-4 right-4">
-      <div className="dropdown dropdown-end">
-        <button
-          type="button"
-          tabIndex={0}
-          className="btn btn-ghost btn-circle"
-          aria-label="Open account menu"
-        >
-          <User className="h-5 w-5" />
-        </button>
-        <ul
-          tabIndex={0}
-          className="dropdown-content z-20 menu mt-3 min-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-        >
-          <li className="menu-title max-w-full">
-            <span className="truncate text-base-content" data-ph-mask>
-              {email}
-            </span>
-          </li>
-          <li>
-            <Link to="/settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-          </li>
-          <ThemePreferenceMenuItems />
-          <li>
-            <button
+      <DropdownMenu>
+        <DropdownMenu.Trigger
+          render={
+            <Button
               type="button"
-              className="text-error"
-              onClick={handleSignOut}
+              variant="ghost"
+              shape="circle"
+              aria-label="Open account menu"
             >
-              Sign out
-            </button>
-          </li>
-        </ul>
-      </div>
+              <User className="h-5 w-5" />
+            </Button>
+          }
+        />
+        <DropdownMenu.Content align="end" className="min-w-56">
+          <DropdownMenu.Group>
+            <DropdownMenu.Label>
+              <span className="block truncate" data-ph-mask>
+                {email}
+              </span>
+            </DropdownMenu.Label>
+          </DropdownMenu.Group>
+          <DropdownMenu.LinkItem
+            icon={Settings}
+            render={<Link to="/settings" />}
+          >
+            Settings
+          </DropdownMenu.LinkItem>
+          <ThemePreferenceMenuItems />
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item variant="danger" onClick={handleSignOut}>
+            Sign out
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu>
     </div>
   );
 }

@@ -2,6 +2,7 @@ import { Settings, User } from "lucide-react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { signOutAndRedirect } from "@/lib/auth-client";
 import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 // Account dropdown shared by the onboarding wizard and the onboarding chat so a
 // signed-in user can reach Settings / theme / sign out from either surface.
@@ -17,39 +18,37 @@ export function OnboardingAccountMenu({
 
   return (
     <div className="fixed top-4 right-4">
-      <div className="dropdown dropdown-end">
-        <Button
-          type="button"
-          tabIndex={0}
-          variant="ghost"
-          shape="circle"
-          aria-label="Open account menu"
-        >
-          <User className="h-5 w-5" />
-        </Button>
-        <ul
-          tabIndex={0}
-          className="dropdown-content z-20 menu mt-3 min-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-        >
-          <li className="menu-title max-w-full">
-            <span className="truncate text-base-content" data-ph-mask>
-              {email}
-            </span>
-          </li>
-          <li>
-            <a href="/settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </a>
-          </li>
+      <DropdownMenu>
+        <DropdownMenu.Trigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              shape="circle"
+              aria-label="Open account menu"
+            >
+              <User className="h-5 w-5" />
+            </Button>
+          }
+        />
+        <DropdownMenu.Content align="end" className="min-w-56">
+          <DropdownMenu.Group>
+            <DropdownMenu.Label>
+              <span className="block truncate" data-ph-mask>
+                {email}
+              </span>
+            </DropdownMenu.Label>
+          </DropdownMenu.Group>
+          <DropdownMenu.LinkItem icon={Settings} href="/settings">
+            Settings
+          </DropdownMenu.LinkItem>
           <ThemePreferenceMenuItems />
-          <li>
-            <button type="button" onClick={handleSignOut}>
-              Sign out
-            </button>
-          </li>
-        </ul>
-      </div>
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item variant="danger" onClick={handleSignOut}>
+            Sign out
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu>
     </div>
   );
 }

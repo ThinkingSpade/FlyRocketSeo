@@ -3,6 +3,8 @@ import { MoreHorizontal, ScanSearch, Trash2 } from "lucide-react";
 import type { getAuditHistory } from "@/serverFunctions/audit";
 import { formatDate, StatusBadge } from "@/client/features/audit/shared";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 export function AuditHistorySection({
   projectId,
@@ -119,33 +121,34 @@ function HistoryActions({
       >
         View
       </Link>
-      <div className="dropdown dropdown-end">
-        <div
-          tabIndex={0}
-          role="button"
-          className="btn btn-ghost btn-xs btn-square"
-          aria-label="Audit actions"
-        >
-          <MoreHorizontal className="size-3.5" />
-        </div>
-        <ul
-          tabIndex={0}
-          className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-40"
-        >
-          <li>
-            <button
-              className="text-error"
-              onClick={(event) => {
-                event.stopPropagation();
-                onDelete(auditId);
-              }}
+      <DropdownMenu>
+        <DropdownMenu.Trigger
+          render={
+            <Button
+              variant="ghost"
+              size="xs"
+              shape="square"
+              aria-label="Audit actions"
             >
-              <Trash2 className="size-3.5" />
-              Delete audit
-            </button>
-          </li>
-        </ul>
-      </div>
+              <MoreHorizontal className="size-3.5" />
+            </Button>
+          }
+        />
+        <DropdownMenu.Content align="end">
+          <DropdownMenu.Item
+            variant="danger"
+            icon={Trash2}
+            onClick={(event) => {
+              // The row behind this is itself clickable, so the delete must not
+              // also navigate into the audit it just removed.
+              event.stopPropagation();
+              onDelete(auditId);
+            }}
+          >
+            Delete audit
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu>
     </div>
   );
 }

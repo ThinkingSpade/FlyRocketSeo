@@ -28,17 +28,12 @@ import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 const DEFAULT_PAGES_SORT: SortingState = [{ id: "capturedVolume", desc: true }];
 const DEFAULT_QUERIES_SORT: SortingState = [
   { id: "aiSearchVolume", desc: true },
 ];
-
-// DaisyUI focus-dropdowns stay open until the active element blurs.
-function closeExportMenu(): void {
-  const active = document.activeElement;
-  if (active instanceof HTMLElement) active.blur();
-}
 
 export function CitationTabsCard({
   result,
@@ -123,9 +118,11 @@ export function CitationTabsCard({
     queriesTable.getSortedRowModel().rows.map((row) => row.original),
   );
 
+  // No explicit menu close in either handler — Kumo's menu closes itself on
+  // select. These used to call a local blur() helper, the same DaisyUI
+  // workaround that src/client/lib/dropdown.ts carried.
   const handleExportCsv = () => {
     downloadBrandLookupCsv(activeTab, result.resolvedTarget, exportTable);
-    closeExportMenu();
   };
 
   const handleExportSheets = () => {
@@ -134,7 +131,6 @@ export function CitationTabsCard({
       rows: exportTable.rows,
       feature: `brand_lookup_${activeTab}`,
     });
-    closeExportMenu();
   };
 
   const canExport = exportTable.rows.length > 0;
@@ -164,42 +160,25 @@ export function CitationTabsCard({
           ]}
         />
 
-        <div className="dropdown dropdown-end">
-          <div
-            tabIndex={0}
-            role="button"
-            className={`btn btn-ghost btn-sm gap-1.5 ${canExport ? "" : "btn-disabled"}`}
-          >
-            <Download className="size-3.5" />
-            Export
-            <ChevronDown className="size-3.5" />
-          </div>
-          <ul
-            tabIndex={0}
-            className="menu dropdown-content z-10 mt-1 w-48 rounded-box border border-base-300 bg-base-100 p-1 shadow"
-          >
-            <li>
-              <button
-                type="button"
-                onClick={handleExportSheets}
-                disabled={!canExport}
-              >
-                <Sheet className="size-4" />
-                Google Sheets
-              </button>
-            </li>
-            <li>
-              <button
-                type="button"
-                onClick={handleExportCsv}
-                disabled={!canExport}
-              >
-                <Download className="size-4" />
-                CSV
-              </button>
-            </li>
-          </ul>
-        </div>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={
+              <Button variant="ghost" size="sm" disabled={!canExport}>
+                <Download className="size-3.5" />
+                Export
+                <ChevronDown className="size-3.5" />
+              </Button>
+            }
+          />
+          <DropdownMenu.Content align="end">
+            <DropdownMenu.Item icon={Sheet} onClick={handleExportSheets}>
+              Google Sheets
+            </DropdownMenu.Item>
+            <DropdownMenu.Item icon={Download} onClick={handleExportCsv}>
+              CSV
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
       </div>
 
       <div className="flex items-center gap-2 border-b border-base-300 px-4 py-2">

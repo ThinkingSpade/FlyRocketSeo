@@ -1,5 +1,7 @@
 import { ChevronDown, Download, Loader2, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 export function TableBulkActionBar({
   selectedCount,
@@ -90,79 +92,95 @@ export function TableBulkExportMenu({
   busy?: boolean;
 }) {
   return (
-    <div className="dropdown dropdown-top dropdown-end">
-      <button
-        type="button"
-        tabIndex={0}
-        disabled={busy}
-        aria-haspopup="menu"
-        className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-base-content/85 hover:bg-base-content/10 disabled:opacity-50"
-      >
-        {busy ? (
-          <Loader2 className="size-3.5 animate-spin" />
-        ) : (
-          <Download className="size-3.5" />
-        )}
-        Export
-        <ChevronDown className="size-3 opacity-60" />
-      </button>
-      <ul
-        tabIndex={0}
-        role="menu"
-        className="dropdown-content menu z-10 mb-2 w-52 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-      >
-        {actions.map((action, index) => (
-          <li key={index}>
-            <button
-              type="button"
-              onClick={action.onClick}
-              disabled={busy || action.disabled}
-            >
-              {action.icon}
-              {action.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <button
+            type="button"
+            disabled={busy}
+            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-base-content/85 hover:bg-base-content/10 disabled:opacity-50"
+          >
+            {busy ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5" />
+            )}
+            Export
+            <ChevronDown className="size-3 opacity-60" />
+          </button>
+        }
+      />
+      {/* side="top": this bar floats at the bottom of the viewport, so the menu
+          has to open upward — what `dropdown-top` used to do. */}
+      <DropdownMenu.Content side="top" align="end" className="w-52">
+        <ExportMenuItems actions={actions} busy={busy} />
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }
 
-export function TableExportMenu({
+/** The action list both export menus render. Kumo only injects its own `mr-2`
+ *  for icon *components*, and callers hand these in as elements, so the gap is
+ *  supplied here rather than at every call site. */
+function ExportMenuItems({
   actions,
-  buttonClassName = "btn btn-sm gap-1",
-  menuClassName = "dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-56",
+  busy,
 }: {
-  actions: Array<{
-    label: ReactNode;
-    icon?: ReactNode;
-    onClick: () => void;
-    disabled?: boolean;
-  }>;
-  buttonClassName?: string;
-  menuClassName?: string;
+  actions: ExportMenuAction[];
+  busy?: boolean;
 }) {
   return (
-    <div className="dropdown dropdown-end">
-      <div tabIndex={0} role="button" className={buttonClassName}>
-        <Download className="size-4" />
-        Export
-        <ChevronDown className="size-3 opacity-60" />
-      </div>
-      <ul tabIndex={0} className={menuClassName}>
-        {actions.map((action, index) => (
-          <li key={index}>
-            <button
-              type="button"
-              onClick={action.onClick}
-              disabled={action.disabled}
-            >
-              {action.icon}
-              {action.label}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </div>
+    <>
+      {actions.map((action, index) => (
+        <DropdownMenu.Item
+          key={index}
+          icon={
+            action.icon ? (
+              <span className="mr-2 inline-flex">{action.icon}</span>
+            ) : undefined
+          }
+          disabled={busy || action.disabled}
+          onClick={action.onClick}
+        >
+          {action.label}
+        </DropdownMenu.Item>
+      ))}
+    </>
+  );
+}
+
+type ExportMenuAction = {
+  label: ReactNode;
+  icon?: ReactNode;
+  onClick: () => void;
+  disabled?: boolean;
+};
+
+export function TableExportMenu({
+  actions,
+  variant = "secondary",
+}: {
+  actions: ExportMenuAction[];
+  /** Replaces the old `buttonClassName`/`menuClassName` pair. Those existed so
+   *  two callers could ask for a ghost button and a narrower menu by pasting
+   *  DaisyUI class strings; the trigger is a Kumo Button now, so the intent is
+   *  a named variant and the width is Kumo's to decide. */
+  variant?: "secondary" | "ghost";
+}) {
+  return (
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button variant={variant} size="sm">
+            <Download className="size-4" />
+            Export
+            <ChevronDown className="size-3 opacity-60" />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content align="end" className="w-56">
+        <ExportMenuItems actions={actions} />
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }
