@@ -21,6 +21,9 @@ import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
   "/_project/p/$projectId/audit/",
@@ -108,10 +111,10 @@ function AuditDetail({
     return (
       <div className="px-4 py-6 md:px-6">
         <div className="mx-auto max-w-3xl space-y-4">
-          <div className="alert alert-error">
+          <Banner variant="error">
             <AlertCircle className="size-5" />
             <span>We could not load this audit. It may have been deleted.</span>
-          </div>
+          </Banner>
           <Button variant="ghost" size="sm" onClick={onBack}>
             &larr; Back to audits
           </Button>
@@ -248,8 +251,8 @@ function ProgressCard({
 
   return (
     <div className="space-y-3">
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body gap-3">
+      <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+        <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-medium flex items-center gap-2">
               <Loader2 className="size-4 animate-spin text-primary" />
@@ -257,13 +260,15 @@ function ProgressCard({
                 ? "Running Lighthouse checks"
                 : "Crawling pages"}
             </h2>
-            <span className="badge badge-ghost badge-sm">{phaseLabel}</span>
+            <Badge variant="neutral">{phaseLabel}</Badge>
           </div>
 
-          <progress
-            className="progress progress-primary w-full"
+          <ProgressBar
+            className="w-full"
+            barClassName="h-2"
             value={progress}
             max={100}
+            label="Audit progress"
           />
 
           <div className="flex items-center justify-between text-sm">
@@ -285,8 +290,8 @@ function ProgressCard({
       </div>
 
       {crawledUrls.length > 0 && (
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+          <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-2 p-4">
             <h3 className="text-sm font-medium text-base-content/70">
               Crawled Pages ({crawledUrls.length})
             </h3>

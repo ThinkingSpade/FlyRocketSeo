@@ -17,6 +17,7 @@ import {
   AUTUMN_PAID_PLAN_ID,
 } from "@/shared/billing";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 
@@ -257,14 +258,13 @@ function SubscribePage() {
         </Button>
 
         <p className="text-center text-xs text-base-content/50">
-          <span
-            className="tooltip before:max-w-60 before:whitespace-normal"
-            data-tip={`Not for you yet? Email ${SUPPORT_EMAIL} within 30 days of your charge and we'll refund your subscription.`}
+          <Tooltip
+            content={`Not for you yet? Email ${SUPPORT_EMAIL} within 30 days of your charge and we'll refund your subscription.`}
           >
             <span className="cursor-help underline decoration-dotted">
               30-day money-back guarantee
             </span>
-          </span>
+          </Tooltip>
           . Cancel anytime. Powered by Stripe.
         </p>
       </div>

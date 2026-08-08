@@ -39,6 +39,7 @@ import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
+import { Dialog } from "@cloudflare/kumo/components/dialog";
 
 type Props = Omit<KeywordResearchControllerInput, "onFormSubmit">;
 type KeywordSearchTab = SearchTab & { input: KeywordSearchTabInput };
@@ -425,32 +426,32 @@ function KeywordSaveDialog({
 }: {
   controller: KeywordResearchControllerState;
 }) {
-  if (!controller.showSaveDialog) return null;
-
+  // Controlled rather than trigger-driven: the dialog is opened from the bulk
+  // action bar elsewhere in the tree, so `open` is the controller's state.
+  // Kumo supplies the backdrop, the focus trap and Escape-to-close, all of
+  // which the hand-rolled version was missing -- the old `modal-backdrop` div
+  // only closed on click.
   return (
-    <div className="modal modal-open">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">
+    <Dialog.Root
+      open={controller.showSaveDialog}
+      onOpenChange={(open) => controller.setShowSaveDialog(open)}
+    >
+      <Dialog className="p-6">
+        <Dialog.Title className="text-lg font-bold">
           Save {controller.selectedRows.size} Keywords
-        </h3>
-        <div className="py-4">
-          <p className="text-base-content/70 text-sm">
-            These keywords will be saved to your current project.
-          </p>
-        </div>
-        <div className="modal-action">
-          <Button onClick={() => controller.setShowSaveDialog(false)}>
-            Cancel
-          </Button>
+        </Dialog.Title>
+        <Dialog.Description className="mt-2 text-sm text-base-content/70">
+          These keywords will be saved to your current project.
+        </Dialog.Description>
+        <div className="mt-6 flex justify-end gap-2">
+          <Dialog.Close
+            render={(props) => <Button {...props}>Cancel</Button>}
+          />
           <Button variant="primary" onClick={controller.confirmSave}>
             Save
           </Button>
         </div>
-      </div>
-      <div
-        className="modal-backdrop"
-        onClick={() => controller.setShowSaveDialog(false)}
-      />
-    </div>
+      </Dialog>
+    </Dialog.Root>
   );
 }

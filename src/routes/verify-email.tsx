@@ -14,6 +14,7 @@ import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const verificationIssueSchema = z
   .enum(["invalid_token", "token_expired", "user_not_found", "unknown"])
@@ -217,9 +218,9 @@ function VerifyEmailPage() {
       >
         {!isHostedMode ? null : errorMessage ? (
           <div className="space-y-3">
-            <div className="alert alert-error">
+            <Banner variant="error">
               <span>{errorMessage}</span>
-            </div>
+            </Banner>
             <Link
               to="/sign-in"
               search={getSignInSearch(redirectTo)}
@@ -235,9 +236,9 @@ function VerifyEmailPage() {
         ) : email ? (
           <div className="space-y-3">
             {resendError ? (
-              <div className="alert alert-error" role="alert">
+              <Banner variant="error" role="alert">
                 <span>{resendError}</span>
-              </div>
+              </Banner>
             ) : null}
             <Button
               type="button"

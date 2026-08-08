@@ -15,6 +15,7 @@ import { formatUrlForDisplay } from "@/client/components/table/url";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 
 type TopPageRow = BrandLookupResult["topPages"][number];
 type TopQueryRow = BrandLookupResult["topQueries"][number];
@@ -319,9 +320,10 @@ export function buildTopQueriesColumns({
       header: () => <span className="sr-only">Actions</span>,
       meta: { cellClassName: "w-px whitespace-nowrap text-right align-top" },
       cell: ({ row }) => (
-        <span
-          className="tooltip tooltip-left opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-          data-tip="Run this prompt in Prompt Explorer"
+        <Tooltip
+          side="left"
+          className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+          content="Run this prompt in Prompt Explorer"
         >
           <Link
             to="/p/$projectId/prompt-explorer"
@@ -332,7 +334,7 @@ export function buildTopQueriesColumns({
           >
             <Sparkles className="size-3.5" />
           </Link>
-        </span>
+        </Tooltip>
       ),
     }),
   ];

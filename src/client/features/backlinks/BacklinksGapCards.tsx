@@ -186,12 +186,12 @@ export function LinkIntersectCard({
               <span className="text-xs text-base-content/40">
                 Page {result?.page ?? 1} · each page is a new lookup
               </span>
-              <div className="join">
+              <div className="inline-flex items-stretch">
                 <Button
                   type="button"
                   variant="ghost"
                   size="xs"
-                  className="join-item"
+                  className=""
                   disabled={(result?.page ?? 1) <= 1 || isLoading}
                   onClick={() => onPageChange((result?.page ?? 1) - 1)}
                 >
@@ -201,7 +201,7 @@ export function LinkIntersectCard({
                   type="button"
                   variant="ghost"
                   size="xs"
-                  className="join-item"
+                  className=""
                   disabled={!result?.hasMore || isLoading}
                   onClick={() => onPageChange((result?.page ?? 1) + 1)}
                 >

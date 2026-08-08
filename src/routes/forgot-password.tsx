@@ -12,6 +12,7 @@ import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -99,13 +100,16 @@ function ForgotPasswordPage() {
                 </p>
               }
             >
+              {/* Kumo's Banner has no success variant (default / alert /
+                  error / secondary), and "check your inbox" is informational
+                  rather than a result, so default is the honest fit. */}
               {isSuccess ? (
-                <div className="alert alert-success">
+                <Banner variant="default">
                   <span>
                     If an account exists for that email, you'll receive password
                     reset instructions shortly.
                   </span>
-                </div>
+                </Banner>
               ) : (
                 <form
                   className="space-y-4"

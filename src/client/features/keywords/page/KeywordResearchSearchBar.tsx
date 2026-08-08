@@ -19,6 +19,7 @@ import { resolveKeywordProviderNotice } from "./keywordProviderNotice";
 import type { KeywordResearchControllerState } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Switch } from "@cloudflare/kumo/components/switch";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 
 type Props = {
   controller: KeywordResearchControllerState;
@@ -234,12 +235,12 @@ export function KeywordResearchSearchBar({
                           </span>
                         }
                       />
-                      <div
-                        className="tooltip tooltip-right"
-                        data-tip="Google reports one combined search volume for similar keywords (e.g. 'seo tool' and 'seo tools'). Turn this on to estimate each keyword's own volume. Costs 2x the credits."
+                      <Tooltip
+                        side="right"
+                        content="Google reports one combined search volume for similar keywords (e.g. 'seo tool' and 'seo tools'). Turn this on to estimate each keyword's own volume. Costs 2x the credits."
                       >
                         <Info className="size-3.5 text-base-content/50" />
-                      </div>
+                      </Tooltip>
                     </div>
                   )}
                 </controlsForm.Field>

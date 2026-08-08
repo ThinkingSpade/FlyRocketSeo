@@ -360,7 +360,7 @@ function CommandPaletteImpl() {
         <ul
           role="listbox"
           aria-label="Commands"
-          className="menu min-h-0 flex-1 flex-nowrap gap-0 overflow-y-auto p-2"
+          className="flex flex-col flex-wrap p-2 text-sm min-h-0 flex-1 flex-nowrap gap-0 overflow-y-auto p-2"
         >
           {flatCommands.length === 0 ? (
             <li className="px-3 py-6 text-center text-sm text-base-content/50">
@@ -368,7 +368,7 @@ function CommandPaletteImpl() {
             </li>
           ) : (
             filteredSections.map((section) => (
-              <li key={section.heading} className="menu-none">
+              <li key={section.heading} className="">
                 <ul className="gap-0.5 px-0">
                   <li
                     role="presentation"

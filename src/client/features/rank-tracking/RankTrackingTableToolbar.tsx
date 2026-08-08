@@ -3,6 +3,7 @@ import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { ExportMenu, MoreMenu } from "./ToolbarMenus";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 export function RankTrackingTableToolbar({
   showFilters,
@@ -100,10 +101,11 @@ export function RankTrackingTableToolbar({
             {latestRun.keywordsChecked}/{latestRun.keywordsTotal || "?"}
           </span>
           {latestRun.keywordsTotal > 0 && (
-            <progress
-              className="progress progress-primary w-24"
+            <ProgressBar
+              className="w-24"
               value={latestRun.keywordsChecked}
               max={latestRun.keywordsTotal}
+              label="Keywords checked"
             />
           )}
         </div>

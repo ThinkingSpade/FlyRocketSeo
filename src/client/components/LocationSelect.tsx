@@ -136,7 +136,7 @@ export function LocationSelect({
           <ul
             ref={listRef}
             role="listbox"
-            className="menu mt-2 max-h-64 w-full flex-nowrap overflow-y-auto p-0"
+            className="flex flex-col flex-wrap p-2 text-sm mt-2 max-h-64 w-full flex-nowrap overflow-y-auto p-0"
           >
             {filtered.length === 0 ? (
               <li className="w-full break-all px-3 py-2 text-sm text-base-content/50">
