@@ -9,6 +9,7 @@ import { exportBackup } from "@/serverFunctions/backup";
 import { GscOAuthConfigSection } from "@/client/features/gsc/GscOAuthConfigSection";
 import { GeoLocationSeedSection } from "@/client/features/geo/GeoLocationSeedSection";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Switch } from "@cloudflare/kumo/components/switch";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -128,13 +129,11 @@ function SettingsPage() {
                   Share analytics and usage data.
                 </p>
               </div>
-              <input
-                type="checkbox"
-                className="toggle toggle-primary"
+              <Switch
                 checked={analyticsEnabled}
                 disabled={isSessionPending || isSaving || !session?.user}
-                onChange={(event) => {
-                  void updateAnalyticsPreference(event.currentTarget.checked);
+                onCheckedChange={(checked) => {
+                  void updateAnalyticsPreference(checked);
                 }}
                 aria-label="Enable product analytics"
               />

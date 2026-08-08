@@ -8,6 +8,7 @@ import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Switch } from "@cloudflare/kumo/components/switch";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -151,24 +152,22 @@ function LaunchOptions({
 function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/20 p-3 space-y-2">
-      <label className="label cursor-pointer justify-start gap-2 p-0">
-        <launchForm.Field name="runLighthouse">
-          {(field) => (
-            <input
-              type="checkbox"
-              className="toggle toggle-sm toggle-primary"
-              checked={Boolean(field.state.value)}
-              onChange={(event) => field.handleChange(event.target.checked)}
-            />
-          )}
-        </launchForm.Field>
-        <span
-          className="text-sm font-medium text-base-content/80"
-          title="Lighthouse measures the performance of your pages and identifies issues."
-        >
-          Include Lighthouse
-        </span>
-      </label>
+      <launchForm.Field name="runLighthouse">
+        {(field) => (
+          <Switch
+            checked={Boolean(field.state.value)}
+            onCheckedChange={(checked) => field.handleChange(checked)}
+            label={
+              <span
+                className="text-sm font-medium text-base-content/80"
+                title="Lighthouse measures the performance of your pages and identifies issues."
+              >
+                Include Lighthouse
+              </span>
+            }
+          />
+        )}
+      </launchForm.Field>
 
       <launchForm.Subscribe
         selector={(snapshot) => snapshot.values.runLighthouse}

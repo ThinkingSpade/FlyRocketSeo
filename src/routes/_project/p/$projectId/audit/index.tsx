@@ -20,6 +20,7 @@ import {
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
   "/_project/p/$projectId/audit/",
@@ -98,7 +99,7 @@ function AuditDetail({
   if (statusQuery.isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="loading loading-spinner loading-lg" />
+        <Loader size="lg" />
       </div>
     );
   }

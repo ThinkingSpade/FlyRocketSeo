@@ -13,6 +13,7 @@ import {
 import { AuthConfigErrorCard } from "@/client/components/AuthConfigErrorCard";
 import { UnauthenticatedErrorCard } from "@/client/components/UnauthenticatedErrorCard";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 export const Route = createFileRoute("/_app/")({
   component: IndexRedirect,
@@ -113,7 +114,7 @@ function IndexRedirect() {
 
   return (
     <div className="flex items-center justify-center h-full">
-      <span className="loading loading-spinner loading-md" />
+      <Loader />
     </div>
   );
 }

@@ -13,6 +13,7 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const verificationIssueSchema = z
   .enum(["invalid_token", "token_expired", "user_not_found", "unknown"])
@@ -229,7 +230,7 @@ function VerifyEmailPage() {
           </div>
         ) : isPending || isRuntimeConfigPending || isRedirecting ? (
           <div className="flex justify-center py-4">
-            <span className="loading loading-spinner loading-md" />
+            <Loader />
           </div>
         ) : email ? (
           <div className="space-y-3">

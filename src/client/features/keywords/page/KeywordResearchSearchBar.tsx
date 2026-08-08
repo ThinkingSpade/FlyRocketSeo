@@ -18,6 +18,7 @@ import type { TargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { resolveKeywordProviderNotice } from "./keywordProviderNotice";
 import type { KeywordResearchControllerState } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Switch } from "@cloudflare/kumo/components/switch";
 
 type Props = {
   controller: KeywordResearchControllerState;
@@ -222,19 +223,17 @@ export function KeywordResearchSearchBar({
                 <controlsForm.Field name="clickstream">
                   {(field) => (
                     <div className="flex items-center gap-2">
-                      <label className="label cursor-pointer justify-start gap-2 p-0">
-                        <input
-                          type="checkbox"
-                          className="toggle toggle-sm toggle-primary"
-                          checked={field.state.value}
-                          onChange={(event) =>
-                            field.handleChange(event.target.checked)
-                          }
-                        />
-                        <span className="text-sm font-medium text-base-content/80">
-                          Clickstream-refined volumes
-                        </span>
-                      </label>
+                      <Switch
+                        checked={field.state.value}
+                        onCheckedChange={(checked) =>
+                          field.handleChange(checked)
+                        }
+                        label={
+                          <span className="text-sm font-medium text-base-content/80">
+                            Clickstream-refined volumes
+                          </span>
+                        }
+                      />
                       <div
                         className="tooltip tooltip-right"
                         data-tip="Google reports one combined search volume for similar keywords (e.g. 'seo tool' and 'seo tools'). Turn this on to estimate each keyword's own volume. Costs 2x the credits."

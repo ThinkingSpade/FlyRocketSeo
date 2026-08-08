@@ -29,6 +29,7 @@ import {
 } from "@/client/lib/active-project";
 import { useThemePreference } from "@/client/lib/theme";
 import { useSession } from "@/lib/auth-client";
+import { Kbd } from "@/client/components/Kbd";
 
 // Module-level open channel: the global keydown listener lives inside the
 // palette, but other surfaces (the sidebar trigger) need to open it without a
@@ -353,9 +354,7 @@ function CommandPaletteImpl() {
             autoCorrect="off"
             spellCheck={false}
           />
-          <kbd className="kbd kbd-sm shrink-0 text-base-content/60">
-            {isMac ? "⌘K" : "Ctrl K"}
-          </kbd>
+          <Kbd className="shrink-0">{isMac ? "⌘K" : "Ctrl K"}</Kbd>
         </div>
 
         <ul
@@ -417,18 +416,18 @@ function CommandPaletteImpl() {
 
         <div className="flex items-center gap-3 border-t border-base-300 px-3 py-2 text-xs text-base-content/50">
           <span className="flex items-center gap-1">
-            <kbd className="kbd kbd-xs">↑</kbd>
-            <kbd className="kbd kbd-xs">↓</kbd>
+            <Kbd size="xs">↑</Kbd>
+            <Kbd size="xs">↓</Kbd>
             to navigate
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="kbd kbd-xs">
+            <Kbd size="xs">
               <CornerDownLeft className="h-3 w-3" />
-            </kbd>
+            </Kbd>
             to select
           </span>
           <span className="flex items-center gap-1">
-            <kbd className="kbd kbd-xs">Esc</kbd>
+            <Kbd size="xs">Esc</Kbd>
             to close
           </span>
         </div>

@@ -16,6 +16,7 @@ import {
   AUTUMN_MANAGED_ACCESS_FEATURE_ID,
   AUTUMN_PAID_PLAN_ID,
 } from "@/shared/billing";
+import { Loader } from "@cloudflare/kumo/components/loader";
 
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 
@@ -128,7 +129,7 @@ function SubscribePage() {
         <h1 className="text-2xl font-semibold">
           Finalizing your subscription&hellip;
         </h1>
-        <span className="loading loading-spinner loading-md" />
+        <Loader />
         <p className="text-sm text-base-content/60">
           This usually takes a few seconds.
         </p>

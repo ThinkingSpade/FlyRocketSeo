@@ -29,6 +29,7 @@ import { BILLING_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
+import { Kbd } from "@/client/components/Kbd";
 
 interface SidebarProps {
   projectId: string | null;
@@ -238,12 +239,9 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
       >
         <Search className="h-4 w-4 shrink-0" />
         <span className="truncate">Search</span>
-        {/* Was DaisyUI's `kbd kbd-xs`. Kumo has no standalone key cap — its
-            Shortcut part only exists inside a dropdown — so this is the same
-            treatment written in plain utilities. */}
-        <kbd className="ml-auto rounded border border-base-300 bg-base-100 px-1.5 py-0.5 font-sans text-[10px] text-base-content/50">
+        <Kbd size="xs" className="ml-auto">
           ⌘K
-        </kbd>
+        </Kbd>
       </button>
 
       {!isHostedMode ? <DataforseoBalanceIndicator /> : null}
