@@ -464,6 +464,57 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
   will-change: auto;
 }
 
+/* Per-section stagger.
+
+   Same reveal, but applied to the CHILDREN of the marked element rather than to
+   the element itself, so a page's sections arrive one after another instead of
+   as one block.
+
+   The delay comes from :nth-child rather than a --motion-index set per element,
+   which is what makes this worth doing: the alternative was wrapping every
+   section in its own <Reveal>, and these containers hang tables, charts and
+   grids directly off themselves — inserting a div between them reshuffles those
+   layouts. This changes no markup at all.
+
+   The ladder stops at the sixth child, and everything after it shares that
+   delay. A stagger is a reading cue, not a queue: past roughly six steps the
+   last section is still waiting long after the eye has arrived, which reads as
+   the page being slow rather than as sequence. Long pages therefore arrive in
+   six beats regardless of how many sections they have. */
+[data-reveal-stagger] > * {
+  transition-property: opacity, transform;
+  transition-duration: var(--motion-duration-slow);
+  transition-timing-function: var(--ease-out-soft);
+  will-change: opacity, transform;
+}
+
+[data-reveal-stagger="hidden"] > * {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-rise-distance), 0);
+}
+
+[data-reveal-stagger="shown"] > * {
+  opacity: 1;
+  transform: translate3d(0, 0, 0);
+  will-change: auto;
+}
+
+[data-reveal-stagger="shown"] > *:nth-child(2) {
+  transition-delay: calc(1 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(3) {
+  transition-delay: calc(2 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(4) {
+  transition-delay: calc(3 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(5) {
+  transition-delay: calc(4 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(n + 6) {
+  transition-delay: calc(5 * var(--motion-stagger-step));
+}
+
 /* Micro-interactions. `motion-lift` is the hover treatment for cards and other
    clickable surfaces; pair it with the element's own ring/border classes.
 
