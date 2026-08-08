@@ -14,7 +14,7 @@ export function FreePlanAlert({ visible }: { visible: boolean }) {
         <Link
           to={SUBSCRIBE_ROUTE}
           search={{ upgrade: true }}
-          className="link font-medium"
+          className="app-link font-medium"
         >
           upgrade to the paid plan
         </Link>

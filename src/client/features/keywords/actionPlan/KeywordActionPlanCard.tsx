@@ -111,7 +111,7 @@ export function KeywordActionPlanCard({
               params={{ projectId }}
               // Content Optimizer's own search param for the target keyword.
               search={{ q: keyword }}
-              className="link link-primary"
+              className="app-link"
             >
               Open Content Optimizer
               <ArrowRight className="ml-0.5 inline size-3" />
@@ -130,7 +130,7 @@ export function KeywordActionPlanCard({
             <Link
               to="/p/$projectId/local"
               params={{ projectId }}
-              className="link link-primary"
+              className="app-link"
             >
               Open Local SEO
               <ArrowRight className="ml-0.5 inline size-3" />
@@ -147,7 +147,7 @@ export function KeywordActionPlanCard({
             <Link
               to="/p/$projectId/backlinks"
               params={{ projectId }}
-              className="link link-primary"
+              className="app-link"
             >
               Open Backlinks
               <ArrowRight className="ml-0.5 inline size-3" />

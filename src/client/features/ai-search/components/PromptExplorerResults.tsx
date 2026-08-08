@@ -100,7 +100,7 @@ function ModelResultCard({
                   href={citation.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`link inline-flex items-start gap-1 ${
+                  className={`app-link inline-flex items-start gap-1 ${
                     citation.matchedBrand ? "link-primary font-medium" : ""
                   }`}
                 >

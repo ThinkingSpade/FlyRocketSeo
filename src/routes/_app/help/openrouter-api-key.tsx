@@ -30,7 +30,7 @@ function OpenrouterApiKeyHelpPage() {
               <li>
                 Create an account at{" "}
                 <a
-                  className="link link-primary"
+                  className="app-link"
                   href="https://openrouter.ai"
                   target="_blank"
                   rel="noreferrer"
@@ -42,7 +42,7 @@ function OpenrouterApiKeyHelpPage() {
               <li>
                 Go to{" "}
                 <a
-                  className="link link-primary"
+                  className="app-link"
                   href={OPENROUTER_KEYS_URL}
                   target="_blank"
                   rel="noreferrer"

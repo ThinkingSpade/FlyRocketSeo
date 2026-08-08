@@ -75,7 +75,7 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
               href={match.url}
               target="_blank"
               rel="noreferrer"
-              className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
+              className="app-link-subtle flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
               View listing
               <ExternalLink className="size-3" />
@@ -129,7 +129,7 @@ function CitationUnconfirmedList({
               href={match.url}
               target="_blank"
               rel="noreferrer"
-              className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
+              className="app-link-subtle flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
               Check this result
               <ExternalLink className="size-3" />
@@ -175,7 +175,7 @@ function CitationMissingList({ missing }: { missing: DirectoryEntry[] }) {
               href={`https://${directory.domain}`}
               target="_blank"
               rel="noreferrer"
-              className="link link-hover flex shrink-0 items-center gap-1 text-xs text-base-content/60"
+              className="app-link-subtle flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
               Check manually
               <ExternalLink className="size-3" />

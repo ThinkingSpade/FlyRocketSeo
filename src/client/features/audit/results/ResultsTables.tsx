@@ -54,7 +54,7 @@ const pagesColumns: ColumnDef<PageRow>[] = [
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="link link-primary inline-flex items-center gap-1 text-xs"
+          className="app-link inline-flex items-center gap-1 text-xs"
         >
           <span className="truncate">{extractPathname(url)}</span>
           <ExternalLink className="size-3 shrink-0" />

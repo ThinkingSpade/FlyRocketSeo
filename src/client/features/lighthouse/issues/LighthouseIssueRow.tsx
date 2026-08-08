@@ -129,7 +129,7 @@ function renderInlineMarkdown(markdown: string): ReactNode {
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        className="link link-primary inline-flex items-center gap-1"
+        className="app-link inline-flex items-center gap-1"
       >
         {label}
         <ExternalLink className="size-3" />

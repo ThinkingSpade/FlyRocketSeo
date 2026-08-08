@@ -45,7 +45,7 @@ function BetaNotice() {
         For more powerful AI workflows, use the FlyRocketSEO MCP with your own
         agent like Claude Code or Hermes.
       </p>
-      <Link to="/ai" className="link link-primary mt-1.5 inline-block text-xs">
+      <Link to="/ai" className="app-link mt-1.5 inline-block text-xs">
         Set up the MCP →
       </Link>
     </div>

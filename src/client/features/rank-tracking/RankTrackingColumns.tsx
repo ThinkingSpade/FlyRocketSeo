@@ -112,7 +112,7 @@ function makeKeywordColumn(
     cell: ({ row }) => (
       <button
         type="button"
-        className="font-medium text-left link link-hover decoration-dotted underline-offset-2"
+        className="font-medium text-left app-link-subtle decoration-dotted underline-offset-2"
         onClick={() => onKeywordClick(row.original)}
         title="View position history"
       >

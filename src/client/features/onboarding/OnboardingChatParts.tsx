@@ -82,15 +82,12 @@ export function WelcomeMessage({
               href={DISCORD_URL}
               target="_blank"
               rel="noreferrer"
-              className="link link-primary"
+              className="app-link"
             >
               join the Discord
             </a>{" "}
             or email{" "}
-            <a
-              href="mailto:huy1999nguyen@gmail.com"
-              className="link link-primary"
-            >
+            <a href="mailto:huy1999nguyen@gmail.com" className="app-link">
               huy1999nguyen@gmail.com
             </a>{" "}
             if you have any questions I can’t help you with.
@@ -208,7 +205,7 @@ export function UpgradeSidebar({
               href={DISCORD_URL}
               target="_blank"
               rel="noreferrer"
-              className="link link-primary"
+              className="app-link"
             >
               Join the Discord
             </a>

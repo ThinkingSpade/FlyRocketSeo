@@ -42,7 +42,7 @@ export function RecentRunsList({
         Couldn&rsquo;t load recent runs.{" "}
         <button
           type="button"
-          className="link"
+          className="app-link"
           onClick={() => void query.refetch()}
         >
           Retry

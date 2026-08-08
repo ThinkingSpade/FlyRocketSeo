@@ -389,7 +389,7 @@ function ProfileField({
         <span className="text-base-content/40">—</span>
       ) : isLink ? (
         <a
-          className="link link-hover break-all"
+          className="app-link-subtle break-all"
           href={value}
           target="_blank"
           rel="noopener noreferrer"

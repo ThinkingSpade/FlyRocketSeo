@@ -253,7 +253,7 @@ export function OnboardingChatConversation({
                   {remaining} free question{remaining === 1 ? "" : "s"} left.{" "}
                   <button
                     type="button"
-                    className="link link-primary"
+                    className="app-link"
                     disabled={isStartingCheckout}
                     onClick={() => void startCheckout()}
                   >

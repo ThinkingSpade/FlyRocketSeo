@@ -648,6 +648,41 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
    The arrow is inline SVG rather than DaisyUI's two-gradient triangle: it is a
    real chevron, it scales, and `currentColor` cannot be used inside a data URI,
    so each theme sets its own stroke below. */
+/* Text links, replacing DaisyUI's .link family.
+   ---------------------------------------------------------------------------
+   Kumo does ship a Link component, but these 42 sites are spread across three
+   different elements — TanStack's <Link>, plain <a>, and SafeExternalLink —
+   and swapping the element would cost the router's typed navigation on the
+   first and the external-link safety wrapper on the third. Same reasoning as
+   .app-select above, and the same shape: keep the element, take Kumo's look.
+
+   Two variants, matching the two DaisyUI spellings actually in use:
+   `.app-link` is always underlined (a link inside a sentence, which needs to
+   be visible without hovering), `.app-link-subtle` underlines only on hover
+   and inherits its colour (a link that is a whole row or cell, where a
+   permanent underline is noise). */
+@layer components {
+  .app-link {
+    color: var(--text-color-kumo-link);
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
+
+  .app-link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .app-link-subtle {
+    color: inherit;
+    text-decoration-line: none;
+  }
+
+  .app-link-subtle:hover {
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
+}
+
 @layer base {
   .app-select {
     appearance: none;

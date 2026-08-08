@@ -39,7 +39,7 @@ const baseColumns = [
         <SafeExternalLink
           url={getDomainWebsiteHref(domain)}
           label={domain}
-          className="link link-primary link-hover break-all inline-flex items-center gap-1"
+          className="app-link-subtle break-all inline-flex items-center gap-1"
         />
       );
     },

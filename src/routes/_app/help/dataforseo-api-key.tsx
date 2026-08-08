@@ -29,7 +29,7 @@ function DataforseoApiKeyHelpPage() {
               <li>
                 Go to{" "}
                 <a
-                  className="link link-primary"
+                  className="app-link"
                   href={DATAFORSEO_API_ACCESS_URL}
                   target="_blank"
                   rel="noreferrer"

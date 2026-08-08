@@ -303,7 +303,7 @@ function AiPage() {
         <p className="mt-12 text-xs text-base-content/55 leading-relaxed">
           Have feedback? Reach out on{" "}
           <a
-            className="link link-primary"
+            className="app-link"
             href={DISCORD_URL}
             target="_blank"
             rel="noreferrer"
@@ -311,7 +311,7 @@ function AiPage() {
             Discord
           </a>{" "}
           or email{" "}
-          <a className="link link-primary" href={`mailto:${SUPPORT_EMAIL}`}>
+          <a className="app-link" href={`mailto:${SUPPORT_EMAIL}`}>
             {SUPPORT_EMAIL}
           </a>
           .

@@ -185,7 +185,7 @@ export function GeoLocationSeedSection() {
                   href={DATAFORSEO_LOCATIONS_DOCS_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="link"
+                  className="app-link"
                 >
                   their docs
                 </a>

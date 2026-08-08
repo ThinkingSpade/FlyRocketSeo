@@ -44,7 +44,7 @@ function SafeAnchor({ href, children, ...rest }: AnchorProps) {
       href={safeHref}
       target="_blank"
       rel="noreferrer"
-      className="link link-primary"
+      className="app-link"
     >
       {children}
     </a>

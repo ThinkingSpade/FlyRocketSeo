@@ -25,7 +25,7 @@ function SeoApiStatusBanners({
                 features. See the quick steps on the{" "}
                 <Link
                   {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
+                  className="app-link font-medium"
                 >
                   help page
                 </Link>
@@ -46,7 +46,7 @@ function SeoApiStatusBanners({
                 working, check the setup steps on the{" "}
                 <Link
                   {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
+                  className="app-link font-medium"
                 >
                   help page
                 </Link>

@@ -135,7 +135,7 @@ function SubscribePage() {
         </p>
         <p className="text-xs text-base-content/50">
           Taking longer?{" "}
-          <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
+          <a className="app-link" href={`mailto:${SUPPORT_EMAIL}`}>
             Email {SUPPORT_EMAIL}
           </a>
           .
@@ -272,7 +272,7 @@ function SubscribePage() {
       <div className="text-center space-y-2">
         <p className="text-sm text-base-content/60">
           Questions?{" "}
-          <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
+          <a className="app-link" href={`mailto:${SUPPORT_EMAIL}`}>
             Email {SUPPORT_EMAIL}
           </a>
           .

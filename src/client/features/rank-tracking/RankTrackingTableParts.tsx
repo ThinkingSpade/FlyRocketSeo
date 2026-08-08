@@ -121,7 +121,7 @@ export function DeviceUrlCell({
       href={toFullUrl(result.rankingUrl, domain)}
       target="_blank"
       rel="noopener noreferrer"
-      className="link link-hover block truncate text-xs"
+      className="app-link-subtle block truncate text-xs"
       title={result.rankingUrl}
     >
       {toPath(result.rankingUrl)}

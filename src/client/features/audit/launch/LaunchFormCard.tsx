@@ -137,7 +137,7 @@ function LaunchOptions({
             <Link
               to={SUBSCRIBE_ROUTE}
               search={{ upgrade: true }}
-              className="link link-primary"
+              className="app-link"
             >
               Upgrade
             </Link>{" "}
