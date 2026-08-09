@@ -70,10 +70,14 @@
    with light-dark(), which resolves off the color-scheme the two theme classes
    below set, so an alias inherits both modes for free.
 
-   TO RE-THEME THE APP, CHANGE --color-primary. It is the only brand-carrying
-   entry here; everything else is a neutral or a status colour that should not
-   move with a logo. It points at --color-kumo-brand, set in the FlyRocketSEO
-   identity block further down.
+   TO RE-THEME THE APP, CHANGE --brand-ink AND --brand-signal in the identity
+   block further down. Everything brand-carrying here derives from those two;
+   the rest are neutrals and status colours that should not move with a logo.
+
+   Four surfaces deliberately do NOT follow them, and each has its reason at
+   the site: LoadingShell.tsx paints before this stylesheet loads, ReportChrome
+   and ClientReportPage are printed and emailed so they must not track the
+   viewer's theme, and RankGridMap builds a Leaflet marker as an HTML string.
 
    The status colours now come from Kumo rather than the old hand-picked hexes.
    That closes the split this migration has been carrying: a DaisyUI alert and
@@ -92,9 +96,27 @@
      resolved values directly. */
   --color-base-content: light-dark(oklch(21% 0.006 285.885), oklch(97% 0 0));
 
-  /* Brand */
-  --color-primary: var(--color-kumo-brand);
-  --color-primary-content: #ffffff;
+  /* Brand.
+     Three entries where there used to be one, because the purple they replaced
+     could do every job at once and this palette cannot.
+
+     `primary` is Signal, the accent: it drives the sidebar's active rail, tab
+     dots, the tinted active-row backgrounds (bg-primary/5..15), focus borders
+     and every chart's series colour. Orange is right for all of those — they
+     are marks and highlights, not text and not fields carrying white labels.
+
+     `--text-color-primary` splits `text-primary` back off, because Signal at
+     2.87:1 on white is unreadable as text. Same darkened orange the Kumo link
+     token uses. Tailwind's text-color namespace wins over --color-* for the
+     text-* utilities specifically, which is the mechanism Kumo's own
+     --text-color-kumo-brand already relies on.
+
+     `--color-primary-content` is Ink rather than white: it is the label on top
+     of a Signal fill (the chat bubble, the tag button), and Ink on Signal is
+     6.39:1 where white would have been 2.87:1. */
+  --color-primary: var(--brand-signal);
+  --text-color-primary: var(--text-color-kumo-brand);
+  --color-primary-content: var(--brand-ink);
 
   /* Status */
   --color-error: var(--color-kumo-danger);
@@ -253,42 +275,54 @@ html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
    Kumo ships Cloudflare's own brand values: a blue --color-kumo-brand and the
    #f6821f orange on --text-color-kumo-brand. We want their density, spacing
    and motion — not their identity — so only the brand-carrying tokens are
-   remapped, onto the palette the DaisyUI themes above already define.
-   Everything else (the neutral surface ramp, badge hues, the type scale, the
-   focus ring) is left exactly as Kumo ships it.
+   remapped, onto the Fly Rocket Media palette below. Everything else (the
+   neutral surface ramp, badge hues, the type scale, the focus ring) is left
+   exactly as Kumo ships it.
 
    The rule is map identity, keep their craft — which is why the semantic
    status colours (--color-kumo-danger/info/success/warning and their -tint and
-   text pairs) are NOT remapped, even though the app has its own error red.
-   Each of those is a tuned triple: a solid that carries white text, a
-   translucent tint, and a text colour for a surface, all balanced across both
-   modes. Substituting the DaisyUI values would mean inventing eight new
-   colours and hand-checking their contrast, and since the plan is to migrate
-   off DaisyUI entirely, it would be inventing them only to delete them later.
-   Until then a DaisyUI alert and a Kumo banner will show slightly different
-   reds; both read as red, and the drift ends when the last DaisyUI component
-   goes. If that mismatch turns out to be intolerable sooner, this is the block
-   to add them to.
+   text pairs) are NOT remapped. Each of those is a tuned triple: a solid that
+   carries white text, a translucent tint, and a text colour for a surface, all
+   balanced across both modes. Red, amber and green are not brand colours here
+   and should not move with a logo.
 
    light-dark() rather than a [data-theme] override, because that is the
-   mechanism Kumo's own :root tokens use and it is already driven correctly:
-   the two DaisyUI themes set color-scheme, so this follows the existing theme
-   toggle with no data-mode wiring of our own.
+   mechanism Kumo's own :root tokens use: the two theme classes set
+   color-scheme, so this follows the existing toggle with no wiring of our own.
 
-   The background and the text tokens do NOT get the same dark value, which
-   looks like an inconsistency and is not. Kumo's primary button hardcodes
-   `!text-white`, so --color-kumo-brand has to stay dark enough for white text
-   in BOTH modes — the DaisyUI dark primary (#a89bff) is a light lavender that
-   pairs with dark text, and white on it would fail contrast. The text/link
-   tokens sit on a page surface instead, so there they take the lavender. */
+   Signal orange appears at three different values in this block, which looks
+   like drift and is not. It is one colour measured against three backgrounds:
+   #ff6a14 as a fill, #c2410c as text on white, #ff6a14 again as text on
+   near-black. The notes at each entry give the ratio that forced it. */
 :root {
-  /* Button/emphasis backgrounds — always carries white text. */
-  --color-kumo-brand: light-dark(#4934c7, #5b46d9);
-  --color-kumo-brand-hover: light-dark(#3b29a3, #6d5ae8);
-  /* Brand-coloured text and links — sits on base/canvas, so it tracks the
-     DaisyUI primary exactly. */
-  --text-color-kumo-brand: light-dark(#4934c7, #a89bff);
-  --text-color-kumo-link: light-dark(#4934c7, #a89bff);
+  /* The three colours off the Fly Rocket Media brand sheet, unmodified. Every
+     value below is derived from these two; Canvas is plain #fff and already
+     lives in Kumo's base. */
+  --brand-ink: #0a1525;
+  --brand-signal: #ff6a14;
+
+  /* Kumo's primary button, which hardcodes `!text-white`. That single fact
+     decides this whole block: white on Signal is 2.87:1, which fails even the
+     3:1 large-text floor, so Signal cannot be the button. Ink can — white on
+     Ink is 18.3:1 — and it matches how the logo is built, an Ink field with the
+     rocket as the signal on top.
+
+     Dark mode cannot use Ink itself: at 1.05:1 against a near-black page the
+     button would vanish into it. Lifted along the same hue instead, far enough
+     to read as a raised surface (2.8:1) while white text still clears AA at
+     6.2:1. */
+  --color-kumo-brand: light-dark(#0a1525, #3b6390);
+  --color-kumo-brand-hover: light-dark(#1a2b45, #4a76a6);
+
+  /* Brand-coloured TEXT, which sits on a surface rather than carrying one, and
+     so has the opposite problem: Ink text is indistinguishable from body copy
+     and gives a link no affordance at all.
+
+     Orange, then — but Signal on white is the same 2.87:1 that ruled it out
+     above, so light mode takes it darkened to 5.18:1. Dark mode keeps true
+     Signal, which needs no help at 6.1:1 on a near-black page. */
+  --text-color-kumo-brand: light-dark(#c2410c, #ff6a14);
+  --text-color-kumo-link: light-dark(#c2410c, #ff6a14);
 
   /* Kumo's primary/destructive button paints itself out of these four, and
      ships NO default for any of them — it sets them as INLINE styles on the

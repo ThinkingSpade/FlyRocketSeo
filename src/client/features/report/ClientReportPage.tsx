@@ -15,16 +15,16 @@ const PRINT_STYLES = `
 /* Table styling is applied at the report root so every existing section picks
    it up without each one re-implementing the look. */
 #client-report table { width: 100%; border-collapse: collapse; }
-#client-report thead tr { background: #4934c7; }
+#client-report thead tr { background: #0a1525; }
 #client-report thead th {
   padding: 10px 12px; text-align: left; color: #ffffff;
   font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em;
 }
 #client-report tbody td {
-  padding: 9px 12px; font-size: 12.5px; color: #2f2b52;
-  border-bottom: 1px solid #ece9f8;
+  padding: 9px 12px; font-size: 12.5px; color: #2b3340;
+  border-bottom: 1px solid #f0e4dc;
 }
-#client-report tbody tr:nth-child(even) { background: #f7f6fd; }
+#client-report tbody tr:nth-child(even) { background: #fdf7f3; }
 #client-report .report-page:first-of-type { break-before: auto; }
 
 @media print {

@@ -33,7 +33,7 @@ export function PostSignupOnboarding({
 
       <div className="text-center space-y-3">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />

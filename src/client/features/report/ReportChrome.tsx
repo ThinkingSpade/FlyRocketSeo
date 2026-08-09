@@ -4,19 +4,19 @@ import type { ReactNode } from "react";
  * Cover page and per-page framing for the Client Report, so the printed PDF
  * reads like an agency deliverable rather than a dashboard dump.
  *
- * Colours are hard-coded from the brand palette (primary #4934c7, accent
- * #c2410c) rather than themed: this artefact gets printed and emailed, so it
+ * Colours are hard-coded from the brand palette (Ink #0a1525, Signal #ff6a14
+ * darkened to #c2410c for type on white) rather than themed: this artefact gets printed and emailed, so it
  * must look identical regardless of the viewer's light/dark theme.
  *
  * Layout follows one-topic-per-page — each `ReportPage` is exactly one printed
  * sheet: a chapter band, a single section, and a page number.
  */
 
-const INK = "#1b1149"; // deep indigo, the header notch
-const BRAND = "#4934c7"; // primary indigo
-const BRAND_DEEP = "#2f1f8f"; // gradient end
-const ACCENT = "#c2410c"; // orange, for links and emphasis
-const RAIL = "#e3dff7"; // lavender edge rail
+const INK = "#0a1525"; // brand Ink, the header notch
+const BRAND = "#0a1525"; // brand Ink — the field that carries white type
+const BRAND_DEEP = "#16243c"; // gradient end, one step off Ink
+const ACCENT = "#c2410c"; // Signal darkened for print legibility on white
+const RAIL = "#ffe2d1"; // Signal tint, the edge rail
 const BODY = "#3f3d56"; // paragraph ink
 
 export function ReportCover({

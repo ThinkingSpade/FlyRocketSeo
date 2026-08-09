@@ -19,7 +19,6 @@ const BILLING_USAGE_FEATURE_IDS: string[] = [
 ];
 
 /** Unchanged from the Recharts bar's `fill`. */
-const BAR_COLOR = "#7c3aed";
 
 export function BillingUsageChart() {
   const theme = useChartTheme();
@@ -103,11 +102,13 @@ export function BillingUsageChart() {
           type: "bar" as const,
           data: values,
           barMaxWidth: 12,
-          itemStyle: { color: BAR_COLOR, borderRadius: [2, 2, 0, 0] },
+          // Single-series, so it takes the brand accent rather than a hue of
+          // its own — theme.brand resolves --color-primary.
+          itemStyle: { color: theme.brand, borderRadius: [2, 2, 0, 0] },
         },
       ],
     }),
-    [base, labels, values],
+    [base, labels, values, theme.brand],
   );
 
   return (

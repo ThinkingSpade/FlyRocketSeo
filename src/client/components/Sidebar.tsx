@@ -126,7 +126,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
           className="flex items-center gap-2 text-base font-semibold text-base-content"
         >
           <img
-            src="/transparent-logo-mark.svg"
+            src="/logo-mark.png"
             alt=""
             width={24}
             height={24}

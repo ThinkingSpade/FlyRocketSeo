@@ -63,15 +63,18 @@ export function LoadingShell() {
 }
 
 const loadingShellCss = `
+/* Literals, not tokens: this stylesheet is inlined into the SPA shell and has
+   to paint before app.css loads, which is the whole point of the shell. Keep
+   these in step with --brand-signal / --brand-ink by hand. */
 :root {
   --frs-shell-bg: #ffffff;
-  --frs-shell-fg: #7c5cff;
-  --frs-shell-dot: #c9bdff;
+  --frs-shell-fg: #ff6a14;
+  --frs-shell-dot: #ffd0b3;
 }
 :root[data-theme="flyrocketseo-dark"] {
   --frs-shell-bg: #0f1117;
-  --frs-shell-fg: #a996ff;
-  --frs-shell-dot: #4b3f7a;
+  --frs-shell-fg: #ff6a14;
+  --frs-shell-dot: #6b3410;
 }
 .frs-rocket-wrap {
   position: relative;

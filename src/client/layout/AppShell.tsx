@@ -188,7 +188,7 @@ function MobileTopBar({
         className="ml-1 flex items-center gap-1.5 font-semibold text-base-content"
       >
         <img
-          src="/transparent-logo-mark.svg"
+          src="/logo-mark.png"
           alt=""
           width={20}
           height={20}

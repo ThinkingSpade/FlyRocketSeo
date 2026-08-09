@@ -87,7 +87,7 @@ function SiteForm({ projectId }: { projectId: string }) {
       >
         <div className="space-y-3 text-center">
           <img
-            src="/transparent-logo.svg"
+            src="/logo-mark.png"
             alt="FlyRocketSEO"
             className="mx-auto size-10 rounded-lg"
           />

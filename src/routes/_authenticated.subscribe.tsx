@@ -123,7 +123,7 @@ function SubscribePage() {
     return (
       <div className="w-full max-w-xs space-y-4 text-center">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
@@ -150,7 +150,7 @@ function SubscribePage() {
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center space-y-3">
           <img
-            src="/transparent-logo.svg"
+            src="/logo-mark.png"
             alt="FlyRocketSEO"
             className="mx-auto size-10 rounded-lg"
           />
@@ -210,7 +210,7 @@ function SubscribePage() {
 
       <div className="text-center space-y-3">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
