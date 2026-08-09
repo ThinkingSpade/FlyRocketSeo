@@ -20,6 +20,7 @@ import {
 } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Input } from "@cloudflare/kumo/components/input";
+import { useReveal } from "@/client/hooks/useReveal";
 
 export const Route = createFileRoute("/_app/billing")({
   beforeLoad: () => {
@@ -123,8 +124,16 @@ function BillingPage() {
     );
   }
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 p-4 py-10 md:p-6 md:py-12">
+    <div
+      ref={revealRef}
+      className="mx-auto w-full max-w-2xl space-y-5 p-4 py-10 md:p-6 md:py-12"
+    >
       <h1 className="text-2xl font-semibold">Billing</h1>
 
       <div className="grid gap-5 md:grid-cols-2">

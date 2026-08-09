@@ -24,6 +24,7 @@ import type { PortfolioProject } from "@/client/features/projects/types";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Button } from "@cloudflare/kumo/components/button";
+import { useReveal } from "@/client/hooks/useReveal";
 
 const compactFormatter = new Intl.NumberFormat(undefined, {
   notation: "compact",
@@ -160,9 +161,14 @@ export function ProjectsPage() {
   });
   const projects = portfolioQuery.data?.projects ?? [];
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto w-full max-w-7xl space-y-6">
+      <div ref={revealRef} className="mx-auto w-full max-w-7xl space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">Portfolio</h1>

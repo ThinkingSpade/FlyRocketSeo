@@ -10,6 +10,7 @@ import { GscOAuthConfigSection } from "@/client/features/gsc/GscOAuthConfigSecti
 import { GeoLocationSeedSection } from "@/client/features/geo/GeoLocationSeedSection";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Switch } from "@cloudflare/kumo/components/switch";
+import { useReveal } from "@/client/hooks/useReveal";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -73,9 +74,14 @@ function SettingsPage() {
     }
   }
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto max-w-xl space-y-10">
+      <div ref={revealRef} className="mx-auto max-w-xl space-y-10">
         <h1 className="text-2xl font-semibold">Settings</h1>
 
         <section className="space-y-3">
