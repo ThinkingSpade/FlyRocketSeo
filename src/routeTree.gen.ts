@@ -11,7 +11,6 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as VerifyEmailRouteImport } from './routes/verify-email'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
-import { Route as PreviewLandingRouteImport } from './routes/preview-landing'
 import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthRouteImport } from './routes/_auth'
@@ -76,11 +75,6 @@ const VerifyEmailRoute = VerifyEmailRouteImport.update({
 const ResetPasswordRoute = ResetPasswordRouteImport.update({
   id: '/reset-password',
   path: '/reset-password',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PreviewLandingRoute = PreviewLandingRouteImport.update({
-  id: '/preview-landing',
-  path: '/preview-landing',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
@@ -379,7 +373,6 @@ const ProjectPProjectIdAuditIssuesResultIdRoute =
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/preview-landing': typeof PreviewLandingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
@@ -435,7 +428,6 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/forgot-password': typeof ForgotPasswordRoute
-  '/preview-landing': typeof PreviewLandingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
@@ -493,7 +485,6 @@ export interface FileRoutesById {
   '/_auth': typeof AuthRouteWithChildren
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/forgot-password': typeof ForgotPasswordRoute
-  '/preview-landing': typeof PreviewLandingRoute
   '/reset-password': typeof ResetPasswordRoute
   '/verify-email': typeof VerifyEmailRoute
   '/.well-known/openai-apps-challenge': typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
@@ -551,7 +542,6 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/forgot-password'
-    | '/preview-landing'
     | '/reset-password'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
@@ -607,7 +597,6 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/forgot-password'
-    | '/preview-landing'
     | '/reset-password'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
@@ -664,7 +653,6 @@ export interface FileRouteTypes {
     | '/_auth'
     | '/_authenticated'
     | '/forgot-password'
-    | '/preview-landing'
     | '/reset-password'
     | '/verify-email'
     | '/.well-known/openai-apps-challenge'
@@ -725,7 +713,6 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRouteWithChildren
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
   ForgotPasswordRoute: typeof ForgotPasswordRoute
-  PreviewLandingRoute: typeof PreviewLandingRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
   VerifyEmailRoute: typeof VerifyEmailRoute
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute: typeof Char91DotwellKnownChar93OpenaiAppsChallengeRoute
@@ -749,13 +736,6 @@ declare module '@tanstack/react-router' {
       path: '/reset-password'
       fullPath: '/reset-password'
       preLoaderRoute: typeof ResetPasswordRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/preview-landing': {
-      id: '/preview-landing'
-      path: '/preview-landing'
-      fullPath: '/preview-landing'
-      preLoaderRoute: typeof PreviewLandingRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/forgot-password': {
@@ -1321,7 +1301,6 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRouteWithChildren,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
   ForgotPasswordRoute: ForgotPasswordRoute,
-  PreviewLandingRoute: PreviewLandingRoute,
   ResetPasswordRoute: ResetPasswordRoute,
   VerifyEmailRoute: VerifyEmailRoute,
   Char91DotwellKnownChar93OpenaiAppsChallengeRoute:

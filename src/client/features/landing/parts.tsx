@@ -32,7 +32,12 @@ export function Section({
   const surface = tone === "raised" ? "bg-base-200" : "bg-base-100";
 
   return (
-    <section id={id} className={`${surface} px-5 py-20 md:px-8 md:py-28`}>
+    // `scroll-mt-14` clears the sticky nav: every band carries an id, and
+    // without it a jump to one parks its heading underneath the bar.
+    <section
+      id={id}
+      className={`${surface} scroll-mt-14 px-5 py-20 md:px-8 md:py-28`}
+    >
       <div
         ref={revealRef}
         className={`mx-auto flex w-full max-w-6xl flex-col gap-12 ${className}`}
