@@ -168,14 +168,14 @@ export function KeywordTrendModal({
             series={series}
             serpDepth={serpDepth}
             showBottomBand
-            renderTooltip={(label, entries) => (
-              <ChartTooltip
-                label={label}
-                entries={entries}
-                serpDepth={serpDepth}
-                bottomBandKeys={bottomBandKeys}
-              />
-            )}
+            renderTooltip={(label, entries) =>
+              chartTooltipHtml({
+                label,
+                entries,
+                serpDepth,
+                bottomBandKeys,
+              })
+            }
           />
 
           <div className="flex items-center justify-end gap-2">
@@ -281,7 +281,15 @@ function EmptyState({ count }: { count: number }) {
   );
 }
 
-function ChartTooltip({
+/**
+ * The trend chart's tooltip body.
+ *
+ * A string rather than a component because ECharts formats its tooltip instead
+ * of rendering one — there is no React subtree to hand it. The chart's own
+ * option supplies the surface, border and text colour, so this is only the
+ * inner rows.
+ */
+function chartTooltipHtml({
   label,
   entries,
   serpDepth,
@@ -291,37 +299,28 @@ function ChartTooltip({
   entries: Array<{ dataKey?: string | number; value: number | null }>;
   serpDepth: number;
   bottomBandKeys: Set<string>;
-}) {
-  return (
-    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm space-y-0.5">
-      <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
-      </p>
-      {entries.map((e) => {
-        const device =
-          e.dataKey === "desktop" || e.dataKey === "mobile"
-            ? DEVICE_STYLE[e.dataKey].label
-            : String(e.dataKey ?? "");
-        const inBottomBand = bottomBandKeys.has(`${label}:${e.dataKey}`);
-        return (
-          <p key={String(e.dataKey)} className="text-sm font-medium">
-            {device}:{" "}
-            {inBottomBand ? (
-              <span className="text-base-content/60">
-                Not in top {serpDepth}
-              </span>
-            ) : (
-              e.value
-            )}
-          </p>
-        );
-      })}
-    </div>
-  );
+}): string {
+  const date = new Date(label).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const rows = entries.map((e) => {
+    const device =
+      e.dataKey === "desktop" || e.dataKey === "mobile"
+        ? DEVICE_STYLE[e.dataKey].label
+        : String(e.dataKey ?? "");
+    // `bottomBandKeys` rather than `value === serpDepth`: a genuine position at
+    // exactly serpDepth is a real ranking, not a miss.
+    const value = bottomBandKeys.has(`${label}:${e.dataKey}`)
+      ? `<span style="opacity:0.6">Not in top ${serpDepth}</span>`
+      : String(e.value ?? "");
+    return `<div style="font-size:13px;font-weight:500">${device}: ${value}</div>`;
+  });
+  return [
+    `<div style="font-size:11px;opacity:0.6">${date}</div>`,
+    ...rows,
+  ].join("");
 }
 
 // ---------------------------------------------------------------------------

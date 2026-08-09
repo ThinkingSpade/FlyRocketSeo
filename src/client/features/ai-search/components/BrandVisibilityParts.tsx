@@ -6,17 +6,14 @@ import {
   Search,
   TrendingUp,
 } from "lucide-react";
+import { Chart } from "@cloudflare/kumo/components/chart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import { formatCount } from "@/client/features/ai-search/platformLabels";
-import { CHART_AXIS_TICK_SM } from "@/client/components/chart/chartTheme";
 
 /**
  * Presentational pieces for the project-centric AI Visibility panel. Pure props
@@ -144,63 +141,98 @@ export function VisibilityStatTiles({
   );
 }
 
+/** Unchanged from the Recharts line's `stroke`. */
+const MENTIONS_COLOR = "hsl(220 70% 50%)";
+
 /** Tracked mention trend from stored snapshots — needs at least two points. */
 export function VisibilityTrendChart({ series }: { series: TrendPointView[] }) {
-  const data = useMemo(
-    () =>
-      series.map((point) => ({
-        label: point.capturedOn.slice(5), // MM-DD
-        // Keep unknown totals as null (not 0) so a failed metrics call doesn't
-        // draw a false drop to zero; connectNulls bridges the gap instead.
-        mentions: point.totalMentions,
-      })),
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
+
+  const { labels, values } = useMemo(
+    () => ({
+      labels: series.map((point) => point.capturedOn.slice(5)), // MM-DD
+      // Keep unknown totals as null (not 0) so a failed metrics call doesn't
+      // draw a false drop to zero; connectNulls bridges the gap instead.
+      values: series.map((point) => point.totalMentions),
+    }),
     [series],
   );
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        // `dangerousHtmlFormatter`, not `formatter`: Kumo destructures this key
+        // out and hands it to ECharts AS `formatter`, overwriting anything
+        // passed under that name with undefined. A tooltip that spelled it
+        // `formatter` would silently fall back to the ECharts default.
+        dangerousHtmlFormatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          return [
+            `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
+            `<div style="font-size:13px;font-weight:500">${formatCount(first.value)} mentions</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        // Category, not time: these are the capture dates of stored snapshots
+        // taken at whatever cadence the project runs, and spacing them by
+        // elapsed time would stretch the gaps between checks.
+        type: "category" as const,
+        data: labels,
+        boundaryGap: false,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          fontSize: 11,
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        // Recharts' allowDecimals={false}.
+        minInterval: 1,
+        axisLabel: { ...base.axisCommon.axisLabel, fontSize: 11 },
+      },
+      series: [
+        {
+          type: "line" as const,
+          data: values,
+          smooth: true,
+          // `showSymbol: false` rather than `symbol: "none"`: Recharts drew no
+          // dots along the line but kept its default hover dot, and only this
+          // form keeps the point marker on the hovered value.
+          showSymbol: false,
+          symbolSize: 6,
+          connectNulls: true,
+          lineStyle: { width: 2, color: MENTIONS_COLOR },
+          itemStyle: { color: MENTIONS_COLOR },
+        },
+      ],
+    }),
+    [base, labels, values],
+  );
+
   // Need at least two points that actually have a total to draw a trend line.
-  if (data.filter((point) => point.mentions != null).length < 2) return null;
+  if (values.filter((value) => value != null).length < 2) return null;
 
   return (
     <section className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="border-b border-base-300 px-4 py-3">
         <h3 className="text-sm font-semibold">AI mentions over time</h3>
       </div>
-      <div className="h-56 p-4">
-        <ResponsiveContainer width="100%" height="100%">
-          <LineChart
-            data={data}
-            margin={{ top: 12, right: 12, bottom: 4, left: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="currentColor"
-              opacity={0.12}
-            />
-            <XAxis
-              dataKey="label"
-              tick={CHART_AXIS_TICK_SM}
-              tickLine={false}
-              axisLine={false}
-            />
-            <YAxis
-              tick={CHART_AXIS_TICK_SM}
-              tickLine={false}
-              axisLine={false}
-              allowDecimals={false}
-            />
-            <Tooltip
-              cursor={{ stroke: "currentColor", strokeOpacity: 0.2 }}
-              contentStyle={{ fontSize: 12 }}
-            />
-            <Line
-              type="monotone"
-              dataKey="mentions"
-              stroke="hsl(220 70% 50%)"
-              strokeWidth={2}
-              dot={false}
-              connectNulls
-            />
-          </LineChart>
-        </ResponsiveContainer>
+      <div className="p-4">
+        <Chart
+          echarts={echarts}
+          options={options}
+          height={192}
+          isDarkMode={theme.isDark}
+          className="w-full min-w-0"
+        />
       </div>
     </section>
   );

@@ -1,24 +1,20 @@
 import { useMemo } from "react";
-import { Map } from "lucide-react";
-import {
-  CartesianGrid,
-  Cell,
-  Scatter,
-  ScatterChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-  ZAxis,
-} from "recharts";
-import type { TooltipContentProps } from "recharts";
+// Aliased: the icon is called `Map`, and the tooltip lookup below needs the
+// global `Map` constructor.
+import { Map as MapIcon } from "lucide-react";
+import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
-import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
+import {
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { domainOverviewResultSchema } from "@/types/schemas/domain";
-import { CHART_AXIS_TICK } from "@/client/components/chart/chartTheme";
 
 // Series palette shared with the trends charts.
 const DOT_COLORS = [
@@ -33,6 +29,18 @@ const DOT_COLORS = [
 ];
 const TARGET_COLOR = "#111827";
 const MAX_BUBBLES = 8;
+
+/**
+ * Recharts' `<ZAxis range>` is an AREA range in square pixels; ECharts'
+ * `symbolSize` is a diameter. Same two numbers, converted rather than reused,
+ * so the bubbles keep the sizes they had.
+ */
+const BUBBLE_AREA_MIN = 80;
+const BUBBLE_AREA_MAX = 900;
+
+function diameterForArea(area: number): number {
+  return 2 * Math.sqrt(area / Math.PI);
+}
 
 type Bubble = {
   domain: string;
@@ -50,16 +58,17 @@ function formatCompact(value: number): string {
   }).format(value);
 }
 
-/** Recharts types tooltip payloads as any; narrow structurally instead. */
-function isBubble(value: unknown): value is Bubble {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "domain" in value &&
-    "keywords" in value &&
-    "traffic" in value &&
-    "overlap" in value
-  );
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+};
+
+/** The tooltip is an HTML string rather than a React subtree now, so the
+ *  provider-supplied domain has to be escaped by hand — JSX did it before. */
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"]/g, (char) => HTML_ESCAPES[char] ?? char);
 }
 
 /**
@@ -124,8 +133,100 @@ export function CompetitorsPositioningMap({
     return competitors;
   }, [rows, target, targetRun]);
 
-  const { containerRef, width: chartWidth } = useChartWidth();
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
   const height = 260;
+
+  // One point per bubble, carrying its own colour: this is what `<Cell>` was.
+  // A per-point object beats an `itemStyle.color` callback here because the
+  // target's bubble differs in opacity as well as hue, and both belong to the
+  // point rather than to the series.
+  const points = useMemo(() => {
+    const overlaps = bubbles.map((bubble) => bubble.overlap);
+    const min = Math.min(...overlaps);
+    const max = Math.max(...overlaps);
+    return bubbles.map((bubble) => {
+      // A degenerate domain lands every bubble on the middle of the size
+      // range, which is what d3 (and so Recharts) does with min === max.
+      const t = max === min ? 0.5 : (bubble.overlap - min) / (max - min);
+      return {
+        name: bubble.domain,
+        value: [bubble.keywords, bubble.traffic],
+        symbolSize: diameterForArea(
+          BUBBLE_AREA_MIN + t * (BUBBLE_AREA_MAX - BUBBLE_AREA_MIN),
+        ),
+        itemStyle: {
+          color: bubble.fill,
+          opacity: bubble.isTarget ? 0.85 : 0.5,
+        },
+      };
+    });
+  }, [bubbles]);
+
+  // The tooltip needs the whole bubble, not just the [x, y] pair ECharts hands
+  // back, so the point's name indexes into the source rows.
+  const byDomain = useMemo(
+    () => new Map(bubbles.map((bubble) => [bubble.domain, bubble])),
+    [bubbles],
+  );
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        // Points, not categories: with a value x-axis there is no shared axis
+        // value to gather a column of series at, and Recharts showed the
+        // hovered point too.
+        trigger: "item" as const,
+        // `dangerousHtmlFormatter`, not `formatter`: Kumo's Chart rewrites the
+        // tooltip as `{...rest, formatter: dangerousHtmlFormatter}` before
+        // calling setOption, so a plain `formatter` is overwritten with
+        // undefined and ECharts' default tooltip shows instead. The name warns
+        // about untrusted HTML — hence `escapeHtml` on the one value that comes
+        // from the provider.
+        dangerousHtmlFormatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          const bubble = byDomain.get(first.axisValue);
+          if (!bubble) return "";
+          return [
+            `<div style="font-size:12px;font-weight:500;padding-bottom:2px">${escapeHtml(bubble.domain)}</div>`,
+            `<div style="font-size:12px">${formatCompact(bubble.keywords)} keywords · ${formatCompact(bubble.traffic)} traffic</div>`,
+            bubble.isTarget
+              ? ""
+              : `<div style="font-size:12px;opacity:0.6">${formatCompact(bubble.overlap)} shared keywords</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          formatter: (value: number) => formatCompact(value),
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          formatter: (value: number) => formatCompact(value),
+        },
+      },
+      series: [
+        {
+          type: "scatter" as const,
+          name: "Competitors",
+          data: points,
+          animation: false,
+        },
+      ],
+    }),
+    [base, byDomain, points],
+  );
+
   if (targetRunFailed) {
     return (
       <InlineQueryError
@@ -141,88 +242,20 @@ export function CompetitorsPositioningMap({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={Map} tone="primary" />
+          <InsightIcon icon={MapIcon} tone="primary" />
           Competitive positioning
         </h2>
         <p className="-mt-1 text-xs text-base-content/50">
           Organic keywords vs. estimated traffic — bubble size is keyword
           overlap with {target || "the target"}.
         </p>
-        <div ref={containerRef} className="w-full min-w-0" style={{ height }}>
-          {chartWidth > 0 ? (
-            <ScatterChart
-              width={chartWidth}
-              height={height}
-              margin={{ top: 12, right: 16, bottom: 4, left: 0 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="currentColor"
-                opacity={0.1}
-              />
-              <XAxis
-                type="number"
-                dataKey="keywords"
-                name="Organic keywords"
-                tickFormatter={formatCompact}
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-              />
-              <YAxis
-                type="number"
-                dataKey="traffic"
-                name="Organic traffic"
-                tickFormatter={formatCompact}
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                width={44}
-              />
-              <ZAxis
-                type="number"
-                dataKey="overlap"
-                range={[80, 900]}
-                name="Shared keywords"
-              />
-              <Tooltip
-                cursor={{ strokeDasharray: "3 3" }}
-                content={(props: TooltipContentProps<number, string>) => {
-                  // Same narrowing pattern as the trends tooltip: annotate
-                  // the callback param instead of assigning the any[].
-                  const candidates = (props.payload ?? []).map(
-                    (entry: { payload?: unknown }) => entry.payload,
-                  );
-                  const payload = candidates[0];
-                  if (!props.active || !isBubble(payload)) return null;
-                  return (
-                    <div className="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-xs shadow">
-                      <div className="pb-1 font-medium">{payload.domain}</div>
-                      <div>
-                        {formatCompact(payload.keywords)} keywords ·{" "}
-                        {formatCompact(payload.traffic)} traffic
-                      </div>
-                      {payload.isTarget ? null : (
-                        <div className="text-base-content/60">
-                          {formatCompact(payload.overlap)} shared keywords
-                        </div>
-                      )}
-                    </div>
-                  );
-                }}
-              />
-              <Scatter data={bubbles} isAnimationActive={false}>
-                {bubbles.map((bubble) => (
-                  <Cell
-                    key={bubble.domain}
-                    fill={bubble.fill}
-                    fillOpacity={bubble.isTarget ? 0.85 : 0.5}
-                  />
-                ))}
-              </Scatter>
-            </ScatterChart>
-          ) : null}
-        </div>
+        <Chart
+          echarts={echarts}
+          options={options}
+          height={height}
+          isDarkMode={theme.isDark}
+          className="w-full min-w-0"
+        />
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/70">
           {bubbles.map((bubble) => (
             <span key={bubble.domain} className="flex items-center gap-1.5">

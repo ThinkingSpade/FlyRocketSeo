@@ -1,15 +1,13 @@
 /* eslint-disable max-lines -- the keyword-trends form and its chart rendering stay colocated. */
 import { useEffect, useMemo, useState } from "react";
 import { Activity, Search } from "lucide-react";
+import { Chart } from "@cloudflare/kumo/components/chart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import type { TooltipContentProps } from "recharts";
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getKeywordTrends } from "@/serverFunctions/trends";
 import { trendsResultSchema } from "@/types/schemas/trends";
@@ -18,7 +16,6 @@ import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoResto
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { MAX_TRENDS_KEYWORDS } from "@/types/schemas/trends";
-import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import {
   SERIES_COLORS,
   TrendsInsightsTable,
@@ -54,10 +51,6 @@ import {
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildTrendsVerdict } from "@/client/features/insights/verdicts/keywords";
-import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_LINE,
-} from "@/client/components/chart/chartTheme";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
@@ -68,13 +61,6 @@ type TrendsNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
   replace: boolean;
 }) => void;
-
-/** Narrowed shape of a recharts tooltip payload entry (typed `any` upstream). */
-interface RechartsPayloadEntry {
-  name?: string;
-  value?: number | string | null;
-  color?: string;
-}
 
 function parseKeywords(query: string): string[] {
   return [
@@ -550,6 +536,35 @@ export function TrendsPage({
   );
 }
 
+const HTML_ESCAPES: Record<string, string> = {
+  "&": "&amp;",
+  "<": "&lt;",
+  ">": "&gt;",
+  '"': "&quot;",
+};
+
+/**
+ * The series names below are keywords the user typed, and an ECharts formatter
+ * returns an HTML string rather than a React subtree -- so the escaping React
+ * used to do for the old tooltip component has to happen here.
+ */
+function escapeHtml(value: string): string {
+  return value.replaceAll(/[&<>"]/g, (char) => HTML_ESCAPES[char] ?? char);
+}
+
+/** `date` is the bucket's `date_from` ("2026-01-04"), which parses to the same
+ *  instant as the `timestamp` the Recharts axis used, so both the axis and the
+ *  tooltip read exactly as they did before. */
+function formatTrendDate(
+  value: string,
+  options: Intl.DateTimeFormatOptions,
+): string {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime())
+    ? value
+    : parsed.toLocaleDateString("en-US", options);
+}
+
 function TrendsChart({
   keywords,
   averages,
@@ -564,17 +579,90 @@ function TrendsChart({
    *  for the worldwide default, matching this chart's pre-Task-6 look. */
   geoLabel: string;
 }) {
-  const { containerRef, width: chartWidth } = useChartWidth();
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
   const height = 288;
   const showGeoLabel = geoLabel !== "Interest";
 
-  const data = points.map((point) => {
-    const row: Record<string, number | null> = { timestamp: point.timestamp };
-    keywords.forEach((keyword, index) => {
-      row[keyword] = point.values[index];
-    });
-    return row;
-  });
+  const { dates, series } = useMemo(
+    () => ({
+      dates: points.map((point) => point.date),
+      series: keywords.map((keyword, index) => ({
+        type: "line" as const,
+        name: keyword,
+        data: points.map((point) => point.values[index] ?? null),
+        smooth: true,
+        // `showSymbol: false` rather than `symbol: "none"`: the Recharts line
+        // drew no dots but did draw one on the hovered point (`activeDot`),
+        // and only this form keeps that marker.
+        showSymbol: false,
+        symbolSize: 8,
+        // A gap in one keyword's history stays a gap, as before.
+        connectNulls: false,
+        lineStyle: { width: 2, color: SERIES_COLORS[index] },
+        itemStyle: { color: SERIES_COLORS[index] },
+      })),
+    }),
+    [keywords, points],
+  );
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        // `dangerousHtmlFormatter`, not `formatter`: Kumo destructures this key
+        // out and hands it to ECharts AS `formatter`, overwriting anything
+        // passed under that name with undefined. A tooltip that spelled it
+        // `formatter` would silently fall back to the ECharts default.
+        dangerousHtmlFormatter: (params: unknown) => {
+          const rows = tooltipRows(params);
+          const [first] = rows;
+          if (!first) return "";
+          return [
+            `<div style="font-size:12px;font-weight:500;padding-bottom:2px">${formatTrendDate(
+              first.axisValue,
+              { month: "short", day: "numeric", year: "numeric" },
+            )}</div>`,
+            ...rows.map(
+              (row) =>
+                `<div style="display:flex;align-items:center;gap:6px;font-size:12px">` +
+                `<span style="display:inline-block;width:8px;height:8px;border-radius:9999px;background:${row.color}"></span>` +
+                `${escapeHtml(row.seriesName)}: ${row.value ?? "—"}</div>`,
+            ),
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        // A category axis, not a time axis: Google Trends returns evenly
+        // spaced buckets keyed by their start date, so the string IS the
+        // bucket and placing them by elapsed time would only add rounding.
+        type: "category" as const,
+        data: dates,
+        boundaryGap: false,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          formatter: (value: string) =>
+            formatTrendDate(value, { month: "short", year: "2-digit" }),
+          // ECharts' own overlap avoidance replaces Recharts' minTickGap: it
+          // drops labels that would collide rather than taking a pixel budget.
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        // Google Trends interest is always 0-100, and pinning the axis keeps a
+        // calm series from being auto-zoomed into looking volatile.
+        min: 0,
+        max: 100,
+        minInterval: 1,
+      },
+      series,
+    }),
+    [base, dates, series],
+  );
 
   return (
     <div className="space-y-3">
@@ -598,102 +686,13 @@ function TrendsChart({
           </span>
         ))}
       </div>
-      <div ref={containerRef} className="w-full min-w-0" style={{ height }}>
-        {chartWidth > 0 ? (
-          <LineChart
-            width={chartWidth}
-            height={height}
-            data={data}
-            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="currentColor"
-              opacity={0.1}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="timestamp"
-              type="number"
-              scale="time"
-              domain={["dataMin", "dataMax"]}
-              tickFormatter={(value: number) =>
-                new Date(value).toLocaleDateString("en-US", {
-                  month: "short",
-                  year: "2-digit",
-                })
-              }
-              tick={CHART_AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={40}
-            />
-            <YAxis
-              domain={[0, 100]}
-              allowDecimals={false}
-              tick={CHART_AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              width={32}
-            />
-            <Tooltip
-              content={(props: TooltipContentProps<number, string>) => {
-                const { active, payload, label } = props;
-                if (!active || !payload?.length || typeof label !== "number") {
-                  return null;
-                }
-                // Recharts types payload entries as any; narrow them first.
-                const entries: RechartsPayloadEntry[] = payload.map(
-                  (entry: RechartsPayloadEntry) => ({
-                    name: entry.name,
-                    value: entry.value,
-                    color: entry.color,
-                  }),
-                );
-                return (
-                  <div className="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-xs shadow">
-                    <div className="pb-1 font-medium">
-                      {new Date(label).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </div>
-                    {entries.map((entry) => (
-                      <div
-                        key={entry.name ?? ""}
-                        className="flex items-center gap-1.5"
-                      >
-                        <span
-                          className="inline-block size-2 rounded-full"
-                          style={{ backgroundColor: entry.color }}
-                        />
-                        {entry.name ?? ""}:{" "}
-                        {typeof entry.value === "number" ? entry.value : "—"}
-                      </div>
-                    ))}
-                  </div>
-                );
-              }}
-              cursor={CHART_CURSOR_LINE}
-            />
-            {keywords.map((keyword, index) => (
-              <Line
-                key={keyword}
-                type="monotone"
-                dataKey={keyword}
-                name={keyword}
-                stroke={SERIES_COLORS[index]}
-                strokeWidth={2}
-                dot={false}
-                activeDot={{ r: 4 }}
-                connectNulls={false}
-                isAnimationActive={false}
-              />
-            ))}
-          </LineChart>
-        ) : null}
-      </div>
+      <Chart
+        echarts={echarts}
+        options={options}
+        height={height}
+        isDarkMode={theme.isDark}
+        className="w-full min-w-0"
+      />
       <p className="text-xs text-base-content/50">
         Interest is relative to the peak (100) across the selected keywords and
         time range — it is not absolute search volume.

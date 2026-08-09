@@ -72,7 +72,7 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
       ...base,
       tooltip: {
         ...base.tooltip,
-        formatter: (params: unknown) => {
+        dangerousHtmlFormatter: (params: unknown) => {
           const [first] = tooltipRows(params);
           if (!first) return "";
           // The axis shows the bare month; the tooltip is where the year fits,

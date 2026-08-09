@@ -74,7 +74,7 @@ export function DomainVisibilityTrend({
       ...base,
       tooltip: {
         ...base.tooltip,
-        formatter: (params: unknown) => {
+        dangerousHtmlFormatter: (params: unknown) => {
           const [first] = tooltipRows(params);
           if (!first) return "";
           return [

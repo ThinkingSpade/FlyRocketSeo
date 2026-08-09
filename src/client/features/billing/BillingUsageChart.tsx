@@ -1,36 +1,29 @@
 import { useAggregateEvents } from "autumn-js/react";
-import { useEffect, useRef, useState } from "react";
-import { Bar, BarChart, CartesianGrid, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
+import { Chart } from "@cloudflare/kumo/components/chart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
+import {
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import {
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
-import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_BAR,
-} from "@/client/components/chart/chartTheme";
 
 const BILLING_USAGE_FEATURE_IDS: string[] = [
   AUTUMN_SEO_DATA_BALANCE_FEATURE_ID,
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
 ];
 
+/** Unchanged from the Recharts bar's `fill`. */
+const BAR_COLOR = "#7c3aed";
+
 export function BillingUsageChart() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [chartWidth, setChartWidth] = useState(0);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-
-    const update = () => setChartWidth(el.clientWidth);
-    update();
-
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
 
   const eventsQuery = useAggregateEvents({
     featureId: BILLING_USAGE_FEATURE_IDS,
@@ -38,17 +31,84 @@ export function BillingUsageChart() {
     binSize: "day",
   });
 
-  const chartData = (eventsQuery.list ?? []).map((row) => ({
-    date: row.period,
-    credits: autumnSeoDataCreditsToUsd(
-      BILLING_USAGE_FEATURE_IDS.reduce(
-        (sum, featureId) => sum + (row.values?.[featureId] ?? 0),
-        0,
+  // `eventsQuery.list` is undefined until the first response lands, so the
+  // fallback lives inside the memo -- `?? []` in the dependency list would be a
+  // fresh array on every render and re-derive the options each time.
+  const rows = eventsQuery.list;
+  const { labels, values } = useMemo(() => {
+    const list = rows ?? [];
+    return {
+      // The bin's day, pre-formatted: the axis tick and the tooltip heading
+      // asked for the same "Aug 9" shape, so the category value IS the label
+      // and neither has to re-parse the timestamp.
+      labels: list.map((row) => formatShortDate(row.period)),
+      values: list.map((row) =>
+        autumnSeoDataCreditsToUsd(
+          BILLING_USAGE_FEATURE_IDS.reduce(
+            (sum, featureId) => sum + (row.values?.[featureId] ?? 0),
+            0,
+          ),
+        ),
       ),
-    ),
-  }));
+    };
+  }, [rows]);
 
-  const totalSpend = chartData.reduce((sum, d) => sum + d.credits, 0);
+  const totalSpend = values.reduce((sum, value) => sum + value, 0);
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        // Recharts' bar cursor: a filled band behind the hovered bar, rather
+        // than the crosshair a line chart gets.
+        axisPointer: { type: "shadow" as const },
+        // `dangerousHtmlFormatter`, not `formatter`: Kumo destructures this key
+        // out and hands it to ECharts AS `formatter`, overwriting anything
+        // passed under that name with undefined. A tooltip that spelled it
+        // `formatter` would silently fall back to the ECharts default.
+        dangerousHtmlFormatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          return [
+            `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
+            `<div style="font-size:13px;font-weight:500">$${(first.value ?? 0).toFixed(2)}</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        // Category, not time: these are daily bins already collapsed to a
+        // label, and `boundaryGap` (left at its default for a bar series) is
+        // what centres each bar in its own band.
+        type: "category" as const,
+        data: labels,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          // ECharts' own overlap avoidance replaces Recharts' minTickGap: it
+          // drops labels that would collide rather than taking a pixel budget.
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          formatter: (value: number) => formatUsdAxis(value),
+        },
+      },
+      series: [
+        {
+          type: "bar" as const,
+          data: values,
+          barMaxWidth: 12,
+          itemStyle: { color: BAR_COLOR, borderRadius: [2, 2, 0, 0] },
+        },
+      ],
+    }),
+    [base, labels, values],
+  );
 
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-4 space-y-3">
@@ -61,77 +121,23 @@ export function BillingUsageChart() {
         ${totalSpend.toFixed(2)}
       </div>
 
-      <div ref={containerRef} className="w-full h-32 min-w-0">
-        {eventsQuery.isLoading ? null : chartData.length === 0 ? (
+      <div className="w-full h-32 min-w-0">
+        {eventsQuery.isLoading ? null : labels.length === 0 ? (
           <div className="flex h-full items-center justify-center">
             <span className="text-sm text-base-content/40">
               No usage recorded yet
             </span>
           </div>
-        ) : chartWidth > 0 ? (
-          <BarChart
-            width={chartWidth}
+        ) : (
+          <Chart
+            echarts={echarts}
+            options={options}
             height={128}
-            data={chartData}
-            margin={{ top: 4, right: 0, bottom: 0, left: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="currentColor"
-              opacity={0.06}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="date"
-              tickFormatter={formatShortDate}
-              tick={CHART_AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={40}
-            />
-            <YAxis
-              tickFormatter={formatUsdAxis}
-              tick={CHART_AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              width={44}
-            />
-            <Tooltip content={<UsageTooltip />} cursor={CHART_CURSOR_BAR} />
-            <Bar
-              dataKey="credits"
-              fill="#7c3aed"
-              radius={[2, 2, 0, 0]}
-              maxBarSize={12}
-            />
-          </BarChart>
-        ) : null}
+            isDarkMode={theme.isDark}
+            className="w-full min-w-0"
+          />
+        )}
       </div>
-    </div>
-  );
-}
-
-function UsageTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: Array<{ value: number }>;
-  label?: number;
-}) {
-  if (!active || !payload?.length || label == null) return null;
-
-  return (
-    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm">
-      <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-        })}
-      </p>
-      <p className="text-sm font-medium tabular-nums">
-        ${payload[0].value.toFixed(2)}
-      </p>
     </div>
   );
 }

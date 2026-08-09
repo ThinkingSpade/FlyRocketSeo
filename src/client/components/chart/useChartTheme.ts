@@ -3,12 +3,13 @@ import { useMemo, useSyncExternalStore } from "react";
 /**
  * Resolved colour values for ECharts.
  *
- * This exists because of one difference from Recharts, and it is why
- * chartTheme.ts cannot simply be reused. Recharts writes colours out as SVG
- * presentation attributes, so `fill="var(--color-base-content)"` works: the
- * browser resolves the variable at paint time, per theme, for free. ECharts
- * computes styles in JavaScript and hands its renderer concrete values, so
- * anything it cannot parse itself renders black or not at all.
+ * This exists because of one difference from the Recharts charts these replaced,
+ * and it is why their `chartTheme.ts` constants could not simply be carried
+ * over. Recharts wrote colours out as SVG presentation attributes, so
+ * `fill="var(--color-base-content)"` worked: the browser resolved the variable
+ * at paint time, per theme, for free. ECharts computes styles in JavaScript and
+ * hands its renderer concrete values, so anything it cannot parse itself renders
+ * black or not at all.
  *
  * Two things it cannot parse, both of which this app's tokens are made of:
  *
@@ -35,13 +36,16 @@ type ChartTheme = {
   text: string;
   /** Grid lines and axis rules — the text colour at low alpha. */
   line: string;
+  /** The hover crosshair, which sits above the grid and so is stronger than it.
+   *  30%, the value the Recharts charts used for the same cursor. */
+  crosshair: string;
   /** Series colour for single-series charts. */
   brand: string;
   /** Panel behind the chart, for tooltip backgrounds. */
   surface: string;
   /** Top and bottom stops of the gradient under an area series. Read from the
-   *  --trend-fill-*-opacity tokens the Recharts charts already used, so an
-   *  area chart's fill is unchanged by the swap. */
+   *  --trend-fill-*-opacity tokens the Recharts charts used, so an area chart's
+   *  fill came through the swap unchanged. */
   brandFillStart: string;
   brandFillEnd: string;
   /** True when the dark theme is active — Kumo's Chart takes this directly. */
@@ -51,6 +55,7 @@ type ChartTheme = {
 const FALLBACK: ChartTheme = {
   text: "rgb(23, 32, 51)",
   line: "rgba(23, 32, 51, 0.12)",
+  crosshair: "rgba(23, 32, 51, 0.3)",
   brand: "rgb(73, 52, 199)",
   surface: "rgb(255, 255, 255)",
   brandFillStart: "rgba(73, 52, 199, 0.32)",
@@ -100,12 +105,16 @@ function readTheme(): ChartTheme {
     const brand = resolve(probe, "var(--color-primary)", FALLBACK.brand);
     cached = {
       text,
-      // Matches the 12% grid opacity the Recharts charts used, so the two read
-      // the same while both exist.
+      // The 12% grid opacity the Recharts charts used.
       line: resolve(
         probe,
         `color-mix(in oklab, ${text} 12%, transparent)`,
         FALLBACK.line,
+      ),
+      crosshair: resolve(
+        probe,
+        `color-mix(in oklab, ${text} 30%, transparent)`,
+        FALLBACK.crosshair,
       ),
       brand,
       surface: resolve(probe, "var(--color-base-100)", FALLBACK.surface),
@@ -161,13 +170,29 @@ export function useChartTheme(): ChartTheme {
 export function useChartBase(theme: ChartTheme) {
   return useMemo(
     () => ({
-      grid: { left: 8, right: 8, top: 16, bottom: 8, containLabel: true },
+      // `outerBoundsMode`/`outerBoundsContain` rather than `containLabel: true`,
+      // which ECharts 6 deprecated and warns about once per chart. The docs give
+      // this pair as its exact equivalent, and the new mechanism measures the
+      // labels instead of estimating them from a sample.
+      grid: {
+        left: 8,
+        right: 8,
+        top: 16,
+        bottom: 8,
+        outerBoundsMode: "same" as const,
+        outerBoundsContain: "axisLabel" as const,
+      },
       textStyle: { color: theme.text, fontSize: 10 },
       tooltip: {
         trigger: "axis" as const,
         backgroundColor: theme.surface,
         borderColor: theme.line,
         textStyle: { color: theme.text, fontSize: 12 },
+        // ECharts' default crosshair is a fixed mid-grey, which is the exact
+        // problem the old chart tokens existed to fix: a single grey reads as
+        // disabled on the dark surface and misses contrast on the light one.
+        // Same 30% the Recharts cursor used, off the same token.
+        axisPointer: { lineStyle: { color: theme.crosshair } },
       },
       axisCommon: {
         axisLine: { lineStyle: { color: theme.line } },

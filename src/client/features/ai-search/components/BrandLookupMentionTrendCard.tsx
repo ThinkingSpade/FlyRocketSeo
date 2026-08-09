@@ -37,7 +37,7 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
         // subtree to hand it. `formatter` returns a string, so the markup that
         // used to be a component is a template here, using the same tokens the
         // rest of the app does so it still matches its surroundings.
-        formatter: (params: unknown) => {
+        dangerousHtmlFormatter: (params: unknown) => {
           const [first] = tooltipRows(params);
           if (!first) return "";
           return [
