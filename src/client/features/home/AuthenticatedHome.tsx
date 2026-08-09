@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/serverFunctions/projects";
@@ -15,11 +15,16 @@ import { UnauthenticatedErrorCard } from "@/client/components/UnauthenticatedErr
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 import { Loader } from "@cloudflare/kumo/components/loader";
 
-export const Route = createFileRoute("/_app/")({
-  component: IndexRedirect,
-});
-
-function IndexRedirect() {
+/**
+ * What "/" does once there IS a session: pick a project and go.
+ *
+ * This was the whole of `_app/index.tsx` until the landing page took over the
+ * root. It moved out of the `_app` layout rather than changing, because that
+ * layout's guard bounces a visitor without a session straight to /sign-in —
+ * correct for every other app route, and the one thing a public front door
+ * must not do.
+ */
+export function AuthenticatedHome() {
   const navigate = useNavigate();
 
   const { data, error, isError, refetch } = useQuery({
@@ -113,7 +118,7 @@ function IndexRedirect() {
   }
 
   return (
-    <div className="flex items-center justify-center h-full">
+    <div className="flex h-dvh items-center justify-center">
       <Loader />
     </div>
   );
