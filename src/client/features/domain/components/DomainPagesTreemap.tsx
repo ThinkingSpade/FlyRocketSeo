@@ -3,6 +3,7 @@ import { LayoutGrid } from "lucide-react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { echarts } from "@/client/components/chart/echarts";
+import { escapeHtml } from "@/client/components/chart/tooltipHtml";
 import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
   useChartBase,
@@ -29,18 +30,17 @@ const CELL_COLORS = [
 ];
 const OTHER_COLOR = "#9ca3af";
 
-const HTML_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-};
-
-/** The tooltip is an HTML string rather than a React subtree now, so the page
- *  path has to be escaped by hand — JSX did it before. */
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]/g, (char) => HTML_ESCAPES[char] ?? char);
-}
+/**
+ * The Recharts rects' `fillOpacity={0.55}`, carried in the colour itself.
+ *
+ * Not the series-level `itemStyle.colorAlpha` ECharts offers: that belongs to
+ * the treemap's visual-mapping pipeline and loses to a per-node
+ * `itemStyle.color`, which every cell here sets. Setting it there looked right
+ * and did nothing — the cells painted fully saturated.
+ */
+const CELL_ALPHA = Math.round(0.55 * 255)
+  .toString(16)
+  .padStart(2, "0");
 
 /** The same two lines the React tooltip rendered, as markup. */
 function tooltipHtml(datum: TreemapDatum): string {
@@ -103,9 +103,11 @@ export function DomainPagesTreemap({
             // Per-cell colour, which is what the custom `content` renderer did
             // by indexing the palette itself. The "other" bucket keeps its grey.
             itemStyle: {
-              color: datum.isOther
-                ? OTHER_COLOR
-                : CELL_COLORS[index % CELL_COLORS.length],
+              color: `${
+                datum.isOther
+                  ? OTHER_COLOR
+                  : CELL_COLORS[index % CELL_COLORS.length]
+              }${CELL_ALPHA}`,
             },
           })),
           // Fill the frame: ECharts otherwise centres the treemap in 80% of it.
@@ -120,10 +122,10 @@ export function DomainPagesTreemap({
           breadcrumb: { show: false },
           animation: false,
           itemStyle: {
-            // `colorAlpha` is the treemap's own fill opacity, applied to the
-            // per-cell colour above — the `fillOpacity={0.55}` of the rects.
-            colorAlpha: 0.55,
-            borderColor: "rgba(255, 255, 255, 0.85)",
+            // The panel colour, not a fixed white: the gaps between cells
+            // should read as the page showing through, which on the dark theme
+            // is near-black. Hardcoded white drew bright gridlines there.
+            borderColor: theme.surface,
             borderWidth: 1,
             borderRadius: 3,
             gapWidth: 0,
@@ -131,7 +133,12 @@ export function DomainPagesTreemap({
           label: {
             show: true,
             position: "insideTopLeft" as const,
-            color: "#fff",
+            // The cells are their colour at 55% over the panel, so they are
+            // pale on the light theme and dark on the dark one — a fixed white
+            // label reads on one and barely on the other. The theme's own text
+            // colour is the contrasting one against the panel by definition,
+            // and each cell is mostly panel.
+            color: theme.text,
             fontSize: 11,
             fontWeight: 500,
             padding: [4, 6],
@@ -142,7 +149,7 @@ export function DomainPagesTreemap({
         },
       ],
     }),
-    [base, byName, data],
+    [base, byName, data, theme.surface, theme.text],
   );
 
   if (data.length === 0) return null;

@@ -11,18 +11,17 @@
  * runtime rather than at build time if a chart uses an unregistered series,
  * so a missing entry shows up as an empty chart, not a compile error.
  *
- * SVGRenderer, not CanvasRenderer, and this is load-bearing rather than a
- * preference. This app's colour tokens resolve to oklch()/oklab(), which
- * zrender's own colour parser does not understand — under Canvas it has to
- * parse every colour itself, and those would fail. Under SVG the colour string
- * is written into an SVG attribute and the BROWSER parses it, so modern colour
- * spaces pass straight through. Switching renderers would silently break every
- * chart's colours.
+ * SVGRenderer, not CanvasRenderer: canvas wins for tens of thousands of points,
+ * which nothing here plots, and this app renders a print-ready client report,
+ * where a canvas chart prints at screen resolution while SVG prints at the
+ * printer's.
  *
- * It is also the right choice on its own merits: canvas wins for tens of
- * thousands of points, which nothing here plots, and this app renders a
- * print-ready client report, where a canvas chart prints at screen resolution
- * while SVG prints at the printer's.
+ * This choice is NOT what keeps modern colour spaces working, though an earlier
+ * version of this comment claimed it was. zrender's parser cannot read oklch()
+ * or oklab(), and picking SVG only avoids that for painting — it still parses
+ * colours in JavaScript to animate them, and an unparseable one throws there.
+ * What actually makes the tokens safe is useChartTheme resolving every colour
+ * to rgba() before it reaches ECharts. See the comment there.
  */
 import * as echarts from "echarts/core";
 import {

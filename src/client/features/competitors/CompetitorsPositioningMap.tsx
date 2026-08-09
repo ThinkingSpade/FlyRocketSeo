@@ -6,6 +6,7 @@ import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { echarts } from "@/client/components/chart/echarts";
+import { escapeHtml } from "@/client/components/chart/tooltipHtml";
 import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
   useChartBase,
@@ -27,7 +28,17 @@ const DOT_COLORS = [
   "#db2777",
   "#65a30d",
 ];
-const TARGET_COLOR = "#111827";
+/**
+ * The target's bubble is the one that has to read as "you", so it takes the
+ * highest-contrast colour on the surface rather than a palette hue. It used to
+ * be a fixed gray-900, which is invisible on the dark theme's near-black panel
+ * — the one bubble that must stand out was the only one that did not.
+ *
+ * A token, because the only place this string is used is the legend swatch,
+ * which is a real DOM node. The chart takes the resolved `theme.text` instead;
+ * ECharts cannot read a CSS variable.
+ */
+const TARGET_COLOR = "var(--color-base-content)";
 const MAX_BUBBLES = 8;
 
 /**
@@ -56,19 +67,6 @@ function formatCompact(value: number): string {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value);
-}
-
-const HTML_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-};
-
-/** The tooltip is an HTML string rather than a React subtree now, so the
- *  provider-supplied domain has to be escaped by hand — JSX did it before. */
-function escapeHtml(value: string): string {
-  return value.replace(/[&<>"]/g, (char) => HTML_ESCAPES[char] ?? char);
 }
 
 /**
@@ -156,12 +154,12 @@ export function CompetitorsPositioningMap({
           BUBBLE_AREA_MIN + t * (BUBBLE_AREA_MAX - BUBBLE_AREA_MIN),
         ),
         itemStyle: {
-          color: bubble.fill,
+          color: bubble.isTarget ? theme.text : bubble.fill,
           opacity: bubble.isTarget ? 0.85 : 0.5,
         },
       };
     });
-  }, [bubbles]);
+  }, [bubbles, theme.text]);
 
   // The tooltip needs the whole bubble, not just the [x, y] pair ECharts hands
   // back, so the point's name indexes into the source rows.

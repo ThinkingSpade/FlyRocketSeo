@@ -303,11 +303,24 @@ function EmptyChartState() {
   );
 }
 
+/**
+ * Built once — constructing an Intl formatter per tick is the expensive part.
+ *
+ * One fraction digit is not cosmetic. Rounding thousands to whole K (the old
+ * `(value / 1000).toFixed(0)`) collapses any two ticks less than 1,000 apart
+ * onto the same label, and ECharts picks 500-unit steps on these axes: the
+ * backlinks trend axis read "4K, 3K, 3K, 2K, 2K, 1K, 500, 0", with three
+ * duplicated pairs. Round values still print as before — 90000 is "90K", not
+ * "90.0K".
+ */
+const AXIS_NUMBER = new Intl.NumberFormat(undefined, {
+  notation: "compact",
+  maximumFractionDigits: 1,
+});
+
 function formatAxisValue(value: unknown) {
   if (typeof value !== "number") return "";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-  return String(value);
+  return AXIS_NUMBER.format(value);
 }
 
 function formatChartTick(value: unknown) {

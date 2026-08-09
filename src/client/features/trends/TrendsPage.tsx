@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Activity, Search } from "lucide-react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { echarts } from "@/client/components/chart/echarts";
+import { escapeHtml } from "@/client/components/chart/tooltipHtml";
 import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
   useChartBase,
@@ -534,22 +535,6 @@ export function TrendsPage({
       ) : null}
     </AppPageShell>
   );
-}
-
-const HTML_ESCAPES: Record<string, string> = {
-  "&": "&amp;",
-  "<": "&lt;",
-  ">": "&gt;",
-  '"': "&quot;",
-};
-
-/**
- * The series names below are keywords the user typed, and an ECharts formatter
- * returns an HTML string rather than a React subtree -- so the escaping React
- * used to do for the old tooltip component has to happen here.
- */
-function escapeHtml(value: string): string {
-  return value.replaceAll(/[&<>"]/g, (char) => HTML_ESCAPES[char] ?? char);
 }
 
 /** `date` is the bucket's `date_from` ("2026-01-04"), which parses to the same

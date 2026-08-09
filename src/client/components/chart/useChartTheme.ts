@@ -24,11 +24,27 @@ import { useMemo, useSyncExternalStore } from "react";
  * applied to a real colour property, and getComputedStyle on THAT returns a
  * single resolved colour instead of an expression.
  *
- * What it returns is NOT always `rgb()`. Chrome preserves the source colour
- * space, so these come back as `oklch(...)` and `oklab(...)`. That is fine here
- * only because echarts.ts registers the SVG renderer, which writes colours into
- * SVG attributes for the browser to parse. Under the canvas renderer zrender
- * would have to parse them itself and every one of these would fail.
+ * Then converted, because measuring is not enough. Chrome preserves the source
+ * colour space, so `color-mix(in oklab, ...)` measures back as
+ * `oklab(0.452805 0.0373447 -0.210475 / 0.32)`, and zrender's colour parser
+ * predates those functions: `parse()` returns undefined for both `oklab()` and
+ * `oklch()`.
+ *
+ * Registering the SVG renderer is NOT a defence against that, which is the
+ * assumption this file was originally written on. SVG only covers PAINTING —
+ * the colour goes into an attribute and the browser parses it. zrender still
+ * parses colours in JavaScript on the ANIMATION path, whichever renderer is
+ * mounted, and there an unparseable colour is a crash rather than a fallback:
+ * hovering an area chart whose gradient stops were `oklab()` threw
+ * `Cannot read properties of undefined` out of `interpolate1DArray` on every
+ * frame, ~70 times a second, for the life of the page.
+ *
+ * So each measured colour is round-tripped through a 1x1 canvas and read back
+ * as pixels, which yields plain `rgba()`. Canvas stores pixels premultiplied,
+ * so a translucent colour comes back off by a few 1/255 in the channels — an
+ * error bounded by the alpha itself, and therefore invisible exactly when it
+ * happens. Reading `ctx.fillStyle` back instead would be exact but useless:
+ * Chrome returns modern colour functions from it verbatim.
  */
 
 type ChartTheme = {
@@ -63,15 +79,31 @@ const FALLBACK: ChartTheme = {
   isDark: false,
 };
 
-/** Collapse a colour expression to a single resolved colour, by making the
- *  browser do it on a real element. */
-function resolve(probe: HTMLElement, expression: string, fallback: string) {
+/** Collapse a colour expression to a single `rgba()` colour: the browser
+ *  resolves it on a real element, then a canvas pixel strips the colour space
+ *  back to something zrender can parse. */
+function resolve(
+  probe: HTMLElement,
+  ctx: CanvasRenderingContext2D | null,
+  expression: string,
+  fallback: string,
+) {
   probe.style.color = "";
   probe.style.color = expression;
   // An unparseable expression leaves the property unset rather than throwing.
   if (probe.style.color === "") return fallback;
   const value = getComputedStyle(probe).color;
-  return value === "" ? fallback : value;
+  if (value === "") return fallback;
+  if (!ctx) return value;
+
+  ctx.clearRect(0, 0, 1, 1);
+  ctx.fillStyle = value;
+  ctx.fillRect(0, 0, 1, 1);
+  const [red, green, blue, alpha] = ctx.getImageData(0, 0, 1, 1).data;
+  if (red === undefined || green === undefined || blue === undefined) {
+    return fallback;
+  }
+  return `rgba(${red}, ${green}, ${blue}, ${((alpha ?? 255) / 255).toFixed(3)})`;
 }
 
 function readNumber(
@@ -99,35 +131,48 @@ function readTheme(): ChartTheme {
   const probe = document.createElement("span");
   probe.style.display = "none";
   root.appendChild(probe);
+  const canvas = document.createElement("canvas");
+  canvas.width = 1;
+  canvas.height = 1;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
   try {
     const styles = getComputedStyle(root);
-    const text = resolve(probe, "var(--color-base-content)", FALLBACK.text);
-    const brand = resolve(probe, "var(--color-primary)", FALLBACK.brand);
+    const text = resolve(
+      probe,
+      ctx,
+      "var(--color-base-content)",
+      FALLBACK.text,
+    );
+    const brand = resolve(probe, ctx, "var(--color-primary)", FALLBACK.brand);
     cached = {
       text,
       // The 12% grid opacity the Recharts charts used.
       line: resolve(
         probe,
+        ctx,
         `color-mix(in oklab, ${text} 12%, transparent)`,
         FALLBACK.line,
       ),
       crosshair: resolve(
         probe,
+        ctx,
         `color-mix(in oklab, ${text} 30%, transparent)`,
         FALLBACK.crosshair,
       ),
       brand,
-      surface: resolve(probe, "var(--color-base-100)", FALLBACK.surface),
+      surface: resolve(probe, ctx, "var(--color-base-100)", FALLBACK.surface),
       // These two tokens are plain numbers rather than colours, so unlike the
       // colours above they can be read straight off the custom property — a
       // literal's specified value is its resolved one.
       brandFillStart: resolve(
         probe,
+        ctx,
         `color-mix(in oklab, ${brand} ${readNumber(styles, "--trend-fill-start-opacity", 0.32) * 100}%, transparent)`,
         FALLBACK.brandFillStart,
       ),
       brandFillEnd: resolve(
         probe,
+        ctx,
         `color-mix(in oklab, ${brand} ${readNumber(styles, "--trend-fill-end-opacity", 0.05) * 100}%, transparent)`,
         FALLBACK.brandFillEnd,
       ),
