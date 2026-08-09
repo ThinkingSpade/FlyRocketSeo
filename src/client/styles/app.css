@@ -289,6 +289,54 @@ html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
      DaisyUI primary exactly. */
   --text-color-kumo-brand: light-dark(#4934c7, #a89bff);
   --text-color-kumo-link: light-dark(#4934c7, #a89bff);
+
+  /* Kumo's primary/destructive button paints itself out of these four, and
+     ships NO default for any of them — it sets them as INLINE styles on the
+     element, computed from the variant. That works for <Button variant="primary">
+     and not at all for `buttonVariants({ variant: "primary" })`, the class-only
+     helper we put on routed <Link>s: the classes land, the inline style does
+     not, and `bg-(--kumo-button-emphasis-bg)` resolves to nothing. With the
+     variant's `!text-white` that is white text on a transparent background —
+     thirteen invisible call-to-action links, most of them the empty-state
+     button a new project sees first.
+
+     Same formulas Kumo uses, so a real <Button>'s inline values are identical
+     to these and nothing about it changes; these only fill the gap where no
+     inline style was written. */
+  --kumo-button-emphasis-ring: color-mix(
+    in oklch,
+    var(--color-kumo-brand),
+    black 10%
+  );
+  --kumo-button-emphasis-bg: color-mix(
+    in oklch,
+    var(--color-kumo-brand),
+    white 30%
+  );
+  --kumo-button-emphasis-gradient-start: color-mix(
+    in oklch,
+    var(--color-kumo-brand),
+    white 15%
+  );
+  --kumo-button-emphasis-gradient-end: var(--color-kumo-brand);
+}
+
+/* The gradient half of that button.
+   Kumo's <Button> paints it with an absolutely-positioned overlay span, which
+   `buttonVariants()` cannot produce because it returns a class string and not
+   markup. Without this, a Link would take --kumo-button-emphasis-bg on its own
+   — brand mixed with 30% white, which is the INSET HIGHLIGHT colour, not the
+   button's face: a washed-out lilac carrying white text.
+
+   Unlayered, so it outranks the Tailwind utility that sets background-color.
+   A real <Button> is unaffected: its overlay span covers the element edge to
+   edge, so the element's own background-image is never seen. */
+.bg-\(--kumo-button-emphasis-bg\) {
+  background-image: linear-gradient(
+    to bottom,
+    var(--kumo-button-emphasis-gradient-start),
+    var(--kumo-button-emphasis-gradient-end)
+  );
 }
 
 /* Keyword difficulty score badges — muted/transparent style to match tag chips */
