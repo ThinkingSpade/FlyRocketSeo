@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { MAX_TRACKED_KEYWORD_LENGTH } from "@/shared/rank-tracking";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { InputArea } from "@cloudflare/kumo/components/input";
 
@@ -61,7 +61,7 @@ export function AddKeywordsPanel({
           }}
           disabled={isPending || !keywordInput.trim()}
         >
-          {isPending && <Loader2 className="size-3 animate-spin" />}
+          {isPending && <CircleNotch className="size-3 animate-spin" />}
           Add
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>

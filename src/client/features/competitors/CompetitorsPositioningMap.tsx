@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 // Aliased: the icon is called `Map`, and the tooltip lookup below needs the
 // global `Map` constructor.
-import { Map as MapIcon } from "lucide-react";
+import { MapTrifold as MapIcon } from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";

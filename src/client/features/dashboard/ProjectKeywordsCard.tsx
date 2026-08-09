@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { KeyRound, Target, TrendingUp } from "lucide-react";
+import { Key, Target, TrendUp } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
@@ -43,7 +43,7 @@ function QueryList({
 }: {
   title: string;
   hint: string;
-  icon: typeof KeyRound;
+  icon: typeof Key;
   rows: RankedQuery[];
   emptyLabel: string;
   metric: "clicks" | "impressions";
@@ -136,7 +136,7 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
 
   return (
     <DashboardCard
-      icon={KeyRound}
+      icon={Key}
       title="Your keywords · last 28 days"
       headerLink={gscLink}
     >
@@ -158,7 +158,7 @@ export function ProjectKeywordsCard({ projectId }: { projectId: string }) {
           <QueryList
             title="Ranking now"
             hint="What's already earning — position, clicks, impressions."
-            icon={TrendingUp}
+            icon={TrendUp}
             rows={rankingNow}
             metric="clicks"
             emptyLabel={

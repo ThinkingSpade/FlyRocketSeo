@@ -1,4 +1,4 @@
-import { Monitor, Moon, Sun } from "lucide-react";
+import { Monitor, Moon, Sun } from "@phosphor-icons/react";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
 

@@ -1,5 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { Clock, Globe, History, Search, X } from "lucide-react";
+import {
+  Clock,
+  Globe,
+  ClockCounterClockwise,
+  MagnifyingGlass,
+  X,
+} from "@phosphor-icons/react";
 import { DEFAULT_LOCATION_CODE } from "@/client/features/keywords/locations";
 import { LOCATIONS } from "@/client/features/keywords/utils";
 import type { KeywordResearchControllerState } from "./types";
@@ -71,7 +77,7 @@ function SearchHistoryState({
         <section className="rounded-2xl border border-base-300 bg-base-100 p-5 md:p-6">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <History className="size-4 text-base-content/45" />
+              <ClockCounterClockwise className="size-4 text-base-content/45" />
               <span className="text-sm text-base-content/60">
                 {history.length} recent search
                 {history.length !== 1 ? "es" : ""}
@@ -131,7 +137,7 @@ function SearchHistoryState({
         </section>
       ) : (
         <section className="rounded-2xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/50 space-y-3">
-          <Search className="size-10 mx-auto opacity-40" />
+          <MagnifyingGlass className="size-10 mx-auto opacity-40" />
           <p className="text-lg font-medium text-base-content/80">
             Enter a keyword to get started
           </p>

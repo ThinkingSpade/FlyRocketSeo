@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { CaretLeft, CaretRight, ArrowSquareOut } from "@phosphor-icons/react";
 import { ExportToSheetsButton } from "@/client/components/table/ExportToSheetsButton";
 import type { SerpResultItem } from "@/types/keywords";
 import { Button } from "@cloudflare/kumo/components/button";
@@ -111,7 +111,7 @@ function SerpAnalysisTable({ items }: { items: SerpResultItem[] }) {
                     title={item.title}
                   >
                     {item.title || item.url}
-                    <ExternalLink className="size-3 shrink-0 opacity-40" />
+                    <ArrowSquareOut className="size-3 shrink-0 opacity-40" />
                   </a>
                   <span className="text-xs text-base-content/40 truncate">
                     {item.domain}
@@ -149,7 +149,7 @@ function SerpAnalysisPagination({
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
         >
-          <ChevronLeft className="size-3.5" />
+          <CaretLeft className="size-3.5" />
           Prev
         </Button>
         <Button
@@ -159,7 +159,7 @@ function SerpAnalysisPagination({
           onClick={() => onPageChange(page + 1)}
         >
           Next
-          <ChevronRight className="size-3.5" />
+          <CaretRight className="size-3.5" />
         </Button>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { ShieldAlert } from "lucide-react";
+import { ShieldWarning } from "@phosphor-icons/react";
 import { Button, LinkButton } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
@@ -18,7 +18,7 @@ export function AuthConfigErrorCard({
     <div className="relative flex flex-col rounded-xl w-full max-w-2xl bg-base-100 border border-base-300 shadow-xl">
       <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <h2 className="text-base font-semibold gap-2">
-          <ShieldAlert className="size-5 text-error" />
+          <ShieldWarning className="size-5 text-error" />
           Authentication setup required
         </h2>
 

@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createColumnHelper, type Table } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ArrowSquareOut, Sparkle } from "@phosphor-icons/react";
 import { AppDataTable } from "@/client/components/table/AppDataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
@@ -110,7 +110,7 @@ function PageUrlCell({
             You
           </Badge>
         ) : null}
-        <ExternalLink className="size-3 shrink-0 text-base-content/40" />
+        <ArrowSquareOut className="size-3 shrink-0 text-base-content/40" />
       </span>
       {path ? (
         <span className="block truncate text-xs text-base-content/50">
@@ -332,7 +332,7 @@ export function buildTopQueriesColumns({
             className={`${buttonVariants({ variant: "ghost", size: "xs" })} gap-1`}
             aria-label="Run this prompt in Prompt Explorer"
           >
-            <Sparkles className="size-3.5" />
+            <Sparkle className="size-3.5" />
           </Link>
         </Tooltip>
       ),

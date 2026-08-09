@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Zap } from "lucide-react";
+import { Lightning } from "@phosphor-icons/react";
 import { DashboardCard, useProjectNavLinks } from "./dashboardShared";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
 
@@ -18,7 +18,7 @@ export function QuickActionsCard({ projectId }: { projectId: string }) {
   const actions = QUICK_ACTION_TARGETS.map((target) => nav.get(target));
 
   return (
-    <DashboardCard icon={Zap} title="Quick actions">
+    <DashboardCard icon={Lightning} title="Quick actions">
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
         {actions.map(({ icon: Icon, label, linkProps }) => (
           <Link

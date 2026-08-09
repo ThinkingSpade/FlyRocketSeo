@@ -5,7 +5,7 @@ import {
   createRankTrackingConfig,
   updateRankTrackingConfig,
 } from "@/serverFunctions/rank-tracking";
-import { Info, Loader2, X } from "lucide-react";
+import { Info, CircleNotch, X } from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -419,7 +419,7 @@ export function RankTrackingConfigModal({
             size="sm"
             disabled={isPending || !domain.trim()}
           >
-            {isPending && <Loader2 className="size-3.5 animate-spin" />}
+            {isPending && <CircleNotch className="size-3.5 animate-spin" />}
             {isEdit ? "Save Changes" : "Add Domain"}
           </Button>
         </div>

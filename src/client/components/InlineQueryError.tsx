@@ -1,4 +1,4 @@
-import { AlertCircle, RefreshCw } from "lucide-react";
+import { WarningCircle, ArrowsClockwise } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 /**
@@ -31,7 +31,7 @@ export function InlineQueryError({
       role="alert"
       className={`flex flex-wrap items-center gap-2 rounded-lg border border-base-300 bg-base-200/40 px-3 py-2 text-sm ${className}`}
     >
-      <AlertCircle className="size-4 shrink-0 text-base-content/45" />
+      <WarningCircle className="size-4 shrink-0 text-base-content/45" />
       <span className="min-w-0 flex-1 text-base-content/70">{message}</span>
       {onRetry ? (
         <Button
@@ -41,7 +41,7 @@ export function InlineQueryError({
           disabled={retrying}
           onClick={onRetry}
         >
-          <RefreshCw
+          <ArrowsClockwise
             className={`size-3.5 text-base-content/45 ${retrying ? "animate-spin" : ""}`}
           />
           {retryLabel}

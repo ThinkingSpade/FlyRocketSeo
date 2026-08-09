@@ -7,7 +7,7 @@ import {
   getRankPositionMatrix,
   estimateRankCheckCost,
 } from "@/serverFunctions/rank-tracking";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { Warning, ArrowLeft } from "@phosphor-icons/react";
 import { useSession } from "@/lib/auth-client";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -223,7 +223,7 @@ export function RankTrackingDomainDetail({
 
       {config.lastSkipReason === "insufficient_credits" && (
         <Banner variant="alert" className="text-sm py-2">
-          <AlertTriangle className="size-4" />
+          <Warning className="size-4" />
           <span>
             Last scheduled check was skipped due to insufficient credits. Top up
             your balance to resume automatic tracking.
@@ -233,7 +233,7 @@ export function RankTrackingDomainDetail({
 
       {latestRun?.maybeStale && (
         <Banner variant="alert" className="text-sm py-2">
-          <AlertTriangle className="size-4" />
+          <Warning className="size-4" />
           <span>
             This run may be unresponsive and will be cleaned up automatically.
           </span>

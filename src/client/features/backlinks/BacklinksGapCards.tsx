@@ -1,4 +1,10 @@
-import { Download, Network, Plus, Radar, Target } from "lucide-react";
+import {
+  Download,
+  Network,
+  Plus,
+  Broadcast,
+  Target,
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { exportLinkGap } from "./exportLinkGap";
 import type {
@@ -239,7 +245,7 @@ export function CompetingDomainsCard({
     <CardShell
       title="Who competes for your links"
       description="Sites sharing the most referring domains with you. These are the rivals worth comparing against, whether or not they rank for the same keywords."
-      icon={Radar}
+      icon={Broadcast}
       errorMessage={errorMessage}
       action={
         <Button

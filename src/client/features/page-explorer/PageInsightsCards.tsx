@@ -1,4 +1,4 @@
-import { Target, Zap } from "lucide-react";
+import { Target, Lightning } from "@phosphor-icons/react";
 import { PositionDistribution } from "@/client/features/domain/components/PositionDistribution";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
@@ -30,7 +30,7 @@ export function TrafficConcentrationCard({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={Zap} tone="primary" />
+          <InsightIcon icon={Lightning} tone="primary" />
           Traffic concentration
         </h2>
         <ul className="space-y-1.5">

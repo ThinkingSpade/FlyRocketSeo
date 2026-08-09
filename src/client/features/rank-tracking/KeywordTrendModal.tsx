@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/client/components/Modal";

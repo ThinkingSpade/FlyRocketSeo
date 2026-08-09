@@ -1,5 +1,9 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowUpRight, PenLine, Split } from "lucide-react";
+import {
+  ArrowUpRight,
+  PencilSimpleLine,
+  ArrowsSplit,
+} from "@phosphor-icons/react";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
@@ -11,11 +15,11 @@ type BadgeVariant = ComponentProps<typeof Badge>["variant"];
 
 const KIND_META: Record<
   OpportunityKind,
-  { label: string; icon: typeof PenLine; variant: BadgeVariant }
+  { label: string; icon: typeof PencilSimpleLine; variant: BadgeVariant }
 > = {
   "quick-win": { label: "Quick win", icon: ArrowUpRight, variant: "success" },
-  ctr: { label: "Rewrite title", icon: PenLine, variant: "warning" },
-  consolidate: { label: "Consolidate", icon: Split, variant: "error" },
+  ctr: { label: "Rewrite title", icon: PencilSimpleLine, variant: "warning" },
+  consolidate: { label: "Consolidate", icon: ArrowsSplit, variant: "error" },
 };
 
 /** Where each opportunity kind sends you to act on it. A lookup rather than a

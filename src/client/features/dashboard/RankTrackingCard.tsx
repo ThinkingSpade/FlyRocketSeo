@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
+import { TrendUp } from "@phosphor-icons/react";
 import {
   getLatestRankResults,
   getRankTrackingConfigSummaries,
@@ -60,11 +60,7 @@ export function RankTrackingCard({ projectId }: { projectId: string }) {
   );
 
   return (
-    <DashboardCard
-      icon={TrendingUp}
-      title="Rank tracking"
-      headerLink={rankLink}
-    >
+    <DashboardCard icon={TrendUp} title="Rank tracking" headerLink={rankLink}>
       {summariesQuery.isError ? (
         <CardError error={summariesQuery.error} />
       ) : summariesQuery.isPending ? (

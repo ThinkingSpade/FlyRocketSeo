@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import type { KeywordResearchControllerState } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
@@ -37,7 +37,7 @@ export function MobileFilters({
           onClick={controller.resetFilters}
           disabled={activeFilterCount === 0}
         >
-          <RotateCcw className="size-3" />
+          <ArrowCounterClockwise className="size-3" />
           Clear
         </Button>
       </div>

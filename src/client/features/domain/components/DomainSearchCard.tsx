@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { AlertCircle, Search } from "lucide-react";
+import { WarningCircle, MagnifyingGlass } from "@phosphor-icons/react";
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import type { DomainOverviewControlsForm } from "@/client/features/domain/DomainOverviewPage";
 import { toSortMode } from "@/client/features/domain/utils";
@@ -38,7 +38,7 @@ export function DomainSearchCard({
 
               return (
                 <div className="relative flex w-full items-center lg:min-w-0 lg:max-w-md lg:flex-1">
-                  <Search className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+                  <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
                   <Input
                     className="w-full min-w-0 pl-9"
                     placeholder="Enter a domain"
@@ -121,7 +121,7 @@ export function DomainSearchCard({
 
             return errorMessage ? (
               <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error flex items-start gap-2">
-                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <WarningCircle className="size-4 shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
               </div>
             ) : null;

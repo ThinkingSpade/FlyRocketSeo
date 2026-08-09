@@ -1,13 +1,13 @@
 import {
-  ChevronDown,
+  CaretDown,
   Download,
-  FileDown,
-  LineChart,
-  Save,
-  Sheet,
+  FileArrowDown,
+  ChartLine,
+  FloppyDisk,
+  GridFour,
   SlidersHorizontal,
-  Sparkles,
-} from "lucide-react";
+  Sparkle,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -215,15 +215,18 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
                 aria-label="Export"
               >
                 <Download className="size-3.5" />
-                <ChevronDown className="size-3 opacity-60" />
+                <CaretDown className="size-3 opacity-60" />
               </Button>
             }
           />
           <DropdownMenu.Content align="end">
-            <DropdownMenu.Item icon={Sheet} onClick={handleExportToSheets}>
+            <DropdownMenu.Item icon={GridFour} onClick={handleExportToSheets}>
               Export to Sheets
             </DropdownMenu.Item>
-            <DropdownMenu.Item icon={FileDown} onClick={controller.exportCsv}>
+            <DropdownMenu.Item
+              icon={FileArrowDown}
+              onClick={controller.exportCsv}
+            >
               Export CSV
             </DropdownMenu.Item>
           </DropdownMenu.Content>
@@ -236,13 +239,13 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
         actions={
           <div className="flex items-center px-1.5">
             <TableBulkActionButton
-              icon={<Save className="size-3.5" />}
+              icon={<FloppyDisk className="size-3.5" />}
               onClick={controller.handleSaveKeywords}
             >
               Save
             </TableBulkActionButton>
             <TableBulkActionButton
-              icon={<LineChart className="size-3.5" />}
+              icon={<ChartLine className="size-3.5" />}
               onClick={() => setShowTrackModal(true)}
             >
               Track
@@ -251,18 +254,18 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
               actions={[
                 {
                   label: "Copy for AI",
-                  icon: <Sparkles className="size-4" />,
+                  icon: <Sparkle className="size-4" />,
                   onClick: () =>
                     void copyKeywordsAsMarkdown(selectedExportRows),
                 },
                 {
                   label: "Export to Sheets",
-                  icon: <Sheet className="size-4" />,
+                  icon: <GridFour className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {
                   label: "Export CSV",
-                  icon: <FileDown className="size-4" />,
+                  icon: <FileArrowDown className="size-4" />,
                   onClick: handleExportSelectionCsv,
                 },
               ]}

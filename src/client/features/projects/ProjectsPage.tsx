@@ -1,14 +1,14 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
-  BarChart3,
-  ClipboardCheck,
-  FolderKanban,
-  MousePointerClick,
+  WarningCircle,
+  ChartBar,
+  ClipboardText,
+  Kanban,
+  CursorClick,
   Plus,
-  Search,
-} from "lucide-react";
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   getArchivedProjects,
@@ -50,22 +50,22 @@ function PortfolioSummary({ projects }: { projects: PortfolioProject[] }) {
     {
       label: "Total projects",
       value: String(projects.length),
-      icon: FolderKanban,
+      icon: Kanban,
     },
     {
       label: "GSC connected",
       value: String(summary.connected),
-      icon: Search,
+      icon: MagnifyingGlass,
     },
     {
       label: "Clicks this period",
       value: compactFormatter.format(Math.round(summary.clicks)),
-      icon: MousePointerClick,
+      icon: CursorClick,
     },
     {
       label: "Projects with audit issues",
       value: String(summary.auditIssues),
-      icon: ClipboardCheck,
+      icon: ClipboardText,
     },
   ];
 
@@ -127,7 +127,7 @@ function PortfolioError({
 }) {
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-6 text-center">
-      <AlertCircle className="mx-auto size-5 text-base-content/40" />
+      <WarningCircle className="mx-auto size-5 text-base-content/40" />
       <h2 className="mt-2 font-medium">Portfolio could not be loaded</h2>
       <p className="mx-auto mt-1 max-w-md text-sm text-base-content/60">
         {getStandardErrorMessage(error)}
@@ -213,7 +213,7 @@ export function ProjectsPage() {
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-xs text-base-content/45">
-                  <BarChart3 className="size-3.5 text-base-content/35" />
+                  <ChartBar className="size-3.5 text-base-content/35" />
                   Free and cached data only
                 </span>
               </div>

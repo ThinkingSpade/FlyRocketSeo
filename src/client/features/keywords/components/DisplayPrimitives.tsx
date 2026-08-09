@@ -3,7 +3,7 @@
 // it. That is exactly why `AreaTrendChart` now lives in its own
 // `AreaTrendChart.tsx` (see that file's doc comment): recharts here put 195 KB
 // into the client ENTRY chunk for every visitor on every route.
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import { createPortal } from "react-dom";
 import { FloatingTooltip, useFloatingTooltip } from "./FloatingTooltip";
 
@@ -93,9 +93,9 @@ export function SortHeader({
       {label}
       {isActive &&
         (dir === "asc" ? (
-          <ChevronUp className="size-3" />
+          <CaretUp className="size-3" />
         ) : (
-          <ChevronDown className="size-3" />
+          <CaretDown className="size-3" />
         ))}
       {tooltip.isOpen && helpText && typeof document !== "undefined"
         ? createPortal(

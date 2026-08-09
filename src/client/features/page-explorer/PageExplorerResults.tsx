@@ -1,13 +1,13 @@
 import {
-  Award,
+  Trophy,
   FileText,
-  KeyRound,
-  Link2,
+  Key,
+  LinkSimple,
   Medal,
   Network,
   Target,
-  TrendingUp,
-} from "lucide-react";
+  TrendUp,
+} from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import { computePageRealEstate } from "./pageInsights";
 import {
@@ -42,14 +42,14 @@ export function PageExplorerResults({
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-8">
         <InsightTile
-          icon={TrendingUp}
+          icon={TrendUp}
           label="Est. monthly traffic"
           value={formatCount(result.estimatedTraffic)}
           hint="Sum of keyword-level estimates"
           tone="primary"
         />
         <InsightTile
-          icon={KeyRound}
+          icon={Key}
           label="Ranking keywords"
           value={formatCount(result.totalKeywords ?? result.keywords.length)}
           hint={`Top ${result.keywords.length} shown`}
@@ -60,7 +60,7 @@ export function PageExplorerResults({
             data and when the call FAILED. `backlinksStatus` separates them, so
             a failure now says so instead of quietly reading as zero. */}
         <InsightTile
-          icon={Link2}
+          icon={LinkSimple}
           label="Backlinks"
           value={formatCount(result.backlinks?.backlinks)}
           hint={
@@ -80,7 +80,7 @@ export function PageExplorerResults({
           }
         />
         <InsightTile
-          icon={Award}
+          icon={Trophy}
           label="#1 rankings"
           value={realEstate.numberOne}
           tone={realEstate.numberOne > 0 ? "success" : "neutral"}

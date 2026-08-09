@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users } from "lucide-react";
+import { Users } from "@phosphor-icons/react";
 import type { UseQueryResult } from "@tanstack/react-query";
 import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link, type LinkOptions } from "@tanstack/react-router";
-import { CheckCircle2, Circle, Rocket } from "lucide-react";
+import { CheckCircle, Circle, Rocket } from "@phosphor-icons/react";
 import { getProjects } from "@/serverFunctions/projects";
 import { getRankTrackingConfigSummaries } from "@/serverFunctions/rank-tracking";
 import { getGscConnection } from "@/serverFunctions/gsc";
@@ -133,7 +133,7 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
         {steps.map((step) => (
           <li key={step.key} className="flex items-center gap-2 py-1">
             {step.done ? (
-              <CheckCircle2 className="size-4 shrink-0 text-success" />
+              <CheckCircle className="size-4 shrink-0 text-success" />
             ) : (
               <Circle className="size-4 shrink-0 text-base-content/40" />
             )}

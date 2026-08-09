@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Swords, X } from "lucide-react";
+import { Plus, Sword, X } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { MAX_COMPARE_COMPETITORS } from "@/types/schemas/backlinks-compare";
 import type {
@@ -303,7 +303,7 @@ export function BacklinksCompareCard({
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <InsightIcon icon={Swords} />
+            <InsightIcon icon={Sword} />
             Compare against competitors
           </h3>
           <p className="text-xs text-base-content/55">

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { Check, Search } from "lucide-react";
+import { Check, MagnifyingGlass } from "@phosphor-icons/react";
 import { searchGeoLocations } from "@/serverFunctions/geo";
 import type { TargetArea } from "@/shared/geo/types";
 import {
@@ -265,7 +265,7 @@ export function GeoLocationSelect({
       {open ? (
         <div className="fixed z-30 mt-2 w-full max-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
           <label className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2 focus-within:border-primary">
-            <Search className="size-4 shrink-0 text-base-content/45" />
+            <MagnifyingGlass className="size-4 shrink-0 text-base-content/45" />
             <input
               ref={inputRef}
               type="text"

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Save } from "lucide-react";
+import { Copy, CircleNotch, FloppyDisk } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   AppDataTable,
@@ -349,9 +349,9 @@ export function StrikingDistanceTable({
             <TableBulkActionButton
               icon={
                 save.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <CircleNotch className="size-3.5 animate-spin" />
                 ) : (
-                  <Save className="size-3.5" />
+                  <FloppyDisk className="size-3.5" />
                 )
               }
               onClick={() => save.mutate(selectedQueries)}

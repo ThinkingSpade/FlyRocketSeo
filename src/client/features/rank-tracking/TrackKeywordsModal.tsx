@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Info, Loader2, X } from "lucide-react";
+import { Info, CircleNotch, X } from "@phosphor-icons/react";
 import {
   addTrackingKeywords,
   createRankTrackingConfig,
@@ -210,7 +210,7 @@ export function TrackKeywordsModal({
         />
       ) : configsQuery.isLoading ? (
         <div className="flex items-center justify-center gap-2 py-8 text-sm text-base-content/50">
-          <Loader2 className="size-4 animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
           Loading tracked domains…
         </div>
       ) : (
@@ -351,7 +351,7 @@ export function TrackKeywordsModal({
           onClick={() => mutation.mutate()}
           disabled={confirmDisabled}
         >
-          {isPending && <Loader2 className="size-3.5 animate-spin" />}
+          {isPending && <CircleNotch className="size-3.5 animate-spin" />}
           Track {keywordLabel}
         </Button>
       </div>

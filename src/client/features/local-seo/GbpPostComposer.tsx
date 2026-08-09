@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarClock, TriangleAlert } from "lucide-react";
+import { CalendarCheck, Warning } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { scheduleGbpPost } from "@/serverFunctions/gbp";
@@ -118,7 +118,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={CalendarClock} tone="neutral" />
+          <InsightIcon icon={CalendarCheck} tone="neutral" />
           Schedule a post
         </h2>
 
@@ -204,7 +204,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         {confirming ? (
           <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3">
             <p className="flex items-start gap-2 text-sm">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
               <span>
                 This queues the post for{" "}
                 {scheduledAtIso

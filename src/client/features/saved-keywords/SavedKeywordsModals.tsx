@@ -1,11 +1,11 @@
-import { AlertCircle, Loader2 } from "lucide-react";
+import { WarningCircle, CircleNotch } from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
 import { Button } from "@cloudflare/kumo/components/button";
 
 export function RemoveSavedKeywordsError({ message }: { message: string }) {
   return (
     <div className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error">
-      <AlertCircle className="mt-0.5 size-4 shrink-0" />
+      <WarningCircle className="mt-0.5 size-4 shrink-0" />
       <span>{message}</span>
     </div>
   );
@@ -42,7 +42,7 @@ export function DeleteSavedKeywordsModal({
           onClick={onConfirm}
           disabled={isPending}
         >
-          {isPending ? <Loader2 className="size-3 animate-spin" /> : null}
+          {isPending ? <CircleNotch className="size-3 animate-spin" /> : null}
           Delete {selectedCount} keyword
           {selectedCount !== 1 ? "s" : ""}
         </Button>

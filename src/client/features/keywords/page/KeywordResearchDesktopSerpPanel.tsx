@@ -1,5 +1,5 @@
 import { getRouteApi } from "@tanstack/react-router";
-import { Globe } from "lucide-react";
+import { Globe } from "@phosphor-icons/react";
 import { SerpAnalysisCard } from "@/client/features/keywords/components";
 // Direct import, not through the components barrel: that is what keeps
 // recharts out of the client entry chunk (see AreaTrendChart.tsx).

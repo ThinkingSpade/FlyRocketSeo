@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import {
-  Activity,
+  Pulse,
   ArrowDownRight,
   ArrowUpRight,
-  CalendarDays,
+  CalendarDots,
   Minus,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
   computeMonthlyInterest,
@@ -85,7 +85,7 @@ export function TrendsInsightsTable({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={Activity} tone="primary" />
+          <InsightIcon icon={Pulse} tone="primary" />
           Momentum &amp; seasonality
         </h2>
         <div className="overflow-x-auto">
@@ -173,7 +173,7 @@ export function TrendsSeasonalHeatmap({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={CalendarDays} tone="info" />
+          <InsightIcon icon={CalendarDots} tone="info" />
           Seasonal heatmap
         </h2>
         <div className="overflow-x-auto">

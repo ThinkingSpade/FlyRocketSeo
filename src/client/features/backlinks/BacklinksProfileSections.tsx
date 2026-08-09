@@ -1,12 +1,12 @@
 import {
-  Activity,
+  Pulse,
   Globe,
-  LayoutTemplate,
-  Link2,
-  MousePointerClick,
-  Server,
+  Layout,
+  LinkSimple,
+  CursorClick,
+  HardDrives,
   Wrench,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeLinkVelocity } from "./linkVelocity";
@@ -115,30 +115,30 @@ export function BacklinksProfileBreakdowns({
       />
       <BreakdownList
         title="Top-level domains"
-        icon={Link2}
+        icon={LinkSimple}
         rows={summary.referringTlds}
       />
       <BreakdownList
         title="Link types"
-        icon={Link2}
+        icon={LinkSimple}
         rows={summary.referringLinkTypes}
       />
       {/* Three more splits the same summary call already returned. */}
       <BreakdownList
         title="Link attributes"
-        icon={MousePointerClick}
+        icon={CursorClick}
         rows={summary.referringLinkAttributes}
         humanize
       />
       <BreakdownList
         title="Site types"
-        icon={Server}
+        icon={HardDrives}
         rows={summary.referringPlatformTypes}
         humanize
       />
       <BreakdownList
         title="Placement on page"
-        icon={LayoutTemplate}
+        icon={Layout}
         rows={summary.referringPlacements}
         humanize
       />
@@ -172,7 +172,7 @@ export function LinkVelocityCard({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <InsightIcon icon={Activity} />
+          <InsightIcon icon={Pulse} />
           Link velocity
         </h3>
         <p className={`text-lg font-semibold ${tone}`}>

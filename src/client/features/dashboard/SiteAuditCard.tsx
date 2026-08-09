@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardText } from "@phosphor-icons/react";
 import { getAuditHistory } from "@/serverFunctions/audit";
 import { formatStartedAt, StatusBadge } from "@/client/features/audit/shared";
 import {
@@ -35,7 +35,7 @@ export function SiteAuditCard({ projectId }: { projectId: string }) {
 
   return (
     <DashboardCard
-      icon={ClipboardCheck}
+      icon={ClipboardText}
       title="Site audit"
       headerLink={auditLink}
     >

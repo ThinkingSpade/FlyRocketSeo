@@ -1,4 +1,4 @@
-import { CircleDollarSign } from "lucide-react";
+import { CurrencyCircleDollar } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import type { KeywordResearchRow } from "@/types/keywords";
 import {
@@ -60,7 +60,7 @@ export function PpcValuePanel({ rows }: { rows: KeywordResearchRow[] }) {
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <InsightIcon icon={CircleDollarSign} />
+          <InsightIcon icon={CurrencyCircleDollar} />
           Buy vs rank
         </h3>
         <p className="text-xs text-base-content/60">

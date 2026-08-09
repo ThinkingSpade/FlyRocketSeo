@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Megaphone } from "lucide-react";
+import { Megaphone } from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { echarts } from "@/client/components/chart/echarts";

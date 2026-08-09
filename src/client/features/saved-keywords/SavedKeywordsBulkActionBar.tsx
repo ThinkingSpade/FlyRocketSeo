@@ -1,4 +1,11 @@
-import { Copy, FileDown, LineChart, Sheet, Tags, Trash2 } from "lucide-react";
+import {
+  Copy,
+  FileArrowDown,
+  ChartLine,
+  GridFour,
+  Tag,
+  Trash,
+} from "@phosphor-icons/react";
 import {
   TableBulkActionBar,
   TableBulkActionButton,
@@ -37,14 +44,14 @@ export function SavedKeywordsBulkActionBar({
         <>
           <div className="flex items-center gap-0.5 px-1.5">
             <TableBulkActionButton
-              icon={<Tags className="size-3.5" />}
+              icon={<Tag className="size-3.5" />}
               onClick={onOpenTags}
             >
               Tag
             </TableBulkActionButton>
 
             <TableBulkActionButton
-              icon={<LineChart className="size-3.5" />}
+              icon={<ChartLine className="size-3.5" />}
               onClick={onTrackRanks}
             >
               Track ranks
@@ -60,12 +67,12 @@ export function SavedKeywordsBulkActionBar({
                 },
                 {
                   label: "Export to Sheets",
-                  icon: <Sheet className="size-4" />,
+                  icon: <GridFour className="size-4" />,
                   onClick: onExportSheets,
                 },
                 {
                   label: "Export CSV",
-                  icon: <FileDown className="size-4" />,
+                  icon: <FileArrowDown className="size-4" />,
                   onClick: onExportCsv,
                 },
               ]}
@@ -74,7 +81,7 @@ export function SavedKeywordsBulkActionBar({
 
           <div className="flex items-center border-l border-base-content/10 px-1.5">
             <TableBulkActionButton
-              icon={<Trash2 className="size-3.5" />}
+              icon={<Trash className="size-3.5" />}
               onClick={onDelete}
               variant="danger"
             >

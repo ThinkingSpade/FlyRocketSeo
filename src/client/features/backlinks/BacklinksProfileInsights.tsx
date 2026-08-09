@@ -1,4 +1,10 @@
-import { Download, Gauge, ShieldAlert, Tag, Waypoints } from "lucide-react";
+import {
+  Download,
+  Gauge,
+  ShieldWarning,
+  Tag,
+  Graph,
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { downloadTextFile } from "@/client/lib/csv";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
@@ -109,7 +115,7 @@ export function FollowSplitCard({
         : "text-success";
 
   return (
-    <InsightCard title="Nofollow exposure" icon={Waypoints}>
+    <InsightCard title="Nofollow exposure" icon={Graph}>
       <p className={`text-lg font-semibold ${tone}`}>
         <span className="tabular-nums">{formatNumber(exposure.nofollow)}</span>{" "}
         <span className="text-sm font-normal text-base-content/60">
@@ -239,7 +245,7 @@ export function ToxicLinksCard({
   return (
     <InsightCard
       title="Toxic links worth reviewing"
-      icon={ShieldAlert}
+      icon={ShieldWarning}
       action={
         <Button
           type="button"

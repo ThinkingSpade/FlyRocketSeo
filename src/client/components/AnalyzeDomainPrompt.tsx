@@ -1,10 +1,10 @@
-import type { LucideIcon } from "lucide-react";
-import { Search } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { Button } from "@cloudflare/kumo/components/button";
 
 export type AnalyzePreviewItem = {
-  icon: LucideIcon;
+  icon: Icon;
   title: string;
   description: string;
 };
@@ -54,7 +54,7 @@ export function AnalyzeDomainPrompt({
             loading={isBusy}
             onClick={onAnalyze}
           >
-            <Search className="size-3.5" />
+            <MagnifyingGlass className="size-3.5" />
             Analyze {domain}
           </Button>
         </div>

@@ -2,10 +2,10 @@ import { useMemo, type ReactNode } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
-  Quote,
-  Search,
-  TrendingUp,
-} from "lucide-react";
+  Quotes,
+  MagnifyingGlass,
+  TrendUp,
+} from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { echarts } from "@/client/components/chart/echarts";
 import { tooltipRows } from "@/client/components/chart/tooltipParams";
@@ -257,10 +257,10 @@ export function VisibilityOpportunities({
         {opportunities.map((opportunity, index) => {
           const Icon =
             opportunity.kind === "share_of_voice"
-              ? TrendingUp
+              ? TrendUp
               : opportunity.question
-                ? Quote
-                : Search;
+                ? Quotes
+                : MagnifyingGlass;
           return (
             <li
               key={`${opportunity.kind}-${index}`}

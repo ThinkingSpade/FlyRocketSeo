@@ -1,27 +1,27 @@
 import type { ComponentType } from "react";
 import {
-  Activity,
+  Pulse,
   Bookmark,
-  ClipboardCheck,
-  FileSearch,
+  ClipboardText,
+  FileMagnifyingGlass,
   FileText,
   Globe,
-  Grid3x3,
+  GridNine,
   Lightbulb,
-  Link2,
-  ListOrdered,
+  LinkSimple,
+  ListNumbers,
   MapPin,
-  MessageSquare,
+  ChatCentered,
   Network,
-  NotebookPen,
+  NotePencil,
   PencilRuler,
-  Search,
-  Sparkles,
-  Split,
-  TrendingUp,
+  MagnifyingGlass,
+  Sparkle,
+  ArrowsSplit,
+  TrendUp,
   Users,
-  Waypoints,
-} from "lucide-react";
+  Graph,
+} from "@phosphor-icons/react";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 import { CardGrid, FeatureCard, Section, SectionHeading } from "./parts";
 
@@ -65,18 +65,18 @@ const RESEARCH_GROUPS: CapabilityGroup[] = [
     items: [
       {
         title: "Keyword Research",
-        icon: Search,
+        icon: MagnifyingGlass,
         blurb: "Ideas, search demand, and how hard each one looks to rank for.",
       },
       {
         title: "Keyword Trends",
-        icon: Activity,
+        icon: Pulse,
         blurb:
           "Interest over time, so you spot seasonality before committing to a topic.",
       },
       {
         title: "SERP Overview",
-        icon: ListOrdered,
+        icon: ListNumbers,
         blurb:
           "Who ranks in the live results for a keyword, and what else is on the page.",
       },
@@ -88,13 +88,13 @@ const RESEARCH_GROUPS: CapabilityGroup[] = [
     items: [
       {
         title: "Content Optimizer",
-        icon: NotebookPen,
+        icon: NotePencil,
         blurb:
           "A brief built from the pages that already rank: length, subtopics, questions.",
       },
       {
         title: "Page Explorer",
-        icon: FileSearch,
+        icon: FileMagnifyingGlass,
         blurb: "Point at any URL and see its keywords, traffic, and backlinks.",
       },
       {
@@ -123,7 +123,7 @@ const RESEARCH_GROUPS: CapabilityGroup[] = [
       },
       {
         title: "Backlinks",
-        icon: Link2,
+        icon: LinkSimple,
         blurb:
           "Who links to a site, which pages attract them, and what changed.",
       },
@@ -135,12 +135,12 @@ const RESEARCH_GROUPS: CapabilityGroup[] = [
     items: [
       {
         title: "AI Visibility",
-        icon: Sparkles,
+        icon: Sparkle,
         blurb: "How AI search cites a brand or domain, and what it links to.",
       },
       {
         title: "Prompt Explorer",
-        icon: MessageSquare,
+        icon: ChatCentered,
         blurb:
           "Ask one prompt across several models and compare the answers side by side.",
       },
@@ -186,13 +186,13 @@ const SITE_GROUPS: CapabilityGroup[] = [
       },
       {
         title: "Rank Tracking",
-        icon: TrendingUp,
+        icon: TrendUp,
         blurb:
           "Check your keyword positions on a schedule and watch them move.",
       },
       {
         title: "Local Rank Grid",
-        icon: Grid3x3,
+        icon: GridNine,
         blurb:
           "Where you actually show up on the map, across a grid of nearby points.",
       },
@@ -210,7 +210,7 @@ const SITE_GROUPS: CapabilityGroup[] = [
     items: [
       {
         title: "Site Audit",
-        icon: ClipboardCheck,
+        icon: ClipboardText,
         blurb: "Crawl the site and list the technical problems it finds.",
       },
       {
@@ -221,12 +221,12 @@ const SITE_GROUPS: CapabilityGroup[] = [
       },
       {
         title: "Cannibalization",
-        icon: Split,
+        icon: ArrowsSplit,
         blurb: "Where several of your own pages rank for the same query.",
       },
       {
         title: "Link Opportunities",
-        icon: Waypoints,
+        icon: Graph,
         blurb:
           "Internal links to add: your pages Google already ties to a keyword.",
       },

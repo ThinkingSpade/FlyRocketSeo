@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft } from "lucide-react";
+import { CaretLeft } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -42,7 +42,7 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
           to="/projects"
           className="inline-flex items-center gap-1 text-sm text-base-content/60 transition-colors hover:text-base-content"
         >
-          <ChevronLeft className="size-4" />
+          <CaretLeft className="size-4" />
           Projects
         </Link>
         <div>

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { TriangleAlert, Wand2 } from "lucide-react";
+import { Warning, MagicWand } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { useGbpWriteAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import {
@@ -59,7 +59,7 @@ export function GbpListingFixButton({
         className="mt-1 inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
         onClick={() => setOpen(true)}
       >
-        <Wand2 className="size-3" />
+        <MagicWand className="size-3" />
         Fix on Google
       </button>
     );
@@ -89,7 +89,7 @@ function ConfirmBar({
 }) {
   return (
     <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5 text-xs">
-      <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+      <Warning className="size-3.5 shrink-0 text-warning" />
       <span>{label}</span>
       <Button
         type="button"

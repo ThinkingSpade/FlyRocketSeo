@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 import { DOMAIN_KEYWORDS_PAGE_SIZES } from "@/types/schemas/domain";
@@ -78,7 +78,7 @@ export function DomainKeywordsPagination({
               onPageChange={onPageChange}
               label="Previous page"
             >
-              <ChevronLeft className="size-4" />
+              <CaretLeft className="size-4" />
             </PageLink>
             <PageLink
               page={page + 1}
@@ -86,7 +86,7 @@ export function DomainKeywordsPagination({
               onPageChange={onPageChange}
               label="Next page"
             >
-              <ChevronRight className="size-4" />
+              <CaretRight className="size-4" />
             </PageLink>
           </div>
         </div>

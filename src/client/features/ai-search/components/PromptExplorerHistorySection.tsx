@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MessageSquare } from "lucide-react";
+import { ChatCentered } from "@phosphor-icons/react";
 import {
   HISTORY_ITEM_LINK_CLASS,
   SearchHistorySection,
@@ -18,7 +18,7 @@ export function PromptExplorerHistorySection({ projectId, ...props }: Props) {
   return (
     <SearchHistorySection
       {...props}
-      emptyIcon={MessageSquare}
+      emptyIcon={ChatCentered}
       emptyMessage="Enter a prompt to compare model answers"
       noun="prompt"
       renderItemLink={(item, content) => (

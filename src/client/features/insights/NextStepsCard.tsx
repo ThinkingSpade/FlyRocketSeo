@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
-  CircleCheck,
-  CircleHelp,
-  TriangleAlert,
-} from "lucide-react";
+  CheckCircle,
+  Question,
+  Warning,
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import { ExplainButton } from "./ExplainButton";
@@ -19,10 +19,10 @@ import type { Verdict, VerdictTone } from "./types";
  */
 
 const TONE_ICON = {
-  good: CircleCheck,
-  mixed: TriangleAlert,
-  bad: TriangleAlert,
-  unknown: CircleHelp,
+  good: CheckCircle,
+  mixed: Warning,
+  bad: Warning,
+  unknown: Question,
 } as const;
 
 const TONE_STYLE: Record<

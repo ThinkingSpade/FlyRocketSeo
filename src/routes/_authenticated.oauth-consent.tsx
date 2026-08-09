@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Database, KeyRound, User } from "lucide-react";
+import { Check, Database, Key, User } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useSession } from "@/lib/auth-client";
 import { Button } from "@cloudflare/kumo/components/button";
@@ -15,7 +15,7 @@ const SCOPES = [
     description: "Projects, keyword reports, and audit results.",
   },
   {
-    icon: KeyRound,
+    icon: Key,
     label: "Act on your behalf via MCP",
     description: "Run tools and write results back to your workspace.",
   },

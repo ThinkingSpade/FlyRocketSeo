@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  BarChart3,
-  CircleDollarSign,
+  ChartBar,
+  CurrencyCircleDollar,
   Gauge,
-  HelpCircle,
-  ListOrdered,
-  Search,
-} from "lucide-react";
+  Question,
+  ListNumbers,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSerpOverview } from "@/serverFunctions/serp";
 import { serpOverviewSchema } from "@/types/schemas/serp";
@@ -188,7 +188,11 @@ function AnalyzeButton({
         Analyze
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         Analyze
       </Button>
     </div>
@@ -349,7 +353,7 @@ function SerpKeywordStatsTiles({
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <InsightTile
-          icon={BarChart3}
+          icon={ChartBar}
           label={formatGeoMetricLabel("Volume", geo.volume)}
           value={formatCount(result.keywordStats?.searchVolume)}
           tone="primary"
@@ -361,7 +365,7 @@ function SerpKeywordStatsTiles({
           tone={difficultyTone(difficultyValue)}
         />
         <InsightTile
-          icon={CircleDollarSign}
+          icon={CurrencyCircleDollar}
           label={formatGeoMetricLabel("CPC", geo.volume)}
           value={
             result.keywordStats?.cpc != null
@@ -371,7 +375,7 @@ function SerpKeywordStatsTiles({
           tone="info"
         />
         <InsightTile
-          icon={ListOrdered}
+          icon={ListNumbers}
           label={formatGeoMetricLabel("Organic results", geo.serp)}
           value={result.totalOrganic}
           // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
@@ -620,7 +624,7 @@ export function SerpOverviewPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <ListOrdered className="size-6" />
+            <ListNumbers className="size-6" />
             SERP Overview
           </h1>
           <p className="text-sm text-base-content/60">
@@ -779,7 +783,7 @@ export function SerpOverviewPage({
             <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
               <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-                  <InsightIcon icon={HelpCircle} tone="info" />
+                  <InsightIcon icon={Question} tone="info" />
                   People also ask
                 </h2>
                 <ul className="list-inside list-disc space-y-1 text-sm text-base-content/80">

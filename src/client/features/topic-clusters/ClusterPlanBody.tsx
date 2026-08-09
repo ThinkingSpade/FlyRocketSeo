@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { NotebookPen } from "lucide-react";
+import { NotePencil } from "@phosphor-icons/react";
 import type { getTopicClusters } from "@/serverFunctions/topic-clusters";
 import type {
   prioritizeClusters,
@@ -67,7 +67,7 @@ export function ClusterPlanBody({
                 search={{ q: plan.topic, loc: plan.locationCode }}
                 className={`${buttonVariants({ variant: "primary", size: "xs" })} gap-1`}
               >
-                <NotebookPen className="size-3" /> Build brief
+                <NotePencil className="size-3" /> Build brief
               </Link>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -140,7 +140,7 @@ export function ClusterPlanBody({
                     search={{ q: topKeyword, loc: plan.locationCode }}
                     className={`${buttonVariants({ variant: "secondary", size: "xs" })} gap-1`}
                   >
-                    <NotebookPen className="size-3" /> Build brief
+                    <NotePencil className="size-3" /> Build brief
                   </Link>
                   <Link
                     to="/p/$projectId/serp"

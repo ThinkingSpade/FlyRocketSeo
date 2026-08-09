@@ -9,17 +9,17 @@ import {
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
-  Bot,
-  CornerDownLeft,
+  Robot,
+  ArrowElbowDownLeft,
   Folder,
-  FolderCog,
+  FolderSimpleUser,
   Keyboard,
   Monitor,
   Moon,
-  Search,
-  Settings,
+  MagnifyingGlass,
+  Gear,
   Sun,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { openKeyboardShortcuts } from "@/client/components/KeyboardShortcutsHelp";
 import { getProjectNavGroups } from "@/client/navigation/items";
 import { getProjects } from "@/serverFunctions/projects";
@@ -248,19 +248,19 @@ function CommandPaletteImpl() {
         {
           id: "link:settings",
           label: "Settings",
-          icon: Settings,
+          icon: Gear,
           run: () => void navigate({ to: "/settings" }),
         },
         {
           id: "link:ai",
           label: "AI & MCP",
-          icon: Bot,
+          icon: Robot,
           run: () => void navigate({ to: "/ai" }),
         },
         {
           id: "link:projects",
           label: "Manage projects",
-          icon: FolderCog,
+          icon: FolderSimpleUser,
           run: () => void navigate({ to: "/projects" }),
         },
         {
@@ -338,7 +338,7 @@ function CommandPaletteImpl() {
         onClick={(event) => event.stopPropagation()}
       >
         <div className="flex items-center gap-2.5 border-b border-base-300 px-3">
-          <Search className="h-4 w-4 shrink-0 text-base-content/40" />
+          <MagnifyingGlass className="h-4 w-4 shrink-0 text-base-content/40" />
           <input
             ref={inputRef}
             value={query}
@@ -422,7 +422,7 @@ function CommandPaletteImpl() {
           </span>
           <span className="flex items-center gap-1">
             <Kbd size="xs">
-              <CornerDownLeft className="h-3 w-3" />
+              <ArrowElbowDownLeft className="h-3 w-3" />
             </Kbd>
             to select
           </span>

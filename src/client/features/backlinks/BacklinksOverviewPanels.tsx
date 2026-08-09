@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import {
   BacklinksAuthorityChart,

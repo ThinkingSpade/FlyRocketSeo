@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Sparkline } from "@/client/components/Sparkline";
 
@@ -11,7 +11,7 @@ export type InsightTone =
   | "neutral";
 
 // Plain colored icons, no chip backgrounds — matches the app's native icon
-// language (muted lucide glyphs like `text-base-content/45`). Tones stay
+// language (muted Phosphor glyphs like `text-base-content/45`). Tones stay
 // quiet; only the meaning-bearing ones get color.
 const ICON_COLOR: Record<InsightTone, string> = {
   primary: "text-primary/70",
@@ -36,7 +36,7 @@ export function InsightIcon({
   icon: Icon,
   tone = "neutral",
 }: {
-  icon: LucideIcon;
+  icon: Icon;
   tone?: InsightTone;
 }) {
   return (
@@ -80,7 +80,7 @@ export function InsightTile({
   trend,
   loading = false,
 }: {
-  icon: LucideIcon;
+  icon: Icon;
   label: string;
   value: ReactNode;
   hint?: ReactNode;

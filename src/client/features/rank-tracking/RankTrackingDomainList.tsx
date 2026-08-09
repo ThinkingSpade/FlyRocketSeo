@@ -3,13 +3,13 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
-  AlertTriangle,
+  Warning,
   Archive,
   Globe,
   Plus,
-  ChevronRight,
-  Search,
-} from "lucide-react";
+  CaretRight,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import {
   getRankTrackingConfigSummaries,
   updateRankTrackingConfig,
@@ -161,7 +161,7 @@ export function RankTrackingDomainList({
           ) : filteredSummaries.length === 0 ? (
             <div className="px-5 py-10 text-center space-y-3">
               <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-base-200">
-                <Search className="size-5 text-base-content/40" />
+                <MagnifyingGlass className="size-5 text-base-content/40" />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-base-content/70">
@@ -267,7 +267,7 @@ function DomainRow({
         </p>
         {summary.lastSkipReason === "insufficient_credits" && (
           <p className="flex items-center gap-1 text-xs text-warning">
-            <AlertTriangle className="size-3" />
+            <Warning className="size-3" />
             Scheduled check skipped — insufficient credits
           </p>
         )}
@@ -296,7 +296,7 @@ function DomainRow({
       >
         <Archive className="size-4" />
       </Button>
-      <ChevronRight className="size-4 shrink-0 text-base-content/40 pointer-events-none" />
+      <CaretRight className="size-4 shrink-0 text-base-content/40 pointer-events-none" />
     </div>
   );
 }

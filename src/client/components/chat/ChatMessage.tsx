@@ -1,14 +1,14 @@
 import { type UIMessage } from "ai";
 import { useState } from "react";
 import {
-  AlertTriangle,
+  Warning,
   Check,
-  ChevronRight,
+  CaretRight,
   Copy,
-  Loader2,
+  CircleNotch,
   Pencil,
-  Undo2,
-} from "lucide-react";
+  ArrowUUpLeft,
+} from "@phosphor-icons/react";
 import { Markdown } from "@/client/components/Markdown";
 import { Button } from "@cloudflare/kumo/components/button";
 import { InputArea } from "@cloudflare/kumo/components/input";
@@ -125,7 +125,7 @@ function MessageActions({
           className="text-base-content/40 hover:text-base-content"
           onClick={onUndo}
         >
-          <Undo2 className="size-3.5" />
+          <ArrowUUpLeft className="size-3.5" />
         </Button>
       ) : null}
     </div>
@@ -155,9 +155,9 @@ function ReasoningBlock({
         className="inline-flex items-center gap-1.5 text-xs hover:text-base-content/80"
       >
         {isStreaming ? (
-          <Loader2 className="size-3 animate-spin" />
+          <CircleNotch className="size-3 animate-spin" />
         ) : (
-          <ChevronRight
+          <CaretRight
             className={`size-3 transition-transform ${expanded ? "rotate-90" : ""}`}
           />
         )}
@@ -198,9 +198,9 @@ function ToolBadge({
       }`}
     >
       {isRunning ? (
-        <Loader2 className="size-3 animate-spin" />
+        <CircleNotch className="size-3 animate-spin" />
       ) : isError ? (
-        <AlertTriangle className="size-3" />
+        <Warning className="size-3" />
       ) : (
         <Check className="size-3" />
       )}

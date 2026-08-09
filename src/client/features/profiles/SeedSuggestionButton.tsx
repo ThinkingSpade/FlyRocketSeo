@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import { MAX_KEYWORDS_PER_SUBMIT } from "@/client/features/keywords/keywordResearchTypes";
@@ -78,7 +78,7 @@ export function SeedSuggestionButton({
           );
         }}
       >
-        <Sparkles className="size-3.5 text-base-content/60" />
+        <Sparkle className="size-3.5 text-base-content/60" />
         {generate.isPending ? "Thinking…" : "Suggest keywords for this client"}
       </Button>
       <span className="text-sm text-base-content/60">

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { MoreHorizontal, ScanSearch, Trash2 } from "lucide-react";
+import { DotsThree, Scan, Trash } from "@phosphor-icons/react";
 import type { getAuditHistory } from "@/serverFunctions/audit";
 import { formatDate, StatusBadge } from "@/client/features/audit/shared";
 import { Badge } from "@cloudflare/kumo/components/badge";
@@ -29,7 +29,7 @@ export function AuditHistorySection({
     return (
       <div className="flex items-center justify-center py-16">
         <div className="space-y-2 text-center text-base-content/50">
-          <ScanSearch className="mx-auto size-12 opacity-30" />
+          <Scan className="mx-auto size-12 opacity-30" />
           <p className="text-sm font-medium">
             Previous audits could not be loaded
           </p>
@@ -45,7 +45,7 @@ export function AuditHistorySection({
     return (
       <div className="flex items-center justify-center py-16">
         <div className="text-center text-base-content/40 space-y-3">
-          <ScanSearch className="size-12 mx-auto opacity-30" />
+          <Scan className="size-12 mx-auto opacity-30" />
           <p className="text-lg font-medium">No audits yet</p>
         </div>
       </div>
@@ -141,14 +141,14 @@ function HistoryActions({
               shape="square"
               aria-label="Audit actions"
             >
-              <MoreHorizontal className="size-3.5" />
+              <DotsThree className="size-3.5" />
             </Button>
           }
         />
         <DropdownMenu.Content align="end">
           <DropdownMenu.Item
             variant="danger"
-            icon={Trash2}
+            icon={Trash}
             onClick={(event) => {
               // The row behind this is itself clickable, so the delete must not
               // also navigate into the audit it just removed.

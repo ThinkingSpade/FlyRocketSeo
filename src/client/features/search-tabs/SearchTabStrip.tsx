@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { QueryKey } from "@tanstack/react-query";
-import { Loader2, X } from "lucide-react";
+import { CircleNotch, X } from "@phosphor-icons/react";
 import type { SearchTab } from "./types";
 import {
   KEYWORD_RESEARCH_STALE_TIME_MS,
@@ -155,7 +155,7 @@ function SearchTabStatusIndicator({
       aria-hidden
     >
       {status === "loading" ? (
-        <Loader2 className="size-3 animate-spin text-base-content/50" />
+        <CircleNotch className="size-3 animate-spin text-base-content/50" />
       ) : status === "error" ? (
         <span className="size-2 rounded-full bg-error" />
       ) : status === "unviewed" ? (

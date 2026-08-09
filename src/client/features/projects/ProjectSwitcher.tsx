@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronsUpDown, FolderCog } from "lucide-react";
+import { CaretUpDown, FolderSimpleUser } from "@phosphor-icons/react";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { getProjects } from "@/serverFunctions/projects";
 import { setLastProjectId } from "@/client/lib/active-project";
@@ -55,7 +55,7 @@ export function ProjectSwitcher({
                 </span>
               ) : null}
             </span>
-            <ChevronsUpDown className="size-3.5 shrink-0 text-base-content/40" />
+            <CaretUpDown className="size-3.5 shrink-0 text-base-content/40" />
           </button>
         }
       />
@@ -91,7 +91,7 @@ export function ProjectSwitcher({
         {projects.length > 0 ? <DropdownMenu.Separator /> : null}
 
         <DropdownMenu.LinkItem
-          icon={FolderCog}
+          icon={FolderSimpleUser}
           render={<Link to="/projects" onClick={onCloseDrawer} />}
         >
           Manage projects

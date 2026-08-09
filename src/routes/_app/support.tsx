@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useReveal } from "@/client/hooks/useReveal";

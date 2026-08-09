@@ -5,7 +5,7 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { useMemo } from "react";
 import {
   AppDataTable,
@@ -191,7 +191,7 @@ function SavedKeywordsEmptyState({
 }) {
   return (
     <div className="py-12 text-center text-sm text-base-content/55">
-      <Search className="mx-auto mb-2 size-8 opacity-40" />
+      <MagnifyingGlass className="mx-auto mb-2 size-8 opacity-40" />
       <p>
         {hasActiveFilters
           ? "No saved keywords match the current filters."

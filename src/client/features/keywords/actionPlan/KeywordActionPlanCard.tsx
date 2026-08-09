@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, MapPin, PenLine, Target } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  PencilSimpleLine,
+  Target,
+} from "@phosphor-icons/react";
 import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { wantsGeoModifiers } from "@/shared/keyword-fit/profileTypes";
@@ -101,7 +106,7 @@ export function KeywordActionPlanCard({
         </div>
 
         {hasUsableShape && shape ? (
-          <PlanStep icon={<PenLine className="size-3.5" />}>
+          <PlanStep icon={<PencilSimpleLine className="size-3.5" />}>
             <span className="font-medium">Write the shape that wins.</span>{" "}
             {shape.count} of the {shape.total} results are{" "}
             {serpPageTypeLabel(shape.dominant)}. Match that format before trying

@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
-  CircleCheck,
-  CircleHelp,
-  ExternalLink,
-  ScanSearch,
-  Search,
-} from "lucide-react";
+  CheckCircle,
+  Question,
+  ArrowSquareOut,
+  Scan,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getCitationReport } from "@/serverFunctions/citations";
 import { citationTrackerResultSchema } from "@/types/schemas/citations";
@@ -68,7 +68,7 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
             className="flex items-center justify-between gap-2 py-1.5 text-sm"
           >
             <span className="flex items-center gap-1.5">
-              <InsightIcon icon={CircleCheck} tone="success" />
+              <InsightIcon icon={CheckCircle} tone="success" />
               {match.directory.name}
             </span>
             <a
@@ -78,7 +78,7 @@ function CitationFoundList({ found }: { found: CitationMatch[] }) {
               className="app-link-subtle flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
               View listing
-              <ExternalLink className="size-3" />
+              <ArrowSquareOut className="size-3" />
             </a>
           </li>
         ))}
@@ -122,7 +122,7 @@ function CitationUnconfirmedList({
             className="flex items-center justify-between gap-2 py-1.5 text-sm"
           >
             <span className="flex items-center gap-1.5">
-              <InsightIcon icon={CircleHelp} tone="neutral" />
+              <InsightIcon icon={Question} tone="neutral" />
               {match.directory.name}
             </span>
             <a
@@ -132,7 +132,7 @@ function CitationUnconfirmedList({
               className="app-link-subtle flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
               Check this result
-              <ExternalLink className="size-3" />
+              <ArrowSquareOut className="size-3" />
             </a>
           </li>
         ))}
@@ -168,7 +168,7 @@ function CitationMissingList({ missing }: { missing: DirectoryEntry[] }) {
             className="flex items-center justify-between gap-2 py-1.5 text-sm"
           >
             <span className="flex items-center gap-1.5 text-base-content/70">
-              <InsightIcon icon={CircleHelp} tone="neutral" />
+              <InsightIcon icon={Question} tone="neutral" />
               {directory.name}
             </span>
             <a
@@ -178,7 +178,7 @@ function CitationMissingList({ missing }: { missing: DirectoryEntry[] }) {
               className="app-link-subtle flex shrink-0 items-center gap-1 text-xs text-base-content/60"
             >
               Check manually
-              <ExternalLink className="size-3" />
+              <ArrowSquareOut className="size-3" />
             </a>
           </li>
         ))}
@@ -284,7 +284,7 @@ export function CitationTrackerSection({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="max-w-xl">
             <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-              <InsightIcon icon={ScanSearch} tone="neutral" />
+              <InsightIcon icon={Scan} tone="neutral" />
               Citation tracker
             </h2>
             <p className="mt-0.5 text-xs text-base-content/55">
@@ -306,7 +306,7 @@ export function CitationTrackerSection({
             {reportQuery.isFetching ? (
               <Loader size="sm" />
             ) : (
-              <Search className="size-3.5" />
+              <MagnifyingGlass className="size-3.5" />
             )}
             Check citations
           </Button>

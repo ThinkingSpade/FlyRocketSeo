@@ -1,7 +1,7 @@
 /* eslint-disable max-lines, max-lines-per-function -- Content Optimizer keeps its brief and separately-authorized outline workflow together. */
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { NotebookPen, Search } from "lucide-react";
+import { NotePencil, MagnifyingGlass } from "@phosphor-icons/react";
 import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { BriefTargets, quantile } from "@/client/features/content/BriefTargets";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
@@ -184,7 +184,11 @@ function BuildBriefButton({
         Build brief
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         {meteredActionLabel(
           "Build brief",
           { kind: "paidRequests", count: 4 },
@@ -806,7 +810,7 @@ function ContentOptimizerHeading({ scope }: { scope: TargetAreaScope }) {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <NotebookPen className="size-6" />
+          <NotePencil className="size-6" />
           Content Optimizer
         </h1>
         <p className="text-sm text-base-content/60">

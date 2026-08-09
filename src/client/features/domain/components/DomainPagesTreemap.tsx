@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { LayoutGrid } from "lucide-react";
+import { SquaresFour } from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { echarts } from "@/client/components/chart/echarts";
@@ -157,7 +157,7 @@ export function DomainPagesTreemap({
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-4">
       <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-        <InsightIcon icon={LayoutGrid} tone="primary" />
+        <InsightIcon icon={SquaresFour} tone="primary" />
         Traffic by page
       </h3>
       <p className="mt-0.5 text-xs text-base-content/50">

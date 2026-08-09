@@ -1,6 +1,6 @@
 /* eslint-disable max-lines -- the keyword-trends form and its chart rendering stay colocated. */
 import { useEffect, useMemo, useState } from "react";
-import { Activity, Search } from "lucide-react";
+import { Pulse, MagnifyingGlass } from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { echarts } from "@/client/components/chart/echarts";
 import { escapeHtml } from "@/client/components/chart/tooltipHtml";
@@ -186,7 +186,11 @@ function CompareButton({
         Compare
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         Compare
       </Button>
     </div>
@@ -351,7 +355,7 @@ export function TrendsPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <Activity className="size-6" />
+            <Pulse className="size-6" />
             Keyword Trends
           </h1>
           <p className="text-sm text-base-content/60">

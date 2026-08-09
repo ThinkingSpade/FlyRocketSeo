@@ -1,4 +1,4 @@
-import { Monitor, Plus, Settings, Smartphone } from "lucide-react";
+import { Monitor, Plus, Gear, DeviceMobile } from "@phosphor-icons/react";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { devicesLabel, scheduleLabel } from "@/shared/rank-tracking";
 import type {
@@ -75,7 +75,7 @@ export function RankTrackingDetailHeader({
               },
               {
                 value: "mobile" as const,
-                icon: <Smartphone className="size-3.5" />,
+                icon: <DeviceMobile className="size-3.5" />,
                 label: "Mobile",
               },
             ]}
@@ -99,7 +99,7 @@ export function RankTrackingDetailHeader({
         </select>
         <div className="hidden sm:block h-6 w-px bg-base-300" />
         <Button size="sm" onClick={onEdit}>
-          <Settings className="size-3.5" />
+          <Gear className="size-3.5" />
           Configure
         </Button>
         <Button variant="primary" size="sm" onClick={onToggleAddKeywords}>

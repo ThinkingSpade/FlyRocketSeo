@@ -1,4 +1,4 @@
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
@@ -64,7 +64,11 @@ export function CompetitorsSearchForm({
           isFetching
         }
       >
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         Analyze
       </Button>
     </form>

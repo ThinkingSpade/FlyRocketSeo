@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Briefcase, Check, Wand2, X } from "lucide-react";
+import { Briefcase, Check, MagicWand, X } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import {
@@ -116,7 +116,7 @@ export function ProjectProfileCard({ projectId }: Props) {
                 });
               }}
             >
-              <Wand2 className="size-3.5 text-base-content/60" />
+              <MagicWand className="size-3.5 text-base-content/60" />
               {drafter.isPending
                 ? "Reading the site…"
                 : "Draft this from their site"}

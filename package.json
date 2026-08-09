@@ -98,7 +98,6 @@
     "fast-xml-parser": "^5.4.1",
     "jose": "^6.0.12",
     "leaflet": "^1.9.4",
-    "lucide-react": "^0.542.0",
     "papaparse": "^5.5.3",
     "postgres": "^3.4.9",
     "posthog-js": "^1.395.0",

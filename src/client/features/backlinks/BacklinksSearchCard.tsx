@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import {
   createFormValidationErrors,
   getFieldError,
@@ -144,7 +144,7 @@ export function BacklinksSearchCard({
 
                   return (
                     <div className="relative flex flex-1 items-center">
-                      <Search className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+                      <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
                       <Input
                         placeholder="Enter a domain or URL"
                         value={field.state.value}

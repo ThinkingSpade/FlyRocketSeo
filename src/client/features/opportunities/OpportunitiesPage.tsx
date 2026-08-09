@@ -1,7 +1,12 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, ClipboardCheck, Lightbulb, Wrench } from "lucide-react";
+import {
+  ArrowUpRight,
+  ClipboardText,
+  Lightbulb,
+  Wrench,
+} from "@phosphor-icons/react";
 import { InsightTile } from "@/client/components/InsightTile";
 import { AppCard } from "@/client/components/AppCard";
 import { SectionHeader } from "@/client/components/SectionHeader";
@@ -141,7 +146,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           tone={technicalIssues.length > 0 ? "warning" : "neutral"}
         />
         <InsightTile
-          icon={ClipboardCheck}
+          icon={ClipboardText}
           label="Pages affected"
           value={technicalSourcesFailed ? "—" : affectedPages.toLocaleString()}
           hint="Across the last audit"

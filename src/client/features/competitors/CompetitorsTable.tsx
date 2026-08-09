@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { GitCompareArrows } from "lucide-react";
+import { GitDiff } from "@phosphor-icons/react";
 import {
   AppDataTable,
   useAppTable,
@@ -76,7 +76,7 @@ export function CompetitorsTable({
             onClick={() => onCompareCompetitor(row.original.domain)}
             title="Compare keywords with this competitor"
           >
-            <GitCompareArrows className="size-3.5" />
+            <GitDiff className="size-3.5" />
             Keyword Gap
           </Button>
         ),

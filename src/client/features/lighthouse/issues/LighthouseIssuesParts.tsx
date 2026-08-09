@@ -1,12 +1,12 @@
 import {
-  ChevronDown,
+  CaretDown,
   Copy,
   Download,
-  FileWarning,
+  FileX,
   Info,
-  Sheet,
-  TriangleAlert,
-} from "lucide-react";
+  GridFour,
+  Warning,
+} from "@phosphor-icons/react";
 import type {
   CategoryTab,
   ExportPayload,
@@ -64,11 +64,11 @@ export function LighthouseIssuesHeader({
           <LighthouseIssuesSummary scores={scores} metrics={metrics} />
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge className="border border-error/30 bg-error/10 text-error/80 gap-1">
-              <FileWarning className="size-3" />
+              <FileX className="size-3" />
               Critical {severityCounts.critical}
             </Badge>
             <Badge className="border border-warning/30 bg-warning/10 text-warning/80 gap-1">
-              <TriangleAlert className="size-3" />
+              <Warning className="size-3" />
               Warning {severityCounts.warning}
             </Badge>
             <Badge className="border border-info/30 bg-info/10 text-info/80 gap-1">
@@ -201,7 +201,7 @@ function ExportMenu({
           <Button size="sm">
             <Download className="size-4" />
             Export
-            <ChevronDown className="size-3 opacity-60" />
+            <CaretDown className="size-3 opacity-60" />
           </Button>
         }
       />
@@ -212,14 +212,14 @@ function ExportMenu({
         <DropdownMenu.Group>
           <DropdownMenu.Label>Export to Sheets</DropdownMenu.Label>
           <DropdownMenu.Item
-            icon={Sheet}
+            icon={GridFour}
             disabled={!visibleIssues.length}
             onClick={() => onExportSheets(visibleIssues, "current")}
           >
             Open in Sheets — {categoryLabelLower}
           </DropdownMenu.Item>
           <DropdownMenu.Item
-            icon={Sheet}
+            icon={GridFour}
             disabled={!allIssues.length}
             onClick={() => onExportSheets(allIssues, "all")}
           >

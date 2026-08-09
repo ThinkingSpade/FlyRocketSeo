@@ -1,5 +1,5 @@
 import { useMemo, type MutableRefObject } from "react";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown } from "@phosphor-icons/react";
 import type { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { makeSelectionColumn } from "@/client/components/table/AppDataTable";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Network, Search } from "lucide-react";
+import { Network, MagnifyingGlass } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getTopicClusters } from "@/serverFunctions/topic-clusters";
 import { topicClusterPlanSchema } from "@/types/schemas/topic-clusters";
@@ -83,7 +83,11 @@ function PlanClustersButton({
         Plan clusters
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         Plan clusters
       </Button>
     </div>

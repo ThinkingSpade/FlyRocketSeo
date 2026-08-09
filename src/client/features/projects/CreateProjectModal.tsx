@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { Modal } from "@/client/components/Modal";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
@@ -181,7 +181,7 @@ function ConnectSearchConsoleStep({
 
       {connectionQuery.isPending ? (
         <div className="flex items-center gap-2 py-2 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
           Checking…
         </div>
       ) : !configured ? (

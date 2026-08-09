@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { applyBillingMarkupUsd } from "@/shared/billing";
 import {
@@ -53,7 +53,7 @@ export function BrandLookupSearchCard({
                 with it — which also stops the icon being a click target that
                 does not focus the field. */}
             <div className="relative flex flex-1 items-center">
-              <Search className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+              <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
               <Input
                 type="text"
                 placeholder="Enter a brand name or domain"

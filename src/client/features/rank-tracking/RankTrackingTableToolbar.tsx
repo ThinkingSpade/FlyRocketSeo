@@ -1,4 +1,9 @@
-import { CalendarDays, Loader2, SlidersHorizontal, Table } from "lucide-react";
+import {
+  CalendarDots,
+  CircleNotch,
+  SlidersHorizontal,
+  Table,
+} from "@phosphor-icons/react";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { ExportMenu, MoreMenu } from "./ToolbarMenus";
 import { Button } from "@cloudflare/kumo/components/button";
@@ -62,7 +67,7 @@ export function RankTrackingTableToolbar({
             },
             {
               value: "history" as const,
-              icon: <CalendarDays className="size-3.5" />,
+              icon: <CalendarDots className="size-3.5" />,
               label: "History",
             },
           ]}
@@ -93,7 +98,7 @@ export function RankTrackingTableToolbar({
 
       {isRunning && latestRun ? (
         <div className="flex items-center gap-2 text-sm text-base-content/70">
-          <Loader2 className="size-3.5 animate-spin text-primary" />
+          <CircleNotch className="size-3.5 animate-spin text-primary" />
           <span>
             {latestRun.status === "pending"
               ? "Preparing..."

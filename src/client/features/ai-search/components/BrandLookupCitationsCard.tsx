@@ -1,6 +1,11 @@
 import { useMemo, useState } from "react";
 import { type SortingState } from "@tanstack/react-table";
-import { ChevronDown, Download, Sheet, SlidersHorizontal } from "lucide-react";
+import {
+  CaretDown,
+  Download,
+  GridFour,
+  SlidersHorizontal,
+} from "@phosphor-icons/react";
 import { useAppTable } from "@/client/components/table/AppDataTable";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import {
@@ -166,12 +171,12 @@ export function CitationTabsCard({
               <Button variant="ghost" size="sm" disabled={!canExport}>
                 <Download className="size-3.5" />
                 Export
-                <ChevronDown className="size-3.5" />
+                <CaretDown className="size-3.5" />
               </Button>
             }
           />
           <DropdownMenu.Content align="end">
-            <DropdownMenu.Item icon={Sheet} onClick={handleExportSheets}>
+            <DropdownMenu.Item icon={GridFour} onClick={handleExportSheets}>
               Google Sheets
             </DropdownMenu.Item>
             <DropdownMenu.Item icon={Download} onClick={handleExportCsv}>

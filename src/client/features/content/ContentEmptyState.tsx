@@ -1,11 +1,18 @@
-import { Clock, HelpCircle, KeyRound, ListTree, Ruler, X } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import {
+  Clock,
+  Question,
+  Key,
+  TreeStructure,
+  Ruler,
+  X,
+} from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import type { ContentBriefHistoryItem } from "./useContentBriefHistory";
 
 const BRIEF_PARTS: Array<{
-  icon: LucideIcon;
+  icon: Icon;
   title: string;
   description: string;
 }> = [
@@ -15,18 +22,18 @@ const BRIEF_PARTS: Array<{
     description: "Median word count of the pages that actually rank",
   },
   {
-    icon: ListTree,
+    icon: TreeStructure,
     title: "Structure & outline",
     description:
       "H2 counts, each competitor's outline, and the consensus sections",
   },
   {
-    icon: KeyRound,
+    icon: Key,
     title: "Terms to include",
     description: "The keywords the top pages rank for, with volumes",
   },
   {
-    icon: HelpCircle,
+    icon: Question,
     title: "Questions & grading",
     description: "People-Also-Ask questions plus a paste-in draft grader",
   },

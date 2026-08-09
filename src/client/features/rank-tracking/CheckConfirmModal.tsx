@@ -1,4 +1,4 @@
-import { Loader2, Zap } from "lucide-react";
+import { CircleNotch, Lightning } from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
 import type { RankTrackingConfig } from "@/types/schemas/rank-tracking";
 import {
@@ -58,7 +58,7 @@ export function CheckConfirmModal({
         disabled={isPending}
       >
         <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
-          <Zap className="size-5 text-primary" />
+          <Lightning className="size-5 text-primary" />
         </div>
         <div className="flex-1">
           <p className="font-medium">Run Now</p>
@@ -69,7 +69,7 @@ export function CheckConfirmModal({
         </div>
         <div className="text-right">
           <p className="font-mono font-semibold">~${costUsd.toFixed(2)}</p>
-          {isPending && <Loader2 className="size-3 animate-spin ml-auto" />}
+          {isPending && <CircleNotch className="size-3 animate-spin ml-auto" />}
         </div>
       </button>
 

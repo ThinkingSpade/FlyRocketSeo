@@ -5,7 +5,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 import {
   AppDataTable,
   useAppTable,
@@ -57,7 +57,7 @@ const pagesColumns: ColumnDef<PageRow>[] = [
           className="app-link inline-flex items-center gap-1 text-xs"
         >
           <span className="truncate">{extractPathname(url)}</span>
-          <ExternalLink className="size-3 shrink-0" />
+          <ArrowSquareOut className="size-3 shrink-0" />
         </a>
       );
     },

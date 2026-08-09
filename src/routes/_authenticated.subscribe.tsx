@@ -1,7 +1,7 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
-import { ArrowRight, Settings, User } from "lucide-react";
+import { ArrowRight, Gear, User } from "@phosphor-icons/react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { Button } from "@cloudflare/kumo/components/button";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
@@ -320,10 +320,7 @@ function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
               </span>
             </DropdownMenu.Label>
           </DropdownMenu.Group>
-          <DropdownMenu.LinkItem
-            icon={Settings}
-            render={<Link to="/settings" />}
-          >
+          <DropdownMenu.LinkItem icon={Gear} render={<Link to="/settings" />}>
             Settings
           </DropdownMenu.LinkItem>
           <ThemePreferenceMenuItems />

@@ -1,4 +1,4 @@
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Input } from "@cloudflare/kumo/components/input";
 

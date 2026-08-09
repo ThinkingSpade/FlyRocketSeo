@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Layers, TrendingDown, TrendingUp } from "lucide-react";
+import { Stack, TrendDown, TrendUp } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
@@ -239,7 +239,7 @@ export function ContentPerformanceTab({
           <div className="rounded-lg border border-base-300 bg-base-100 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-                <InsightIcon icon={Layers} tone="primary" />
+                <InsightIcon icon={Stack} tone="primary" />
                 Content groups
               </h3>
               <SegmentedToggle
@@ -318,9 +318,9 @@ function ContentGroupRowView({ group }: { group: ContentGroupRow }) {
       <td>
         <span className="inline-flex items-center gap-1.5 font-medium">
           {growing ? (
-            <TrendingUp className="size-3.5 text-success/80" />
+            <TrendUp className="size-3.5 text-success/80" />
           ) : decaying ? (
-            <TrendingDown className="size-3.5 text-error/80" />
+            <TrendDown className="size-3.5 text-error/80" />
           ) : null}
           {group.label}
         </span>

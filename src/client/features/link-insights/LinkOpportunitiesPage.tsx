@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
-import { Check, ExternalLink, Waypoints } from "lucide-react";
+import { Check, ArrowSquareOut, Graph } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { checkLinkPresence } from "@/serverFunctions/link-insights";
 import {
@@ -93,7 +93,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Waypoints className="size-6" />
+          <Graph className="size-6" />
           Link Opportunities
         </h1>
         <p className="text-sm text-base-content/60">
@@ -218,7 +218,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
                           <span className="line-clamp-1">
                             {toPath(source.page)}
                           </span>
-                          <ExternalLink className="size-3 shrink-0 text-base-content/40" />
+                          <ArrowSquareOut className="size-3 shrink-0 text-base-content/40" />
                         </a>
                       </Table.Cell>
                       <Table.Cell className="text-right tabular-nums">

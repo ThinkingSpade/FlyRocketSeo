@@ -1,4 +1,4 @@
-import { ShieldAlert } from "lucide-react";
+import { ShieldWarning } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 export function BacklinksLoadingState() {
@@ -51,7 +51,7 @@ export function BacklinksErrorState({
     <section className="rounded-2xl border border-error/30 bg-error/5 p-6 space-y-3">
       <div className="flex items-start gap-3">
         <div className="rounded-xl bg-error/10 p-2.5 text-error shrink-0">
-          <ShieldAlert className="size-5" />
+          <ShieldWarning className="size-5" />
         </div>
         <div className="space-y-1">
           <h2 className="text-lg font-semibold">Could not load backlinks</h2>

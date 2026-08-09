@@ -1,4 +1,4 @@
-import { Info, Search } from "lucide-react";
+import { Info, MagnifyingGlass } from "@phosphor-icons/react";
 import { getFieldError } from "@/client/lib/forms";
 import {
   isResultLimit,
@@ -77,7 +77,7 @@ export function KeywordResearchSearchBar({
                       keywordError ? "border-error" : "border-base-300"
                     }`}
                   >
-                    <Search className="mt-0.5 size-4 shrink-0 text-base-content/60" />
+                    <MagnifyingGlass className="mt-0.5 size-4 shrink-0 text-base-content/60" />
                     <textarea
                       className="grow min-w-0 resize-none bg-transparent text-sm leading-6 outline-none placeholder:text-base-content/40"
                       rows={rows}

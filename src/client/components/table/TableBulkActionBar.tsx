@@ -1,4 +1,4 @@
-import { ChevronDown, Download, Loader2, X } from "lucide-react";
+import { CaretDown, Download, CircleNotch, X } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
@@ -101,12 +101,12 @@ export function TableBulkExportMenu({
             className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-base-content/85 hover:bg-base-content/10 disabled:opacity-50"
           >
             {busy ? (
-              <Loader2 className="size-3.5 animate-spin" />
+              <CircleNotch className="size-3.5 animate-spin" />
             ) : (
               <Download className="size-3.5" />
             )}
             Export
-            <ChevronDown className="size-3 opacity-60" />
+            <CaretDown className="size-3 opacity-60" />
           </button>
         }
       />
@@ -174,7 +174,7 @@ export function TableExportMenu({
           <Button variant={variant} size="sm">
             <Download className="size-4" />
             Export
-            <ChevronDown className="size-3 opacity-60" />
+            <CaretDown className="size-3 opacity-60" />
           </Button>
         }
       />

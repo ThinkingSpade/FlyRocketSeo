@@ -1,5 +1,10 @@
 import { Link } from "@tanstack/react-router";
-import { Clock, History, Link2, X } from "lucide-react";
+import {
+  Clock,
+  ClockCounterClockwise,
+  LinkSimple,
+  X,
+} from "@phosphor-icons/react";
 import type { BacklinksSearchHistoryItem } from "@/client/hooks/useBacklinksSearchHistory";
 import { Button } from "@cloudflare/kumo/components/button";
 
@@ -23,7 +28,7 @@ export function BacklinksHistorySection({
   if (history.length === 0) {
     return (
       <section className="rounded-2xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/55 space-y-2">
-        <Link2 className="size-9 mx-auto opacity-35" />
+        <LinkSimple className="size-9 mx-auto opacity-35" />
         <p className="text-base font-medium text-base-content/80">
           Enter a domain or URL to get started
         </p>
@@ -35,7 +40,7 @@ export function BacklinksHistorySection({
     <section className="rounded-2xl border border-base-300 bg-base-100 p-5 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <History className="size-4 text-base-content/45" />
+          <ClockCounterClockwise className="size-4 text-base-content/45" />
           <span className="text-sm text-base-content/60">
             {history.length} recent search{history.length !== 1 ? "es" : ""}
           </span>

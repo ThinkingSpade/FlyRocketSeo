@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  AlertCircle,
+  WarningCircle,
   ArrowLeft,
-  BarChart3,
-  Quote,
-  TrendingUp,
-} from "lucide-react";
+  ChartBar,
+  Quotes,
+  TrendUp,
+} from "@phosphor-icons/react";
 import { lookupBrand } from "@/serverFunctions/ai-search";
 import {
   HostedPlanGate,
@@ -38,17 +38,17 @@ type Props = {
 
 const BRAND_LOOKUP_BULLETS = [
   {
-    icon: TrendingUp,
+    icon: TrendUp,
     title: "Track AI visibility",
     body: "See estimated counts for ChatGPT and Google AI Overview answers that cite your brand, and watch the trend month over month.",
   },
   {
-    icon: Quote,
+    icon: Quotes,
     title: "See the prompts",
     body: "View sample user questions where LLMs reference your brand or domain.",
   },
   {
-    icon: BarChart3,
+    icon: ChartBar,
     title: "Map the competition",
     body: "Spot the pages LLMs cite alongside you so you know who's competing for attention in AI answers.",
   },
@@ -247,7 +247,7 @@ function BrandLookupPageInner({
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
             >
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <WarningCircle className="mt-0.5 size-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           ) : null}

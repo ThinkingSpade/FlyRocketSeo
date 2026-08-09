@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, UserPlus } from "lucide-react";
+import { CircleNotch, UserPlus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { CopyButton } from "@/client/features/ai-mcp/SetupControls";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -106,7 +106,7 @@ export function TeamPage() {
               disabled={createMutation.isPending || email.trim() === ""}
             >
               {createMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <CircleNotch className="size-4 animate-spin" />
               ) : (
                 <UserPlus className="size-4" />
               )}

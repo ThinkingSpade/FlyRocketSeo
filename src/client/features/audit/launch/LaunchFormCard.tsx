@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import { MIN_PAGES } from "@/client/features/audit/launch/types";
 import type { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
 import { getFieldError, getFormError } from "@/client/lib/forms";
@@ -68,7 +68,7 @@ export function LaunchFormCard({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Starting...
+                    <CircleNotch className="size-4 animate-spin" /> Starting...
                   </>
                 ) : (
                   "Start Audit"

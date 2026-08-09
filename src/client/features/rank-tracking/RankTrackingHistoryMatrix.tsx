@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 import { Table } from "@cloudflare/kumo/components/table";
 
@@ -26,7 +26,7 @@ export function RankTrackingHistoryMatrix({
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="size-5 animate-spin text-base-content/50" />
+        <CircleNotch className="size-5 animate-spin text-base-content/50" />
       </div>
     );
   }

@@ -5,7 +5,7 @@ import {
   Crosshair,
   Megaphone,
   Minus,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { BarList } from "@/client/components/BarList";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";

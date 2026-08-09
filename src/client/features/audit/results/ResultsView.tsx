@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertTriangle } from "lucide-react";
+import { Warning } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { extractPathname, StatCard } from "@/client/features/audit/shared";
 import {
@@ -181,7 +181,7 @@ function AuditIssuesList({ issues }: { issues: AuditIssueSummary[] }) {
     <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <InsightIcon icon={AlertTriangle} />
+          <InsightIcon icon={Warning} />
           Issues found
         </h3>
         <ul className="space-y-2">

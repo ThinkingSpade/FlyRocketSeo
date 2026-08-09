@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, TrendingUp } from "lucide-react";
+import { ArrowRight, TrendUp } from "@phosphor-icons/react";
 import { formatNumber } from "@/client/features/keywords/utils";
 import {
   isActionable,
@@ -128,7 +128,7 @@ function Shell({ children }: { children: React.ReactNode }) {
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div>
           <h2 className="flex items-center gap-2 text-sm font-semibold">
-            <TrendingUp className="size-4 text-base-content/50" />
+            <TrendUp className="size-4 text-base-content/50" />
             What to work on next
           </h2>
           <p className="text-sm text-base-content/60">

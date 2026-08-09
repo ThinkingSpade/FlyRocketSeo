@@ -1,4 +1,4 @@
-import { Settings, User } from "lucide-react";
+import { Gear, User } from "@phosphor-icons/react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
 import { signOutAndRedirect } from "@/lib/auth-client";
 import { Button } from "@cloudflare/kumo/components/button";
@@ -39,7 +39,7 @@ export function OnboardingAccountMenu({
               </span>
             </DropdownMenu.Label>
           </DropdownMenu.Group>
-          <DropdownMenu.LinkItem icon={Settings} href="/settings">
+          <DropdownMenu.LinkItem icon={Gear} href="/settings">
             Settings
           </DropdownMenu.LinkItem>
           <ThemePreferenceMenuItems />

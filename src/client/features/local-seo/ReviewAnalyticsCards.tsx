@@ -1,10 +1,10 @@
 import {
-  CalendarClock,
-  MessageSquareReply,
-  MessageSquareWarning,
+  CalendarCheck,
+  ChatCenteredDots,
+  ChatCenteredSlash,
   Star,
-  TrendingUp,
-} from "lucide-react";
+  TrendUp,
+} from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import {
   computeReviewAnalytics,
@@ -48,7 +48,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
           tone="warning"
         />
         <InsightTile
-          icon={MessageSquareReply}
+          icon={ChatCenteredDots}
           label="Response rate"
           value={
             analytics.responseRate != null
@@ -59,7 +59,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
           tone="info"
         />
         <InsightTile
-          icon={MessageSquareWarning}
+          icon={ChatCenteredSlash}
           label="Unanswered ≤3★"
           value={analytics.unansweredNegativeCount}
           // Softened (final wave item 5): replying to a review is not
@@ -69,7 +69,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
           tone={analytics.unansweredNegativeCount > 0 ? "warning" : "success"}
         />
         <InsightTile
-          icon={CalendarClock}
+          icon={CalendarCheck}
           label="Last 90 days"
           value={analytics.last90DaysCount}
           hint="Recent review velocity"
@@ -111,7 +111,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
         <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
           <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-              <InsightIcon icon={TrendingUp} tone="primary" />
+              <InsightIcon icon={TrendUp} tone="primary" />
               Review velocity
             </h3>
             <div className="flex h-24 items-end gap-1">
@@ -148,7 +148,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
         <div className="relative flex flex-col rounded-xl border border-warning/40 bg-base-100">
           <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-              <InsightIcon icon={MessageSquareWarning} tone="warning" />
+              <InsightIcon icon={ChatCenteredSlash} tone="warning" />
               Needs a response
             </h3>
             <ul className="space-y-2">

@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { CalendarRange } from "lucide-react";
+import { CalendarBlank } from "@phosphor-icons/react";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
@@ -194,7 +194,7 @@ export function BacklinksTimelineSection({
   return (
     <section className="rounded-2xl border border-base-300 bg-base-100 p-5">
       <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-        <InsightIcon icon={CalendarRange} tone="primary" />
+        <InsightIcon icon={CalendarBlank} tone="primary" />
         Referring domains — won vs lost
       </h2>
       <p className="mt-0.5 text-xs text-base-content/50">

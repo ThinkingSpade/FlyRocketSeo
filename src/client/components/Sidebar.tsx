@@ -2,17 +2,17 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import type { LinkOptions } from "@tanstack/react-router";
 import { useEffect, useState, type ComponentType } from "react";
 import {
-  CircleHelp,
+  Question,
   CreditCard,
-  LayoutGrid,
-  LogOut,
-  MessageCircle,
-  Search,
-  Settings,
+  SquaresFour,
+  SignOut,
+  ChatCircle,
+  MagnifyingGlass,
+  Gear,
   Users,
   User,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { openCommandPalette } from "@/client/components/CommandPalette";
 import {
   connectNavGroup,
@@ -173,7 +173,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                 value: "browse",
                 label: (
                   <span className="flex items-center gap-1.5">
-                    <LayoutGrid className="size-4" />
+                    <SquaresFour className="size-4" />
                     Browse
                   </span>
                 ),
@@ -182,7 +182,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                 value: "chat",
                 label: (
                   <span className="flex items-center gap-1.5">
-                    <MessageCircle className="size-4" />
+                    <ChatCircle className="size-4" />
                     Chat
                   </span>
                 ),
@@ -237,7 +237,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
         className={`${navItemClass} w-full`}
         aria-label="Open command menu"
       >
-        <Search className="h-4 w-4 shrink-0" />
+        <MagnifyingGlass className="h-4 w-4 shrink-0" />
         <span className="truncate">Search</span>
         <Kbd size="xs" className="ml-auto">
           ⌘K
@@ -254,7 +254,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
         />
       ) : null}
       <SidebarNavLink
-        icon={CircleHelp}
+        icon={Question}
         label="Help & Community"
         onNavigate={onNavigate}
         linkProps={{ to: "/support" }}
@@ -282,7 +282,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
               bottom of the sidebar, so the menu has to open upward. */}
           <DropdownMenu.Content side="top" align="start" sideOffset={4}>
             <DropdownMenu.LinkItem
-              icon={Settings}
+              icon={Gear}
               render={<Link to="/settings" onClick={onNavigate} />}
             >
               Settings
@@ -301,7 +301,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
                 <DropdownMenu.Separator />
                 <DropdownMenu.Item
                   variant="danger"
-                  icon={LogOut}
+                  icon={SignOut}
                   onClick={() => signOutAndRedirect()}
                 >
                   Sign out
@@ -312,7 +312,7 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
         </DropdownMenu>
       ) : (
         <SidebarNavLink
-          icon={Settings}
+          icon={Gear}
           label="Settings"
           onNavigate={onNavigate}
           linkProps={{ to: "/settings" }}

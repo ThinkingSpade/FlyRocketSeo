@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { Split, Trophy } from "lucide-react";
+import { ArrowsSplit, Trophy } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   scoreCannibalization,
@@ -57,7 +57,7 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Split className="size-6" />
+          <ArrowsSplit className="size-6" />
           Cannibalization
         </h1>
         {/* States what the data shows, then what it might mean — in that order.

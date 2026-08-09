@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, Loader2, Monitor, Moon, Sun } from "lucide-react";
+import {
+  Download,
+  CircleNotch,
+  Monitor,
+  Moon,
+  Sun,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
@@ -170,7 +176,7 @@ function SettingsPage() {
                 disabled={isExportingBackup}
               >
                 {isExportingBackup ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <CircleNotch className="size-4 animate-spin" />
                 ) : (
                   <Download className="size-4" />
                 )}

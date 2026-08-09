@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { MapPin } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 
 /**
@@ -14,7 +14,7 @@ import { InsightIcon } from "@/client/components/InsightTile";
  * `false`. Fixed to describe the full requirement honestly instead of
  * asserting which specific pieces are done or not done.
  *
- * Kept in its own file, with no imports beyond lucide-react/InsightTile
+ * Kept in its own file, with no imports beyond the icon set/InsightTile
  * (deliberately no hooks, no server-function client), so this leaf,
  * data-free component can be rendered in a test without dragging in
  * GbpConnectionCard's react-query/server-function import graph (which

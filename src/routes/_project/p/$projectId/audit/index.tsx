@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { WarningCircle, CircleNotch } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getAuditResults,
@@ -112,7 +112,7 @@ function AuditDetail({
       <div className="px-4 py-6 md:px-6">
         <div className="mx-auto max-w-3xl space-y-4">
           <Banner variant="error">
-            <AlertCircle className="size-5" />
+            <WarningCircle className="size-5" />
             <span>We could not load this audit. It may have been deleted.</span>
           </Banner>
           <Button variant="ghost" size="sm" onClick={onBack}>
@@ -160,7 +160,7 @@ function AuditDetail({
           <div
             className={isFailed ? "alert alert-error" : "alert alert-warning"}
           >
-            <AlertCircle className="size-5" />
+            <WarningCircle className="size-5" />
             <div className="space-y-1">
               <p className="font-medium">
                 Site audit couldn't fully crawl this website.
@@ -255,7 +255,7 @@ function ProgressCard({
         <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-medium flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin text-primary" />
+              <CircleNotch className="size-4 animate-spin text-primary" />
               {isLighthousePhase
                 ? "Running Lighthouse checks"
                 : "Crawling pages"}

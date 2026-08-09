@@ -1,4 +1,4 @@
-import { Download, Loader2, Sheet } from "lucide-react";
+import { Download, CircleNotch, GridFour } from "@phosphor-icons/react";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import {
   GSC_DEVICES,
@@ -75,7 +75,7 @@ export function SearchPerformanceFilters({
   return (
     <div className="flex flex-wrap items-center gap-2">
       {refreshing ? (
-        <Loader2 className="size-4 animate-spin text-base-content/40" />
+        <CircleNotch className="size-4 animate-spin text-base-content/40" />
       ) : null}
       <select
         className="app-select app-select-sm w-36"
@@ -128,7 +128,7 @@ export function SearchPerformanceFilters({
         actions={[
           {
             label: "Export to Sheets",
-            icon: <Sheet className="size-4" />,
+            icon: <GridFour className="size-4" />,
             onClick: () => onExport("sheets"),
           },
           {

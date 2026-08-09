@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@phosphor-icons/react";
 import { ClaudeIcon, CodexIcon } from "@/client/features/ai-mcp/AgentIcons";
 import { AvailableTools } from "@/client/features/ai-mcp/AvailableTools";
 import {

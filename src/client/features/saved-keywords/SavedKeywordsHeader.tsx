@@ -1,11 +1,11 @@
 import {
-  ChevronDown,
+  CaretDown,
   Download,
-  FileDown,
-  Loader2,
-  RefreshCw,
-  Sheet,
-} from "lucide-react";
+  FileArrowDown,
+  CircleNotch,
+  ArrowsClockwise,
+  GridFour,
+} from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
@@ -48,16 +48,19 @@ export function SavedKeywordsHeader({
                 variant="ghost"
                 size="sm"
               >
-                <RefreshCw
+                <ArrowsClockwise
                   className={`size-4 ${metricsRefreshing ? "animate-spin" : ""}`}
                 />
                 {metricsRefreshing ? "Updating..." : "Actions"}
-                <ChevronDown className="size-3 opacity-60" />
+                <CaretDown className="size-3 opacity-60" />
               </Button>
             }
           />
           <DropdownMenu.Content align="end" className="w-64">
-            <DropdownMenu.Item icon={RefreshCw} onClick={onRefreshMetrics}>
+            <DropdownMenu.Item
+              icon={ArrowsClockwise}
+              onClick={onRefreshMetrics}
+            >
               <span className="flex flex-col items-start">
                 <span>Update keyword stats</span>
                 <span className="text-xs text-base-content/50">
@@ -78,20 +81,20 @@ export function SavedKeywordsHeader({
                 size="sm"
               >
                 {exporting != null ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <CircleNotch className="size-4 animate-spin" />
                 ) : (
                   <Download className="size-4" />
                 )}
                 Export
-                <ChevronDown className="size-3 opacity-60" />
+                <CaretDown className="size-3 opacity-60" />
               </Button>
             }
           />
           <DropdownMenu.Content align="end" className="w-56">
-            <DropdownMenu.Item icon={Sheet} onClick={onExportSheets}>
+            <DropdownMenu.Item icon={GridFour} onClick={onExportSheets}>
               Export to Sheets
             </DropdownMenu.Item>
-            <DropdownMenu.Item icon={FileDown} onClick={onExportCsv}>
+            <DropdownMenu.Item icon={FileArrowDown} onClick={onExportCsv}>
               Export CSV
             </DropdownMenu.Item>
           </DropdownMenu.Content>

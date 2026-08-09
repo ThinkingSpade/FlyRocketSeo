@@ -2,14 +2,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
-  Grid3x3,
+  GridNine,
   Hash,
-  LocateFixed,
+  CrosshairSimple,
   MapPin,
   Megaphone,
-  Search,
+  MagnifyingGlass,
   Trophy,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
   geocodeLocation,
@@ -303,7 +303,7 @@ export function LocalRankGridPage({
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Grid3x3 className="size-6" />
+          <GridNine className="size-6" />
           Local Rank Grid
         </h1>
         <p className="text-sm text-base-content/60">
@@ -383,7 +383,7 @@ export function LocalRankGridPage({
               {isLocating ? (
                 <Loader size="sm" />
               ) : (
-                <Search className="size-3.5" />
+                <MagnifyingGlass className="size-3.5" />
               )}
               Scan grid
             </Button>
@@ -451,7 +451,7 @@ export function LocalRankGridPage({
 
         {pendingCenter ? (
           <div className="pointer-events-none absolute left-3 top-3 z-[1000] flex items-center gap-1.5 rounded-full border border-primary/40 bg-base-100/95 px-3 py-1.5 text-xs shadow">
-            <LocateFixed className="size-3.5 text-primary" />
+            <CrosshairSimple className="size-3.5 text-primary" />
             {pendingLabel ??
               `${pendingCenter.lat.toFixed(3)}, ${pendingCenter.lng.toFixed(3)}`}{" "}
             — scan to check here

@@ -1,11 +1,11 @@
 import { useState, type ReactNode } from "react";
 import {
-  ChevronRight,
-  ExternalLink,
-  FileWarning,
+  CaretRight,
+  ArrowSquareOut,
+  FileX,
   Info,
-  TriangleAlert,
-} from "lucide-react";
+  Warning,
+} from "@phosphor-icons/react";
 import type { LighthouseIssue } from "./types";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
@@ -23,7 +23,7 @@ export function LighthouseIssueRow({ issue }: { issue: LighthouseIssue }) {
       >
         <Table.Cell className="py-3 pl-4 pr-2">
           {hasDetails ? (
-            <ChevronRight
+            <CaretRight
               className={`size-3.5 text-base-content/40 transition-transform ${open ? "rotate-90" : ""}`}
             />
           ) : null}
@@ -133,7 +133,7 @@ function renderInlineMarkdown(markdown: string): ReactNode {
         className="app-link inline-flex items-center gap-1"
       >
         {label}
-        <ExternalLink className="size-3" />
+        <ArrowSquareOut className="size-3" />
       </a>,
     );
 
@@ -157,7 +157,7 @@ function severityVariant(
 }
 
 function severityIcon(severity: "critical" | "warning" | "info") {
-  if (severity === "critical") return <FileWarning className="size-3" />;
-  if (severity === "warning") return <TriangleAlert className="size-3" />;
+  if (severity === "critical") return <FileX className="size-3" />;
+  if (severity === "warning") return <Warning className="size-3" />;
   return <Info className="size-3" />;
 }

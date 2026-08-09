@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
-import { ArrowRight, Lock } from "lucide-react";
+import { ArrowRight, Lock } from "@phosphor-icons/react";
 import { Section, SectionHeading } from "./parts";
 
 /**

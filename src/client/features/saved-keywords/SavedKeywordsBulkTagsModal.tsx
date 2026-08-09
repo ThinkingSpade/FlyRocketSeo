@@ -1,4 +1,10 @@
-import { Check, Loader2, Plus, Search, X } from "lucide-react";
+import {
+  Check,
+  CircleNotch,
+  Plus,
+  MagnifyingGlass,
+  X,
+} from "@phosphor-icons/react";
 import { useMemo, useRef, useState } from "react";
 import { Modal } from "@/client/components/Modal";
 import { resolveTagColor, tagDotClass } from "@/shared/tag-colors";
@@ -156,7 +162,7 @@ export function SavedKeywordsBulkTagsModal({
             ) : null}
 
             <label className="flex items-center gap-2 rounded-md border border-base-300 bg-base-100 px-2 py-2">
-              <Search className="size-3.5 opacity-50" />
+              <MagnifyingGlass className="size-3.5 opacity-50" />
               <input
                 ref={inputRef}
                 value={query}
@@ -278,7 +284,9 @@ export function SavedKeywordsBulkTagsModal({
               })
             }
           >
-            {isPending ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            {isPending ? (
+              <CircleNotch className="size-3.5 animate-spin" />
+            ) : null}
             Apply
           </button>
         </div>

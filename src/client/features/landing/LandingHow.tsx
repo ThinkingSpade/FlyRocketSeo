@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
 import {
-  History,
-  KeyRound,
-  MousePointerClick,
+  ClockCounterClockwise,
+  Key,
+  CursorClick,
   Plug,
-  RotateCcw,
-  Search,
-  Sparkles,
+  ArrowCounterClockwise,
+  MagnifyingGlass,
+  Sparkle,
   Terminal,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { CardGrid, FeatureCard, Section, SectionHeading } from "./parts";
 
 /**
@@ -46,7 +46,7 @@ export function LandingSpending() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-5 rounded-2xl border border-primary/30 bg-primary/10 p-6 md:flex-row md:items-start md:gap-8 md:p-10">
           <span className="inline-flex w-fit shrink-0 items-center gap-2 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-primary-content">
-            <MousePointerClick className="size-3.5" aria-hidden="true" />
+            <CursorClick className="size-3.5" aria-hidden="true" />
             Opt in, every time
           </span>
           <div className="flex flex-col gap-3">
@@ -62,21 +62,23 @@ export function LandingSpending() {
 
         <CardGrid columns={3}>
           <FeatureCard
-            icon={<KeyRound className="size-4" aria-hidden="true" />}
+            icon={<Key className="size-4" aria-hidden="true" />}
             title="Billed by DataForSEO, not by us"
           >
             Paid lookups go straight to DataForSEO on the team&rsquo;s own key,
             at DataForSEO&rsquo;s rates.
           </FeatureCard>
           <FeatureCard
-            icon={<History className="size-4" aria-hidden="true" />}
+            icon={
+              <ClockCounterClockwise className="size-4" aria-hidden="true" />
+            }
             title="Reopening never re-spends"
           >
             Re-opening a past analysis restores the stored result from R2 and
             never re-spends.
           </FeatureCard>
           <FeatureCard
-            icon={<Search className="size-4" aria-hidden="true" />}
+            icon={<MagnifyingGlass className="size-4" aria-hidden="true" />}
             title="Search Console costs nothing"
           >
             Google Search Console data is free.
@@ -139,7 +141,7 @@ export function LandingProjects() {
 
         <div className="flex items-start gap-4 rounded-2xl border border-base-300 bg-base-200 p-5 md:p-6">
           <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <RotateCcw className="size-4" aria-hidden="true" />
+            <ArrowCounterClockwise className="size-4" aria-hidden="true" />
           </span>
           <div className="flex flex-col gap-1.5">
             <h3 className="text-sm font-semibold">A second look is free</h3>
@@ -219,7 +221,7 @@ export function LandingAgents() {
             The first connection sends you through login and authorization.
           </CodeCard>
           <CodeCard
-            icon={<Sparkles className="size-3.5" aria-hidden="true" />}
+            icon={<Sparkle className="size-3.5" aria-hidden="true" />}
             label="Agent skills"
             value="npx skills add ThinkingSpade/FlyRocketSeo"
           >

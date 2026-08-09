@@ -1,11 +1,11 @@
 import { useState } from "react";
 import {
-  ChevronDown,
+  CaretDown,
   Download,
   Gauge,
-  MoreHorizontal,
-  Sheet,
-} from "lucide-react";
+  DotsThree,
+  GridFour,
+} from "@phosphor-icons/react";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
@@ -54,7 +54,7 @@ export function BacklinksExportMenu({
           >
             <Download className="size-4" />
             Export
-            <ChevronDown className="size-3 opacity-60" />
+            <CaretDown className="size-3 opacity-60" />
           </Button>
         }
       />
@@ -67,7 +67,7 @@ export function BacklinksExportMenu({
               {isExportingSheets ? (
                 <Loader size="sm" />
               ) : (
-                <Sheet className="size-4" />
+                <GridFour className="size-4" />
               )}
             </span>
           }
@@ -114,7 +114,7 @@ export function BacklinksActionsMenu({
             aria-label="Backlinks table actions"
             title="Backlinks table actions"
           >
-            <MoreHorizontal className="size-4" />
+            <DotsThree className="size-4" />
           </Button>
         }
       />

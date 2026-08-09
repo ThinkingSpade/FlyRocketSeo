@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { CaretDown, CaretUp } from "@phosphor-icons/react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { MARKDOWN_COMPONENTS } from "@/client/components/Markdown";
@@ -92,12 +92,12 @@ export function MarkdownAnswer({ text }: Props) {
         >
           {expanded ? (
             <>
-              <ChevronUp className="size-3.5" />
+              <CaretUp className="size-3.5" />
               Show less
             </>
           ) : (
             <>
-              <ChevronDown className="size-3.5" />
+              <CaretDown className="size-3.5" />
               Read more
             </>
           )}
@@ -114,7 +114,7 @@ function ThinkingBlock({ text }: { text: string }) {
       className="group mb-3 rounded-lg border border-base-300 bg-base-200/40"
     >
       <summary className="flex cursor-pointer list-none items-center gap-2 px-3 py-2 text-xs font-medium text-base-content/70 hover:text-base-content">
-        <ChevronDown className="size-3.5 transition-transform group-open:rotate-180" />
+        <CaretDown className="size-3.5 transition-transform group-open:rotate-180" />
         Model Thinking
       </summary>
       <pre className="overflow-x-auto whitespace-pre-wrap break-words rounded-b-lg border-t border-base-300 bg-base-200/60 px-3 py-2.5 text-xs font-mono text-base-content/80">

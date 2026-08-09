@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info } from "@phosphor-icons/react";
 import { BrandLookupMentionTrendCard } from "@/client/features/ai-search/components/BrandLookupMentionTrendCard";
 import { BrandLookupShareOfVoice } from "@/client/features/ai-search/components/BrandLookupShareOfVoice";
 import { CitationTabsCard } from "@/client/features/ai-search/components/BrandLookupCitationsCard";

@@ -1,4 +1,4 @@
-import { MapPin } from "lucide-react";
+import { MapPin } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";

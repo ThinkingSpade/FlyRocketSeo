@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Loader2, RefreshCw, Wand2 } from "lucide-react";
+import { CircleNotch, ArrowsClockwise, MagicWand } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -121,7 +121,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
   if (fixesQuery.isPending) {
     return (
       <div className="flex items-center gap-2 p-8 text-sm text-base-content/60">
-        <Loader2 className="size-4 animate-spin" /> Loading on-page fixes…
+        <CircleNotch className="size-4 animate-spin" /> Loading on-page fixes…
       </div>
     );
   }
@@ -163,9 +163,9 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                 title="Rewrite pending titles and descriptions with AI"
               >
                 {rewriteMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <CircleNotch className="size-4 animate-spin" />
                 ) : (
-                  <Wand2 className="size-4" />
+                  <MagicWand className="size-4" />
                 )}
                 AI rewrite ({rewritableCount})
               </Button>
@@ -179,9 +179,9 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                 onClick={() => generateMutation.mutate()}
               >
                 {generateMutation.isPending ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <CircleNotch className="size-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="size-4" />
+                  <ArrowsClockwise className="size-4" />
                 )}
                 Re-scan
               </Button>
@@ -192,8 +192,8 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
         {rows.length === 0 &&
         (auditHistoryQuery.isPending || gscConnectionQuery.isPending) ? (
           <div className="flex items-center justify-center gap-2 p-8 text-sm text-base-content/60">
-            <Loader2 className="size-4 animate-spin" /> Checking available audit
-            data…
+            <CircleNotch className="size-4 animate-spin" /> Checking available
+            audit data…
           </div>
         ) : rows.length === 0 &&
           (auditHistoryQuery.isError || gscConnectionQuery.isError) ? (
@@ -251,9 +251,9 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
               onClick={() => generateMutation.mutate()}
             >
               {generateMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <CircleNotch className="size-4 animate-spin" />
               ) : (
-                <RefreshCw className="size-4" />
+                <ArrowsClockwise className="size-4" />
               )}
               Generate fixes
             </Button>

@@ -1,6 +1,6 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import { DEFAULT_LOCATION_CODE } from "@/shared/keyword-locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { useSession } from "@/lib/auth-client";
@@ -43,7 +43,7 @@ export function OnboardingChat() {
     return (
       <StrategyShell>
         <div className="flex flex-1 items-center justify-center gap-2 p-6 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
           Loading…
         </div>
       </StrategyShell>

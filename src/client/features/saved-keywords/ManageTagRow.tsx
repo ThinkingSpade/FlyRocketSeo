@@ -1,4 +1,4 @@
-import { Pencil, Trash2 } from "lucide-react";
+import { Pencil, Trash } from "@phosphor-icons/react";
 import { useState } from "react";
 import {
   resolveTagColor,
@@ -72,7 +72,7 @@ export function ManageTagRow({
           onClick={onDelete}
           disabled={isBusy}
         >
-          <Trash2 className="size-3" />
+          <Trash className="size-3" />
           Delete
         </button>
         <div className="flex items-center gap-1.5">
