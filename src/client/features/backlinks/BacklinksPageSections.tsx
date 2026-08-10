@@ -4,9 +4,12 @@ import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
 import { BacklinksCategoryChips } from "./BacklinksCategoryChips";
 import {
+  activeCategoryFilters,
   hasActiveCategoryFilter,
   type CategoryFilterField,
 } from "./backlinksCategoryFilters";
+import { resolveBacklinksEmptyState } from "./backlinksEmptyState";
+import { BacklinksEmptyResults } from "./BacklinksPageEmptyTableState";
 import { BacklinksTable } from "./BacklinksTable";
 import { ReferringDomainsTable } from "./ReferringDomainsTable";
 import { TopPagesTable } from "./TopPagesTable";
@@ -62,6 +65,7 @@ export function BacklinksResultsCard({
   onTabChange,
   onViewChange,
   onClearCategory,
+  tabInsights,
 }: {
   projectId: string;
   activeTab: BacklinksSearchState["tab"];
@@ -86,6 +90,8 @@ export function BacklinksResultsCard({
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
   onClearCategory: (field: CategoryFilterField) => void;
+  /** Cards derived from the active tab's rows, rendered above its table. */
+  tabInsights?: React.ReactNode;
 }) {
   const {
     ratings: domainRatings,
@@ -96,6 +102,26 @@ export function BacklinksResultsCard({
   const categoryFiltersActive = hasActiveCategoryFilter(
     filters.backlinks.values,
   );
+  const activeTabRows =
+    activeTab === "backlinks"
+      ? tabRows.backlinks
+      : activeTab === "domains"
+        ? tabRows.referringDomains
+        : activeTab === "pages"
+          ? tabRows.topPages
+          : tabRows.anchors;
+  // activeFilterCount counts the drill-downs too, so subtract them to learn
+  // whether the user set anything in the panel itself.
+  const manualFilterCount =
+    activeTab === "backlinks"
+      ? activeFilterCount -
+        activeCategoryFilters(filters.backlinks.values).length
+      : activeFilterCount;
+  const emptyState = resolveBacklinksEmptyState({
+    hasCategoryFilter: activeTab === "backlinks" && categoryFiltersActive,
+    hasManualFilter: manualFilterCount > 0,
+    page: pagination.page,
+  });
   const exportTable = useMemo(
     () =>
       buildBacklinksTabExport({ tab: activeTab, rows: tabRows, domainRatings }),
@@ -211,6 +237,8 @@ export function BacklinksResultsCard({
         onClear={onClearCategory}
       />
 
+      {tabInsights}
+
       <div className="p-4">
         {tabErrorMessage ? (
           <Banner variant="error" className="mb-3">
@@ -220,7 +248,17 @@ export function BacklinksResultsCard({
         {isTabLoading && !tabErrorMessage ? (
           <TabLoadingState label={TAB_LOADING_LABELS[activeTab]} />
         ) : null}
-        {!isTabLoading && !tabErrorMessage ? (
+        {!isTabLoading && !tabErrorMessage && activeTabRows.length === 0 ? (
+          <BacklinksEmptyResults
+            state={emptyState}
+            onClearFilters={() => {
+              filters[activeTab].reset();
+              onPageChange(1);
+            }}
+            onPreviousPage={() => onPageChange(pagination.page - 1)}
+          />
+        ) : null}
+        {!isTabLoading && !tabErrorMessage && activeTabRows.length > 0 ? (
           <>
             {activeTab === "backlinks" ? (
               <BacklinksTable

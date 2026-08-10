@@ -2,20 +2,13 @@ import { useMemo } from "react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { ChevronDown } from "lucide-react";
 import { BacklinksOverviewPanels } from "./BacklinksOverviewPanels";
-import {
-  BrokenLinkReclaimCard,
-  LinkVelocityCard,
-} from "./BacklinksProfileSections";
+import { LinkVelocityCard } from "./BacklinksProfileSections";
 import { BacklinksProfileBreakdowns } from "./BacklinksBreakdownCards";
-import {
-  AnchorHealthCard,
-  DomainQualityCard,
-  FollowSplitCard,
-  ToxicLinksCard,
-} from "./BacklinksProfileInsights";
+import { FollowSplitCard } from "./BacklinksProfileInsights";
 import { BacklinksCompareSection } from "./BacklinksCompareSection";
 import { BacklinksResultsCard } from "./BacklinksPageSections";
 import { BacklinksRestoredResultsCard } from "./BacklinksRestoredResultsCard";
+import { BacklinksTabInsights } from "./BacklinksTabInsights";
 import {
   BacklinksErrorState,
   BacklinksLoadingState,
@@ -241,6 +234,15 @@ export function BacklinksBody({
             onTabChange={onTabChange}
             onViewChange={onViewChange}
             onClearCategory={onClearCategory}
+            tabInsights={
+              <BacklinksTabInsights
+                activeTab={searchState.tab}
+                target={overviewData.displayTarget || searchState.target}
+                referringDomains={referringDomainsPage}
+                anchors={anchorsPage}
+                topPages={topPagesPage}
+              />
+            }
           />
         )}
       </section>
@@ -275,26 +277,14 @@ export function BacklinksBody({
           }
         />
 
-        {/* Derived views over data already fetched: the follow split reads the
-            overview summary, the other two read whichever results sub-tab the
-            user has opened. None of them fetch, so they are safe on a restored
-            run — they simply render nothing until their rows exist. */}
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <FollowSplitCard summary={overviewData.summary} />
-          <DomainQualityCard referringDomains={referringDomainsPage} />
-          <AnchorHealthCard
-            anchors={anchorsPage}
-            target={overviewData.displayTarget || searchState.target}
-          />
-        </div>
+        {/* Reads the overview summary, so it belongs with composition. The
+            cards that read a sub-tab's rows now sit above that tab's table
+            instead — see BacklinksTabInsights. */}
+        <FollowSplitCard summary={overviewData.summary} />
       </section>
 
       <section className="space-y-3">
         <h2 className="text-base font-semibold">Issues &amp; opportunities</h2>
-        <ToxicLinksCard
-          referringDomains={referringDomainsPage}
-          target={overviewData.displayTarget || searchState.target}
-        />
         {/* Pure read of data already on the page -- renders for a restored run
             too, unlike the metered cards below it. */}
         <NextStepsCard
@@ -308,9 +298,6 @@ export function BacklinksBody({
           projectId={projectId}
           tab="Backlinks"
         />
-        {restoredResults == null ? (
-          <BrokenLinkReclaimCard topPages={topPagesPage} />
-        ) : null}
       </section>
 
       <section className="space-y-3">
