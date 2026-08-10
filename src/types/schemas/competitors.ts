@@ -89,12 +89,29 @@ export const competitorsSearchSchema = z.object({
   page: optionalSearchPositiveIntParam,
 });
 
+/**
+ * One competitor row, exactly as it is cached.
+ *
+ * The discovery fields below are optional with defaults rather than required:
+ * this schema validates payloads restored from R2, so a run stored before
+ * keyword-seeded discovery existed must still parse. A legacy row reports
+ * `null` metrics and `source: "domain"` — which is true of it — instead of
+ * becoming `unreadable` and vanishing from the tab's history.
+ */
 const competitorRowSchema = z.object({
   domain: z.string(),
   avgPosition: z.number().nullable(),
   intersections: z.number().nullable(),
   organicKeywords: z.number().nullable(),
   organicTraffic: z.number().nullable(),
+  /** Share of the SEED keywords this domain ranks for, 0..1. */
+  coverage: z.number().nullable().default(null),
+  /** Seed keywords where this domain outranks the client. */
+  beatsYouCount: z.number().nullable().default(null),
+  /** median(their position) - median(client position); negative = ahead. */
+  positionDelta: z.number().nullable().default(null),
+  source: z.enum(["serp", "domain"]).default("domain"),
+  pinned: z.boolean().default(false),
 });
 
 export type CompetitorRow = z.infer<typeof competitorRowSchema>;
@@ -110,6 +127,11 @@ export const competitorsPageSchema = z.object({
   rows: z.array(competitorRowSchema),
   totalCount: z.number().nullable(),
   fetchedAt: z.string(),
+  /** How many seed keywords the answer was drawn from. 0 on the fallback path. */
+  seedSize: z.number().default(0),
+  /** Domains suppressed by this project's exclusions — never hide silently. */
+  hiddenCount: z.number().default(0),
+  discoveryMode: z.enum(["serp", "domain"]).default("domain"),
 });
 
 export type CompetitorsPage = z.infer<typeof competitorsPageSchema>;
