@@ -5,11 +5,13 @@ import { resolveDraftStatus, type DraftStatus } from "./draftStatus";
 import { applyPrefill } from "./profilePrefill";
 import { useProfilePrefill } from "./useProfilePrefill";
 import {
-  SERVICE_AREA_KINDS,
   SERVICE_AREA_LABELS,
-  isServiceAreaKind,
+  wantsGeoModifiers,
   type ProjectProfile,
 } from "@/shared/keyword-fit/profileTypes";
+import { ServiceAreaField } from "./ServiceAreaField";
+import { summariseServiceArea } from "./serviceAreaSummary";
+import { useTargetArea } from "@/client/features/geo/useTargetArea";
 import { parseExclusions } from "@/shared/keyword-fit/keywordFit";
 import {
   useDraftProjectProfile,
@@ -45,6 +47,9 @@ export function ProjectProfileCard({ projectId }: Props) {
   const aiAvailable = useAiExplainAvailable();
   const drafter = useDraftProjectProfile(projectId);
   const prefill = useProfilePrefill(projectId);
+  // Same cached query ServiceAreaField reads; the collapsed summary needs the
+  // place name too, and it renders when that field does not exist.
+  const areaLabel = summariseServiceArea(useTargetArea(projectId).data).label;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ProjectProfile>(profile);
 
@@ -72,6 +77,7 @@ export function ProjectProfileCard({ projectId }: Props) {
         // the editor is about to call local.
         profile={seed}
         isFilled={isFilled}
+        areaLabel={areaLabel}
         onOpen={() => {
           setDraft(seed);
           setOpen(true);
@@ -178,26 +184,11 @@ export function ProjectProfileCard({ projectId }: Props) {
           rows={2}
         />
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Where do they sell?</span>
-          <select
-            className="app-select w-full max-w-sm"
-            value={draft.serviceAreaKind}
-            onChange={(event) => {
-              const next = event.target.value;
-              if (isServiceAreaKind(next)) set("serviceAreaKind", next);
-            }}
-          >
-            {SERVICE_AREA_KINDS.map((kind) => (
-              <option key={kind} value={kind}>
-                {SERVICE_AREA_LABELS[kind].label}
-              </option>
-            ))}
-          </select>
-          <span className="text-sm text-base-content/60">
-            {SERVICE_AREA_LABELS[draft.serviceAreaKind].hint}
-          </span>
-        </label>
+        <ServiceAreaField
+          projectId={projectId}
+          value={draft.serviceAreaKind}
+          onChange={(kind) => set("serviceAreaKind", kind)}
+        />
 
         <div className="flex items-center gap-2">
           <Button
@@ -320,10 +311,13 @@ function ProfileField({
 function ProfileSummary({
   profile,
   isFilled,
+  areaLabel,
   onOpen,
 }: {
   profile: ProjectProfile;
   isFilled: boolean;
+  /** The detected or confirmed place, when there is one. */
+  areaLabel: string | null;
   onOpen: () => void;
 }) {
   if (!isFilled) {
@@ -347,7 +341,13 @@ function ProfileSummary({
     );
   }
 
-  const areaHint = SERVICE_AREA_LABELS[profile.serviceAreaKind].label;
+  // Names the place rather than the shape whenever the shape uses one, so the
+  // collapsed card says "Dallas-Ft. Worth TX" instead of the strictly-true but
+  // uninformative "One local area".
+  const areaHint =
+    wantsGeoModifiers(profile.serviceAreaKind) && areaLabel
+      ? areaLabel
+      : SERVICE_AREA_LABELS[profile.serviceAreaKind].label;
   const ruleCount = parseExclusions(profile.exclusions).length;
 
   return (
