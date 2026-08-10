@@ -81,6 +81,12 @@ vi.mock("@/server/lib/dataforseo/labs-competitors", () => ({
   fetchBulkTrafficEstimation: vi.fn(),
   fetchHistoricalRankOverview: vi.fn(),
   fetchSubdomains: vi.fn(),
+  // This module's real export is named fetchSerpCompetitors (mocked under
+  // its true name here); fetchers.ts re-exports it under the alias
+  // fetchSerpCompetitorsPage so it doesn't collide with the DIFFERENT
+  // fetchSerpCompetitors "./labs" also exports (mocked separately below) --
+  // see fetchers.ts's own comment for the full reason.
+  fetchSerpCompetitors: vi.fn(),
 }));
 vi.mock("@/server/lib/dataforseo/serp", () => ({
   fetchLiveSerp: vi.fn(),

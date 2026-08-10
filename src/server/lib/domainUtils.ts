@@ -52,3 +52,27 @@ export function normalizeDomainInput(
 
   return getDomain(host) ?? host;
 }
+
+/**
+ * Best-effort domain normalization for values that already arrive as bare
+ * hostnames from a provider response (e.g. DataForSEO's `domain` field on a
+ * competitor/discovery item) rather than as user-typed strings.
+ *
+ * Deliberately non-throwing and skips `normalizeDomainInput`'s URL parsing
+ * and `isValidDomainHost` check: one malformed item in a page of discovery
+ * results must not fail the whole request the way a bad user-typed domain
+ * should. What it keeps is the same lowercase + strip-leading-"www."
+ * transform `normalizeDomainInput(domain, true)` applies to its hostname, so
+ * a row discovered as "WWW.Example.com" and an override saved through
+ * `ProjectCompetitorRepository` (which normalizes via `normalizeDomainInput`)
+ * compare equal with plain string equality.
+ *
+ * Known gap: unlike `normalizeDomainInput`, this does not run the value
+ * through `URL`, so it will not punycode-encode IDN hosts or strip a
+ * trailing dot/port. DataForSEO's `domain` fields are plain ASCII hostnames
+ * in practice, so this has not been a problem; a future caller feeding it
+ * anything else should reconsider.
+ */
+export function normalizeDiscoveredDomain(domain: string): string {
+  return domain.trim().toLowerCase().replace(/^www\./, "");
+}

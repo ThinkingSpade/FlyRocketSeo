@@ -137,7 +137,11 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
     competitors: {
       domainCompetitors: lazyMeter(customer, (f) => f.fetchCompetitorsDomain),
       keywordGap: lazyMeter(customer, (f) => f.fetchDomainIntersection),
-      serpCompetitors: lazyMeter(customer, (f) => f.fetchSerpCompetitors),
+      // fetchSerpCompetitorsPage, NOT fetchSerpCompetitors -- see the alias
+      // comment in fetchers.ts. `labs.serpCompetitors` below is the other,
+      // older fetchSerpCompetitors (bare array, no totalCount); this one
+      // returns {items, totalCount} for the paginated competitors list.
+      serpCompetitors: lazyMeter(customer, (f) => f.fetchSerpCompetitorsPage),
       trafficEstimation: lazyMeter(
         customer,
         (f) => f.fetchBulkTrafficEstimation,

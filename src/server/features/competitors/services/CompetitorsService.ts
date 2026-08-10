@@ -4,7 +4,10 @@ import { AnalysisRunService } from "@/server/features/analysis-runs/services/ana
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
-import { normalizeDomainInput } from "@/server/lib/domainUtils";
+import {
+  normalizeDiscoveredDomain,
+  normalizeDomainInput,
+} from "@/server/lib/domainUtils";
 import { isRecord } from "@/server/lib/dataforseo/envelope";
 import type {
   CompetitorDomainItem,
@@ -17,6 +20,14 @@ import {
   type CompetitorsPage,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
+import { GscService } from "@/server/features/gsc/services/GscService";
+import { toDimensionRows } from "@/server/features/gsc/searchPerformanceReport";
+import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
+import { ProjectCompetitorRepository } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
+import { buildCompetitorSeed } from "@/server/features/competitors/competitorSeed";
+import { rankSerpCompetitors } from "@/server/features/competitors/rankSerpCompetitors";
+import { applyProjectCompetitors } from "@/server/features/competitors/applyProjectCompetitors";
+import { resolveDiscoveryMode } from "@/server/features/competitors/resolveDiscoveryMode";
 
 /** Competitor and keyword-gap data refresh cadence, matching domain overview. */
 const COMPETITORS_TTL_SECONDS = 12 * 60 * 60;
@@ -56,7 +67,13 @@ function readMetric(container: unknown, key: string): number | null {
 function mapCompetitorItem(item: CompetitorDomainItem): CompetitorRow | null {
   if (!item.domain) return null;
   return {
-    domain: item.domain,
+    // Normalized the same way ProjectCompetitorRepository normalizes a saved
+    // pin/exclude override, and the same way the serp-seeded path normalizes
+    // its own rows (rankSerpCompetitors) -- see normalizeDiscoveredDomain's
+    // doc comment. Without this, a discovered "WWW.Avfusa.com" would never
+    // match a pin saved as "avfusa.com" and applyProjectCompetitors would
+    // silently no-op.
+    domain: normalizeDiscoveredDomain(item.domain),
     avgPosition: item.avg_position ?? null,
     intersections: item.intersections ?? null,
     organicKeywords: readMetric(item.full_domain_metrics, "count"),
@@ -125,7 +142,106 @@ async function getCompetitors(
     return cached.data;
   }
 
+  // Moved above the seed-building block below: both the serp and the
+  // domain-overlap branch need it, and the serp branch returns early.
   const dataforseo = createDataforseoClient(billingCustomer);
+
+  // Free inputs first: a seed costs nothing, and its size decides whether the
+  // metered keyword-seeded call is worth making at all.
+  const [profile, overrides] = await Promise.all([
+    ProjectProfileRepository.getByProject(input.projectId),
+    ProjectCompetitorRepository.listByProject(input.projectId),
+  ]);
+
+  let seedKeywords: ReturnType<typeof buildCompetitorSeed>["keywords"] = [];
+  let hasGsc = false;
+  try {
+    const performance = await GscService.getPerformance({
+      projectId: input.projectId,
+      dimensions: ["query"],
+      dateRange: "last_28_days",
+      rowLimit: 500,
+      // Demand totals, not page-attribution rows: left unset this defaults to
+      // "auto" and Google picks, which for query-dimension rows can still
+      // double-count a query that surfaces through two of the property's URLs.
+      // See GscPerformanceInput's own doc comment (searchAnalytics.ts).
+      aggregationType: "byProperty",
+    });
+    hasGsc = true;
+    // GSC only returns rows with at least one impression, so `impressions <=
+    // 0` should not occur here in practice -- but this is the first seam
+    // where a real GSC row (rather than a hand-built fixture) reaches
+    // buildCompetitorSeed, and this codebase's own convention elsewhere
+    // (searchPerformanceReport.ts's `sumSearchTotals`) is that `position: 0`
+    // reads as "no impressions", not "ranks #1". buildCompetitorSeed buckets
+    // `selfPosition <= 1.5` as "already owned" and deprioritizes it; trusting
+    // a zero-impression row there would misfile "no rank signal at all" as
+    // "the client ranks #1", so it is dropped before seeding rather than left
+    // for buildCompetitorSeed to (mis)classify.
+    const dimensionRows = toDimensionRows(performance.rows).filter(
+      (row) => row.impressions > 0,
+    );
+    seedKeywords = buildCompetitorSeed(dimensionRows, {
+      brandTerms: profile?.brandTerms ?? "",
+    }).keywords;
+  } catch {
+    // No connection, revoked grant, or an API failure: all mean "no seed".
+    // The fallback below is a real answer, so this must not fail the request.
+    hasGsc = false;
+  }
+
+  const mode = resolveDiscoveryMode(seedKeywords.length, hasGsc);
+
+  if (mode === "serp") {
+    const response = await dataforseo.competitors.serpCompetitors({
+      keywords: seedKeywords.map((k) => k.keyword),
+      // KNOWN GAP: input.locationCode is the project's onboarding-time
+      // country selection (useProjectMarket -> projects.locationCode), NOT
+      // the confirmed project_target_areas row. Competitors is not one of
+      // the six tabs wired into useTargetAreaScope/resolveRunGeo (see
+      // useTargetAreaScope.ts's own enumeration), so a regional operator's
+      // confirmed metro never reaches this call today -- it is measured
+      // against national SERPs regardless of what the project has confirmed
+      // elsewhere in the app. Fixing it means adding Competitors as a
+      // seventh consumer of that system (a GeoNeed variant, a competitors
+      // geo-bundle schema, header UI, capture-at-authorize, and restore-path
+      // changes across several files, mirroring SerpOverviewPage.tsx) --
+      // deliberately not attempted here; this comment is the record of the
+      // gap until that follow-up happens.
+      locationCode: input.locationCode,
+      languageCode: input.languageCode,
+      limit: input.pageSize,
+      offset: (input.page - 1) * input.pageSize,
+      // Organic only. The endpoint's default item types include paid
+      // results, which would let a rival's AD placement count as outranking
+      // the client's organic GSC position.
+      itemTypes: ["organic"],
+    });
+
+    const ranked = rankSerpCompetitors(response.items, seedKeywords, target);
+    const applied = applyProjectCompetitors(ranked, overrides);
+
+    const result: CompetitorsPage = {
+      rows: applied.rows,
+      totalCount: response.totalCount,
+      fetchedAt: new Date().toISOString(),
+      seedSize: seedKeywords.length,
+      hiddenCount: applied.hiddenCount,
+      discoveryMode: "serp",
+    };
+
+    if (applied.rows.length > 0) {
+      void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch(
+        (error) => {
+          console.error("competitors.list.cache-write failed:", error);
+        },
+      );
+      await recordRun();
+    }
+
+    return result;
+  }
+
   const response = await dataforseo.competitors.domainCompetitors({
     target,
     locationCode: input.locationCode,
@@ -142,19 +258,21 @@ async function getCompetitors(
     .filter((row): row is CompetitorRow => row != null)
     // The target itself is always its own top "competitor"; drop it.
     .filter((row) => row.domain !== target);
+  const applied = applyProjectCompetitors(rows, overrides);
 
   const result: CompetitorsPage = {
-    rows,
+    rows: applied.rows,
     totalCount: response.totalCount,
     fetchedAt: new Date().toISOString(),
     // This endpoint is the domain-overlap fallback path: no seed keywords,
-    // no filtered exclusions, and domain-based ranking (not SERP-seeded).
+    // and domain-based ranking (not SERP-seeded) -- but pin/exclude still
+    // applies, same as the serp path.
     seedSize: 0,
-    hiddenCount: 0,
+    hiddenCount: applied.hiddenCount,
     discoveryMode: "domain",
   };
 
-  if (rows.length > 0) {
+  if (applied.rows.length > 0) {
     void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
       console.error("competitors.list.cache-write failed:", error);
     });

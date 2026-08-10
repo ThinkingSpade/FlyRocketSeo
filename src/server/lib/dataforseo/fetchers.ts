@@ -49,6 +49,13 @@ export {
   fetchKeywordsForSite,
   fetchSearchIntent,
   fetchSubdomains,
+  // Aliased: "./labs" (above) already exports a DIFFERENT, older
+  // fetchSerpCompetitors (bare SerpCompetitorItem[], no totalCount, used by
+  // client.ts's `labs.serpCompetitors`). A same-name re-export here would
+  // collide with it, so client.ts's `competitors.serpCompetitors` reaches
+  // this one -- the {items, totalCount} shape rankSerpCompetitors/getCompetitors
+  // depend on -- through this alias instead.
+  fetchSerpCompetitors as fetchSerpCompetitorsPage,
 } from "./labs-competitors";
 export { fetchAdsKeywordIdeas, fetchAdsSearchVolume } from "./google-ads";
 export {

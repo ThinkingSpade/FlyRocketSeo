@@ -1,4 +1,5 @@
 import type { CompetitorRow } from "@/types/schemas/competitors";
+import { normalizeDiscoveredDomain } from "@/server/lib/domainUtils";
 import type { SeedQuery } from "./competitorSeed";
 
 /**
@@ -50,10 +51,16 @@ export function rankSerpCompetitors(
   seed: SeedQuery[],
   selfDomain: string,
 ): CompetitorRow[] {
-  const self = selfDomain.toLowerCase();
+  // Normalized the same way `ProjectCompetitorRepository` normalizes a saved
+  // pin/exclude override (`normalizeDiscoveredDomain`'s own doc comment has
+  // the full rationale), so downstream `applyProjectCompetitors` can match a
+  // discovered row against an override with plain string equality, and so a
+  // client domain DataForSEO echoes back as "www.example.com" still matches
+  // `selfDomain` here and gets excluded as the client's own row.
+  const self = normalizeDiscoveredDomain(selfDomain);
 
   const rows = items.flatMap((item): CompetitorRow[] => {
-    const domain = item.domain?.toLowerCase();
+    const domain = item.domain ? normalizeDiscoveredDomain(item.domain) : null;
     if (!domain || domain === self) return [];
 
     const theirPositions: number[] = [];

@@ -179,6 +179,34 @@ describe("rankSerpCompetitors", () => {
     expect(row.positionDelta).toBeCloseTo(-6);
   });
 
+  it("normalizes a www-prefixed, mixed-case domain the same way saved overrides are normalized", () => {
+    const [row] = rankSerpCompetitors(
+      [{ domain: "WWW.AVFusa.com", keywords_positions: {} }],
+      seed,
+      "americavending.com",
+    );
+
+    // ProjectCompetitorRepository normalizes overrides via
+    // normalizeDomainInput(domain, true), which lowercases and strips a
+    // leading "www.". A pin saved as "avfusa.com" must match this row via
+    // plain string equality in applyProjectCompetitors, so the row's own
+    // domain must already be in that same form.
+    expect(row.domain).toBe("avfusa.com");
+  });
+
+  it("excludes the client's own domain even when DataForSEO echoes it back with a www. prefix", () => {
+    const rows = rankSerpCompetitors(
+      [
+        { domain: "WWW.AmericaVending.com", keywords_positions: {} },
+        { domain: "avfusa.com", keywords_positions: {} },
+      ],
+      seed,
+      "americavending.com",
+    );
+
+    expect(rows.map((r) => r.domain)).toEqual(["avfusa.com"]);
+  });
+
   it("passes through avg_position, organicKeywords, and organicTraffic", () => {
     const [row] = rankSerpCompetitors(
       [
