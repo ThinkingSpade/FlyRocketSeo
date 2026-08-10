@@ -21,6 +21,8 @@ import {
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
 import { GscService } from "@/server/features/gsc/services/GscService";
+import { GSC_ANALYTICS_ROW_CEILING } from "@/server/features/gsc/searchAnalytics";
+import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
 import { toDimensionRows } from "@/server/features/gsc/searchPerformanceReport";
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import { ProjectCompetitorRepository } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
@@ -174,6 +176,16 @@ async function getCompetitors(
 
   let seedKeywords: ReturnType<typeof buildCompetitorSeed>["keywords"] = [];
   let hasGsc = false;
+  // Whether the GSC pull the seed was drawn from came back AT the row
+  // ceiling. GSC orders rows by CLICKS descending and documents that it
+  // returns top rows rather than every matching row (fetchAllRows.ts's own
+  // doc comment has the full citation) -- so a full pull means queries where
+  // the client sits at, say, position 20-40 (real impressions, near-zero
+  // clicks) may have been sorted out of the window before buildCompetitorSeed
+  // ever saw them. Those are exactly the queries this feature exists to find
+  // rivals for, so a truncated pull makes the seed a biased sample, not a
+  // representative one -- see `seedTruncated` on the result below.
+  let seedTruncated = false;
   // The try/catch wraps ONLY the GSC I/O call. A connection problem, revoked
   // grant, or API failure all mean "no seed", and the domain-overlap
   // fallback below is a real answer -- but the pure transforms after this
@@ -185,14 +197,22 @@ async function getCompetitors(
   // Named to avoid shadowing the global `performance` (Web/Node Performance
   // API).
   let gscPerformance:
-    | Awaited<ReturnType<typeof GscService.getPerformance>>
+    | Awaited<ReturnType<typeof GscService.getAnalyticsPerformance>>
     | undefined;
   try {
-    gscPerformance = await GscService.getPerformance({
+    // getAnalyticsPerformance, not getPerformance: this is an analytics
+    // caller building a market-wide seed, not the MCP path getPerformance
+    // defaults to guarding (see its own doc comment, GscService.ts). Asking
+    // for the full GSC_ANALYTICS_ROW_CEILING (rather than a smaller number
+    // that still gets clamped to it) is what makes `pullWasTruncated` below
+    // able to ever observe "not truncated" -- requesting less than the
+    // ceiling would make a full page ambiguous between "this is everything"
+    // and "we stopped asking early".
+    gscPerformance = await GscService.getAnalyticsPerformance({
       projectId: input.projectId,
       dimensions: ["query"],
       dateRange: "last_28_days",
-      rowLimit: 500,
+      rowLimit: GSC_ANALYTICS_ROW_CEILING,
       // Demand totals, not page-attribution rows: left unset this defaults to
       // "auto" and Google picks, which for query-dimension rows can still
       // double-count a query that surfaces through two of the property's URLs.
@@ -207,6 +227,12 @@ async function getCompetitors(
   }
 
   if (gscPerformance) {
+    // Compare against the limit the request ACTUALLY applied (clamped), never
+    // the limit asked for -- see pullWasTruncated's own doc comment.
+    seedTruncated = pullWasTruncated({
+      rows: gscPerformance.rows,
+      request: gscPerformance.request,
+    });
     // GSC only returns rows with at least one impression, so `impressions <=
     // 0` should not occur here in practice -- but this is the first seam
     // where a real GSC row (rather than a hand-built fixture) reaches
@@ -263,6 +289,7 @@ async function getCompetitors(
       seedSize: seedKeywords.length,
       hiddenCount: applied.hiddenCount,
       discoveryMode: "serp",
+      seedTruncated,
     };
 
     if (applied.rows.length > 0) {
@@ -305,6 +332,9 @@ async function getCompetitors(
     seedSize: 0,
     hiddenCount: applied.hiddenCount,
     discoveryMode: "domain",
+    // No seed was consulted to produce this answer, so there is no seed bias
+    // to report here even if the GSC pull above happened to come back full.
+    seedTruncated: false,
   };
 
   if (applied.rows.length > 0) {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2 } from "lucide-react";
+import { AlertTriangle, Loader2 } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Modal } from "@/client/components/Modal";
 import type { DiscoveryMode } from "@/types/schemas/competitors";
@@ -28,31 +28,46 @@ export function CompetitorsDiscoveryNotice({
   discoveryMode,
   seedSize,
   hiddenCount,
+  seedTruncated,
 }: {
   projectId: string;
   discoveryMode: DiscoveryMode;
   seedSize: number;
   hiddenCount: number;
+  /** True when the GSC pull the seed was drawn from came back full, so
+   *  Google's clicks-descending ordering may have cut lower-ranked (lower
+   *  click, but real-impression) queries out of the seed before this run
+   *  ever saw them. See `seedTruncated` on `competitorsPageSchema`. */
+  seedTruncated: boolean;
 }) {
   const [managing, setManaging] = useState(false);
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 text-xs text-base-content/60">
-      <p>{discoveryModeCopy(discoveryMode, seedSize)}</p>
-      {hiddenCount > 0 ? (
-        <div className="flex items-center gap-2">
-          <span>
-            {hiddenCount} domain{hiddenCount === 1 ? "" : "s"} hidden
-          </span>
-          <Button
-            type="button"
-            variant="ghost"
-            size="xs"
-            onClick={() => setManaging(true)}
-          >
-            Manage
-          </Button>
-        </div>
+    <div className="flex flex-col gap-1 text-xs text-base-content/60">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+        <p>{discoveryModeCopy(discoveryMode, seedSize)}</p>
+        {hiddenCount > 0 ? (
+          <div className="flex items-center gap-2">
+            <span>
+              {hiddenCount} domain{hiddenCount === 1 ? "" : "s"} hidden
+            </span>
+            <Button
+              type="button"
+              variant="ghost"
+              size="xs"
+              onClick={() => setManaging(true)}
+            >
+              Manage
+            </Button>
+          </div>
+        ) : null}
+      </div>
+      {seedTruncated ? (
+        <p className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
+          <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
+          Search Console had more queries than we could pull in one run —
+          this list may be missing ones you rank lower for.
+        </p>
       ) : null}
       {managing ? (
         <HiddenDomainsModal

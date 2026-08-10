@@ -166,7 +166,7 @@ export function CompetitorsPage({
     restored,
     target,
   );
-  const { discoveryMode, seedSize, hiddenCount, hasResult } =
+  const { discoveryMode, seedSize, hiddenCount, seedTruncated, hasResult } =
     pickDiscoveryDisclosure(competitorsQuery.data, restoredRun);
   const restoreNotice = resolveRestoreNotice({
     target,
@@ -351,6 +351,7 @@ export function CompetitorsPage({
           discoveryMode={discoveryMode}
           seedSize={seedSize}
           hiddenCount={hiddenCount}
+          seedTruncated={seedTruncated}
         />
       ) : null}
 

@@ -132,6 +132,16 @@ export const competitorsPageSchema = z.object({
   /** Domains suppressed by this project's exclusions — never hide silently. */
   hiddenCount: z.number().default(0),
   discoveryMode: z.enum(["serp", "domain"]).default("domain"),
+  /**
+   * True when the GSC pull the seed was built from came back AT the row
+   * ceiling, meaning Google's clicks-descending ordering may have cut off
+   * queries the client ranks lower (and has fewer clicks) on -- exactly the
+   * queries this feature exists to find rivals for. Always `false` on the
+   * domain-overlap fallback path: that path never consults a seed, so there
+   * is no bias to report. Default `false` so a run recorded before this field
+   * existed reads as "not known to be biased" rather than failing to parse.
+   */
+  seedTruncated: z.boolean().default(false),
 });
 
 export type CompetitorsPage = z.infer<typeof competitorsPageSchema>;

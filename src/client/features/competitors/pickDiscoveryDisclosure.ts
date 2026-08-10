@@ -19,6 +19,9 @@ export function pickDiscoveryDisclosure(
   discoveryMode: CompetitorsPage["discoveryMode"];
   seedSize: number;
   hiddenCount: number;
+  /** Whether the GSC pull the seed was drawn from may have left biased-away
+   *  queries behind -- see `seedTruncated` on `competitorsPageSchema`. */
+  seedTruncated: boolean;
   /** Whether there is a real answer to disclose at all -- a restored run
    *  counts even though no live query ran for it, but only an ADOPTED one
    *  (see `pickAdoptedRestore`), which is exactly what a non-null
@@ -30,6 +33,7 @@ export function pickDiscoveryDisclosure(
     discoveryMode: page?.discoveryMode ?? "domain",
     seedSize: page?.seedSize ?? 0,
     hiddenCount: page?.hiddenCount ?? 0,
+    seedTruncated: page?.seedTruncated ?? false,
     hasResult: page != null,
   };
 }

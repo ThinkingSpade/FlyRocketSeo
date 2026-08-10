@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { GSC_ANALYTICS_ROW_CEILING } from "@/server/features/gsc/searchAnalytics";
 
 /**
  * Orchestration-level tests for `getCompetitors`.
@@ -27,7 +28,7 @@ const mocks = vi.hoisted(() => ({
   setCached: vi.fn(),
   record: vi.fn(),
   getConnection: vi.fn(),
-  getPerformance: vi.fn(),
+  getAnalyticsPerformance: vi.fn(),
   getByProject: vi.fn(),
   listByProject: vi.fn(),
   domainCompetitors: vi.fn(),
@@ -46,7 +47,7 @@ vi.mock("@/server/features/analysis-runs/services/analysisRuns", () => ({
 vi.mock("@/server/features/gsc/services/GscService", () => ({
   GscService: {
     getConnection: mocks.getConnection,
-    getPerformance: mocks.getPerformance,
+    getAnalyticsPerformance: mocks.getAnalyticsPerformance,
   },
 }));
 vi.mock(
@@ -102,6 +103,17 @@ function seedClearingGscRows() {
   return Array.from({ length: 6 }, (_, i) => gscRow(`keyword ${i}`, 100, 10));
 }
 
+/**
+ * A `GscService.getAnalyticsPerformance` resolution, shaped the way
+ * `pullWasTruncated` reads it: `rows` plus the `request` the pull ACTUALLY
+ * applied. Defaults `rowLimit` well above `rows.length` (never truncated) --
+ * pass a `rowLimit` equal to `rows.length` to simulate a pull that came back
+ * full.
+ */
+function gscPull(rows: ReturnType<typeof gscRow>[], rowLimit?: number) {
+  return { rows, request: { rowLimit: rowLimit ?? rows.length + 1 } };
+}
+
 function domainItem(domain: string) {
   return {
     domain,
@@ -142,7 +154,9 @@ describe("CompetitorsService.getCompetitors", () => {
     mocks.setCached.mockResolvedValue(undefined);
     mocks.record.mockResolvedValue(undefined);
     mocks.getConnection.mockResolvedValue(null);
-    mocks.getPerformance.mockRejectedValue(new Error("not connected"));
+    mocks.getAnalyticsPerformance.mockRejectedValue(
+      new Error("not connected"),
+    );
     mocks.getByProject.mockResolvedValue(null);
     mocks.listByProject.mockResolvedValue([]);
     mocks.domainCompetitors.mockResolvedValue({ items: [], totalCount: 0 });
@@ -151,7 +165,9 @@ describe("CompetitorsService.getCompetitors", () => {
 
   it("falls back to domain mode and still returns a valid page when the GSC pull throws", async () => {
     mocks.getConnection.mockResolvedValue({ id: "conn_1" });
-    mocks.getPerformance.mockRejectedValue(new Error("revoked grant"));
+    mocks.getAnalyticsPerformance.mockRejectedValue(
+      new Error("revoked grant"),
+    );
     mocks.domainCompetitors.mockResolvedValue({
       items: [domainItem("rival.com")],
       totalCount: 1,
@@ -171,7 +187,9 @@ describe("CompetitorsService.getCompetitors", () => {
 
   it("calls serpCompetitors, not domainCompetitors, once the seed clears the floor", async () => {
     mocks.getConnection.mockResolvedValue({ id: "conn_1" });
-    mocks.getPerformance.mockResolvedValue({ rows: seedClearingGscRows() });
+    mocks.getAnalyticsPerformance.mockResolvedValue(
+      gscPull(seedClearingGscRows()),
+    );
     mocks.serpCompetitors.mockResolvedValue({
       items: [serpItem("rival.com", { "keyword 0": [3] })],
       totalCount: 1,
@@ -192,11 +210,91 @@ describe("CompetitorsService.getCompetitors", () => {
     expect(mocks.domainCompetitors).not.toHaveBeenCalled();
   });
 
+  it("requests the full analytics ceiling, not a smaller clicks-truncated window", async () => {
+    mocks.getConnection.mockResolvedValue({ id: "conn_1" });
+    mocks.getAnalyticsPerformance.mockResolvedValue(
+      gscPull(seedClearingGscRows()),
+    );
+    mocks.serpCompetitors.mockResolvedValue({ items: [], totalCount: 0 });
+    const { CompetitorsService } = await import("./CompetitorsService");
+
+    await CompetitorsService.getCompetitors(input, billingCustomer);
+
+    expect(mocks.getAnalyticsPerformance).toHaveBeenCalledWith(
+      expect.objectContaining({ rowLimit: GSC_ANALYTICS_ROW_CEILING }),
+    );
+  });
+
+  it("marks the seed truncated when the GSC pull comes back at the row ceiling it actually applied", async () => {
+    mocks.getConnection.mockResolvedValue({ id: "conn_1" });
+    const rows = seedClearingGscRows();
+    // rowLimit equal to rows.length simulates a pull that filled the page it
+    // asked for -- pullWasTruncated's signal that there may be more.
+    mocks.getAnalyticsPerformance.mockResolvedValue(
+      gscPull(rows, rows.length),
+    );
+    mocks.serpCompetitors.mockResolvedValue({
+      items: [serpItem("rival.com", { "keyword 0": [3] })],
+      totalCount: 1,
+    });
+    const { CompetitorsService } = await import("./CompetitorsService");
+
+    const result = await CompetitorsService.getCompetitors(
+      input,
+      billingCustomer,
+    );
+
+    expect(result.discoveryMode).toBe("serp");
+    expect(result.seedTruncated).toBe(true);
+  });
+
+  it("reports the seed as NOT truncated when the GSC pull came back short of its own row limit", async () => {
+    mocks.getConnection.mockResolvedValue({ id: "conn_1" });
+    mocks.getAnalyticsPerformance.mockResolvedValue(
+      gscPull(seedClearingGscRows()),
+    );
+    mocks.serpCompetitors.mockResolvedValue({
+      items: [serpItem("rival.com", { "keyword 0": [3] })],
+      totalCount: 1,
+    });
+    const { CompetitorsService } = await import("./CompetitorsService");
+
+    const result = await CompetitorsService.getCompetitors(
+      input,
+      billingCustomer,
+    );
+
+    expect(result.seedTruncated).toBe(false);
+  });
+
+  it("never reports seed truncation on the domain-overlap fallback, even when the underlying GSC pull was truncated", async () => {
+    mocks.getConnection.mockResolvedValue({ id: "conn_1" });
+    // Only 2 distinct queries -- below MIN_COMPETITOR_SEED (5) -- so this
+    // still falls back to domain mode even though the pull below reports
+    // truncated: true (rowLimit === rows.length). Domain mode never consults
+    // the seed, so it must not carry the truncation flag over.
+    const rows = [gscRow("keyword a", 100, 10), gscRow("keyword b", 50, 8)];
+    mocks.getAnalyticsPerformance.mockResolvedValue(gscPull(rows, 2));
+    mocks.domainCompetitors.mockResolvedValue({
+      items: [domainItem("rival.com")],
+      totalCount: 1,
+    });
+    const { CompetitorsService } = await import("./CompetitorsService");
+
+    const result = await CompetitorsService.getCompetitors(
+      input,
+      billingCustomer,
+    );
+
+    expect(result.discoveryMode).toBe("domain");
+    expect(result.seedTruncated).toBe(false);
+  });
+
   it("falls back to domain mode when the seed is below the floor, even though GSC is connected", async () => {
     mocks.getConnection.mockResolvedValue({ id: "conn_1" });
-    mocks.getPerformance.mockResolvedValue({
-      rows: [gscRow("keyword a", 100, 10), gscRow("keyword b", 50, 8)],
-    });
+    mocks.getAnalyticsPerformance.mockResolvedValue(
+      gscPull([gscRow("keyword a", 100, 10), gscRow("keyword b", 50, 8)]),
+    );
     mocks.domainCompetitors.mockResolvedValue({
       items: [domainItem("rival.com")],
       totalCount: 1,
@@ -215,7 +313,9 @@ describe("CompetitorsService.getCompetitors", () => {
 
   it("applies pin/exclude overrides on the serp path", async () => {
     mocks.getConnection.mockResolvedValue({ id: "conn_1" });
-    mocks.getPerformance.mockResolvedValue({ rows: seedClearingGscRows() });
+    mocks.getAnalyticsPerformance.mockResolvedValue(
+      gscPull(seedClearingGscRows()),
+    );
     mocks.listByProject.mockResolvedValue([
       override("excluded-rival.com", "excluded"),
       override("pinned-not-found.com", "pinned"),
@@ -245,9 +345,9 @@ describe("CompetitorsService.getCompetitors", () => {
   });
 
   it("applies pin/exclude overrides on the domain path", async () => {
-    // Default beforeEach state: getConnection -> null, getPerformance ->
-    // rejects. Exercises the fallback path exactly as a disconnected project
-    // would.
+    // Default beforeEach state: getConnection -> null, getAnalyticsPerformance
+    // -> rejects. Exercises the fallback path exactly as a disconnected
+    // project would.
     mocks.listByProject.mockResolvedValue([
       override("excluded-rival.com", "excluded"),
       override("pinned-not-found.com", "pinned"),

@@ -31,6 +31,7 @@ const page = (
   seedSize: 20,
   hiddenCount: 2,
   discoveryMode: "serp",
+  seedTruncated: false,
   ...overrides,
 });
 

@@ -9,15 +9,26 @@ const page = (overrides: Partial<CompetitorsPage> = {}): CompetitorsPage => ({
   seedSize: 0,
   hiddenCount: 0,
   discoveryMode: "domain",
+  seedTruncated: false,
   ...overrides,
 });
 
 describe("pickDiscoveryDisclosure", () => {
   it("prefers the live page over a restored one when both are present", () => {
     const result = pickDiscoveryDisclosure(
-      page({ discoveryMode: "serp", seedSize: 20, hiddenCount: 1 }),
+      page({
+        discoveryMode: "serp",
+        seedSize: 20,
+        hiddenCount: 1,
+        seedTruncated: true,
+      }),
       {
-        result: page({ discoveryMode: "domain", seedSize: 0, hiddenCount: 9 }),
+        result: page({
+          discoveryMode: "domain",
+          seedSize: 0,
+          hiddenCount: 9,
+          seedTruncated: false,
+        }),
       },
     );
 
@@ -25,19 +36,26 @@ describe("pickDiscoveryDisclosure", () => {
       discoveryMode: "serp",
       seedSize: 20,
       hiddenCount: 1,
+      seedTruncated: true,
       hasResult: true,
     });
   });
 
   it("falls back to the restored page when there is no live data", () => {
     const result = pickDiscoveryDisclosure(undefined, {
-      result: page({ discoveryMode: "serp", seedSize: 15, hiddenCount: 3 }),
+      result: page({
+        discoveryMode: "serp",
+        seedSize: 15,
+        hiddenCount: 3,
+        seedTruncated: true,
+      }),
     });
 
     expect(result).toEqual({
       discoveryMode: "serp",
       seedSize: 15,
       hiddenCount: 3,
+      seedTruncated: true,
       hasResult: true,
     });
   });
@@ -49,6 +67,7 @@ describe("pickDiscoveryDisclosure", () => {
       discoveryMode: "domain",
       seedSize: 0,
       hiddenCount: 0,
+      seedTruncated: false,
       hasResult: false,
     });
   });

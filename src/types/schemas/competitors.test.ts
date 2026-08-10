@@ -28,6 +28,7 @@ describe("competitorsPageSchema", () => {
     expect(parsed.data?.seedSize).toBe(0);
     expect(parsed.data?.hiddenCount).toBe(0);
     expect(parsed.data?.discoveryMode).toBe("domain");
+    expect(parsed.data?.seedTruncated).toBe(false);
   });
 
   it("parses a row produced by keyword-seeded discovery", () => {
