@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { Briefcase, Check, Wand2, X } from "lucide-react";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { AlertCircle, Briefcase, Check, Wand2, X } from "lucide-react";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
+import { resolveDraftStatus, type DraftStatus } from "./draftStatus";
 import {
   SERVICE_AREA_KINDS,
   SERVICE_AREA_LABELS,
@@ -72,6 +72,12 @@ export function ProjectProfileCard({ projectId }: Props) {
     value: ProjectProfile[K],
   ) => setDraft((current) => ({ ...current, [key]: value }));
 
+  const draftStatus = resolveDraftStatus({
+    isPending: drafter.isPending,
+    isError: drafter.isError,
+    error: drafter.error,
+  });
+
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
@@ -120,14 +126,7 @@ export function ProjectProfileCard({ projectId }: Props) {
                 ? "Reading the site…"
                 : "Draft this from their site"}
             </Button>
-            <span className="text-sm text-base-content/60">
-              {drafter.isError
-                ? getStandardErrorMessage(
-                    drafter.error,
-                    "Couldn't draft from the site.",
-                  )
-                : "Reads a few pages of their site. You review it before it saves."}
-            </span>
+            <DraftStatusLine status={draftStatus} />
           </div>
         ) : null}
 
@@ -216,6 +215,30 @@ export function ProjectProfileCard({ projectId }: Props) {
       </div>
     </div>
   );
+}
+
+/**
+ * The line beside the draft button.
+ *
+ * An error gets the error colour and an icon; nothing else does. Before this,
+ * the failure message shared the hint's muted grey and its exact position, so
+ * a failed draft looked identical to one that had not been started -- which
+ * is how a correctly wired button gets reported as doing nothing at all.
+ */
+function DraftStatusLine({ status }: { status: DraftStatus }) {
+  if (status.tone === "error") {
+    return (
+      <span
+        className="flex items-center gap-1.5 text-sm text-error"
+        role="alert"
+      >
+        <AlertCircle className="size-3.5 shrink-0" />
+        {status.message}
+      </span>
+    );
+  }
+
+  return <span className="text-sm text-base-content/60">{status.message}</span>;
 }
 
 /**
