@@ -56,6 +56,23 @@ export type { PaidState };
  *    actual paid call by several seconds, `paidCallInFlight` (below) adds a
  *    SECOND, complementary guard that survives an unmount mid-call, which
  *    `attemptedRef` and `restored.outcome` alone cannot.
+ *
+ *    The stale cache entry that guard protects is REFRESHED (`onSettled`'s
+ *    `invalidateQueries` with `refetchType: "all"`), never DROPPED
+ *    (`removeQueries`). Both close the double-spend window, and dropping it
+ *    looks safer at first glance -- a remount would then see
+ *    `data === undefined`, so `outcome` is null and `shouldAutoRunDiscovery`
+ *    refuses outright. But `removeQueries` is synchronous and returns
+ *    `void`, so the mutation would dispatch "success" -- and
+ *    `paidCallInFlight` would drop to false -- the instant the cache entry
+ *    vanished, moving the whole guarantee onto a state (`outcome === null`)
+ *    that is ALSO the ordinary first-load state. A mount landing in that
+ *    window would resolve `paidState` to "none" and render the "Get ranking
+ *    data" prompt, one click away from re-billing a run that had just
+ *    succeeded. Refreshing keeps BOTH guards armed for the whole window:
+ *    the mutation stays pending (so `queryClient.isMutating` no-ops the
+ *    button and the auto-run effect bails) until real data replaces the
+ *    stale entry.
  * 2. A restored run is labeled with the geography it was actually fetched
  *    under, read back via `parseStoredGeo`, never with whatever the live
  *    ScopeControl shows right now -- see resolveRunGeo.ts's own header for
@@ -175,9 +192,32 @@ export function useKeywordTargets(
     // and fires a second paid call -- the same double-spend the mutation
     // key was added to prevent, just delayed by the length of the first
     // call instead of eliminated. Returning the promise keeps the mutation
-    // "pending" (and `paidCallInFlight` true) until this invalidation --
-    // and, since a query observer is still active during that gap, its
-    // triggered refetch -- has actually settled.
+    // "pending" (and `paidCallInFlight` true) until this invalidation's own
+    // refetch has actually settled.
+    //
+    // `refetchType: "all"` is the other half of that, and it is NOT a
+    // default-tightening nicety -- without it the returned promise can
+    // resolve having refetched NOTHING. `invalidateQueries` forwards
+    // `type: filters?.refetchType ?? filters?.type ?? "active"` to
+    // `refetchQueries` (query-core queryClient.js), and `"active"` is
+    // decided by `Query.isActive()`, which is `this.observers.some(...)` --
+    // FALSE for a query with zero observers (query.js). The card unmounting
+    // mid-call is exactly when this hook's restore query has zero
+    // observers, and it is exactly the case the guard above was written
+    // for: the invalidation would mark the query stale, refetch nothing,
+    // resolve immediately, and leave the cached `{status:"none"}` sitting
+    // there for the rest of the QueryClient's 1h `gcTime`
+    // (src/client/tanstack-db/queryClient.ts). The next mount inside that
+    // hour reads `outcome === "none"` and auto-fires a SECOND paid run.
+    // `"all"` reaches the observer-less query instead: `refetchQueries`
+    // only skips `query.isDisabled() || query.isStatic()`, and with zero
+    // observers `isDisabled()` is `queryFn === skipToken || !isFetched()`
+    // -- false here, because this query has fetched at least once (that is
+    // what put the "none" in the cache) -- while `isStatic()` is
+    // unconditionally false with no observers.
+    //
+    // `removeQueries` was considered and rejected; see this hook's own
+    // header note on why the cache is refreshed rather than dropped.
     //
     // This cannot wedge the mutation in "pending" forever if the REFETCH
     // itself fails: `invalidateQueries` -> `refetchQueries`
@@ -221,6 +261,7 @@ export function useKeywordTargets(
     onSettled: () =>
       queryClient.invalidateQueries({
         queryKey: latestRunQueryKey(projectId),
+        refetchType: "all",
       }),
     // No retry. A failed paid call may already have been billed (Labs can
     // charge for a task that subsequently errors) -- see
