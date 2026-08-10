@@ -115,4 +115,90 @@ describe("rankSerpCompetitors", () => {
     // median(their 2,4) = 3; median(client 8,11) = 9.5; delta = -6.5
     expect(row.positionDelta).toBeCloseTo(-6.5);
   });
+
+  it("uses the best (minimum) position when a keyword has multiple ranks", () => {
+    const [row] = rankSerpCompetitors(
+      [
+        {
+          domain: "multi.com",
+          keywords_positions: {
+            "vending machine service dallas": [9, 4], // Best is 4
+            "office coffee service": [15, 2], // Best is 2
+          },
+        },
+      ],
+      seed,
+      "americavending.com",
+    );
+
+    // Both best positions (4, 2) beat client's (11, 8), so beatsYouCount = 2
+    expect(row.beatsYouCount).toBe(2);
+    // median(their 2,4) = 3; median(client 8,11) = 9.5; delta = -6.5
+    expect(row.positionDelta).toBeCloseTo(-6.5);
+  });
+
+  it("does not count a tie as beating the client", () => {
+    const [row] = rankSerpCompetitors(
+      [
+        {
+          domain: "tied.com",
+          keywords_positions: {
+            "vending machine service dallas": [11], // Ties client's position
+            "office coffee service": [2], // Beats client's position
+          },
+        },
+      ],
+      seed,
+      "americavending.com",
+    );
+
+    // Only position 2 beats 8; position 11 ties 11 (does not beat)
+    expect(row.beatsYouCount).toBe(1);
+  });
+
+  it("treats a keyword with empty position array as unmatched", () => {
+    const [row] = rankSerpCompetitors(
+      [
+        {
+          domain: "empty.com",
+          keywords_positions: {
+            "vending machine service dallas": [], // Empty array = unmatched
+            "office coffee service": [2], // Has position
+            "micro market provider": [], // Empty array = unmatched
+          },
+        },
+      ],
+      seed,
+      "americavending.com",
+    );
+
+    // Only 1 keyword matched out of 3 seed keywords
+    expect(row.coverage).toBeCloseTo(1 / 3);
+    expect(row.beatsYouCount).toBe(1);
+    // Median of single values: median([2]) = 2, median([8]) = 8, delta = -6
+    expect(row.positionDelta).toBeCloseTo(-6);
+  });
+
+  it("passes through avg_position, organicKeywords, and organicTraffic", () => {
+    const [row] = rankSerpCompetitors(
+      [
+        {
+          domain: "full.com",
+          avg_position: 5.5,
+          median_position: 4, // Different from avg to catch mix-ups
+          keywords_count: 42,
+          etv: 1234,
+          keywords_positions: {
+            "vending machine service dallas": [4],
+          },
+        },
+      ],
+      seed,
+      "americavending.com",
+    );
+
+    expect(row.avgPosition).toBe(5.5);
+    expect(row.organicKeywords).toBe(42);
+    expect(row.organicTraffic).toBe(1234);
+  });
 });
