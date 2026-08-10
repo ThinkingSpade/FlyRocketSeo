@@ -34,6 +34,7 @@ import {
 } from "./useCompetitorsQueries";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
 import { shouldAdoptRestoredRun } from "./shouldAdoptRestoredRun";
+import { resolveRestoreNotice } from "./resolveRestoreNotice";
 import { writeHandoff } from "@/client/features/insights/handoffStore";
 import {
   COMPETITORS_ANALYZE_PREVIEW,
@@ -164,10 +165,12 @@ export function CompetitorsPage({
     restored,
     target,
   );
-  // Either one means a run genuinely happened but its answer is gone -- see
-  // `CompetitorsRestoreNotice` for why that must never collapse into the
-  // same blank prompt as "never run".
-  const hasRestoreNotice = outcome === "expired" || outcome === "unreadable";
+  const restoreNotice = resolveRestoreNotice({
+    target,
+    hasLiveResult: competitorsQuery.data != null,
+    outcome,
+    expiredLabel: expired?.label ?? null,
+  });
   const gapQuery = useKeywordGapQuery({
     projectId,
     target,
@@ -309,18 +312,21 @@ export function CompetitorsPage({
         />
       ) : null}
 
-      <CompetitorsRestoredRunBanner
-        restoredRun={restoredRun}
-        projectId={projectId}
-        searchState={searchState}
-        authorize={run.authorize}
-        updateSearch={updateSearch}
-        setTargetInput={setTargetInput}
-      />
+      {tab === "competitors" ? (
+        <>
+          <CompetitorsRestoredRunBanner
+            restoredRun={restoredRun}
+            projectId={projectId}
+            searchState={searchState}
+            authorize={run.authorize}
+            updateSearch={updateSearch}
+            setTargetInput={setTargetInput}
+          />
+          <CompetitorsRestoreNotice notice={restoreNotice} expired={expired} />
+        </>
+      ) : null}
 
-      <CompetitorsRestoreNotice outcome={outcome} expired={expired} />
-
-      {!target && !restoredRun && !hasRestoreNotice ? (
+      {!target && !restoredRun && !restoreNotice ? (
         <AnalyzeDomainPrompt
           domain={projectDomain}
           title="See who you're up against"

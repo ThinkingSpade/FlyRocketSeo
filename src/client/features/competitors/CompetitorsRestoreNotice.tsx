@@ -1,4 +1,5 @@
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { formatRunAge } from "@/client/features/analysis-runs/runAge";
 
 /**
  * Says what happened when a restore comes back with nothing to show for a
@@ -7,27 +8,36 @@ import { Banner } from "@cloudflare/kumo/components/banner";
  * tab's schema, e.g. after it changed shape). Both used to collapse into the
  * same blank "you have never run this" prompt -- this is what stops that.
  *
+ * `notice` is the already-decided rendering choice (see
+ * `resolveRestoreNotice`), not a raw hook outcome -- this component only
+ * renders, it does not decide whether it is safe to.
+ *
  * Pulled out of `CompetitorsPage` rather than inlined there to keep that
  * component under this repo's complexity/line-count lint caps, the same
  * reason `CompetitorsOverviewExtras` was split out.
  */
 export function CompetitorsRestoreNotice({
-  outcome,
+  notice,
   expired,
 }: {
-  outcome: "none" | "expired" | "unreadable" | "ready" | null;
+  notice: "expired" | "unreadable" | null;
   expired: { label: string; lastRanAt: string } | null;
 }) {
-  if (outcome === "expired" && expired) {
+  if (notice === "expired" && expired) {
+    // `formatRunAge` returns null for an unparseable timestamp rather than
+    // the literal string "Invalid Date" a raw `new Date(...)` would render
+    // -- every other `lastRanAt` display in this repo goes through it
+    // (see `RestoredRunBanner`), so this degrades the same way instead of
+    // being the one site that doesn't.
+    const age = formatRunAge(expired.lastRanAt, Date.now());
+    const when = age ? ` (${age})` : "";
     return (
       <Banner variant="alert" className="text-sm">
-        Your last run for {expired.label} (
-        {new Date(expired.lastRanAt).toLocaleDateString()}) has expired — saved
-        results are kept for 7 days. Run it again to see current data.
+        {`Your last run for ${expired.label}${when} has expired — saved results are kept for 7 days. Run it again to see current data.`}
       </Banner>
     );
   }
-  if (outcome === "unreadable") {
+  if (notice === "unreadable") {
     return (
       <Banner variant="alert" className="text-sm">
         Your last run for this tab couldn&apos;t be restored — its saved format
