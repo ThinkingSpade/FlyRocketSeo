@@ -181,7 +181,7 @@ function TrendCard({
     <div className="relative flex h-full flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div>
-          <h2 className="text-sm font-medium">{title}</h2>
+          <h3 className="text-sm font-semibold">{title}</h3>
           <p className="text-xs text-base-content/55">{description}</p>
         </div>
         {children}

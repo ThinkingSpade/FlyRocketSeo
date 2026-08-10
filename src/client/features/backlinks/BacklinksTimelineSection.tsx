@@ -111,7 +111,7 @@ export function BacklinksTimelineSection({
         : null;
 
   return (
-    <section className="rounded-2xl border border-base-300 bg-base-100 p-5">
+    <section className="rounded-xl border border-base-300 bg-base-100 p-4">
       <h2 className="flex items-center gap-1.5 text-sm font-semibold">
         <InsightIcon icon={CalendarRange} tone="primary" />
         Referring domains — won vs lost
