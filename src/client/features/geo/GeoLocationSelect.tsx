@@ -53,11 +53,27 @@ type GeoOptionGroupProps = {
   onHover: (index: number) => void;
 };
 
-/** One group's muted heading plus its rows. Split out of GeoLocationSelect
- * purely to keep that function short — same markup CommandPalette.tsx
- * already uses for its own grouped, muted-heading listbox sections, since
- * LocationSelect (the component this one extends) has no grouping of its
- * own to borrow from. */
+/** One group's muted heading plus its rows.
+ *
+ * Deliberately styled with plain Tailwind rather than DaisyUI's `menu`
+ * component classes. Two reasons, both learned the hard way:
+ *
+ *   1. `menu-none` — what the wrapper `<li>` used to carry — is not a DaisyUI
+ *      class at all. It appears nowhere in the package, so it was always a
+ *      no-op, and the wrapper silently inherited `.menu`'s own descendant
+ *      rules (`flex-flow: column wrap`) instead of the containment it looked
+ *      like it was asking for.
+ *   2. The app is mid-migration off DaisyUI onto Kumo, and a production build
+ *      has already shipped without DaisyUI's component layer at all. Anything
+ *      that depends on `.menu` painting its children's padding, radius and
+ *      hover state renders as naked list items the moment that happens. The
+ *      rows below carry their own layout so they look identical either way.
+ *
+ * `role="presentation"` on both wrappers is what keeps the ARIA correct: a
+ * `listbox` must own its `option`s, and a bare `<li>`/`<ul>` in between
+ * breaks that relationship. Presentation removes them from the tree so the
+ * options read as direct children of the listbox they actually belong to.
+ */
 function GeoOptionGroup({
   group,
   activeIndex,
@@ -68,14 +84,14 @@ function GeoOptionGroup({
   onHover,
 }: GeoOptionGroupProps) {
   return (
-    <li className="menu-none">
-      <ul className="gap-0.5 px-0">
-        <li
-          role="presentation"
-          className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-base-content/40"
-        >
-          {group.heading}
-        </li>
+    <li role="presentation">
+      <p
+        aria-hidden="true"
+        className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-base-content/40"
+      >
+        {group.heading}
+      </p>
+      <ul role="presentation" className="flex flex-col gap-0.5 p-0">
         {group.rows.map((area) => {
           const key = areaKey(area);
           const index = indexByKey.get(key) ?? -1;
@@ -86,11 +102,13 @@ function GeoOptionGroup({
               <button
                 type="button"
                 ref={isActive ? activeRowRef : undefined}
-                className={`w-full ${isActive ? "menu-focus" : ""}`}
+                className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors ${
+                  isActive ? "bg-base-200" : "hover:bg-base-200/60"
+                }`}
                 onClick={() => onSelect(area)}
                 onMouseEnter={() => onHover(index)}
               >
-                <span className="flex-1 truncate">{area.label}</span>
+                <span className="min-w-0 flex-1 truncate">{area.label}</span>
                 {isSelected ? (
                   <Check className="size-4 shrink-0 text-primary" />
                 ) : null}
@@ -263,7 +281,17 @@ export function GeoLocationSelect({
       </button>
 
       {open ? (
-        <div className="fixed z-30 mt-2 w-full max-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+        // `absolute`, not `fixed`. A fixed element's containing block is the
+        // viewport, so `w-full` resolved against the VIEWPORT and only landed
+        // near the trigger's width because `max-w-56` happened to clamp it to
+        // 224px — the alignment was a coincidence, and the panel escaped every
+        // ancestor's clipping. Anchoring left/right to the `relative` wrapper
+        // below makes it genuinely trigger-width at any size.
+        //
+        // `rounded-xl` rather than `rounded-box`: the latter reads DaisyUI's
+        // `--radius-box`, which is absent from a build without DaisyUI's
+        // component layer, and an undefined radius var silently renders square.
+        <div className="absolute inset-x-0 z-30 mt-2 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
           <label className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2 focus-within:border-primary">
             <Search className="size-4 shrink-0 text-base-content/45" />
             <input
@@ -280,9 +308,19 @@ export function GeoLocationSelect({
             />
           </label>
 
+          {/* `overflow-x-hidden` is not cosmetic. Setting only `overflow-y`
+              makes the computed `overflow-x` become `auto` (verified in the
+              browser), so this list could scroll sideways — and the
+              `scrollIntoView` effect below drives exactly that, slicing
+              option labels off at their left edge. Pinning the x axis keeps
+              `truncate` on each row the only way a long label is shortened.
+
+              No `menu` class: see GeoOptionGroup's own header. Rows carry
+              their own padding and hover state now, so the list renders the
+              same with or without DaisyUI's component layer present. */}
           <ul
             role="listbox"
-            className="menu mt-2 max-h-64 w-full flex-nowrap gap-0 overflow-y-auto p-0"
+            className="mt-2 flex max-h-64 w-full flex-col overflow-y-auto overflow-x-hidden p-0"
           >
             {flatAreas.length === 0 ? (
               <li className="w-full break-all px-3 py-2 text-sm text-base-content/50">
