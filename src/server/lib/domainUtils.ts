@@ -78,5 +78,8 @@ export function normalizeDomainInput(
  * one either, so both functions agree here -- verified directly, not assumed.)
  */
 export function normalizeDiscoveredDomain(domain: string): string {
-  return domain.trim().toLowerCase().replace(/^www\./, "");
+  return domain
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, "");
 }

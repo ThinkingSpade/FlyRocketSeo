@@ -10,7 +10,7 @@ import { projectCompetitors } from "@/db/schema";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
 
 export type ProjectCompetitorRow = typeof projectCompetitors.$inferSelect;
-export type ProjectCompetitorStatus = "pinned" | "excluded";
+type ProjectCompetitorStatus = "pinned" | "excluded";
 
 async function listByProject(
   projectId: string,

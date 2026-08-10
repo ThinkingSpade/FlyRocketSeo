@@ -1,6 +1,6 @@
 import { MIN_COMPETITOR_SEED } from "./competitorSeed";
 
-export type DiscoveryMode = "serp" | "domain";
+type DiscoveryMode = "serp" | "domain";
 
 /**
  * Which discovery path to run.

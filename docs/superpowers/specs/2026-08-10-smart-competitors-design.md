@@ -10,17 +10,17 @@ The Competitors tab answers the wrong question and forgets its own answers.
 **It finds the wrong rivals.** Discovery calls `dataforseo_labs/google/competitors_domain/live`
 seeded by the project's domain alone (`fetchCompetitorsDomain`,
 `src/server/lib/dataforseo/labs-competitors.ts:45`). That endpoint returns domains whose
-*ranked-keyword sets intersect* with the target, ordered by absolute intersection count. Two
+_ranked-keyword sets intersect_ with the target, ordered by absolute intersection count. Two
 consequences follow:
 
 - A domain with an enormous keyword footprint beats a real rival on raw overlap. For the
   AmericaVending.com project the tab returned webstaurantstore.com (685,753 organic keywords,
   19 shared) above every genuine competitor.
-- A rival that outranks the client but does not yet *share* indexed keywords with them can
+- A rival that outranks the client but does not yet _share_ indexed keywords with them can
   never appear at all. The client's actual rivals — vendingexchange.com, avfusa.com — were
   absent from a nine-row list.
 
-The displayed "% keyword overlap" divides shared keywords by the *competitor's* keyword count,
+The displayed "% keyword overlap" divides shared keywords by the _competitor's_ keyword count,
 so every row reads 0–1% and the column carries no information.
 
 Nothing in the request is client-aware: the tab knows the project's business profile, its
@@ -33,7 +33,7 @@ cached. Two independent causes, both confirmed in code:
    (`src/client/features/competitors/CompetitorsPage.tsx:103`). The target input is prefilled
    from the project domain, so a target is almost always present, so restore almost never
    runs. Meanwhile the metered query stays disabled until the user authorizes a run. The state
-   *target present + not authorized + restore suppressed* renders blank — while R2 already
+   _target present + not authorized + restore suppressed_ renders blank — while R2 already
    holds the answer and reading it costs nothing.
 2. `CompetitorsPage` destructures only `{ restored }` from the hook
    (`CompetitorsPage.tsx:99`), discarding its `outcome` and `expired` fields. Run payloads live
@@ -43,7 +43,7 @@ cached. Two independent causes, both confirmed in code:
 ## Approach
 
 Seed discovery with the keywords the client actually competes on, then rank candidates by
-whether they *beat* the client on those keywords.
+whether they _beat_ the client on those keywords.
 
 `dataforseo_labs/google/serp_competitors/live` accepts a **keyword list** as its seed
 (`DataforseoLabsGoogleSerpCompetitorsLiveRequestInfo`: `keywords`, `location_code`,
@@ -54,10 +54,10 @@ whether they *beat* the client on those keywords.
 
 Rejected alternatives:
 
-- *Keep domain-seeded discovery, add an AI relevance filter.* Cannot surface a rival the
+- _Keep domain-seeded discovery, add an AI relevance filter._ Cannot surface a rival the
   endpoint never returned, and semantic classification needs `OPENROUTER_API_KEY`, which is
   unset in this deployment. The ranking below achieves the same demotion deterministically.
-- *Manual competitor list only.* Accurate and free, but discovers nothing. Retained as a
+- _Manual competitor list only._ Accurate and free, but discovers nothing. Retained as a
   complement (see Pinning), not a replacement.
 
 ## Design
@@ -74,7 +74,7 @@ available through `src/server/features/gsc/searchPerformanceReport.ts`.
   rival exists to be found. Queries at position 1 are kept only to backfill if the preferred
   set is short.
 - Order by impressions descending; cap at 40 keywords (`COMPETITOR_SEED_SIZE`).
-- Return the chosen keywords *and* the client's own position for each, since ranking needs both.
+- Return the chosen keywords _and_ the client's own position for each, since ranking needs both.
 
 The resolved seed is displayed in the UI so the answer is auditable: the user can see the tab
 asked "who beats you on these 40 queries."
@@ -115,7 +115,7 @@ Documented caps: **200 keywords per request** (our seed of 40 is well inside) an
 on the first live run and can be checked against this figure.
 
 **`item_types` must be pinned to `["organic"]`.** The endpoint's default item types include
-*paid* results as well as organic. Left at the default, a competitor's ad placement would be
+_paid_ results as well as organic. Left at the default, a competitor's ad placement would be
 compared against the client's organic GSC position and counted as "outranking" them — inflating
 the headline metric with positions the client is not competing for. `keywords_positions` is
 `Record<string, number[]>` (a domain can hold several positions for one keyword), so the ranking
@@ -125,13 +125,13 @@ reduces each to the best/minimum rank explicitly rather than assuming a scalar.
 
 A pure function `rankSerpCompetitors(items, seed, selfDomain)` producing one row per candidate:
 
-| Column | Derivation |
-| --- | --- |
-| Coverage | `keywords_count / seed.length` — share of **your** seed they rank for. Replaces the meaningless 0–1% column. |
-| Beats you on | Count of seed keywords where their position (from `keywords_positions`) is better than the client's GSC position for the same keyword. **Headline metric, default sort.** |
-| Position delta | Median(their position) − median(client position) across shared keywords. Negative = ahead of you. |
-| Avg / median position | Straight from the item. |
-| Est. traffic | `etv`. |
+| Column                | Derivation                                                                                                                                                                |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Coverage              | `keywords_count / seed.length` — share of **your** seed they rank for. Replaces the meaningless 0–1% column.                                                              |
+| Beats you on          | Count of seed keywords where their position (from `keywords_positions`) is better than the client's GSC position for the same keyword. **Headline metric, default sort.** |
+| Position delta        | Median(their position) − median(client position) across shared keywords. Negative = ahead of you.                                                                         |
+| Avg / median position | Straight from the item.                                                                                                                                                   |
+| Est. traffic          | `etv`.                                                                                                                                                                    |
 
 Rows are sorted by beats-you count descending, then by position delta ascending. The client's
 own domain is excluded. A domain that ranks on two of your forty queries sinks; a domain that
@@ -176,7 +176,7 @@ method without saying so.
 
 ### 6. Restore fix
 
-- Re-gate restore on *"no live result for this target"* rather than *"no target"*:
+- Re-gate restore on _"no live result for this target"_ rather than _"no target"_:
   `enabled: competitorsQuery.data == null && tab === "competitors"`. Restore reads D1 + R2 only
   and can never bill, so running it whenever there is no live result is safe by construction.
 - When a target is present, only adopt a restored run whose `label` matches that target, so a
@@ -206,6 +206,7 @@ project_target_areas ─────────┘                             
 ## Files
 
 New:
+
 - `src/server/features/competitors/competitorSeed.ts` — `buildCompetitorSeed`, pure.
 - `src/server/features/competitors/rankSerpCompetitors.ts` — ranking, pure.
 - `src/server/features/competitors/repositories/ProjectCompetitorRepository.ts`
@@ -214,6 +215,7 @@ New:
 - Tests beside each pure module.
 
 Changed:
+
 - `src/server/lib/dataforseo/labs-competitors.ts` — add `fetchSerpCompetitors`.
 - `src/server/features/competitors/services/CompetitorsService.ts` — orchestrate seed →
   discovery → rank → pin/exclude, keep the R2 cache and `AnalysisRunService.record` behaviour.
@@ -237,6 +239,7 @@ optional/nullable, so historical runs still restore and simply show blanks in th
 ## Testing
 
 Unit, no API key required:
+
 - `buildCompetitorSeed`: branded-term exclusion (including multi-line and case differences),
   the not-#1 preference and its backfill, impression ordering, the 40 cap, the 5-keyword floor.
 - `rankSerpCompetitors`: beats-you counting against self positions, coverage denominator is the

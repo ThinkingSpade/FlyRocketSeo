@@ -80,7 +80,7 @@ export async function fetchCompetitorsDomain(input: {
   };
 }
 
-export type SerpCompetitorItem = DataforseoLabsSerpCompetitorsLiveItem;
+type SerpCompetitorItem = DataforseoLabsSerpCompetitorsLiveItem;
 
 type SerpCompetitorsPage = {
   items: SerpCompetitorItem[];

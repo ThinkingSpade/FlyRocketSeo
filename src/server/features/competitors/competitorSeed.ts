@@ -8,7 +8,7 @@
  */
 
 /** Matches `SearchPerformanceDimensionRow` (gsc/searchPerformanceReport.ts). */
-export type SeedInputRow = {
+type SeedInputRow = {
   key: string;
   impressions: number;
   position: number;
@@ -21,7 +21,7 @@ export type SeedQuery = {
   selfPosition: number;
 };
 
-export type CompetitorSeed = {
+type CompetitorSeed = {
   keywords: SeedQuery[];
   droppedBranded: number;
   totalConsidered: number;
@@ -49,6 +49,10 @@ function isBranded(keyword: string, terms: string[]): boolean {
   return terms.some((term) => haystack.includes(term));
 }
 
+function byImpressions(a: SeedQuery, b: SeedQuery): number {
+  return b.impressions - a.impressions;
+}
+
 export function buildCompetitorSeed(
   rows: SeedInputRow[],
   options: { brandTerms: string; limit?: number },
@@ -71,18 +75,15 @@ export function buildCompetitorSeed(
     });
   }
 
-  const byImpressions = (a: SeedQuery, b: SeedQuery) =>
-    b.impressions - a.impressions;
-
   // A query the client already ranks #1 for cannot surface a rival above them,
   // so it is only worth spending seed budget on once the contested queries run
   // out -- hence two tiers rather than one sort.
   const contested = candidates
     .filter((c) => c.selfPosition > 1.5)
-    .sort(byImpressions);
+    .toSorted(byImpressions);
   const owned = candidates
     .filter((c) => c.selfPosition <= 1.5)
-    .sort(byImpressions);
+    .toSorted(byImpressions);
 
   return {
     keywords: [...contested, ...owned].slice(0, limit),

@@ -3,7 +3,11 @@ import { rankSerpCompetitors } from "./rankSerpCompetitors";
 import type { SeedQuery } from "./competitorSeed";
 
 const seed: SeedQuery[] = [
-  { keyword: "vending machine service dallas", impressions: 500, selfPosition: 11 },
+  {
+    keyword: "vending machine service dallas",
+    impressions: 500,
+    selfPosition: 11,
+  },
   { keyword: "office coffee service", impressions: 300, selfPosition: 8 },
   { keyword: "micro market provider", impressions: 100, selfPosition: 15 },
 ];

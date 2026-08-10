@@ -9,7 +9,7 @@ import type { SeedQuery } from "./competitorSeed";
  * can build fixtures by hand -- and so a vendored-typing change cannot quietly
  * alter what this function is asserted to do.
  */
-export type RankableItem = {
+type RankableItem = {
   domain?: string;
   avg_position?: number;
   median_position?: number;
@@ -21,7 +21,7 @@ export type RankableItem = {
 
 function median(values: number[]): number | null {
   if (values.length === 0) return null;
-  const sorted = [...values].sort((a, b) => a - b);
+  const sorted = values.toSorted((a, b) => a - b);
   const middle = Math.floor(sorted.length / 2);
   return sorted.length % 2 === 0
     ? (sorted[middle - 1] + sorted[middle]) / 2
@@ -101,7 +101,7 @@ export function rankSerpCompetitors(
     ];
   });
 
-  return rows.sort((a, b) => {
+  return rows.toSorted((a, b) => {
     const beats = (b.beatsYouCount ?? 0) - (a.beatsYouCount ?? 0);
     if (beats !== 0) return beats;
     return (b.coverage ?? 0) - (a.coverage ?? 0);

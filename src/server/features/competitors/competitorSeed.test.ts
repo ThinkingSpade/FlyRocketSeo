@@ -30,10 +30,7 @@ describe("buildCompetitorSeed", () => {
 
   it("prefers queries the client does not already own", () => {
     const seed = buildCompetitorSeed(
-      [
-        row("already first", 5000, 1.0),
-        row("contested term", 100, 9.0),
-      ],
+      [row("already first", 5000, 1.0), row("contested term", 100, 9.0)],
       { brandTerms: "" },
     );
 
@@ -44,7 +41,11 @@ describe("buildCompetitorSeed", () => {
 
   it("backfills with position-1 queries rather than returning a short seed", () => {
     const seed = buildCompetitorSeed(
-      [row("contested", 100, 4.0), row("owned a", 90, 1.0), row("owned b", 80, 1.0)],
+      [
+        row("contested", 100, 4.0),
+        row("owned a", 90, 1.0),
+        row("owned b", 80, 1.0),
+      ],
       { brandTerms: "", limit: 3 },
     );
 

@@ -51,10 +51,12 @@ dialect kept in parity), Zod schemas, TanStack Query, Vitest, `dataforseo-client
 ### Task 1: Extend the competitor row shape without breaking restores
 
 **Files:**
+
 - Modify: `src/types/schemas/competitors.ts:92-115`
 - Test: `src/types/schemas/competitors.test.ts` (create)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `competitorRowSchema` gains optional `coverage: number | null`,
   `beatsYouCount: number | null`, `positionDelta: number | null`,
@@ -191,10 +193,12 @@ git commit -m "Competitors: carry discovery metrics without breaking stored runs
 ### Task 2: Build the keyword seed from Search Console
 
 **Files:**
+
 - Create: `src/server/features/competitors/competitorSeed.ts`
 - Test: `src/server/features/competitors/competitorSeed.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing (pure).
 - Produces:
   - `type SeedQuery = { keyword: string; impressions: number; selfPosition: number }`
@@ -241,10 +245,7 @@ describe("buildCompetitorSeed", () => {
 
   it("prefers queries the client does not already own", () => {
     const seed = buildCompetitorSeed(
-      [
-        row("already first", 5000, 1.0),
-        row("contested term", 100, 9.0),
-      ],
+      [row("already first", 5000, 1.0), row("contested term", 100, 9.0)],
       { brandTerms: "" },
     );
 
@@ -255,7 +256,11 @@ describe("buildCompetitorSeed", () => {
 
   it("backfills with position-1 queries rather than returning a short seed", () => {
     const seed = buildCompetitorSeed(
-      [row("contested", 100, 4.0), row("owned a", 90, 1.0), row("owned b", 80, 1.0)],
+      [
+        row("contested", 100, 4.0),
+        row("owned a", 90, 1.0),
+        row("owned b", 80, 1.0),
+      ],
       { brandTerms: "", limit: 3 },
     );
 
@@ -412,10 +417,12 @@ git commit -m "Competitors: choose seed keywords from the client's own GSC queri
 ### Task 3: Wrap the `serp_competitors` endpoint
 
 **Files:**
+
 - Modify: `src/server/lib/dataforseo/labs-competitors.ts` (append; follow `fetchCompetitorsDomain` at :45)
 - Modify: `src/server/lib/dataforseo/client.ts:137-145` (the `competitors:` namespace)
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks.
 - Produces:
   - `export type SerpCompetitorItem = DataforseoLabsSerpCompetitorsLiveItem`
@@ -529,10 +536,12 @@ git commit -m "DataForSEO: wrap serp_competitors, which seeds from keywords"
 ### Task 4: Rank candidates by whether they beat the client
 
 **Files:**
+
 - Create: `src/server/features/competitors/rankSerpCompetitors.ts`
 - Test: `src/server/features/competitors/rankSerpCompetitors.test.ts`
 
 **Interfaces:**
+
 - Consumes: `SeedQuery` (Task 2), `CompetitorRow` (Task 1), `SerpCompetitorItem` (Task 3).
 - Produces:
   `rankSerpCompetitors(items: RankableItem[], seed: SeedQuery[], selfDomain: string): CompetitorRow[]`
@@ -548,7 +557,11 @@ import { rankSerpCompetitors } from "./rankSerpCompetitors";
 import type { SeedQuery } from "./competitorSeed";
 
 const seed: SeedQuery[] = [
-  { keyword: "vending machine service dallas", impressions: 500, selfPosition: 11 },
+  {
+    keyword: "vending machine service dallas",
+    impressions: 500,
+    selfPosition: 11,
+  },
   { keyword: "office coffee service", impressions: 300, selfPosition: 8 },
   { keyword: "micro market provider", impressions: 100, selfPosition: 15 },
 ];
@@ -792,6 +805,7 @@ git commit -m "Competitors: rank by who outranks the client, not by raw overlap"
 ### Task 5: Per-project pinned and excluded competitors
 
 **Files:**
+
 - Modify: `src/db/app.schema.ts` (append near `projectProfiles`, ~line 851)
 - Modify: `src/db/pg/app.schema.ts` (parity)
 - Create: `src/server/features/competitors/repositories/ProjectCompetitorRepository.ts`
@@ -800,6 +814,7 @@ git commit -m "Competitors: rank by who outranks the client, not by raw overlap"
 - Create: `src/server/features/competitors/applyProjectCompetitors.ts`
 
 **Interfaces:**
+
 - Consumes: `CompetitorRow` (Task 1).
 - Produces:
   - Table `projectCompetitors` with columns `id, projectId, domain, status, note, createdAt, updatedAt`
@@ -1103,11 +1118,13 @@ git commit -m "Competitors: per-project pinned and excluded domains"
 ### Task 6: Orchestrate seed -> discovery -> ranking, with fallback
 
 **Files:**
+
 - Modify: `src/server/features/competitors/services/CompetitorsService.ts:67-153`
 - Test: `src/server/features/competitors/resolveDiscoveryMode.test.ts`
 - Create: `src/server/features/competitors/resolveDiscoveryMode.ts`
 
 **Interfaces:**
+
 - Consumes: `buildCompetitorSeed`, `MIN_COMPETITOR_SEED` (Task 2);
   `dataforseo.competitors.serpCompetitors` (Task 3); `rankSerpCompetitors` (Task 4);
   `ProjectCompetitorRepository.listByProject`, `applyProjectCompetitors` (Task 5).
@@ -1194,6 +1211,7 @@ import { resolveDiscoveryMode } from "@/server/features/competitors/resolveDisco
 ```
 
 **Before writing this step, confirm two things by reading the code — do not assume:**
+
 1. The exact exported name and read method for the business profile. Run
    `grep -rn "projectProfiles" src/server/features --include=*.ts | grep -i repos` and use what
    you find; the import above is the expected name, not a verified one. If the profile is read
@@ -1205,70 +1223,68 @@ import { resolveDiscoveryMode } from "@/server/features/competitors/resolveDisco
 Then add, inside `getCompetitors`:
 
 ```ts
-  // Free inputs first: a seed costs nothing, and its size decides whether the
-  // metered keyword-seeded call is worth making at all.
-  const [profile, overrides] = await Promise.all([
-    ProjectProfileRepository.getByProject(input.projectId),
-    ProjectCompetitorRepository.listByProject(input.projectId),
-  ]);
+// Free inputs first: a seed costs nothing, and its size decides whether the
+// metered keyword-seeded call is worth making at all.
+const [profile, overrides] = await Promise.all([
+  ProjectProfileRepository.getByProject(input.projectId),
+  ProjectCompetitorRepository.listByProject(input.projectId),
+]);
 
-  let seedKeywords: ReturnType<typeof buildCompetitorSeed>["keywords"] = [];
-  let hasGsc = false;
-  try {
-    const performance = await GscService.getPerformance({
-      projectId: input.projectId,
-      dimensions: ["query"],
-      dateRange: "last28days",
-      rowLimit: 500,
+let seedKeywords: ReturnType<typeof buildCompetitorSeed>["keywords"] = [];
+let hasGsc = false;
+try {
+  const performance = await GscService.getPerformance({
+    projectId: input.projectId,
+    dimensions: ["query"],
+    dateRange: "last28days",
+    rowLimit: 500,
+  });
+  hasGsc = true;
+  seedKeywords = buildCompetitorSeed(toDimensionRows(performance.rows), {
+    brandTerms: profile?.brandTerms ?? "",
+  }).keywords;
+} catch {
+  // No connection, revoked grant, or an API failure: all mean "no seed".
+  // The fallback below is a real answer, so this must not fail the request.
+  hasGsc = false;
+}
+
+const mode = resolveDiscoveryMode(seedKeywords.length, hasGsc);
+
+if (mode === "serp") {
+  const response = await dataforseo.competitors.serpCompetitors({
+    keywords: seedKeywords.map((k) => k.keyword),
+    locationCode: input.locationCode,
+    languageCode: input.languageCode,
+    limit: input.pageSize,
+    offset: (input.page - 1) * input.pageSize,
+    // Organic only. The endpoint's default includes paid results, which
+    // would let a rival's AD placement count as outranking the client's
+    // organic GSC position and inflate every beats-you count.
+    itemTypes: ["organic"],
+  });
+
+  const ranked = rankSerpCompetitors(response.items, seedKeywords, target);
+  const applied = applyProjectCompetitors(ranked, overrides);
+
+  const result: CompetitorsPage = {
+    rows: applied.rows,
+    totalCount: response.totalCount,
+    fetchedAt: new Date().toISOString(),
+    seedSize: seedKeywords.length,
+    hiddenCount: applied.hiddenCount,
+    discoveryMode: "serp",
+  };
+
+  if (applied.rows.length > 0) {
+    void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
+      console.error("competitors.list.cache-write failed:", error);
     });
-    hasGsc = true;
-    seedKeywords = buildCompetitorSeed(toDimensionRows(performance.rows), {
-      brandTerms: profile?.brandTerms ?? "",
-    }).keywords;
-  } catch {
-    // No connection, revoked grant, or an API failure: all mean "no seed".
-    // The fallback below is a real answer, so this must not fail the request.
-    hasGsc = false;
+    await recordRun();
   }
 
-  const mode = resolveDiscoveryMode(seedKeywords.length, hasGsc);
-
-  if (mode === "serp") {
-    const response = await dataforseo.competitors.serpCompetitors({
-      keywords: seedKeywords.map((k) => k.keyword),
-      locationCode: input.locationCode,
-      languageCode: input.languageCode,
-      limit: input.pageSize,
-      offset: (input.page - 1) * input.pageSize,
-      // Organic only. The endpoint's default includes paid results, which
-      // would let a rival's AD placement count as outranking the client's
-      // organic GSC position and inflate every beats-you count.
-      itemTypes: ["organic"],
-    });
-
-    const ranked = rankSerpCompetitors(response.items, seedKeywords, target);
-    const applied = applyProjectCompetitors(ranked, overrides);
-
-    const result: CompetitorsPage = {
-      rows: applied.rows,
-      totalCount: response.totalCount,
-      fetchedAt: new Date().toISOString(),
-      seedSize: seedKeywords.length,
-      hiddenCount: applied.hiddenCount,
-      discoveryMode: "serp",
-    };
-
-    if (applied.rows.length > 0) {
-      void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch(
-        (error) => {
-          console.error("competitors.list.cache-write failed:", error);
-        },
-      );
-      await recordRun();
-    }
-
-    return result;
-  }
+  return result;
+}
 ```
 
 The existing `domainCompetitors` block below stays as the fallback. Add the override pass to it
@@ -1276,7 +1292,7 @@ too, so pin/exclude works on both paths — replace its `const rows = response.i
 result with:
 
 ```ts
-  const applied = applyProjectCompetitors(rows, overrides);
+const applied = applyProjectCompetitors(rows, overrides);
 ```
 
 and use `applied.rows` when building `result`, adding the same three page fields with
@@ -1325,10 +1341,12 @@ git commit -m "Competitors: discover from GSC keywords, fall back to domain over
 ### Task 7: Server functions for pin and exclude
 
 **Files:**
+
 - Modify: `src/types/schemas/competitors.ts` (append request schemas)
 - Modify: `src/serverFunctions/competitors.ts` (append; follow the pattern at :10-21)
 
 **Interfaces:**
+
 - Consumes: `ProjectCompetitorRepository` (Task 5).
 - Produces: `listProjectCompetitors`, `setProjectCompetitor`, `removeProjectCompetitor` server
   functions. Task 9 consumes them.
@@ -1415,11 +1433,13 @@ git commit -m "Competitors: server functions to pin and exclude per project"
 ### Task 8: Make a cached run show up without pressing Analyze
 
 **Files:**
+
 - Modify: `src/client/features/competitors/CompetitorsPage.tsx:98-135`
 - Test: `src/client/features/competitors/shouldAdoptRestoredRun.test.ts`
 - Create: `src/client/features/competitors/shouldAdoptRestoredRun.ts`
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks.
 - Produces: `shouldAdoptRestoredRun(input: { target: string; restoredLabel: string | null }): boolean`
 
@@ -1432,7 +1452,10 @@ import { shouldAdoptRestoredRun } from "./shouldAdoptRestoredRun";
 describe("shouldAdoptRestoredRun", () => {
   it("adopts the last run when no target is set yet", () => {
     expect(
-      shouldAdoptRestoredRun({ target: "", restoredLabel: "americavending.com" }),
+      shouldAdoptRestoredRun({
+        target: "",
+        restoredLabel: "americavending.com",
+      }),
     ).toBe(true);
   });
 
@@ -1503,28 +1526,30 @@ Expected: PASS (4 tests)
 Replace the `useAutoRestoredRun` call at :99-105:
 
 ```tsx
-  // Restoring reads a stored row plus the R2 object that run already paid for
-  // and can never trigger a metered fetch, so it runs whenever this tab has no
-  // live result -- not only when the target box is empty, which was almost
-  // never true and is what forced a paid click on every visit.
-  const { restored, outcome, expired } = useAutoRestoredRun({
-    projectId,
-    feature: RUN_FEATURES.competitors,
-    schema: competitorsPageSchema,
-    enabled: tab === "competitors",
-    runId: selectedRunId,
-  });
+// Restoring reads a stored row plus the R2 object that run already paid for
+// and can never trigger a metered fetch, so it runs whenever this tab has no
+// live result -- not only when the target box is empty, which was almost
+// never true and is what forced a paid click on every visit.
+const { restored, outcome, expired } = useAutoRestoredRun({
+  projectId,
+  feature: RUN_FEATURES.competitors,
+  schema: competitorsPageSchema,
+  enabled: tab === "competitors",
+  runId: selectedRunId,
+});
 ```
 
 Replace the `restoredRun` derivation at :133:
 
 ```tsx
-  const adoptable =
-    competitorsQuery.data == null &&
-    shouldAdoptRestoredRun({ target, restoredLabel: restored?.label ?? null });
-  const restoredRun = adoptable ? restored : null;
-  const competitorRows =
-    competitorsQuery.data?.rows ?? (adoptable ? restored?.result.rows : null) ?? [];
+const adoptable =
+  competitorsQuery.data == null &&
+  shouldAdoptRestoredRun({ target, restoredLabel: restored?.label ?? null });
+const restoredRun = adoptable ? restored : null;
+const competitorRows =
+  competitorsQuery.data?.rows ??
+  (adoptable ? restored?.result.rows : null) ??
+  [];
 ```
 
 Update the `hasResult` flag passed to `TabBody` (:379) to use `adoptable`:
@@ -1539,12 +1564,15 @@ Add above the `AnalyzeDomainPrompt` block (:302), and add `&& outcome !== "expir
 block's own condition so the two cannot both render:
 
 ```tsx
-      {outcome === "expired" && expired ? (
-        <Banner variant="warning" className="text-sm">
-          Your last run for {expired.label} ({new Date(expired.lastRanAt).toLocaleDateString()})
-          has expired — saved results are kept for 7 days. Run it again to see current data.
-        </Banner>
-      ) : null}
+{
+  outcome === "expired" && expired ? (
+    <Banner variant="warning" className="text-sm">
+      Your last run for {expired.label} (
+      {new Date(expired.lastRanAt).toLocaleDateString()}) has expired — saved
+      results are kept for 7 days. Run it again to see current data.
+    </Banner>
+  ) : null;
+}
 ```
 
 - [ ] **Step 7: Verify no sibling component self-fetches off the restored target**
@@ -1578,10 +1606,12 @@ git commit -m "Competitors: show the cached run instead of demanding a paid clic
 ### Task 9: Surface the new answer in the table
 
 **Files:**
+
 - Modify: `src/client/features/competitors/CompetitorsTable.tsx`
 - Modify: `src/client/features/competitors/CompetitorsPage.tsx` (seed disclosure + hidden count)
 
 **Interfaces:**
+
 - Consumes: `CompetitorRow`'s new fields (Task 1); the server functions from Task 7.
 - Produces: no new exports.
 
@@ -1671,6 +1701,7 @@ npx wrangler d1 execute open-seo --local --command "SELECT name FROM sqlite_mast
 On the **AmericaVending.com** project, press Analyze on the Competitors tab.
 
 Expected, per the spec's acceptance criterion:
+
 - vendingexchange.com and/or avfusa.com appear in the results.
 - webstaurantstore.com either drops out or shows a beats-you count at or near zero.
 - The "Beats you on" column is populated with counts out of the seed size.
@@ -1682,6 +1713,7 @@ Expected, per the spec's acceptance criterion:
 
 Do NOT tune the ranking until you know which half failed. Log the resolved seed and the raw
 vendor response, then determine:
+
 - Did the seed contain the queries those rivals compete on? If not, the seed rules are wrong
   (Task 2).
 - Did the vendor return them at all? If not, the request is wrong — check `location_code`
