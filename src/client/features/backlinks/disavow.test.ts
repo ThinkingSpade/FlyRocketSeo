@@ -43,10 +43,14 @@ describe("auditToxicDomains", () => {
     ]);
   });
 
-  it("honours a custom threshold", () => {
-    const audit = auditToxicDomains([row("mid.com", 45)], 40);
-    expect(audit.candidates).toHaveLength(1);
-    expect(audit.threshold).toBe(40);
+  it("uses the shared high-risk boundary", () => {
+    const audit = auditToxicDomains([
+      row("review.com", 59),
+      row("high-risk.com", 60),
+    ]);
+    expect(audit.candidates.map((candidate) => candidate.domain)).toEqual([
+      "high-risk.com",
+    ]);
   });
 
   it("ignores rows with no spam score rather than assuming zero", () => {
@@ -82,7 +86,14 @@ describe("auditToxicDomains", () => {
 
   it("calls out a spammy domain that also has no authority", () => {
     const audit = auditToxicDomains([row("a.com", 70, 1, 4)]);
-    expect(audit.candidates[0].reason).toContain("DR 4");
+    expect(audit.candidates[0].reason).toContain("Domain authority 4/100");
+  });
+
+  it("does not add a separate severe tier", () => {
+    const audit = auditToxicDomains([row("a.com", 90)]);
+    expect(audit.candidates[0].reason).toBe(
+      "Spam score 90/100 · High-risk signal.",
+    );
   });
 });
 

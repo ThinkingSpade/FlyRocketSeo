@@ -7,14 +7,11 @@ import {
 } from "@/client/components/table/AppDataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { EmptyTableState } from "./BacklinksPageEmptyTableState";
 import type { AnchorRow } from "./backlinksPageTypes";
 import type { AnchorsSortField } from "@/types/schemas/backlinks";
-import {
-  formatCompactDate,
-  formatDecimal,
-  formatNumber,
-} from "./backlinksPageUtils";
+import { formatCompactDate, formatNumber } from "./backlinksPageUtils";
 
 const columnHelper = createColumnHelper<AnchorRow>();
 
@@ -62,7 +59,7 @@ const columns = [
     header: ({ column }) => (
       <SortableHeader
         column={column}
-        label="Rank"
+        label="Link authority"
         helpText="Combined authority of links using this anchor."
       />
     ),
@@ -78,7 +75,16 @@ const columns = [
         helpText="Spam risk score for links using this anchor."
       />
     ),
-    cell: ({ getValue }) => formatDecimal(getValue()),
+    cell: ({ getValue }) => {
+      const spam = describeSpamScore(getValue());
+      return (
+        <span
+          className={`tabular-nums ${spam.reviewRecommended ? "font-medium " : ""}${spam.className}`}
+        >
+          {spam.formatted}
+        </span>
+      );
+    },
     sortDescFirst: true,
   }),
   columnHelper.accessor("firstSeen", {

@@ -3,7 +3,7 @@
  * sub-tab rows already on the page.
  *
  * A raw referring-domain count says nothing about whether those domains carry
- * any weight. Bucketing them by Domain Rank turns one number into the shape
+ * any weight. Bucketing them by domain authority turns one number into the shape
  * Ahrefs shows: how much of the profile is real authority and how much is
  * long-tail filler.
  */
@@ -27,7 +27,7 @@ type DomainQuality = {
   ranked: number;
   /** Rank at the middle of the distribution. */
   medianRank: number;
-  /** Domains at DR 30+, the rough floor for a link that moves anything. */
+  /** Domains at authority 30+, the rough floor for a link that moves anything. */
   strongDomains: number;
   strongShare: number;
   note: string;
@@ -35,8 +35,8 @@ type DomainQuality = {
 
 /**
  * Buckets follow the one-hundred rank scale the backlinks calls already request
- * (`rank_scale: "one_hundred"`), so they line up with the DR numbers shown in
- * the tables.
+ * (`rank_scale: "one_hundred"`), so they line up with the domain-authority
+ * numbers shown in the tables.
  */
 const BUCKETS: ReadonlyArray<{ label: string; min: number; max: number }> = [
   { label: "0-10", min: 0, max: 10 },
@@ -49,7 +49,7 @@ const BUCKETS: ReadonlyArray<{ label: string; min: number; max: number }> = [
   { label: "71+", min: 71, max: Infinity },
 ];
 
-/** Inclusive, so the "DR 30+" the card shows means what it says. */
+/** Inclusive, so the "domain authority 30+" label means what it says. */
 const STRONG_RANK_FLOOR = 30;
 
 export function computeDomainQuality(
@@ -102,30 +102,30 @@ export function filterPositiveQualityBuckets<T extends { domains: number }>(
  * verdict, so the page cannot speak for the profile.
  */
 /**
- * Reports the observed DR distribution and stops there.
+ * Reports the observed domain-authority distribution and stops there.
  *
  * Two things it deliberately no longer claims:
  *
- * - **How much weight the links pass.** DR describes the referring domain's own
+ * - **How much weight the links pass.** Domain authority describes the referring domain's own
  *   backlink profile, not the placement, follow status or outbound-link dilution
- *   of the specific link pointing here. A DR 29 domain can send a followed
+ *   of the specific link pointing here. A domain at 29 can send a followed
  *   editorial link from a page with few outbound links; "passes little weight"
- *   is not derivable from DR.
+ *   is not derivable from domain authority.
  * - **Whether the mix is normal or unusual.** That needs a comparison set for
  *   this niche, which we do not have.
  */
 function describeQuality(strongShare: number, strongDomains: number): string {
   const percent = Math.round(strongShare * 100);
   if (strongDomains === 0) {
-    return "None of the referring domains on this page reach DR 30.";
+    return "None of the referring domains on this page reach domain authority 30.";
   }
   if (strongShare < 0.15) {
-    return `${percent}% of the referring domains on this page reach DR 30; the rest sit below it.`;
+    return `${percent}% of the referring domains on this page reach domain authority 30; the rest sit below it.`;
   }
   if (strongShare < 0.4) {
-    return `${percent}% of the referring domains on this page reach DR 30, the rest below.`;
+    return `${percent}% of the referring domains on this page reach domain authority 30, the rest below.`;
   }
-  return `${percent}% of the referring domains on this page reach DR 30.`;
+  return `${percent}% of the referring domains on this page reach domain authority 30.`;
 }
 
 function median(values: number[]): number {

@@ -86,7 +86,7 @@ export function BacklinksTrendChart({
 }
 
 /**
- * Domain Rank over the same twelve months. The `rank` values already ride
+ * Domain authority over the same twelve months. The `rank` values already ride
  * along on the history call the overview makes, so this chart costs nothing —
  * it was simply never plotted.
  */
@@ -106,7 +106,7 @@ export function BacklinksAuthorityChart({
     <div
       ref={containerRef}
       className="h-56 min-w-0"
-      aria-label="Domain Rank trend chart"
+      aria-label="Domain authority trend chart"
     >
       {chartWidth > 0 ? (
         <LineChart
@@ -140,7 +140,7 @@ export function BacklinksAuthorityChart({
             stroke="#a855f7"
             strokeWidth={2}
             dot={false}
-            name="Domain Rank"
+            name="Domain authority"
           />
         </LineChart>
       ) : null}

@@ -114,7 +114,7 @@ describe("buildBacklinksTabExport", () => {
       },
     });
 
-    expect(content).toContain('"Rank","Ahrefs DR","Spam Score"');
+    expect(content).toContain('"Domain Authority","Ahrefs DR","Spam Score"');
     expect(content).toContain('"71.5"');
   });
 
@@ -130,7 +130,9 @@ describe("buildBacklinksTabExport", () => {
       },
     });
 
-    expect(content).toContain('"Domain Rank","Ahrefs DR","Source Page Rank"');
+    expect(content).toContain(
+      '"Domain Authority","Ahrefs DR","Source Page Authority"',
+    );
     expect(content).toContain('"33"');
   });
 
@@ -169,7 +171,7 @@ describe("buildBacklinksTabExport", () => {
     });
 
     expect(content).toContain(
-      '"Page","Backlinks","Referring Domains","Rank","Broken Backlinks"',
+      '"Page","Backlinks","Referring Domains","Page Authority","Broken Backlinks"',
     );
     expect(content).toContain('"https://docs.example.com/start"');
   });
@@ -186,7 +188,7 @@ describe("buildBacklinksTabExport", () => {
     });
 
     expect(content).toContain(
-      '"Anchor","Backlinks","Referring Domains","Rank","Spam Score","First Seen"',
+      '"Anchor","Backlinks","Referring Domains","Link Authority","Spam Score","First Seen"',
     );
     expect(content).toContain('"click here"');
   });

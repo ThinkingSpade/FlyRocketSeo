@@ -17,7 +17,7 @@ export function exportLinkGap(
         "Referring Domain",
         "Competitors Linked",
         "Which Competitors",
-        "Domain Rank",
+        "Domain Authority",
         "Backlinks",
         "Spam Score",
         "First Seen",

@@ -7,11 +7,19 @@ import {
   BacklinksTrendChart,
 } from "./BacklinksPageCharts";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
-import { formatRelativeTimestamp } from "./backlinksPageUtils";
+import {
+  formatRelativeTimestamp,
+  type SummaryStat,
+} from "./backlinksPageUtils";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
-type SummaryStat = { label: string; value: string; description: string };
+const SUMMARY_TONE_CLASS: Record<SummaryStat["tone"], string> = {
+  neutral: "text-base-content/55",
+  success: "text-success",
+  warning: "text-warning",
+  error: "text-error",
+};
 
 export function BacklinksOverviewPanels({
   projectId,
@@ -84,11 +92,14 @@ function OverviewGrid({
 }
 
 function SummaryStatsGrid({ summaryStats }: { summaryStats: SummaryStat[] }) {
+  const primaryStats = summaryStats.slice(0, 4);
+  const diagnosticStats = summaryStats.slice(4);
+
   return (
     <div className="card border border-base-300 bg-base-100">
-      <div className="flex flex-auto flex-col p-4 xl:h-full gap-2 text-sm">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:gap-y-6">
-          {summaryStats.map((item) => (
+      <div className="flex flex-auto flex-col gap-4 p-4 text-sm xl:h-full">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+          {primaryStats.map((item) => (
             <div key={item.label}>
               <div className="text-xs uppercase tracking-wide text-base-content/55">
                 <HeaderHelpLabel
@@ -96,7 +107,32 @@ function SummaryStatsGrid({ summaryStats }: { summaryStats: SummaryStat[] }) {
                   helpText={item.description}
                 />
               </div>
-              <p className="text-2xl font-semibold">{item.value}</p>
+              <p className="text-2xl font-semibold tabular-nums">
+                {item.value}
+              </p>
+              {item.hint ? (
+                <p
+                  className={`mt-0.5 text-xs ${SUMMARY_TONE_CLASS[item.tone]}`}
+                >
+                  {item.hint}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-base-300 pt-4 md:grid-cols-4">
+          {diagnosticStats.map((item) => (
+            <div key={item.label}>
+              <div className="text-xs uppercase tracking-wide text-base-content/55">
+                <HeaderHelpLabel
+                  label={item.label}
+                  helpText={item.description}
+                />
+              </div>
+              <p className={`text-sm ${SUMMARY_TONE_CLASS[item.tone]}`}>
+                <span className="font-semibold tabular-nums">{item.value}</span>
+                {item.hint ? <span> · {item.hint}</span> : null}
+              </p>
             </div>
           ))}
         </div>
@@ -124,7 +160,7 @@ function TrendPanels({ data }: { data: BacklinksOverviewData }) {
       </TrendCard>
       <TrendCard
         title="Authority trend"
-        description="Domain Rank over the last year"
+        description="Domain authority over the last year"
       >
         <BacklinksAuthorityChart data={data.trends} />
       </TrendCard>

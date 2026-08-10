@@ -1,6 +1,7 @@
 import { formatCount, toPath } from "@/client/features/report/reportModel";
 import { StatBlock } from "@/client/features/report/ReportChrome";
 import { describeOnPageStatus } from "@/client/features/report/onPageStatus";
+import { describeSpamScore } from "@/client/lib/spamScore";
 
 /**
  * The "what's wrong and what's worth doing" chapters of the Client Report:
@@ -254,12 +255,14 @@ export function BacklinkProfileBlock({
   profile: BacklinkProfile;
   topDomains: Array<{ domain: string | null; backlinks: number | null }>;
 }) {
+  const spam = describeSpamScore(profile.backlinksSpamScore);
+
   return (
     <>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         <StatBlock
-          label="Domain rank"
-          value={profile.rank == null ? "—" : String(Math.round(profile.rank))}
+          label="Domain authority"
+          value={profile.rank == null ? "—" : `${Math.round(profile.rank)}/100`}
         />
         <StatBlock
           label="Total backlinks"
@@ -272,9 +275,14 @@ export function BacklinkProfileBlock({
         <StatBlock
           label="Spam score"
           value={
-            profile.backlinksSpamScore == null
-              ? "—"
-              : `${Math.round(profile.backlinksSpamScore)}%`
+            spam.tier === "unavailable"
+              ? spam.formatted
+              : `${spam.formatted}/100`
+          }
+          hint={
+            spam.guidance == null
+              ? spam.label
+              : `${spam.label} · ${spam.guidance}`
           }
         />
         <StatBlock

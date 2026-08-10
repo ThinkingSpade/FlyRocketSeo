@@ -1,6 +1,7 @@
 import { Download, Gauge, ShieldAlert, Tag, Waypoints } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { downloadTextFile } from "@/client/lib/csv";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeAnchorHealth } from "./anchorHealth";
 import {
@@ -233,7 +234,7 @@ export function DomainQualityCard({
           {formatNumber(quality.strongDomains)}
         </span>{" "}
         <span className="text-sm font-normal text-base-content/60">
-          at DR 30+ · median DR{" "}
+          with domain authority of 30+ · median domain authority{" "}
           <span className="tabular-nums">{quality.medianRank}</span>
         </span>
       </p>
@@ -241,7 +242,7 @@ export function DomainQualityCard({
         {buckets.map((bucket) => (
           <ShareBar
             key={bucket.label}
-            label={`DR ${bucket.label}`}
+            label={`Domain authority ${bucket.label}`}
             value={bucket.domains}
             share={bucket.share}
             max={max}
@@ -290,8 +291,8 @@ export function ToxicLinksCard({
         <span className="font-medium text-base-content/80">
           {formatNumber(audit.candidates.length)}
         </span>{" "}
-        {audit.candidates.length === 1 ? "domain" : "domains"} scored{" "}
-        {audit.threshold} or higher for spam, carrying{" "}
+        {audit.candidates.length === 1 ? "domain" : "domains"} scored in the
+        High-risk signal tier, carrying{" "}
         <span className="font-medium text-base-content/80">
           {formatNumber(audit.affectedBacklinks)}
         </span>{" "}
@@ -306,27 +307,32 @@ export function ToxicLinksCard({
             <tr>
               <th>Domain</th>
               <th className="text-right">Spam score</th>
-              <th className="text-right">DR</th>
+              <th className="text-right">Domain authority</th>
               <th className="text-right">Backlinks</th>
             </tr>
           </thead>
           <tbody>
-            {preview.map((candidate) => (
-              <tr key={candidate.domain}>
-                <td className="max-w-md truncate" title={candidate.domain}>
-                  {candidate.domain}
-                </td>
-                <td className="text-right tabular-nums font-medium text-error">
-                  {candidate.spamScore}
-                </td>
-                <td className="text-right tabular-nums text-base-content/60">
-                  {candidate.rank ?? "—"}
-                </td>
-                <td className="text-right tabular-nums text-base-content/60">
-                  {formatNumber(candidate.backlinks)}
-                </td>
-              </tr>
-            ))}
+            {preview.map((candidate) => {
+              const spam = describeSpamScore(candidate.spamScore);
+              return (
+                <tr key={candidate.domain}>
+                  <td className="max-w-md truncate" title={candidate.domain}>
+                    {candidate.domain}
+                  </td>
+                  <td
+                    className={`text-right tabular-nums font-medium ${spam.className}`}
+                  >
+                    {spam.formatted}
+                  </td>
+                  <td className="text-right tabular-nums text-base-content/60">
+                    {candidate.rank ?? "—"}
+                  </td>
+                  <td className="text-right tabular-nums text-base-content/60">
+                    {formatNumber(candidate.backlinks)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
