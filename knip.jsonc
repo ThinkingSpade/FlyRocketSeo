@@ -32,6 +32,11 @@
     // step's tool, applied per page once the pages can be seen -- same
     // situation as GeoLocationSelect above, no importer by design.
     "src/client/components/Reveal.tsx",
+    // Keyword discovery schema: result shape + geo bundle, exported for
+    // Tasks 2-10 (merge function, auto-run guard, server service/function,
+    // hook, components, page wiring). No importer yet by design, same
+    // reasoning as GeoLocationSelect.
+    "src/types/schemas/keyword-discovery.ts",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",
