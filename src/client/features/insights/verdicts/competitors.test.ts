@@ -17,8 +17,18 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "x.com", intersections: null, organicKeywords: 100 },
-        { domain: "y.com", intersections: null, organicKeywords: 200 },
+        {
+          domain: "x.com",
+          intersections: null,
+          organicKeywords: 100,
+          beatsYouCount: null,
+        },
+        {
+          domain: "y.com",
+          intersections: null,
+          organicKeywords: 200,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -33,8 +43,18 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-a.com", intersections: 300, organicKeywords: 400 },
-        { domain: "rival-b.com", intersections: 50, organicKeywords: 2000 },
+        {
+          domain: "rival-a.com",
+          intersections: 300,
+          organicKeywords: 400,
+          beatsYouCount: null,
+        },
+        {
+          domain: "rival-b.com",
+          intersections: 50,
+          organicKeywords: 2000,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -59,12 +79,19 @@ describe("buildCompetitorsVerdict", () => {
           domain: "big-but-unknown.com",
           intersections: null,
           organicKeywords: 999999,
+          beatsYouCount: null,
         },
-        { domain: "small-known.com", intersections: 10, organicKeywords: 20 },
+        {
+          domain: "small-known.com",
+          intersections: 10,
+          organicKeywords: 20,
+          beatsYouCount: null,
+        },
         {
           domain: "biggest-known.com",
           intersections: 80,
           organicKeywords: 100,
+          beatsYouCount: null,
         },
       ],
     });
@@ -78,7 +105,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-c.com", intersections: 50, organicKeywords: 2000 },
+        {
+          domain: "rival-c.com",
+          intersections: 50,
+          organicKeywords: 2000,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -99,7 +131,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "z.com", intersections: 10, organicKeywords: null },
+        {
+          domain: "z.com",
+          intersections: 10,
+          organicKeywords: null,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -113,7 +150,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-d.com", intersections: 2, organicKeywords: 500 },
+        {
+          domain: "rival-d.com",
+          intersections: 2,
+          organicKeywords: 500,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -135,7 +177,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-e.com", intersections: 1, organicKeywords: 500 },
+        {
+          domain: "rival-e.com",
+          intersections: 1,
+          organicKeywords: 500,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -146,7 +193,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-f.com", intersections: 4, organicKeywords: null },
+        {
+          domain: "rival-f.com",
+          intersections: 4,
+          organicKeywords: null,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -157,7 +209,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-g.com", intersections: 5, organicKeywords: null },
+        {
+          domain: "rival-g.com",
+          intersections: 5,
+          organicKeywords: null,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -168,7 +225,12 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-h.com", intersections: 199, organicKeywords: 400 },
+        {
+          domain: "rival-h.com",
+          intersections: 199,
+          organicKeywords: 400,
+          beatsYouCount: null,
+        },
       ],
     });
 
@@ -179,10 +241,37 @@ describe("buildCompetitorsVerdict", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",
       competitors: [
-        { domain: "rival-i.com", intersections: 200, organicKeywords: 400 },
+        {
+          domain: "rival-i.com",
+          intersections: 200,
+          organicKeywords: 400,
+          beatsYouCount: null,
+        },
       ],
     });
 
     expect(verdict.tone).toBe("good");
+  });
+
+  it("defaults to domain-mode reading (intersections) when discoveryMode is omitted", () => {
+    // No caller in this describe block passes discoveryMode at all -- this
+    // pins down that the omission itself means "domain", not merely that
+    // domain-shaped fixtures happen to produce a domain-shaped answer.
+    const verdict = buildCompetitorsVerdict({
+      target: "acme.com",
+      competitors: [
+        {
+          domain: "rival-j.com",
+          intersections: 50,
+          organicKeywords: null,
+          // A nonsense serp-mode value on a row read as domain-mode must be
+          // ignored entirely -- proves the branch, not just the field.
+          beatsYouCount: 999,
+        },
+      ],
+    });
+
+    expect(verdict.tone).toBe("mixed");
+    expect(verdict.read).toContain("shares the most keywords");
   });
 });

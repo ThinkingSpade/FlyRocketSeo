@@ -340,6 +340,8 @@ export function CompetitorsPage({
           projectId={projectId}
           target={target}
           rows={competitorRows}
+          discoveryMode={discoveryMode}
+          seedSize={seedSize}
         />
       ) : null}
 
