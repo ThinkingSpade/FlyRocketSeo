@@ -72,7 +72,23 @@ type NarrativeInput = {
   topQuery?: { query: string; impressions: number; clicks: number } | null;
   pagesTracked?: number;
   queriesTracked?: number;
+  /**
+   * What the client sells, in their own words, from their CONFIRMED business
+   * profile. Absent for a profile nobody has filled in or accepted — the
+   * report must never open by describing a business back to its owner from an
+   * AI guess they have not agreed to.
+   */
+  clientOffer?: string | null;
 };
+
+/**
+ * Drops one trailing full stop so an offer written as a sentence can be
+ * embedded mid-sentence without doubling up. Only one, and only at the end:
+ * the offer is the client's own prose and nothing else about it is rewritten.
+ */
+function trimTrailingPeriod(text: string): string {
+  return text.endsWith(".") ? text.slice(0, -1) : text;
+}
 
 /**
  * The opening summary — the one page most clients actually read. Leads with
@@ -93,6 +109,17 @@ export function buildSummaryNarrative(input: NarrativeInput): string[] {
   const opener = bothDown
     ? `Your site recorded ${count(totals.impressions)} impressions and ${count(totals.clicks)} clicks this period. Impressions saw ${impressions.phrase} and clicks ${clicks.phrase}, while the site held an average position of ${totals.position.toFixed(1)}.`
     : `Your site recorded ${count(totals.impressions)} impressions and ${count(totals.clicks)} clicks this period — impressions ${impressions.direction === "flat" ? "holding steady" : impressions.phrase}, clicks ${clicks.direction === "flat" ? "holding steady" : clicks.phrase} — at an average position of ${totals.position.toFixed(1)}.`;
+
+  // Names the business before the numbers, when the client has told us what
+  // it is. A report that opens on a bare impressions count reads as a
+  // dashboard export; one that opens on who the client is reads as being
+  // about them. Omitted entirely rather than hedged when we don't know.
+  const offer = input.clientOffer?.trim();
+  if (offer) {
+    paragraphs.push(
+      `This report covers search performance for ${trimTrailingPeriod(offer)}.`,
+    );
+  }
   paragraphs.push(opener);
 
   if (input.topPage) {

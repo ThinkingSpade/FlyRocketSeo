@@ -47,6 +47,50 @@ describe("describeChange", () => {
   });
 });
 
+describe("buildSummaryNarrative — who the client is", () => {
+  it("opens by naming the business when the client has confirmed one", () => {
+    // A printed deliverable that opens on a bare impressions count reads as a
+    // dashboard export. Naming the business first makes it a report about
+    // them.
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: "Managed break room programs across DFW.",
+    });
+
+    expect(paragraphs[0]).toBe(
+      "This report covers search performance for Managed break room programs across DFW.",
+    );
+    // One full stop, not two: the offer is the client's own prose and may
+    // already end in one.
+    expect(paragraphs[0]).not.toContain("DFW..");
+    expect(paragraphs[1]).toContain("33,616 impressions");
+  });
+
+  it("says nothing at all when no profile has been confirmed", () => {
+    // Never hedged, never templated around an absence. An unconfirmed AI
+    // draft arrives here as null precisely so this report cannot describe a
+    // business back to its owner from a guess.
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: null,
+    });
+
+    expect(paragraphs[0]).toContain("33,616 impressions");
+    expect(paragraphs.join(" ")).not.toContain("This report covers");
+  });
+
+  it("ignores a profile that is present but blank", () => {
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: "   ",
+    });
+    expect(paragraphs[0]).toContain("33,616 impressions");
+  });
+});
+
 describe("buildSummaryNarrative", () => {
   it("reports both declines honestly and cites the top page", () => {
     const paragraphs = buildSummaryNarrative({

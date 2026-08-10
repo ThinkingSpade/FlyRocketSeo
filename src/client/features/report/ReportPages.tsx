@@ -83,6 +83,7 @@ export function ReportPages({
             }
           : null,
         queriesTracked: gsc.queryTotals.length,
+        clientOffer: data.clientOffer,
       }
     : null;
 

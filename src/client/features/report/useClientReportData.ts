@@ -14,6 +14,8 @@ import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { domainOverviewResultSchema } from "@/types/schemas/domain";
 import { backlinksOverviewCacheSchema } from "@/types/schemas/backlinks-results";
 import { getDomainKeywordsPage } from "@/serverFunctions/domain";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
+import type { ProjectProfile } from "@/shared/keyword-fit/profileTypes";
 import {
   getBacklinksReferringDomains,
   getBacklinksRows,
@@ -190,6 +192,18 @@ function useReportPaidDetails(projectId: string, domain: string | null) {
  * stays about layout. Cached data is reused across tabs — the report costs
  * nothing extra to open when the rest of the project has already been viewed.
  */
+/**
+ * What the client sells, but only once they have confirmed it themselves.
+ *
+ * A standalone function rather than a ternary inside the hook: this report is
+ * printed and handed to the client, so describing their own business back to
+ * them from an AI draft nobody accepted is the worst place in the app to get
+ * that wrong, and the rule deserves to be readable on its own.
+ */
+function confirmedOffer(profile: ProjectProfile): string | null {
+  return profile.confirmedAt !== null ? profile.offer : null;
+}
+
 export function useClientReportData(projectId: string) {
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -199,6 +213,10 @@ export function useClientReportData(projectId: string) {
   const project = projectsQuery.data?.find((entry) => entry.id === projectId);
   const domain = project?.domain ?? null;
   const hasDomain = Boolean(domain);
+  // One free D1 read, and already cached by every tab hosting the profile
+  // card. Degrades to the empty profile on failure, so the report loses a
+  // sentence rather than a section.
+  const { profile } = useProjectProfile(projectId);
 
   const gscQuery = useQuery({
     queryKey: ["report-gsc", projectId],
@@ -300,6 +318,7 @@ export function useClientReportData(projectId: string) {
   return {
     project,
     domain,
+    clientOffer: confirmedOffer(profile),
     gsc: gscQuery.data?.connected ? gscQuery.data : null,
     gscPending: gscQuery.isLoading,
     insights: insightsQuery.data?.connected ? insightsQuery.data : null,

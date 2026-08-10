@@ -6,7 +6,65 @@ type SamProjectContext = {
   domain: string | null;
   locationCode: number;
   languageCode: string;
+  /**
+   * The project's CONFIRMED business profile, or null.
+   *
+   * Null covers both "never filled in" and "an AI draft nobody has accepted",
+   * because an unconfirmed draft is a proposal and SAM must not state a
+   * proposal as fact about the user's own business.
+   */
+  profile: SamBusinessProfile | null;
 };
+
+// Not exported: SamChatAgent builds this shape inline from the profile row
+// and `SamProjectContext` names it, so nothing outside needs the alias.
+type SamBusinessProfile = {
+  offer: string;
+  customer: string;
+  exclusions: string;
+  brandTerms: string;
+};
+
+/**
+ * What the user already told the app their business is.
+ *
+ * SAM's memory block was the only place this could live, which meant every
+ * new chat re-derived it by reading the site — while the answer sat in
+ * `project_profiles`, written by the user on the Keyword Research tab. The
+ * exclusions matter most: they are the one thing a site read cannot reliably
+ * recover, because a page says what a business does and rarely what it
+ * refuses to do.
+ */
+function buildProfileSection(profile: SamBusinessProfile): string | null {
+  const parts: string[] = [];
+  if (profile.offer.trim()) parts.push(`They sell: ${profile.offer.trim()}.`);
+  if (profile.customer.trim()) {
+    parts.push(`Their customer: ${profile.customer.trim()}.`);
+  }
+  if (profile.exclusions.trim()) {
+    parts.push(
+      `They explicitly do NOT do the following, so treat keywords, competitors and content ideas aimed at these as the wrong audience: ${profile.exclusions
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join("; ")}.`,
+    );
+  }
+  if (profile.brandTerms.trim()) {
+    parts.push(
+      `Their brand names, which count as branded search: ${profile.brandTerms
+        .split("\n")
+        .map((line) => line.trim())
+        .filter(Boolean)
+        .join(", ")}.`,
+    );
+  }
+  if (parts.length === 0) return null;
+  return [
+    "The user has described this business in the app, and confirmed it themselves. Treat it as given rather than something to re-derive or ask about:",
+    ...parts,
+  ].join(" ");
+}
 
 /**
  * SAM's "soul" — the read-only identity block of the system prompt. The
@@ -45,7 +103,17 @@ export function buildSamSystemPrompt(
       : `This project has no website set yet. Default market: ${market} (location ${project.locationCode}, language ${project.languageCode}). Ask the user for a domain when a request needs one.`,
   ];
 
-  if (options.memoryIsEmpty) {
+  const profileSection = project.profile
+    ? buildProfileSection(project.profile)
+    : null;
+  if (profileSection) sections.push(profileSection);
+
+  // The intake script below tells SAM to read the site and play back its
+  // assumptions. That is the right move for a project nobody has described,
+  // and the wrong one for a project whose owner already wrote it down --
+  // being asked to confirm what you just typed reads as not having been
+  // listened to.
+  if (options.memoryIsEmpty && !profileSection) {
     sections.push(
       [
         "The memory block is empty, so this is a fresh project for you. Get oriented by reading the site yourself rather than interviewing the user — the ONLY thing to ask for is their website, in one short line (e.g. \"What's the site? I'll take a look and go from there.\"). If the project already has a domain set (above), don't ask anything: go straight to reading it.",
