@@ -54,6 +54,21 @@ const CATEGORY_NAMES: Record<CategoryFilterField, string> = {
   semanticLocation: "placement",
 };
 
+/** The results region a drill-down scrolls to, and returns from. */
+export const BACKLINKS_RESULTS_REGION_ID = "backlinks-results-region";
+
+/**
+ * A stable handle on the row a drill-down came from, so the user can be put
+ * back exactly where they were reading. Losing your place after following a
+ * link is a small thing that makes a page feel unfinished.
+ */
+export function breakdownRowElementId(
+  field: CategoryFilterField,
+  rawValue: string,
+): string {
+  return `backlinks-breakdown-${field}-${encodeURIComponent(rawValue.trim())}`;
+}
+
 /**
  * A row can be drilled into only when it carries a value the filter can send.
  * A blank label cannot: there is no value to match on, and sending an empty

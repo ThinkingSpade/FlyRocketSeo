@@ -4,7 +4,11 @@ import type {
   BacklinksSearchState,
 } from "./backlinksPageTypes";
 import type { BacklinksTabFilterValues } from "./backlinksFilterTypes";
-import type { CategoryFilterField } from "./backlinksCategoryFilters";
+import {
+  BACKLINKS_RESULTS_REGION_ID,
+  breakdownRowElementId,
+  type CategoryFilterField,
+} from "./backlinksCategoryFilters";
 import {
   buildRowsSignature,
   isRowsQueryReleased,
@@ -40,6 +44,10 @@ export function useBacklinksRowsTransaction({
   navigate: BacklinksNavigate;
 }) {
   const [pending, setPending] = useState<RowsRequestSignature | null>(null);
+  // Where the current drill-down was launched from, so the user can be put
+  // back there. Kept even after the chip is cleared: having followed a link,
+  // you still want the way back.
+  const [origin, setOrigin] = useState<BreakdownOrigin | null>(null);
 
   const current = useMemo(
     () =>
@@ -126,8 +134,13 @@ export function useBacklinksRowsTransaction({
   /** Selecting a value replaces that dimension; other dimensions still apply. */
   const selectCategory = useCallback(
     (field: CategoryFilterField, rawValue: string) => {
-      if (appliedFilters[field] === rawValue) return;
-      commitFilterChange({ ...appliedFilters, [field]: rawValue });
+      setOrigin({ field, rawValue });
+      // Re-selecting the applied value changes no filter, but the user still
+      // asked to see those links, so honour the navigation without refetching.
+      if (appliedFilters[field] !== rawValue) {
+        commitFilterChange({ ...appliedFilters, [field]: rawValue });
+      }
+      focusResultsRegion();
     },
     [appliedFilters, commitFilterChange],
   );
@@ -140,5 +153,54 @@ export function useBacklinksRowsTransaction({
     [appliedFilters, commitFilterChange],
   );
 
-  return { rowsReleased: released, selectCategory, clearCategory };
+  const returnToBreakdown = useCallback(() => {
+    if (!origin) return;
+    const row = document.getElementById(
+      breakdownRowElementId(origin.field, origin.rawValue),
+    );
+    // The originating row can be gone -- a re-run may return different values --
+    // so fall back to the section rather than doing nothing.
+    const fallback = document.getElementById(BREAKDOWN_SECTION_ID);
+    const destination = row ?? fallback;
+    if (!destination) return;
+    destination.scrollIntoView({
+      block: row ? "center" : "start",
+      behavior: prefersReducedMotion() ? "auto" : "smooth",
+    });
+    destination.focus({ preventScroll: true });
+  }, [origin]);
+
+  return {
+    rowsReleased: released,
+    selectCategory,
+    clearCategory,
+    origin,
+    returnToBreakdown,
+  };
+}
+
+export type BreakdownOrigin = { field: CategoryFilterField; rawValue: string };
+
+const BREAKDOWN_SECTION_ID = "backlinks-profile-composition";
+
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    window.matchMedia("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
+/**
+ * Moves to the table once the new state has committed -- not once the network
+ * settles. Focus lands on the region rather than the first row, because that
+ * row is replaced when the response arrives.
+ */
+function focusResultsRegion() {
+  const region = document.getElementById(BACKLINKS_RESULTS_REGION_ID);
+  if (!region) return;
+  region.scrollIntoView({
+    block: "start",
+    behavior: prefersReducedMotion() ? "auto" : "smooth",
+  });
+  region.focus({ preventScroll: true });
 }

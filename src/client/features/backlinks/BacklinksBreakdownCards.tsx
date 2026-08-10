@@ -13,6 +13,7 @@ import { LayerCard } from "@cloudflare/kumo/components/layer-card";
 import { Meter } from "@cloudflare/kumo/components/meter";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
+  breakdownRowElementId,
   CATEGORY_FILTER_LABELS,
   prepareBreakdownPresentation,
   type CategoryFilterField,
@@ -159,6 +160,7 @@ function BreakdownList({
             return (
               <li key={`${row.label}:${index}`}>
                 <Button
+                  id={breakdownRowElementId(field, raw)}
                   variant="ghost"
                   size="sm"
                   // Applied is a filter toggle, not the current page, so

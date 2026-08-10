@@ -38,6 +38,7 @@ import { Banner } from "@cloudflare/kumo/components/banner";
 import { Collapsible } from "@cloudflare/kumo/components/collapsible";
 import type { BacklinksRestoredResultsPresentation } from "./backlinksRestoredState";
 import type { CategoryFilterField } from "./backlinksCategoryFilters";
+import type { BreakdownOrigin } from "./useBacklinksRowsTransaction";
 
 type BacklinksBodyProps = {
   projectId: string;
@@ -69,6 +70,8 @@ type BacklinksBodyProps = {
   onRefreshRestored: () => void;
   onSelectCategory: (field: CategoryFilterField, rawValue: string) => void;
   onClearCategory: (field: CategoryFilterField) => void;
+  categoryOrigin: BreakdownOrigin | null;
+  onReturnToBreakdown: () => void;
   onSortingChange: OnChangeFn<SortingState>;
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
@@ -111,6 +114,8 @@ export function BacklinksBody({
   onRefreshRestored,
   onSelectCategory,
   onClearCategory,
+  categoryOrigin,
+  onReturnToBreakdown,
   onSortingChange,
   onTabChange,
   onViewChange,
@@ -234,6 +239,8 @@ export function BacklinksBody({
             onTabChange={onTabChange}
             onViewChange={onViewChange}
             onClearCategory={onClearCategory}
+            origin={categoryOrigin}
+            onReturnToBreakdown={onReturnToBreakdown}
             tabInsights={
               <BacklinksTabInsights
                 activeTab={searchState.tab}
@@ -264,7 +271,11 @@ export function BacklinksBody({
         ) : null}
       </section>
 
-      <section className="space-y-3">
+      <section
+        id="backlinks-profile-composition"
+        tabIndex={-1}
+        className="scroll-mt-4 space-y-3 md:scroll-mt-6"
+      >
         <h2 className="text-base font-semibold">Profile composition</h2>
         <BacklinksProfileBreakdowns
           summary={overviewData.summary}

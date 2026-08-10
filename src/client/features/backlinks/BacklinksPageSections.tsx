@@ -5,6 +5,7 @@ import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
 import { BacklinksCategoryChips } from "./BacklinksCategoryChips";
 import {
   activeCategoryFilters,
+  BACKLINKS_RESULTS_REGION_ID,
   hasActiveCategoryFilter,
   type CategoryFilterField,
 } from "./backlinksCategoryFilters";
@@ -26,6 +27,7 @@ import {
 import { buildBacklinksTabExport } from "./export";
 import type { BacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
+import type { BreakdownOrigin } from "./useBacklinksRowsTransaction";
 import { useAhrefsDomainRatings } from "./useAhrefsDomainRatings";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import {
@@ -65,6 +67,8 @@ export function BacklinksResultsCard({
   onTabChange,
   onViewChange,
   onClearCategory,
+  origin,
+  onReturnToBreakdown,
   tabInsights,
 }: {
   projectId: string;
@@ -90,6 +94,8 @@ export function BacklinksResultsCard({
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
   onClearCategory: (field: CategoryFilterField) => void;
+  origin: BreakdownOrigin | null;
+  onReturnToBreakdown: () => void;
   /** Cards derived from the active tab's rows, rendered above its table. */
   tabInsights?: React.ReactNode;
 }) {
@@ -122,6 +128,16 @@ export function BacklinksResultsCard({
     hasManualFilter: manualFilterCount > 0,
     page: pagination.page,
   });
+  // Announces loading, the result, and failure -- a drill-down that only ever
+  // announced success would leave a screen-reader user waiting on a table that
+  // is never coming.
+  const liveMessage = tabErrorMessage
+    ? `Could not load ${TAB_LOADING_LABELS[activeTab].replace("Loading ", "")}.`
+    : isTabLoading
+      ? `${TAB_LOADING_LABELS[activeTab]}...`
+      : activeTabRows.length === 0
+        ? emptyState.title
+        : `Showing ${activeTabRows.length.toLocaleString()} ${activeTabRows.length === 1 ? "row" : "rows"}.`;
   const exportTable = useMemo(
     () =>
       buildBacklinksTabExport({ tab: activeTab, rows: tabRows, domainRatings }),
@@ -145,7 +161,19 @@ export function BacklinksResultsCard({
   }, [domainRatings, ratableDomains, loadRatings]);
 
   return (
-    <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
+    <div
+      id={BACKLINKS_RESULTS_REGION_ID}
+      role="region"
+      aria-label="Backlink table"
+      tabIndex={-1}
+      aria-busy={isTabLoading || pagination.isFetching}
+      className="scroll-mt-4 overflow-hidden rounded-xl border border-base-300 bg-base-100 md:scroll-mt-6"
+    >
+      {/* One region for the whole card. A second persistent region elsewhere
+          would double-announce every change. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </p>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
         <div className="space-y-2">
           <Tabs
@@ -234,7 +262,9 @@ export function BacklinksResultsCard({
 
       <BacklinksCategoryChips
         values={filters.backlinks.values}
+        origin={origin}
         onClear={onClearCategory}
+        onReturn={onReturnToBreakdown}
       />
 
       {tabInsights}

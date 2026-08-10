@@ -136,14 +136,19 @@ export function BacklinksPage({
   // Declared before the data hook because it gates those queries: a drill-down
   // moves several pieces of state, and every half-applied combination in
   // between is a distinct -- and billable -- query key.
-  const { rowsReleased, selectCategory, clearCategory } =
-    useBacklinksRowsTransaction({
-      searchState,
-      hasTarget,
-      appliedFilters: filters.backlinks.values,
-      applyFilters: filters.backlinks.apply,
-      navigate,
-    });
+  const {
+    rowsReleased,
+    selectCategory,
+    clearCategory,
+    origin: categoryOrigin,
+    returnToBreakdown,
+  } = useBacklinksRowsTransaction({
+    searchState,
+    hasTarget,
+    appliedFilters: filters.backlinks.values,
+    applyFilters: filters.backlinks.apply,
+    navigate,
+  });
 
   const domainExpansion = useBacklinksDomainExpansion({
     projectId,
@@ -335,6 +340,8 @@ export function BacklinksPage({
         onRefreshRestored={refreshRestoredLinks}
         onSelectCategory={selectCategory}
         onClearCategory={clearCategory}
+        categoryOrigin={categoryOrigin}
+        onReturnToBreakdown={returnToBreakdown}
         onSortingChange={handleSortingChange}
         onTabChange={handleResultTabChange}
         onViewChange={handleViewChange}
