@@ -79,4 +79,23 @@ describe("buildCompetitorSeed", () => {
 
     expect(seed.keywords.length).toBeLessThan(MIN_COMPETITOR_SEED);
   });
+
+  it("sorts same-tier keywords by impressions when given out-of-order input", () => {
+    const seed = buildCompetitorSeed(
+      [
+        // All contested (position > 1.5), but given in ascending-impressions order
+        row("low impressions", 100, 5.0),
+        row("medium impressions", 500, 6.0),
+        row("high impressions", 900, 4.0),
+      ],
+      { brandTerms: "" },
+    );
+
+    // Must verify full order, not just first element, to ensure sort is applied
+    expect(seed.keywords.map((k) => k.keyword)).toEqual([
+      "high impressions",
+      "medium impressions",
+      "low impressions",
+    ]);
+  });
 });
