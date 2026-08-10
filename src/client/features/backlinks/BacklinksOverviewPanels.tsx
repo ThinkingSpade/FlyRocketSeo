@@ -45,9 +45,11 @@ export function BacklinksOverviewPanels({
         </Link>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
-        <Badge variant="outline">{data.scope}</Badge>
+        <Badge variant="outline">
+          {data.scope === "page" ? "Exact page" : "Site-wide"}
+        </Badge>
         <span>Target: {data.displayTarget}</span>
-        <span>-</span>
+        <span aria-hidden="true">·</span>
         <span>Updated {formatRelativeTimestamp(data.fetchedAt)}</span>
       </div>
       <OverviewGrid data={data} summaryStats={summaryStats} />
@@ -74,26 +76,16 @@ function OverviewGrid({
   const domainScope = data.scope === "domain";
 
   return (
-    <div
-      className={`grid grid-cols-1 gap-3 ${domainScope ? "md:grid-cols-2 xl:grid-cols-3" : ""}`}
-    >
-      <SummaryStatsGrid data={data} summaryStats={summaryStats} />
+    <div className="flex flex-col gap-6">
+      <SummaryStatsGrid summaryStats={summaryStats} />
       {domainScope ? <TrendPanels data={data} /> : null}
     </div>
   );
 }
 
-function SummaryStatsGrid({
-  data,
-  summaryStats,
-}: {
-  data: BacklinksOverviewData;
-  summaryStats: SummaryStat[];
-}) {
-  const cardClassName = `card bg-base-100 border border-base-300 ${data.scope === "domain" ? "md:col-span-2 xl:col-span-1" : ""}`;
-
+function SummaryStatsGrid({ summaryStats }: { summaryStats: SummaryStat[] }) {
   return (
-    <div className={cardClassName}>
+    <div className="card border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col p-4 xl:h-full gap-2 text-sm">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:gap-y-6">
           {summaryStats.map((item) => (
@@ -115,13 +107,15 @@ function SummaryStatsGrid({
 
 function TrendPanels({ data }: { data: BacklinksOverviewData }) {
   return (
-    <>
-      <TrendCard
-        title="Backlink growth"
-        description="Backlinks and referring domains over the last year"
-      >
-        <BacklinksTrendChart data={data.trends} />
-      </TrendCard>
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className="lg:col-span-2">
+        <TrendCard
+          title="Backlink growth"
+          description="Backlinks and referring domains over the last year"
+        >
+          <BacklinksTrendChart data={data.trends} />
+        </TrendCard>
+      </div>
       <TrendCard
         title="New vs lost"
         description="Backlink acquisition and attrition"
@@ -134,7 +128,7 @@ function TrendPanels({ data }: { data: BacklinksOverviewData }) {
       >
         <BacklinksAuthorityChart data={data.trends} />
       </TrendCard>
-    </>
+    </div>
   );
 }
 
@@ -148,7 +142,7 @@ function TrendCard({
   title: string;
 }) {
   return (
-    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+    <div className="relative flex h-full flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div>
           <h2 className="text-sm font-medium">{title}</h2>

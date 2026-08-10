@@ -263,6 +263,7 @@ export function BacklinksPage({
       </div>
 
       <BacklinksSearchCard
+        compact={overviewData != null}
         errorMessage={restoredOverviewNotice ? null : overviewErrorMessage}
         initialValues={searchCardInitialValues}
         canOpenSearch={canOpenSearch}
