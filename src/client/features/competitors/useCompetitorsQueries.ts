@@ -31,6 +31,10 @@ import {
   type ProjectMarket,
 } from "@/client/hooks/useProjectDomain";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import {
+  applyRemoveProjectCompetitorPatch,
+  applySetProjectCompetitorPatch,
+} from "./competitorsCacheUpdaters";
 
 type CompetitorsRun = {
   authorized: boolean;
@@ -392,24 +396,8 @@ export function useSetProjectCompetitorMutation(projectId: string) {
         projectCompetitorsQueryKey(projectId),
         overrides,
       );
-      const updater = (page: CompetitorsPage): CompetitorsPage => {
-        if (variables.status === "pinned") {
-          return {
-            ...page,
-            rows: page.rows.map((row) =>
-              row.domain === variables.domain ? { ...row, pinned: true } : row,
-            ),
-          };
-        }
-        // Excluded: drop it from the visible rows this project's other
-        // overrides already filtered server-side, and count it as hidden so
-        // the disclosure line stays accurate without a refetch.
-        const rows = page.rows.filter((row) => row.domain !== variables.domain);
-        const removed = page.rows.length - rows.length;
-        return removed === 0
-          ? page
-          : { ...page, rows, hiddenCount: page.hiddenCount + removed };
-      };
+      const updater = (page: CompetitorsPage) =>
+        applySetProjectCompetitorPatch(page, variables);
       patchCachedCompetitorsPages(queryClient, projectId, updater);
       patchCachedRestoredCompetitorsRun(queryClient, projectId, updater);
       toast.success(
@@ -439,19 +427,8 @@ export function useRemoveProjectCompetitorMutation(projectId: string) {
         projectCompetitorsQueryKey(projectId),
         overrides,
       );
-      const updater = (page: CompetitorsPage): CompetitorsPage => {
-        if (variables.reason === "unpin") {
-          return {
-            ...page,
-            rows: page.rows.map((row) =>
-              row.domain === variables.domain ? { ...row, pinned: false } : row,
-            ),
-          };
-        }
-        return page.hiddenCount > 0
-          ? { ...page, hiddenCount: page.hiddenCount - 1 }
-          : page;
-      };
+      const updater = (page: CompetitorsPage) =>
+        applyRemoveProjectCompetitorPatch(page, variables);
       patchCachedCompetitorsPages(queryClient, projectId, updater);
       patchCachedRestoredCompetitorsRun(queryClient, projectId, updater);
       toast.success(
