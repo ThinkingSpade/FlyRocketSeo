@@ -8,7 +8,6 @@ import {
   DEFAULT_LINK_GAP_PAGE_SIZE,
   competitorsPageSchema,
   keywordGapModes,
-  type CompetitorRow,
   type CompetitorsTab,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
@@ -33,7 +32,7 @@ import {
   useLinkGapQuery,
 } from "./useCompetitorsQueries";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
-import { shouldAdoptRestoredRun } from "./shouldAdoptRestoredRun";
+import { pickAdoptedRestore } from "./pickAdoptedRestore";
 import { resolveRestoreNotice } from "./resolveRestoreNotice";
 import { pickDiscoveryDisclosure } from "./pickDiscoveryDisclosure";
 import { writeHandoff } from "@/client/features/insights/handoffStore";
@@ -53,31 +52,6 @@ const COMPETITORS_TAB_ITEMS = COMPETITORS_TABS.map(({ tab, label }) => ({
   value: tab,
   label,
 }));
-
-/**
- * The restored run and the rows to show, once "is this safe to show" has
- * been decided -- pulled out of `CompetitorsPage` (alongside
- * `CompetitorsRestoreNotice`) to keep that component under this repo's
- * line-count lint cap. `restored` is only ever adopted when there is no
- * live answer yet AND `shouldAdoptRestoredRun` agrees, so `restoredRun` and
- * `competitorRows` always move together.
- */
-function pickAdoptedRestore<
-  Restored extends { label: string; result: { rows: CompetitorRow[] } },
->(
-  liveRows: CompetitorRow[] | undefined,
-  restored: Restored | null,
-  target: string,
-): { restoredRun: Restored | null; competitorRows: CompetitorRow[] } {
-  const adoptable =
-    liveRows == null &&
-    shouldAdoptRestoredRun({ target, restoredLabel: restored?.label ?? null });
-  const restoredRun = adoptable ? restored : null;
-  return {
-    restoredRun,
-    competitorRows: liveRows ?? restoredRun?.result.rows ?? [],
-  };
-}
 
 type CompetitorsSearchState = {
   target: string;
@@ -150,10 +124,14 @@ export function CompetitorsPage({
     });
   };
 
+  // Not just `page`: on any other tab this stays pinned to 1 so switching
+  // tabs never leaves a stale deeper-page number lingering behind, the same
+  // reasoning `useCompetitorsQuery` below already applies to its own `page`.
+  const competitorsPage = tab === "competitors" ? page : 1;
   const competitorsQuery = useCompetitorsQuery({
     projectId,
     target,
-    page: tab === "competitors" ? page : 1,
+    page: competitorsPage,
     pageSize: DEFAULT_COMPETITORS_PAGE_SIZE,
     locationCode: market.locationCode,
     languageCode: market.languageCode,
@@ -165,6 +143,7 @@ export function CompetitorsPage({
     competitorsQuery.data?.rows,
     restored,
     target,
+    competitorsPage,
   );
   const { discoveryMode, seedSize, hiddenCount, seedTruncated, hasResult } =
     pickDiscoveryDisclosure(competitorsQuery.data, restoredRun);
