@@ -1,19 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { AlertCircle, Briefcase, Check, Wand2, X } from "lucide-react";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { resolveDraftStatus, type DraftStatus } from "./draftStatus";
-import { applyPrefill } from "./profilePrefill";
+import { applyPrefill, hasNeverBeenDrafted } from "./profilePrefill";
 import { useProfilePrefill } from "./useProfilePrefill";
-import {
-  SERVICE_AREA_LABELS,
-  wantsGeoModifiers,
-  type ProjectProfile,
-} from "@/shared/keyword-fit/profileTypes";
+import { type ProjectProfile } from "@/shared/keyword-fit/profileTypes";
+import { ProfileSummary } from "./ProfileSummary";
 import { ServiceAreaField } from "./ServiceAreaField";
 import { summariseServiceArea } from "./serviceAreaSummary";
 import { useTargetArea } from "@/client/features/geo/useTargetArea";
 import { parseExclusions } from "@/shared/keyword-fit/keywordFit";
 import {
+  useAutoDraftProjectProfile,
   useDraftProjectProfile,
   useProjectProfile,
   useSaveProjectProfile,
@@ -50,6 +49,9 @@ export function ProjectProfileCard({ projectId }: Props) {
   // Same cached query ServiceAreaField reads; the collapsed summary needs the
   // place name too, and it renders when that field does not exist.
   const areaLabel = summariseServiceArea(useTargetArea(projectId).data).label;
+  const domain = useProjectDomain(projectId);
+  const autoDraft = useAutoDraftProjectProfile(projectId);
+  const autoDraftRequested = useRef(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ProjectProfile>(profile);
 
@@ -63,6 +65,28 @@ export function ProjectProfileCard({ projectId }: Props) {
   useEffect(() => {
     if (!open) setDraft(applyPrefill(profile, prefill));
   }, [open, profile, prefill]);
+
+  // Draft from the client's own site on first open, once per project ever.
+  //
+  // The ref only stops this component from firing twice within one mount; the
+  // real exactly-once guarantee is the server's claim, which is what makes it
+  // safe for the card to be mounted on several tabs at the same time. Every
+  // condition here is an optimisation to avoid a pointless round trip, not a
+  // correctness check -- `hasNeverBeenDrafted` says so itself.
+  useEffect(() => {
+    if (autoDraftRequested.current) return;
+    if (isLoading || !aiAvailable || !domain) return;
+    if (!hasNeverBeenDrafted(profile)) return;
+    autoDraftRequested.current = true;
+    autoDraft.mutate(undefined, {
+      // Opens the editor on what it wrote, rather than leaving a filled-in
+      // profile collapsed behind a summary line. The row is unconfirmed until
+      // the user presses Save, so this is the review, not a notification.
+      onSuccess: (result) => {
+        if (result.status === "drafted") setOpen(true);
+      },
+    });
+  }, [isLoading, aiAvailable, domain, profile, autoDraft]);
 
   const isFilled = profile.offer.trim() !== "";
   if (isLoading) return null;
@@ -78,6 +102,7 @@ export function ProjectProfileCard({ projectId }: Props) {
         profile={seed}
         isFilled={isFilled}
         areaLabel={areaLabel}
+        isDrafting={autoDraft.isPending}
         onOpen={() => {
           setDraft(seed);
           setOpen(true);
@@ -90,6 +115,14 @@ export function ProjectProfileCard({ projectId }: Props) {
     key: K,
     value: ProjectProfile[K],
   ) => setDraft((current) => ({ ...current, [key]: value }));
+
+  // An AI draft nobody has accepted yet. `confirmedAt` is the whole contract
+  // `project_profiles` was built on: null means proposal, and this is the one
+  // place that is allowed to show a proposal as if it were the profile.
+  const isUnreviewedDraft =
+    profile.source === "ai" &&
+    profile.confirmedAt === null &&
+    profile.offer.trim() !== "";
 
   const draftStatus = resolveDraftStatus({
     isPending: drafter.isPending,
@@ -124,6 +157,22 @@ export function ProjectProfileCard({ projectId }: Props) {
             <X className="size-3.5" />
           </Button>
         </div>
+
+        {isUnreviewedDraft ? (
+          <p
+            className="rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-sm"
+            role="status"
+          >
+            <span className="font-medium">
+              Drafted from {domain ?? "their site"}.
+            </span>{" "}
+            <span className="text-base-content/70">
+              Nothing uses this until you save it — correct anything that&apos;s
+              wrong first. The &ldquo;what they do NOT do&rdquo; lines are the
+              ones worth checking closely.
+            </span>
+          </p>
+        ) : null}
 
         {aiAvailable ? (
           <div className="flex flex-wrap items-center gap-2">
@@ -305,68 +354,5 @@ function ProfileField({
       <span className="text-sm text-base-content/60">{hint}</span>
       {footer}
     </label>
-  );
-}
-
-function ProfileSummary({
-  profile,
-  isFilled,
-  areaLabel,
-  onOpen,
-}: {
-  profile: ProjectProfile;
-  isFilled: boolean;
-  /** The detected or confirmed place, when there is one. */
-  areaLabel: string | null;
-  onOpen: () => void;
-}) {
-  if (!isFilled) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-3">
-        <div className="flex items-start gap-2">
-          <Briefcase className="mt-0.5 size-4 shrink-0 text-base-content/50" />
-          <p className="text-sm text-base-content/80">
-            Keyword results don&apos;t know what this client does yet, so a
-            machine reseller&apos;s keywords look the same as an
-            operator&apos;s.{" "}
-            <span className="text-base-content/60">
-              Takes a minute, costs nothing.
-            </span>
-          </p>
-        </div>
-        <Button type="button" size="sm" onClick={onOpen}>
-          Describe this client
-        </Button>
-      </div>
-    );
-  }
-
-  // Names the place rather than the shape whenever the shape uses one, so the
-  // collapsed card says "Dallas-Ft. Worth TX" instead of the strictly-true but
-  // uninformative "One local area".
-  const areaHint =
-    wantsGeoModifiers(profile.serviceAreaKind) && areaLabel
-      ? areaLabel
-      : SERVICE_AREA_LABELS[profile.serviceAreaKind].label;
-  const ruleCount = parseExclusions(profile.exclusions).length;
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-3">
-      <div className="flex min-w-0 items-start gap-2">
-        <Briefcase className="mt-0.5 size-4 shrink-0 text-base-content/50" />
-        <p className="min-w-0 text-sm text-base-content/80">
-          <span className="line-clamp-1">{profile.offer}</span>
-          <span className="text-base-content/60">
-            {areaHint}
-            {ruleCount > 0
-              ? ` · ${ruleCount === 1 ? "1 fit rule" : `${ruleCount} fit rules`}`
-              : " · no fit rules yet"}
-          </span>
-        </p>
-      </div>
-      <Button type="button" variant="ghost" size="sm" onClick={onOpen}>
-        Edit
-      </Button>
-    </div>
   );
 }

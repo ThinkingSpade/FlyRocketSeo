@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyPrefill,
   deriveBrandTerms,
+  hasNeverBeenDrafted,
   serviceAreaKindForArea,
 } from "./profilePrefill";
 import { EMPTY_PROFILE } from "@/shared/keyword-fit/profileTypes";
@@ -76,6 +77,37 @@ describe("deriveBrandTerms", () => {
 
   it("returns nothing to prefill when there is nothing to say", () => {
     expect(deriveBrandTerms({ projectName: "Default", domain: null })).toBe("");
+  });
+});
+
+describe("hasNeverBeenDrafted", () => {
+  it("is true for a project with no profile row", () => {
+    expect(hasNeverBeenDrafted(EMPTY_PROFILE)).toBe(true);
+  });
+
+  it("is false once a draft has claimed the row, even while it is still empty", () => {
+    // The claimed-but-failed row: source "ai", nothing filled in. Treating
+    // this as never-drafted is exactly the mistake that would re-crawl an
+    // unreadable site on every page load.
+    expect(hasNeverBeenDrafted({ ...EMPTY_PROFILE, source: "ai" })).toBe(false);
+  });
+
+  it("is false once a human has written anything", () => {
+    expect(
+      hasNeverBeenDrafted({ ...EMPTY_PROFILE, offer: "We place machines" }),
+    ).toBe(false);
+    expect(
+      hasNeverBeenDrafted({ ...EMPTY_PROFILE, brandTerms: "Delio TX" }),
+    ).toBe(false);
+  });
+
+  it("is false for a saved profile, however sparse", () => {
+    expect(
+      hasNeverBeenDrafted({
+        ...EMPTY_PROFILE,
+        confirmedAt: "2026-08-01T00:00:00.000Z",
+      }),
+    ).toBe(false);
   });
 });
 

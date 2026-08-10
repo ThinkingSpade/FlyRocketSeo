@@ -120,6 +120,31 @@ export function deriveBrandTerms(input: {
 }
 
 /**
+ * Whether this project has no profile row at all, and so has never been
+ * drafted.
+ *
+ * `getProjectProfile` returns `EMPTY_PROFILE` for a project with no row, so
+ * the client cannot see the difference directly. What it CAN see is that a
+ * claimed draft is always `source: "ai"` — the claim writes that before it
+ * writes anything else — so an all-empty `manual` profile is the one shape
+ * that means "nothing has ever been written here".
+ *
+ * This is an optimisation, not the guarantee. The server claims the row and
+ * is the only thing that decides whether a draft actually runs; being wrong
+ * here costs one skipped round trip, never a second crawl.
+ */
+export function hasNeverBeenDrafted(profile: ProjectProfile): boolean {
+  return (
+    profile.source === "manual" &&
+    profile.confirmedAt === null &&
+    profile.offer.trim() === "" &&
+    profile.customer.trim() === "" &&
+    profile.exclusions.trim() === "" &&
+    profile.brandTerms.trim() === ""
+  );
+}
+
+/**
  * Lays the free pre-fill over a stored profile, without ever overwriting
  * something a person decided.
  *
