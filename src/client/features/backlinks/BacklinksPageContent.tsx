@@ -42,6 +42,7 @@ import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildBacklinksVerdict } from "@/client/features/insights/verdicts/backlinks";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import type { BacklinksRestoredResultsPresentation } from "./backlinksRestoredState";
+import type { CategoryFilterField } from "./backlinksCategoryFilters";
 
 type BacklinksBodyProps = {
   projectId: string;
@@ -71,6 +72,8 @@ type BacklinksBodyProps = {
   onRemoveHistoryItem: (timestamp: number) => void;
   onRetryOverview: () => void;
   onRefreshRestored: () => void;
+  onSelectCategory: (field: CategoryFilterField, rawValue: string) => void;
+  onClearCategory: (field: CategoryFilterField) => void;
   onSortingChange: OnChangeFn<SortingState>;
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
@@ -111,6 +114,8 @@ export function BacklinksBody({
   onRemoveHistoryItem,
   onRetryOverview,
   onRefreshRestored,
+  onSelectCategory,
+  onClearCategory,
   onSortingChange,
   onTabChange,
   onViewChange,
@@ -201,7 +206,16 @@ export function BacklinksBody({
       {/* All three read numbers the overview and Top Pages calls already
           returned, so none of them spends. */}
       <LinkVelocityCard trends={overviewData.newLostTrends} />
-      <BacklinksProfileBreakdowns summary={overviewData.summary} />
+      <BacklinksProfileBreakdowns
+        summary={overviewData.summary}
+        categoryValues={filters.backlinks.values}
+        // Withheld on a restored run: there is no link list to filter yet, so
+        // the rows stay informational rather than becoming a second way to
+        // trigger a paid refresh.
+        onSelectCategory={
+          restoredResults?.kind === "empty" ? undefined : onSelectCategory
+        }
+      />
 
       {/* Derived views over data already fetched: the follow split reads the
           overview summary, the other two read whichever results sub-tab the
@@ -261,6 +275,7 @@ export function BacklinksBody({
           onSortingChange={onSortingChange}
           onTabChange={onTabChange}
           onViewChange={onViewChange}
+          onClearCategory={onClearCategory}
         />
       )}
       {restoredResults == null ? (

@@ -2,6 +2,11 @@ import { useEffect, useMemo } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
+import { BacklinksCategoryChips } from "./BacklinksCategoryChips";
+import {
+  hasActiveCategoryFilter,
+  type CategoryFilterField,
+} from "./backlinksCategoryFilters";
 import { BacklinksTable } from "./BacklinksTable";
 import { ReferringDomainsTable } from "./ReferringDomainsTable";
 import { TopPagesTable } from "./TopPagesTable";
@@ -56,6 +61,7 @@ export function BacklinksResultsCard({
   onSortingChange,
   onTabChange,
   onViewChange,
+  onClearCategory,
 }: {
   projectId: string;
   activeTab: BacklinksSearchState["tab"];
@@ -79,6 +85,7 @@ export function BacklinksResultsCard({
   onSortingChange: OnChangeFn<SortingState>;
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
+  onClearCategory: (field: CategoryFilterField) => void;
 }) {
   const {
     ratings: domainRatings,
@@ -86,6 +93,9 @@ export function BacklinksResultsCard({
     loadRatings,
   } = useAhrefsDomainRatings(projectId);
   const activeFilterCount = filters[activeTab].activeFilterCount;
+  const categoryFiltersActive = hasActiveCategoryFilter(
+    filters.backlinks.values,
+  );
   const exportTable = useMemo(
     () =>
       buildBacklinksTabExport({ tab: activeTab, rows: tabRows, domainRatings }),
@@ -164,7 +174,10 @@ export function BacklinksResultsCard({
             </Badge>
           ) : null}
         </Button>
-        {activeTab === "backlinks" ? (
+        {/* Hidden while a drill-down is applied: one-per-domain collapses a
+            domain's links to its strongest, so a 14-link slice could show 3
+            rows and read as a broken filter. All links is the invariant. */}
+        {activeTab === "backlinks" && !categoryFiltersActive ? (
           <Tabs
             // The only strip in the app that was `tabs-xs`. Kumo has one
             // compact step (`sm`), which is what every other small control here
@@ -192,6 +205,11 @@ export function BacklinksResultsCard({
           onApplied={() => onPageChange(1)}
         />
       ) : null}
+
+      <BacklinksCategoryChips
+        values={filters.backlinks.values}
+        onClear={onClearCategory}
+      />
 
       <div className="p-4">
         {tabErrorMessage ? (

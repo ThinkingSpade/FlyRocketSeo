@@ -20,6 +20,8 @@ import {
   useBacklinksTargetPrefill,
 } from "./useBacklinksPageData";
 import { useBacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
+import { useBacklinksRowsTransaction } from "./useBacklinksRowsTransaction";
+import { toBacklinksFiltersPayload } from "./backlinksFilterTypes";
 import { useBacklinksRunAuthorization } from "./useBacklinksRunAuthorization";
 import { useBacklinksSearchHistory } from "@/client/hooks/useBacklinksSearchHistory";
 import {
@@ -131,9 +133,23 @@ export function BacklinksPage({
     [navigate],
   );
 
+  // Declared before the data hook because it gates those queries: a drill-down
+  // moves several pieces of state, and every half-applied combination in
+  // between is a distinct -- and billable -- query key.
+  const { rowsReleased, selectCategory, clearCategory } =
+    useBacklinksRowsTransaction({
+      searchState,
+      hasTarget,
+      appliedFilters: filters.backlinks.values,
+      applyFilters: filters.backlinks.apply,
+      navigate,
+    });
+
   const domainExpansion = useBacklinksDomainExpansion({
     projectId,
     searchState,
+    authorized: searchAuthorized,
+    filters: toBacklinksFiltersPayload(filters.backlinks.values),
   });
 
   const {
@@ -150,6 +166,7 @@ export function BacklinksPage({
     projectId,
     searchState,
     hasTarget,
+    rowsReleased,
     filters,
     authorized: searchAuthorized,
     runNonce: run.runNonce,
@@ -315,6 +332,8 @@ export function BacklinksPage({
         onRemoveHistoryItem={removeHistoryItem}
         onRetryOverview={() => run.authorize()}
         onRefreshRestored={refreshRestoredLinks}
+        onSelectCategory={selectCategory}
+        onClearCategory={clearCategory}
         onSortingChange={handleSortingChange}
         onTabChange={handleResultTabChange}
         onViewChange={handleViewChange}

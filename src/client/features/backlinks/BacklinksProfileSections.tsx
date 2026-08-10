@@ -1,5 +1,7 @@
 import {
   Activity,
+  ArrowDown,
+  Check,
   Globe,
   LayoutTemplate,
   Link2,
@@ -7,7 +9,15 @@ import {
   Server,
   Wrench,
 } from "lucide-react";
+import { Button } from "@cloudflare/kumo/components/button";
 import { InsightIcon } from "@/client/components/InsightTile";
+import {
+  CATEGORY_FILTER_LABELS,
+  formatCategoryValue,
+  isSelectableCategoryValue,
+  type CategoryFilterField,
+} from "./backlinksCategoryFilters";
+import type { BacklinksTabFilterValues } from "./backlinksFilterTypes";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeLinkVelocity } from "./linkVelocity";
 import {
@@ -24,6 +34,7 @@ import type { BacklinksTopPagesData } from "./backlinksPageTypes";
  */
 
 const RECLAIM_LIMIT = 8;
+const COUNTS_NOTE_ID = "backlinks-breakdown-counts-note";
 
 function formatNumber(value: number, digits = 0): string {
   return value.toLocaleString(undefined, {
@@ -32,32 +43,66 @@ function formatNumber(value: number, digits = 0): string {
   });
 }
 
-/**
- * DataForSEO returns these split keys as raw API tokens (`noopener`,
- * `unknown`, `article`). Title-case them and swap underscores for spaces so a
- * client-facing report doesn't read like a payload dump. Country and TLD codes
- * are already displayed as-is by their own panels, so nothing here uppercases.
- */
-function humanizeLabel(label: string): string {
-  const spaced = label.replace(/[_-]+/g, " ").trim();
-  if (spaced === "") return label;
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+const ROW_BAR = "h-1 w-full overflow-hidden rounded-full bg-base-200";
+
+function BreakdownRowBody({
+  label,
+  value,
+  share,
+  muted,
+  trailing,
+}: {
+  label: string;
+  value: number;
+  share: number;
+  muted: boolean;
+  trailing: React.ReactNode;
+}) {
+  return (
+    <>
+      <div className="flex w-full min-w-0 items-baseline gap-2 text-sm">
+        <span className={`min-w-0 flex-1 truncate ${muted ? "" : "text-left"}`}>
+          {label}
+        </span>
+        <span
+          className={`shrink-0 tabular-nums ${muted ? "text-base-content/45" : "text-base-content/60"}`}
+        >
+          {formatNumber(value)}
+        </span>
+        {trailing}
+      </div>
+      {/* The count already carries this, so the bar is decoration. */}
+      <div className={ROW_BAR} aria-hidden="true">
+        <div
+          className={`h-full rounded-full ${muted ? "bg-base-300" : "bg-primary/60 group-hover:bg-primary/80 group-focus-visible:bg-primary/80"}`}
+          style={{ width: `${Math.max(2, share * 100)}%` }}
+        />
+      </div>
+    </>
+  );
 }
 
 function BreakdownList({
   title,
   icon,
   rows,
-  humanize = false,
+  field,
+  activeValue,
+  onSelect,
 }: {
   title: string;
   icon: typeof Globe;
   rows: Array<{ label: string; value: number }>;
-  /** Raw API tokens get title-cased; codes like `US` and `.com` do not. */
-  humanize?: boolean;
+  field: CategoryFilterField;
+  activeValue: string;
+  /** Absent while there is no link list to filter (e.g. a restored run). */
+  onSelect?: (field: CategoryFilterField, rawValue: string) => void;
 }) {
   if (rows.length === 0) return null;
   const max = Math.max(...rows.map((row) => row.value));
+  const anySelectable =
+    onSelect != null &&
+    rows.some((row) => isSelectableCategoryValue(row.label));
 
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
@@ -66,25 +111,69 @@ function BreakdownList({
           <InsightIcon icon={icon} />
           {title}
         </h3>
+        {onSelect != null && !anySelectable ? (
+          <p className="text-xs text-base-content/50">Summary only</p>
+        ) : null}
         <ul className="space-y-1.5">
-          {rows.map((row) => (
-            <li key={row.label} className="space-y-0.5">
-              <div className="flex items-baseline justify-between gap-2 text-sm">
-                <span className="truncate">
-                  {humanize ? humanizeLabel(row.label) : row.label}
-                </span>
-                <span className="shrink-0 tabular-nums text-base-content/60">
-                  {formatNumber(row.value)}
-                </span>
-              </div>
-              <div className="h-1 w-full overflow-hidden rounded-full bg-base-200">
-                <div
-                  className="h-full rounded-full bg-primary/60"
-                  style={{ width: `${Math.max(2, (row.value / max) * 100)}%` }}
-                />
-              </div>
-            </li>
-          ))}
+          {rows.map((row) => {
+            const display = formatCategoryValue(field, row.label);
+            const share = row.value / max;
+            const selectable =
+              onSelect != null && isSelectableCategoryValue(row.label);
+
+            // A row with no value to send is plain content, not a disabled
+            // button: it can never become actionable, so it stays out of the
+            // tab order rather than presenting itself as broken.
+            if (!selectable) {
+              return (
+                <li
+                  key={row.label}
+                  className="cursor-default space-y-0.5 px-2 py-1 text-base-content/55"
+                >
+                  <BreakdownRowBody
+                    label={display}
+                    value={row.value}
+                    share={share}
+                    muted
+                    trailing={null}
+                  />
+                </li>
+              );
+            }
+
+            const raw = row.label.trim();
+            const applied = activeValue === raw;
+            return (
+              <li key={row.label}>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  // Applied is a filter toggle, not the current page, so
+                  // aria-pressed: a drill-down can be applied while the user
+                  // reads a different sub-tab entirely.
+                  aria-pressed={applied}
+                  aria-label={`Show All links for ${CATEGORY_FILTER_LABELS[field]}: ${display}. Summary count: ${formatNumber(row.value)}.`}
+                  onClick={() => onSelect(field, raw)}
+                  className={`group h-auto min-h-9 w-full touch-manipulation flex-col items-stretch gap-0.5 rounded-md px-2 py-1 text-left font-normal hover:bg-base-200/70 active:bg-base-200 motion-reduce:transition-none ${applied ? "bg-base-200/60" : ""}`}
+                >
+                  <BreakdownRowBody
+                    label={display}
+                    value={row.value}
+                    share={share}
+                    muted={false}
+                    trailing={
+                      applied ? (
+                        <Check className="size-3.5 shrink-0 text-base-content/60" />
+                      ) : (
+                        // Always faintly visible: touch devices never hover.
+                        <ArrowDown className="size-3.5 shrink-0 text-base-content/35 group-hover:text-base-content/60 group-focus-visible:text-base-content/60" />
+                      )
+                    }
+                  />
+                </Button>
+              </li>
+            );
+          })}
         </ul>
       </div>
     </div>
@@ -93,8 +182,13 @@ function BreakdownList({
 
 export function BacklinksProfileBreakdowns({
   summary,
+  categoryValues,
+  onSelectCategory,
 }: {
   summary: BacklinksOverviewResult["summary"];
+  categoryValues: Pick<BacklinksTabFilterValues, CategoryFilterField>;
+  /** Absent when there is no link list to filter, e.g. on a restored run. */
+  onSelectCategory?: (field: CategoryFilterField, rawValue: string) => void;
 }) {
   const hasAny =
     summary.referringCountries.length > 0 ||
@@ -106,41 +200,72 @@ export function BacklinksProfileBreakdowns({
   if (!hasAny) return null;
 
   return (
-    <div className="grid gap-3 md:grid-cols-3">
-      <BreakdownList
-        title="Top countries"
-        icon={Globe}
-        rows={summary.referringCountries}
-      />
-      <BreakdownList
-        title="Top-level domains"
-        icon={Link2}
-        rows={summary.referringTlds}
-      />
-      <BreakdownList
-        title="Link types"
-        icon={Link2}
-        rows={summary.referringLinkTypes}
-      />
-      {/* Three more splits the same summary call already returned. */}
-      <BreakdownList
-        title="Link attributes"
-        icon={MousePointerClick}
-        rows={summary.referringLinkAttributes}
-        humanize
-      />
-      <BreakdownList
-        title="Site types"
-        icon={Server}
-        rows={summary.referringPlatformTypes}
-        humanize
-      />
-      <BreakdownList
-        title="Placement on page"
-        icon={LayoutTemplate}
-        rows={summary.referringPlacements}
-        humanize
-      />
+    <div className="space-y-2">
+      {/* Says both things that could otherwise mislead: that a click spends,
+          and that these counts come from a different measurement than the
+          table's, so they will not always agree. */}
+      <p
+        id={COUNTS_NOTE_ID}
+        className="text-xs leading-relaxed text-base-content/55"
+      >
+        {onSelectCategory
+          ? "Selectable rows filter All links; each selection runs a fresh lookup. Summary counts cover the whole profile and are measured separately from the table, so totals can differ."
+          : "Load individual links to use breakdown filters."}
+      </p>
+      <div
+        className="grid gap-3 md:grid-cols-3"
+        aria-describedby={COUNTS_NOTE_ID}
+      >
+        <BreakdownList
+          title="Top countries"
+          icon={Globe}
+          rows={summary.referringCountries}
+          field="sourceCountry"
+          activeValue={categoryValues.sourceCountry}
+          onSelect={onSelectCategory}
+        />
+        <BreakdownList
+          title="Top-level domains"
+          icon={Link2}
+          rows={summary.referringTlds}
+          field="sourceTld"
+          activeValue={categoryValues.sourceTld}
+          onSelect={onSelectCategory}
+        />
+        <BreakdownList
+          title="Link types"
+          icon={Link2}
+          rows={summary.referringLinkTypes}
+          field="itemType"
+          activeValue={categoryValues.itemType}
+          onSelect={onSelectCategory}
+        />
+        {/* Three more splits the same summary call already returned. */}
+        <BreakdownList
+          title="Link attributes"
+          icon={MousePointerClick}
+          rows={summary.referringLinkAttributes}
+          field="linkAttribute"
+          activeValue={categoryValues.linkAttribute}
+          onSelect={onSelectCategory}
+        />
+        <BreakdownList
+          title="Site types"
+          icon={Server}
+          rows={summary.referringPlatformTypes}
+          field="sourcePlatformType"
+          activeValue={categoryValues.sourcePlatformType}
+          onSelect={onSelectCategory}
+        />
+        <BreakdownList
+          title="Placement on page"
+          icon={LayoutTemplate}
+          rows={summary.referringPlacements}
+          field="semanticLocation"
+          activeValue={categoryValues.semanticLocation}
+          onSelect={onSelectCategory}
+        />
+      </div>
     </div>
   );
 }

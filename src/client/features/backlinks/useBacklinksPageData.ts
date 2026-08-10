@@ -92,6 +92,10 @@ type UseBacklinksPageDataArgs = {
   projectId: string;
   searchState: BacklinksSearchState;
   hasTarget: boolean;
+  /** False while a filter/view/page change is still landing; see
+   *  `backlinksRowsTransaction`. Holds the paid row queries closed so an
+   *  intermediate combination is never billed. */
+  rowsReleased: boolean;
   filters: BacklinksFiltersState;
   authorized: boolean;
   runNonce: number;
@@ -135,6 +139,7 @@ export function useBacklinksPageData({
   projectId,
   searchState,
   hasTarget,
+  rowsReleased,
   filters,
   authorized,
   runNonce,
@@ -184,7 +189,7 @@ export function useBacklinksPageData({
       rowsFilters,
       rowsMode,
     ],
-    enabled: hasTarget && tab === "backlinks",
+    enabled: hasTarget && rowsReleased && tab === "backlinks",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksRows({
@@ -220,7 +225,7 @@ export function useBacklinksPageData({
       domainsSort.order,
       domainsFilters,
     ],
-    enabled: hasTarget && tab === "domains",
+    enabled: hasTarget && rowsReleased && tab === "domains",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksReferringDomains({
@@ -255,7 +260,7 @@ export function useBacklinksPageData({
       pagesSort.order,
       pagesFilters,
     ],
-    enabled: hasTarget && tab === "pages",
+    enabled: hasTarget && rowsReleased && tab === "pages",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksTopPages({
@@ -290,7 +295,7 @@ export function useBacklinksPageData({
       anchorsSort.order,
       anchorsFilters,
     ],
-    enabled: hasTarget && tab === "anchors",
+    enabled: hasTarget && rowsReleased && tab === "anchors",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksAnchors({
