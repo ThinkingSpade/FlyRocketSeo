@@ -68,10 +68,14 @@ export function normalizeDomainInput(
  * compare equal with plain string equality.
  *
  * Known gap: unlike `normalizeDomainInput`, this does not run the value
- * through `URL`, so it will not punycode-encode IDN hosts or strip a
- * trailing dot/port. DataForSEO's `domain` fields are plain ASCII hostnames
- * in practice, so this has not been a problem; a future caller feeding it
- * anything else should reconsider.
+ * through `URL`, so it will not punycode-encode IDN/Unicode hosts (e.g.
+ * "café.com" stays as-is instead of becoming "xn--caf-dma.com") and will not
+ * strip a port if one is somehow present. DataForSEO's `domain` fields are
+ * plain ASCII hostnames with no port in practice, so this has not been a
+ * problem; a future caller feeding it anything else should reconsider.
+ * (A trailing dot is NOT actually a divergence, despite an earlier version of
+ * this comment claiming otherwise: `new URL(...).hostname` does not strip
+ * one either, so both functions agree here -- verified directly, not assumed.)
  */
 export function normalizeDiscoveredDomain(domain: string): string {
   return domain.trim().toLowerCase().replace(/^www\./, "");

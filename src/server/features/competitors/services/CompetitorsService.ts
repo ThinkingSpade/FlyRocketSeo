@@ -102,6 +102,24 @@ async function getCompetitors(
 ): Promise<CompetitorsPage> {
   const target = normalizeDomainInput(input.target, true);
 
+  // Free (one D1 read via GscConnectionRepository, not the full performance
+  // pull) and resolved before the cache key so a result produced under one
+  // GSC connection state is never served back under a different one. Without
+  // this, a project's first (not-yet-connected) run would cache a
+  // discoveryMode:"domain" result for COMPETITORS_TTL_SECONDS; connecting
+  // Search Console minutes later and re-running would silently return that
+  // same stale domain-mode page instead of a fresh keyword-seeded one, with
+  // no signal that a better answer was now possible.
+  //
+  // This does not close every staleness gap the connection state can create
+  // -- only whether a connection row exists at all. "Connected, but the seed
+  // is below MIN_COMPETITOR_SEED" and "connected, but the grant is revoked"
+  // both still share a cache key with "connected with a good seed", since
+  // neither is knowable without the full (non-free) performance pull this
+  // cache key is built to avoid on a hit.
+  const gscConnection = await GscService.getConnection(input.projectId);
+  const hasGscConnection = gscConnection != null;
+
   const cacheKey = await buildCacheKey("competitors:list", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
@@ -111,6 +129,7 @@ async function getCompetitors(
     excludeTopDomains: input.excludeTopDomains,
     page: input.page,
     pageSize: input.pageSize,
+    hasGscConnection,
   });
 
   // Records this analysis for the tab's history / auto-restore. Free and best
@@ -155,8 +174,21 @@ async function getCompetitors(
 
   let seedKeywords: ReturnType<typeof buildCompetitorSeed>["keywords"] = [];
   let hasGsc = false;
+  // The try/catch wraps ONLY the GSC I/O call. A connection problem, revoked
+  // grant, or API failure all mean "no seed", and the domain-overlap
+  // fallback below is a real answer -- but the pure transforms after this
+  // block (toDimensionRows/filter, buildCompetitorSeed) are deliberately
+  // OUTSIDE it: if a future change introduces a bug in either (e.g. a
+  // null-deref for some row shape), it must fail loudly, not get silently
+  // absorbed into "GSC not connected" and serve domain-mode results forever
+  // for a project whose GSC connection is actually fine.
+  // Named to avoid shadowing the global `performance` (Web/Node Performance
+  // API).
+  let gscPerformance:
+    | Awaited<ReturnType<typeof GscService.getPerformance>>
+    | undefined;
   try {
-    const performance = await GscService.getPerformance({
+    gscPerformance = await GscService.getPerformance({
       projectId: input.projectId,
       dimensions: ["query"],
       dateRange: "last_28_days",
@@ -168,6 +200,13 @@ async function getCompetitors(
       aggregationType: "byProperty",
     });
     hasGsc = true;
+  } catch {
+    // No connection, revoked grant, or an API failure: all mean "no seed".
+    // The fallback below is a real answer, so this must not fail the request.
+    hasGsc = false;
+  }
+
+  if (gscPerformance) {
     // GSC only returns rows with at least one impression, so `impressions <=
     // 0` should not occur here in practice -- but this is the first seam
     // where a real GSC row (rather than a hand-built fixture) reaches
@@ -178,16 +217,12 @@ async function getCompetitors(
     // a zero-impression row there would misfile "no rank signal at all" as
     // "the client ranks #1", so it is dropped before seeding rather than left
     // for buildCompetitorSeed to (mis)classify.
-    const dimensionRows = toDimensionRows(performance.rows).filter(
+    const dimensionRows = toDimensionRows(gscPerformance.rows).filter(
       (row) => row.impressions > 0,
     );
     seedKeywords = buildCompetitorSeed(dimensionRows, {
       brandTerms: profile?.brandTerms ?? "",
     }).keywords;
-  } catch {
-    // No connection, revoked grant, or an API failure: all mean "no seed".
-    // The fallback below is a real answer, so this must not fail the request.
-    hasGsc = false;
   }
 
   const mode = resolveDiscoveryMode(seedKeywords.length, hasGsc);
