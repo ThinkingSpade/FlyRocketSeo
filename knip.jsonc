@@ -41,6 +41,10 @@
     // task). Has no importer yet by design -- Task 6 (the hook) will consume
     // it, which is a deliberately separate plan per Task 1's brief.
     "src/client/features/trends/mergeKeywordRows.ts",
+    // Auto-run guard: the predicate that decides whether to spend money on a
+    // paid discovery call. Task 3. Has no importer yet by design -- Task 6
+    // (the hook) will consume it.
+    "src/client/features/trends/shouldAutoRunDiscovery.ts",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",
