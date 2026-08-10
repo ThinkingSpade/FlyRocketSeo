@@ -36,6 +36,15 @@ dialect kept in parity), Zod schemas, TanStack Query, Vitest, `dataforseo-client
   may require an LLM call.
 - Verification commands: `pnpm test` (vitest run) and `pnpm ci:check`
   (prettier + knip + tsc + oxlint). `ci:check` does NOT run tests — run both.
+- **Every task must run `pnpm tsc --noEmit` before its commit, and must not
+  claim a gate passed without having run it.** Vitest transpiles without
+  typechecking, so a green `pnpm test` says nothing about whether the branch
+  builds. This bit Task 1: adding Zod `.default()` fields makes them REQUIRED
+  in the `z.infer` output type, which broke `CompetitorsService.ts`'s existing
+  object literals while every test stayed green.
+- **Every commit must build on its own.** When a change to a shared type
+  breaks an existing producer, fix that producer in the same task with honest
+  fallback values — do not defer it to the task that will later rewrite it.
 
 ---
 
