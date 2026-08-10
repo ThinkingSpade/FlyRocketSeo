@@ -20,6 +20,7 @@ type MeteredQueryOptions<
   | "refetchOnMount"
   | "refetchOnReconnect"
   | "refetchOnWindowFocus"
+  | "retry"
   | "staleTime"
 > & {
   authorized?: boolean;
@@ -34,6 +35,14 @@ type MeteredQueryOptions<
  * `authorized` must come from an explicit user action in this mounted session.
  * URL state, restored runs, and cached history may prefill inputs but must never
  * set it to true.
+ *
+ * Every automatic re-request path is closed here, including retries. TanStack
+ * retries browser queries three times by default, which turns one click into up
+ * to four server-function invocations, and each one can reach the metered
+ * provider independently -- a failure at or after the provider call is billed
+ * every time. `retry` is omitted from the options type so a call site cannot
+ * re-open that path; a failed paid query surfaces its error and waits for the
+ * user to ask again.
  */
 export function useMeteredQuery<
   TQueryFnData = unknown,
@@ -42,6 +51,20 @@ export function useMeteredQuery<
 >(
   options: MeteredQueryOptions<TQueryFnData, TError, TData>,
 ): UseQueryResult<TData, TError> {
+  return useQuery(buildMeteredQueryOptions(options));
+}
+
+/**
+ * The options `useMeteredQuery` hands to `useQuery`. Split out as a pure
+ * function so the safety invariants -- never enabled without authorization,
+ * never refetched automatically, never retried -- can be asserted directly;
+ * this project's vitest runs in a `node` environment and cannot render hooks.
+ */
+export function buildMeteredQueryOptions<
+  TQueryFnData = unknown,
+  TError = DefaultError,
+  TData = TQueryFnData,
+>(options: MeteredQueryOptions<TQueryFnData, TError, TData>) {
   const {
     authorized = false,
     enabled = true,
@@ -49,18 +72,18 @@ export function useMeteredQuery<
     runNonce,
     ...queryOptions
   } = options;
-  const queryKey = withMeteredRunNonce(queryOptions.queryKey, runNonce);
 
-  return useQuery({
+  return {
     ...queryOptions,
-    queryKey,
+    queryKey: withMeteredRunNonce(queryOptions.queryKey, runNonce),
     enabled: isMeteredQueryEnabled(authorized, enabled),
     staleTime: Infinity,
     gcTime,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,
-  });
+    retry: 0,
+  } as const satisfies UseQueryOptions<TQueryFnData, TError, TData>;
 }
 
 type AuthorizedRun = {
