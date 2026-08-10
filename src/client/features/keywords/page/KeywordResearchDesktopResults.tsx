@@ -7,7 +7,7 @@ import {
   ChartLine,
   ArrowCounterClockwise,
   FloppyDisk,
-  GridFour,
+  Table,
   SlidersHorizontal,
   Sparkle,
   UserMinus,
@@ -253,7 +253,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
             }
           />
           <DropdownMenu.Content align="end">
-            <DropdownMenu.Item icon={GridFour} onClick={handleExportToSheets}>
+            <DropdownMenu.Item icon={Table} onClick={handleExportToSheets}>
               Export to Sheets
             </DropdownMenu.Item>
             <DropdownMenu.Item
@@ -293,7 +293,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
                 },
                 {
                   label: "Export to Sheets",
-                  icon: <GridFour className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {

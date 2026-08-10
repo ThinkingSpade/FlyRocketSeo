@@ -4,7 +4,7 @@ import {
   Download,
   Gauge,
   DotsThree,
-  GridFour,
+  Table,
 } from "@phosphor-icons/react";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
@@ -67,7 +67,7 @@ export function BacklinksExportMenu({
               {isExportingSheets ? (
                 <Loader size="sm" />
               ) : (
-                <GridFour className="size-4" />
+                <Table className="size-4" />
               )}
             </span>
           }

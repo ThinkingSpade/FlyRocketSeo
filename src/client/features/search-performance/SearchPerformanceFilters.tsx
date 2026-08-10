@@ -1,4 +1,4 @@
-import { Download, CircleNotch, GridFour } from "@phosphor-icons/react";
+import { Download, CircleNotch, Table } from "@phosphor-icons/react";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import {
   GSC_DEVICES,
@@ -128,7 +128,7 @@ export function SearchPerformanceFilters({
         actions={[
           {
             label: "Export to Sheets",
-            icon: <GridFour className="size-4" />,
+            icon: <Table className="size-4" />,
             onClick: () => onExport("sheets"),
           },
           {

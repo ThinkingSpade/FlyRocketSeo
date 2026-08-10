@@ -162,7 +162,7 @@ export function ReportPages({
         <ReportCoverage included={pages.length} omissions={omissions} />
       </ReportPage>
 
-      {pages.map((spec, index) => (
+      {pages.map((spec) => (
         <ReportPage
           key={spec.key}
           number={spec.number}

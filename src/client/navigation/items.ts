@@ -7,7 +7,7 @@ import {
   FileText,
   Globe,
   GridNine,
-  Layout,
+  House,
   Lightbulb,
   LinkSimple,
   ListNumbers,
@@ -30,7 +30,7 @@ const projectNavItems = [
   {
     to: "/p/$projectId" as const,
     label: "Overview",
-    icon: Layout,
+    icon: House,
   },
   {
     to: "/p/$projectId/keywords" as const,

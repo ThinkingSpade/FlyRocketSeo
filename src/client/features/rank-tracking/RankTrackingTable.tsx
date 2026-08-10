@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import {
   FileArrowDown,
   CircleNotch,
-  GridFour,
+  Table,
   Trash,
 } from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
@@ -186,7 +186,7 @@ export function RankTrackingTable({
               actions={[
                 {
                   label: "Export to Sheets",
-                  icon: <GridFour className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: exportSelectionToSheets,
                 },
                 {

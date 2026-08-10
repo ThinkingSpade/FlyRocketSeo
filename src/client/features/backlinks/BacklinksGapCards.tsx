@@ -2,7 +2,7 @@ import {
   Download,
   Network,
   Plus,
-  Broadcast,
+  UsersThree,
   Target,
 } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
@@ -245,7 +245,7 @@ export function CompetingDomainsCard({
     <CardShell
       title="Who competes for your links"
       description="Sites sharing the most referring domains with you. These are the rivals worth comparing against, whether or not they rank for the same keywords."
-      icon={Broadcast}
+      icon={UsersThree}
       errorMessage={errorMessage}
       action={
         <Button

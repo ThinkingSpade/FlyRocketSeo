@@ -8,7 +8,7 @@ import {
   DotsThree,
   Play,
   ArrowsClockwise,
-  GridFour,
+  Table,
 } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
@@ -175,7 +175,7 @@ export function ExportMenu({
   return (
     <ToolbarMenu label="Export" icon={<Download className="size-3.5" />}>
       <MenuItem
-        icon={<GridFour className="size-3.5" />}
+        icon={<Table className="size-3.5" />}
         label="Export to Sheets"
         onClick={onExportToSheets}
         disabled={!hasData}

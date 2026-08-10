@@ -124,6 +124,33 @@
   --color-success: var(--color-kumo-success);
   --color-warning: var(--color-kumo-warning);
   --color-neutral: var(--color-kumo-contrast);
+
+  /* Status TEXT, split off exactly the way `--text-color-primary` splits Signal
+     above, and for the identical reason.
+
+     Kumo ships each status hue as a PAIR: `--color-kumo-danger` is the solid
+     that carries white text (a filled banner, a badge), and
+     `--text-color-kumo-danger` is the darker/lighter sibling meant for a status
+     word sitting on a normal surface. Only the solid was aliased here, so every
+     `text-error` / `text-success` in the app painted the fill colour as text.
+
+     Measured in the browser at 12px on the project dashboard, both themes:
+       text-error   #fb2c36 on #ffffff = 3.81:1   ("-0.5 pts", "8 declined")
+       text-error   #e7000b on #0f0f0f = 4.02:1
+       text-success #009966 on #ffffff = 3.65:1   ("1 improved")
+     All three fail the 4.5:1 body-text floor. Kumo's text pair clears it —
+     danger is red-700/red-400, success emerald-800/emerald-200 — because that
+     is the job it was tuned for.
+
+     Only the `text-*` utilities move. `bg-error`, `border-warning` and the
+     `/10` tints keep the solid above, so filled banners and alert backgrounds
+     are untouched; this is the same namespace precedence `--text-color-primary`
+     relies on. Warning stays yellow-800/yellow-400 rather than anything nearer
+     Signal, so amber still reads as distinct from the brand orange. */
+  --text-color-error: var(--text-color-kumo-danger);
+  --text-color-info: var(--text-color-kumo-info);
+  --text-color-success: var(--text-color-kumo-success);
+  --text-color-warning: var(--text-color-kumo-warning);
 }
 
 /* The theme classes now carry only color-scheme. That is all Kumo ever needed
@@ -309,8 +336,13 @@ html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
 
      Dark mode cannot use Ink itself: at 1.05:1 against a near-black page the
      button would vanish into it. Lifted along the same hue instead, far enough
-     to read as a raised surface (2.8:1) while white text still clears AA at
-     6.2:1. */
+     to read as a raised surface (2.8:1) while white text clears AA.
+
+     One caveat, measured rather than assumed: 6.2:1 is this colour flat, and
+     the button is not flat — the gradient's top stop is this mixed with 15%
+     white, which lands at about 4.5:1. That is on the AA line rather than
+     comfortably past it, so lightening this value further would push the top
+     of the button under it. */
   --color-kumo-brand: light-dark(#0a1525, #3b6390);
   --color-kumo-brand-hover: light-dark(#1a2b45, #4a76a6);
 
@@ -836,9 +868,27 @@ table :is(td, th) {
     @apply h-6.5 rounded-md pl-2 pr-6 text-xs;
   }
 
+  /* Focus. The Signal border alone was not a focus indicator.
+
+     Signal on the select's own `bg-base-100` measures 2.87:1 in light mode —
+     the same ratio that disqualified it as text further up, and it fails the
+     3:1 floor a focus indicator has to clear (WCAG 1.4.11 / 2.4.11). With
+     `outline: none` next to it there was nothing else to see, so a keyboard
+     user tabbing through the 36 native selects in light mode got a border
+     shift they cannot reliably perceive. Dark mode was never affected: Signal
+     on the dark surface is 5.94:1.
+
+     Kumo's own controls focus with `focus-visible:ring-2 ring-kumo-focus`, and
+     `--color-kumo-focus` is deliberately a near-black/near-white neutral rather
+     than a brand colour — 18.1:1 on the light surface, 15.4:1 on the dark one,
+     so it clears the floor in both without depending on the palette. Take that
+     ring, keep the Signal border underneath for identity. `outline` rather than
+     a box-shadow so it survives forced-colors mode and cannot be clipped by an
+     ancestor's overflow. */
   .app-select:focus,
   .app-select:focus-visible {
-    outline: none;
+    outline: 2px solid var(--color-kumo-focus);
+    outline-offset: 1px;
     border-color: var(--color-primary);
   }
 

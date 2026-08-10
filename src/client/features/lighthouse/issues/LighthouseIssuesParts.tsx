@@ -2,7 +2,7 @@ import {
   CaretDown,
   Copy,
   Download,
-  FileX,
+  WarningOctagon,
   Info,
   GridFour,
   Warning,
@@ -64,7 +64,7 @@ export function LighthouseIssuesHeader({
           <LighthouseIssuesSummary scores={scores} metrics={metrics} />
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge className="border border-error/30 bg-error/10 text-error/80 gap-1">
-              <FileX className="size-3" />
+              <WarningOctagon className="size-3" />
               Critical {severityCounts.critical}
             </Badge>
             <Badge className="border border-warning/30 bg-warning/10 text-warning/80 gap-1">

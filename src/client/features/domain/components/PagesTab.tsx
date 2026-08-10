@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Copy, Download, FileXls, GridFour } from "@phosphor-icons/react";
+import { Copy, Download, FileXls, Table } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { DomainKeywordsPagination } from "@/client/features/domain/components/DomainKeywordsPagination";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
@@ -226,7 +226,7 @@ export function PagesTab({
         exportActions={[
           {
             label: "Export to Sheets",
-            icon: <GridFour className="size-4" />,
+            icon: <Table className="size-4" />,
             onClick: handleExportToSheets,
           },
           {

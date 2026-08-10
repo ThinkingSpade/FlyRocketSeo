@@ -1,4 +1,4 @@
-import { GridFour } from "@phosphor-icons/react";
+import { Table } from "@phosphor-icons/react";
 import { useState } from "react";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
@@ -53,7 +53,7 @@ export function ExportToSheetsButton({
       title="Copy table and open a new Google Sheet"
       aria-label={iconOnly ? "Export to Sheets" : undefined}
     >
-      <GridFour className="size-3.5" />
+      <Table className="size-3.5" />
       {iconOnly ? null : label}
     </Button>
   );

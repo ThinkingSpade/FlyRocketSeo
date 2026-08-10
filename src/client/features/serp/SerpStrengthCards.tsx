@@ -1,5 +1,5 @@
 import {
-  DotOutline,
+  CircleDashed,
   Crosshair,
   ShieldChevron,
   TrendUp,
@@ -47,7 +47,7 @@ export function SerpStrengthCards({
         title="Median whole-domain monthly traffic across the top 10"
       />
       <InsightTile
-        icon={DotOutline}
+        icon={CircleDashed}
         label="Soft spots"
         value={strength.softSpots}
         tone={strength.softSpots > 0 ? "success" : "neutral"}

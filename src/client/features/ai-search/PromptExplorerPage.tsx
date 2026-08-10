@@ -5,7 +5,7 @@ import {
   WarningCircle,
   ArrowLeft,
   Columns,
-  MagnifyingGlassPlus,
+  Quotes,
   Sparkle,
 } from "@phosphor-icons/react";
 import { explorePrompt } from "@/serverFunctions/ai-search";
@@ -60,7 +60,7 @@ const PROMPT_EXPLORER_BULLETS = [
     body: "Run one prompt across ChatGPT, Claude, Gemini, and Perplexity and compare answers in a single view.",
   },
   {
-    icon: MagnifyingGlassPlus,
+    icon: Quotes,
     title: "See what the models cite",
     body: "Every answer lists the sources it drew from, so you can audit where each model gets its information.",
   },

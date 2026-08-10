@@ -2,7 +2,7 @@ import {
   Copy,
   FileArrowDown,
   ChartLine,
-  GridFour,
+  Table,
   Tag,
   Trash,
 } from "@phosphor-icons/react";
@@ -67,7 +67,7 @@ export function SavedKeywordsBulkActionBar({
                 },
                 {
                   label: "Export to Sheets",
-                  icon: <GridFour className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: onExportSheets,
                 },
                 {

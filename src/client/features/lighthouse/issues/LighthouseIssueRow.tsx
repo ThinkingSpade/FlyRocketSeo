@@ -2,7 +2,7 @@ import { useState, type ReactNode } from "react";
 import {
   CaretRight,
   ArrowSquareOut,
-  FileX,
+  WarningOctagon,
   Info,
   Warning,
 } from "@phosphor-icons/react";
@@ -157,7 +157,7 @@ function severityVariant(
 }
 
 function severityIcon(severity: "critical" | "warning" | "info") {
-  if (severity === "critical") return <FileX className="size-3" />;
+  if (severity === "critical") return <WarningOctagon className="size-3" />;
   if (severity === "warning") return <Warning className="size-3" />;
   return <Info className="size-3" />;
 }

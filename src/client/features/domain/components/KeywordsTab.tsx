@@ -5,7 +5,7 @@ import {
   Download,
   FileXls,
   FloppyDisk,
-  GridFour,
+  Table,
 } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
@@ -305,7 +305,7 @@ export function KeywordsTab({
               actions={[
                 {
                   label: "Export to Sheets",
-                  icon: <GridFour className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {
@@ -331,7 +331,7 @@ export function KeywordsTab({
         exportActions={[
           {
             label: "Export to Sheets",
-            icon: <GridFour className="size-4" />,
+            icon: <Table className="size-4" />,
             onClick: handleExportToSheets,
           },
           {
