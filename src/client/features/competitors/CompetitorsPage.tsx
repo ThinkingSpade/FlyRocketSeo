@@ -10,6 +10,7 @@ import {
   DEFAULT_LINK_GAP_PAGE_SIZE,
   competitorsPageSchema,
   keywordGapModes,
+  type CompetitorRow,
   type CompetitorsTab,
   type KeywordGapMode,
 } from "@/types/schemas/competitors";
@@ -17,11 +18,12 @@ import { AnalyzeDomainPrompt } from "@/client/components/AnalyzeDomainPrompt";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
-import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { TabBody } from "./CompetitorsTabBody";
 import { CompetitorsOverviewExtras } from "./CompetitorsOverviewExtras";
+import { CompetitorsRestoreNotice } from "./CompetitorsRestoreNotice";
+import { CompetitorsRestoredRunBanner } from "./CompetitorsRestoredRunBanner";
 import { KeywordGapOverview } from "./KeywordGapOverview";
 import {
   useCompetitorsQuery,
@@ -31,6 +33,7 @@ import {
   useLinkGapQuery,
 } from "./useCompetitorsQueries";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
+import { shouldAdoptRestoredRun } from "./shouldAdoptRestoredRun";
 import { writeHandoff } from "@/client/features/insights/handoffStore";
 import {
   COMPETITORS_ANALYZE_PREVIEW,
@@ -48,6 +51,31 @@ const COMPETITORS_TAB_ITEMS = COMPETITORS_TABS.map(({ tab, label }) => ({
   value: tab,
   label,
 }));
+
+/**
+ * The restored run and the rows to show, once "is this safe to show" has
+ * been decided -- pulled out of `CompetitorsPage` (alongside
+ * `CompetitorsRestoreNotice`) to keep that component under this repo's
+ * line-count lint cap. `restored` is only ever adopted when there is no
+ * live answer yet AND `shouldAdoptRestoredRun` agrees, so `restoredRun` and
+ * `competitorRows` always move together.
+ */
+function pickAdoptedRestore<
+  Restored extends { label: string; result: { rows: CompetitorRow[] } },
+>(
+  liveRows: CompetitorRow[] | undefined,
+  restored: Restored | null,
+  target: string,
+): { restoredRun: Restored | null; competitorRows: CompetitorRow[] } {
+  const adoptable =
+    liveRows == null &&
+    shouldAdoptRestoredRun({ target, restoredLabel: restored?.label ?? null });
+  const restoredRun = adoptable ? restored : null;
+  return {
+    restoredRun,
+    competitorRows: liveRows ?? restoredRun?.result.rows ?? [],
+  };
+}
 
 type CompetitorsSearchState = {
   target: string;
@@ -86,21 +114,22 @@ export function CompetitorsPage({
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
   const projectDomain = useProjectDomain(projectId);
-  // With no target in the URL the competitors query below stays disabled, so
-  // the tab would otherwise show nothing but a prompt. Restoring the
-  // project's last run fills it in for free: it reads a stored row plus the
-  // R2 object that run already paid for, and can never trigger a metered
-  // fetch. Declared before `useCompetitorsTargetPrefill` so its `label` can
-  // feed that hook's last-run prefill tier.
+  // Restoring reads a stored row plus the R2 object that run already paid
+  // for and can never trigger a metered fetch, so it runs whenever this tab
+  // has no live result -- not only when the target box is empty, which was
+  // almost never true (the target input is prefilled from the project
+  // domain) and forced a paid click on every visit. Declared before
+  // `useCompetitorsTargetPrefill` so its `label` can feed that hook's
+  // last-run prefill tier.
   //
   // Only the competitor list restores. Keyword gap and link gap need a chosen
   // competitor and are separately metered, so they stay on demand.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const { restored } = useAutoRestoredRun({
+  const { restored, outcome, expired } = useAutoRestoredRun({
     projectId,
     feature: RUN_FEATURES.competitors,
     schema: competitorsPageSchema,
-    enabled: target.trim() === "" && tab === "competitors",
+    enabled: tab === "competitors",
     runId: selectedRunId,
   });
   useCompetitorsTargetPrefill({
@@ -130,9 +159,15 @@ export function CompetitorsPage({
     authorized,
     runNonce: run.runNonce,
   });
-  const restoredRun = competitorsQuery.data == null ? restored : null;
-  const competitorRows =
-    competitorsQuery.data?.rows ?? restored?.result.rows ?? [];
+  const { restoredRun, competitorRows } = pickAdoptedRestore(
+    competitorsQuery.data?.rows,
+    restored,
+    target,
+  );
+  // Either one means a run genuinely happened but its answer is gone -- see
+  // `CompetitorsRestoreNotice` for why that must never collapse into the
+  // same blank prompt as "never run".
+  const hasRestoreNotice = outcome === "expired" || outcome === "unreadable";
   const gapQuery = useKeywordGapQuery({
     projectId,
     target,
@@ -274,32 +309,18 @@ export function CompetitorsPage({
         />
       ) : null}
 
-      {restoredRun ? (
-        <RestoredRunBanner
-          label={restoredRun.label}
-          lastRanAt={restoredRun.lastRanAt}
-          runCount={restoredRun.runCount}
-          onRunAgain={() => {
-            setTargetInput(restoredRun.label);
-            writeHandoff(projectId, {
-              kind: "domain",
-              value: restoredRun.label,
-              source: "Competitors",
-              at: Date.now(),
-            });
-            run.authorize(
-              buildCompetitorsAuthorizationKey(projectId, {
-                ...searchState,
-                target: restoredRun.label,
-                page: 1,
-              }),
-            );
-            updateSearch({ target: restoredRun.label, page: 1 });
-          }}
-        />
-      ) : null}
+      <CompetitorsRestoredRunBanner
+        restoredRun={restoredRun}
+        projectId={projectId}
+        searchState={searchState}
+        authorize={run.authorize}
+        updateSearch={updateSearch}
+        setTargetInput={setTargetInput}
+      />
 
-      {!target && !restoredRun ? (
+      <CompetitorsRestoreNotice outcome={outcome} expired={expired} />
+
+      {!target && !restoredRun && !hasRestoreNotice ? (
         <AnalyzeDomainPrompt
           domain={projectDomain}
           title="See who you're up against"
@@ -375,9 +396,10 @@ export function CompetitorsPage({
             isError: competitorsQuery.isError,
             isFetching: competitorsQuery.isFetching,
             // A restored past run is a real answer too, even though no live
-            // query ran for it.
-            hasResult:
-              competitorsQuery.data != null || restored?.result != null,
+            // query ran for it -- but only an ADOPTED one (see
+            // `pickAdoptedRestore`), which is exactly what a non-null
+            // `restoredRun` means.
+            hasResult: competitorsQuery.data != null || restoredRun != null,
           }}
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}
