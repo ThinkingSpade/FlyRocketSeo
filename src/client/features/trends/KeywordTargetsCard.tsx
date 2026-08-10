@@ -47,12 +47,20 @@ export function KeywordTargetsCard({
             </p>
           </div>
           {targets.paidState === "ok" ? (
+            // Deliberately NOT `disabled={targets.isRunningPaid}`. This is
+            // the manual escape hatch useKeywordTargets.ts's own
+            // `paidCallInFlight` comment describes: there is no
+            // client-side timeout anywhere in this codebase, so a paid
+            // call that never settles would otherwise be recoverable only
+            // by a hard reload. The "Loading ranking data..." line below
+            // already tells the user a call is in flight; the "Try
+            // again"/"Refresh it" buttons in the failed/expired banners
+            // below carry no such `disabled` either, for the same reason.
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={targets.runAgain}
-              disabled={targets.isRunningPaid}
             >
               Refresh
             </Button>
