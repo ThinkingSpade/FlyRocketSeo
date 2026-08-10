@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeNofollowExposure } from "./followSplit";
+import {
+  computeNofollowExposure,
+  getNofollowSharePresentation,
+} from "./followSplit";
 
 describe("computeNofollowExposure", () => {
   it("returns null when the total is missing or zero", () => {
@@ -53,5 +56,29 @@ describe("computeNofollowExposure", () => {
 
   it("rejects a negative nofollow count rather than inventing links", () => {
     expect(computeNofollowExposure(50, -5)).toBeNull();
+  });
+});
+
+describe("getNofollowSharePresentation", () => {
+  it("replaces a zero-share bar with the exact no-links message", () => {
+    expect(getNofollowSharePresentation(0)).toEqual({
+      kind: "message",
+      headline: "No nofollow links reported",
+      detail: null,
+    });
+  });
+
+  it("replaces a full-share bar with the exact scope clarification", () => {
+    expect(getNofollowSharePresentation(1)).toEqual({
+      kind: "message",
+      headline: "Every referring domain has at least one nofollow link",
+      detail: "This does not mean every link is nofollow.",
+    });
+  });
+
+  it("keeps a real split as a distribution", () => {
+    expect(getNofollowSharePresentation(0.2)).toEqual({
+      kind: "distribution",
+    });
   });
 });

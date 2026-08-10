@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeDomainQuality } from "./domainQuality";
+import {
+  computeDomainQuality,
+  filterPositiveQualityBuckets,
+} from "./domainQuality";
 
 const ranks = (values: Array<number | null>) =>
   values.map((rank) => ({ rank }));
@@ -69,5 +72,26 @@ describe("computeDomainQuality", () => {
     expect(note).toContain("100%");
     expect(note).not.toMatch(/unusually strong|little weight|normal mix/i);
     expect(computeDomainQuality(ranks([60, 70, 80]))?.note).toContain("DR 30");
+  });
+});
+
+describe("filterPositiveQualityBuckets", () => {
+  it("removes zero buckets while preserving positive buckets", () => {
+    expect(
+      filterPositiveQualityBuckets([
+        { label: "0-10", domains: 0 },
+        { label: "11-20", domains: 2 },
+        { label: "21-30", domains: 0 },
+      ]),
+    ).toEqual([{ label: "11-20", domains: 2 }]);
+  });
+
+  it("returns no rows for an all-zero breakdown", () => {
+    expect(
+      filterPositiveQualityBuckets([
+        { label: "0-10", domains: 0 },
+        { label: "11-20", domains: 0 },
+      ]),
+    ).toEqual([]);
   });
 });

@@ -3,10 +3,10 @@ import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { ChevronDown } from "lucide-react";
 import { BacklinksOverviewPanels } from "./BacklinksOverviewPanels";
 import {
-  BacklinksProfileBreakdowns,
   BrokenLinkReclaimCard,
   LinkVelocityCard,
 } from "./BacklinksProfileSections";
+import { BacklinksProfileBreakdowns } from "./BacklinksBreakdownCards";
 import {
   AnchorHealthCard,
   DomainQualityCard,

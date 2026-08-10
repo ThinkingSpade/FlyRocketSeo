@@ -85,6 +85,13 @@ export function computeDomainQuality(
   };
 }
 
+/** Zero-count buckets are absence of data, not a visible sliver of a chart. */
+export function filterPositiveQualityBuckets<T extends { domains: number }>(
+  buckets: readonly T[],
+): T[] {
+  return buckets.filter((bucket) => bucket.domains > 0);
+}
+
 /**
  * Every sentence here is about the rows ON THIS PAGE, because that is all the
  * input is — one page of referring domains, not the profile.
