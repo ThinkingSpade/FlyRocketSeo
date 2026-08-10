@@ -8,12 +8,47 @@ import { getClientRuntimeConfig } from "@/serverFunctions/config";
 const CLIENT_RUNTIME_CONFIG_QUERY_KEY = ["client-runtime-config"] as const;
 const CLIENT_RUNTIME_CONFIG_STALE_TIME = 5 * 60 * 1000;
 
+type ClientRuntimeConfigSource = "prerender" | "runtime";
+
 type ClientRuntimeConfigQueryData = {
   emailVerificationBypassed: boolean;
   aiExplainAvailable: boolean;
   gbpWriteAvailable: boolean;
-  source: "prerender" | "runtime";
+  source: ClientRuntimeConfigSource;
 };
+
+/**
+ * Whether the email-verification answer can be acted on yet.
+ *
+ * Outside hosted auth there is no verification to bypass, so this resolves
+ * immediately and the placeholder's `false` is the correct final answer.
+ * Under hosted auth nothing may be trusted until the live refetch lands --
+ * otherwise a cold load could briefly bypass verification.
+ */
+export function resolveVerificationResolved(
+  isHostedMode: boolean,
+  source: ClientRuntimeConfigSource,
+): boolean {
+  return !isHostedMode || source === "runtime";
+}
+
+/**
+ * Whether a CAPABILITY answer (AI explain, GBP writing) can be acted on yet.
+ *
+ * Deliberately not the formula above, and this is the whole point of the
+ * split. A capability flag describes the live Worker environment -- is there
+ * an OPENROUTER_API_KEY, are the GBP credentials present -- and a placeholder
+ * is never that, in any auth mode. Sharing the verification formula meant
+ * `!isHostedMode` reported the all-`false` placeholder as resolved, so under
+ * `AUTH_MODE=local_noauth` every AI-gated affordance was invisible no matter
+ * which keys were set. A developer could not see, let alone click, the
+ * profile draft button, which is how it could regress unobserved.
+ */
+export function resolveCapabilityResolved(
+  source: ClientRuntimeConfigSource,
+): boolean {
+  return source === "runtime";
+}
 
 /**
  * Shared subscription to the one client-runtime-config query. Every consumer
@@ -55,17 +90,26 @@ function useClientRuntimeConfigQuery({
     // root bootstrap's forced mount refetch always replaces it with a value
     // read from the live Worker environment.
     initialDataUpdatedAt: 0,
-    enabled: isHostedMode,
+    // Deliberately ungated. This was `enabled: isHostedMode`, which meant the
+    // query never ran outside hosted auth and the placeholder above was the
+    // only value any consumer ever saw -- see resolveCapabilityResolved's own
+    // comment for what that cost. `getClientRuntimeConfig` reads the Worker
+    // env and nothing else, so it is free and safe in every mode, and
+    // `ClientRuntimeConfigBootstrap` (__root.tsx, mounted unconditionally)
+    // already forces exactly one refetch per boot regardless of auth mode.
     staleTime: CLIENT_RUNTIME_CONFIG_STALE_TIME,
     refetchOnMount: refreshOnMount ? "always" : false,
     refetchOnReconnect: false,
     refetchOnWindowFocus: false,
     retry: false,
   });
-  const isResolved =
-    !isHostedMode || runtimeConfigQuery.data.source === "runtime";
+  const source = runtimeConfigQuery.data.source;
 
-  return { data: runtimeConfigQuery.data, isResolved };
+  return {
+    data: runtimeConfigQuery.data,
+    isVerificationResolved: resolveVerificationResolved(isHostedMode, source),
+    isCapabilityResolved: resolveCapabilityResolved(source),
+  };
 }
 
 export function useEmailVerificationBypassed({
@@ -73,14 +117,17 @@ export function useEmailVerificationBypassed({
 }: {
   refreshOnMount?: boolean;
 } = {}) {
-  const { data, isResolved } = useClientRuntimeConfigQuery({ refreshOnMount });
+  const { data, isVerificationResolved } = useClientRuntimeConfigQuery({
+    refreshOnMount,
+  });
 
   return {
     // Never expose a prerendered `true` as authoritative. Callers can only
     // bypass verification after the browser has received the runtime result.
     isBypassed:
-      isResolved && isEmailVerificationBypassed(data.emailVerificationBypassed),
-    isResolved,
+      isVerificationResolved &&
+      isEmailVerificationBypassed(data.emailVerificationBypassed),
+    isResolved: isVerificationResolved,
   };
 }
 
@@ -93,8 +140,8 @@ export function useEmailVerificationBypassed({
  * the button forever, even after the operator adds the key.
  */
 export function useAiExplainAvailable(): boolean {
-  const { data, isResolved } = useClientRuntimeConfigQuery();
-  return isResolved && data.aiExplainAvailable;
+  const { data, isCapabilityResolved } = useClientRuntimeConfigQuery();
+  return isCapabilityResolved && data.aiExplainAvailable;
 }
 
 /**
@@ -106,8 +153,8 @@ export function useAiExplainAvailable(): boolean {
  * after the operator finishes Cloud Console + verification and adds them.
  */
 export function useGbpWriteAvailable(): boolean {
-  const { data, isResolved } = useClientRuntimeConfigQuery();
-  return isResolved && data.gbpWriteAvailable;
+  const { data, isCapabilityResolved } = useClientRuntimeConfigQuery();
+  return isCapabilityResolved && data.gbpWriteAvailable;
 }
 
 // Not exported: nothing outside this file needs to name the type -- callers
@@ -144,6 +191,9 @@ export function resolveGbpCapabilityState(
  * into "false" costs nothing there.
  */
 export function useGbpCapabilityState(): GbpCapabilityState {
-  const { data, isResolved } = useClientRuntimeConfigQuery();
-  return resolveGbpCapabilityState(isResolved, data.gbpWriteAvailable);
+  const { data, isCapabilityResolved } = useClientRuntimeConfigQuery();
+  return resolveGbpCapabilityState(
+    isCapabilityResolved,
+    data.gbpWriteAvailable,
+  );
 }
