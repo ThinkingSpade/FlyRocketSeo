@@ -48,8 +48,9 @@ export function KeywordTargetsCard({
           </div>
           {targets.paidState === "ok" ? (
             // Deliberately NOT `disabled`. The guard against a concurrent
-            // paid call now lives in `runAgain` itself
-            // (useKeywordTargets.ts's `start`, gated on `paidCallInFlight`)
+            // paid call lives in `runAgain` itself (useKeywordTargets.ts's
+            // `start`, which reads the live MutationCache at click time
+            // rather than a rendered value -- see that comment for why)
             // rather than on this control -- a click that lands mid-flight
             // is a silent no-op there, not a second bill. Disabling the
             // button here would be redundant AND would remove the one
@@ -77,7 +78,16 @@ export function KeywordTargetsCard({
               className="ml-2"
               onClick={targets.runAgain}
             >
-              {targets.isRunningPaid ? "Retrying…" : "Try again"}
+              {/* No in-flight label swap here (unlike "Refresh" and
+                  "Refresh it"): clicking flips `discovery.isError` false
+                  synchronously, which drops `paidState` out of "failed" and
+                  unmounts this whole banner before a re-render could ever
+                  show a "Retrying…" state -- reachable only in the narrow
+                  case of a RESTORED failed run being retried before its own
+                  invalidation lands, not the common "this attempt just
+                  failed" path. Not worth a conditional for a label that
+                  would rarely be visible. */}
+              Try again
             </Button>
           </Banner>
         ) : null}

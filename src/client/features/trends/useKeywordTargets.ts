@@ -25,6 +25,7 @@ import {
 import type { ResolvedGeo } from "@/shared/geo/types";
 import { useTrendingOpportunities } from "./useTrendingOpportunities";
 import { mergeKeywordRows, type KeywordTargetRow } from "./mergeKeywordRows";
+import { canStartPaidRun } from "./canStartPaidRun";
 import {
   shouldAutoRunDiscovery,
   type RestoreOutcomeName,
@@ -194,15 +195,19 @@ export function useKeywordTargets(
     // never settles at all (true network hang, not a failure) is a
     // different, pre-existing risk this doesn't newly introduce -- it's the
     // same class of risk the original `getKeywordDiscovery` call already
-    // carries with no CLIENT-side timeout anywhere in this codebase. That
-    // risk is bounded, not unlimited: this app runs on Cloudflare Workers,
-    // whose requests carry their own platform-enforced timeout, so neither
-    // this refetch nor the original call can hang forever. `runAgain` below
-    // is now gated on `paidCallInFlight` (a reversal of an earlier version
-    // of this comment -- see that guard's own comment for why), so a stuck
-    // refetch also blocks a manual retry until Workers' own timeout clears
-    // it, rather than offering the user a second, independently billed
-    // attempt while the first is still technically alive.
+    // carries with no CLIENT-side timeout anywhere in this codebase, and
+    // that risk is NOT bounded by Cloudflare Workers' own request timeout:
+    // that timeout bounds the SERVER, not this client-side fetch promise,
+    // which can sit unsettled indefinitely regardless of what the Worker
+    // that served it does. `runAgain` below is now gated on a live
+    // MutationCache read (see `start`'s own comment) precisely because a
+    // second click while a call is in flight would bill Labs twice, not
+    // because the wait is bounded. If the promise genuinely never settles,
+    // the only recovery is a reload -- accepted deliberately, NOT fixed
+    // with a client-side abort/timeout, because the SERVER may already have
+    // billed and recorded the run by the time any client-side deadline
+    // fires; aborting would present a false failure for a call that
+    // actually succeeded.
     //
     // Runs on BOTH success and failure (unlike onSuccess): the service
     // records an analysis_runs row for a failed attempt too (see
@@ -236,39 +241,83 @@ export function useKeywordTargets(
   // guard cannot close this window on its own: the row doesn't exist until
   // the call settles.
   //
-  // Also gates the MANUAL `runAgain` path below -- a reversal of this file's
-  // earlier stance, which left `runAgain` deliberately ungated as an escape
-  // hatch for a call that never settles. Traced through
-  // `@tanstack/query-core`: `mutationKey` is lookup-only (`useIsMutating`,
-  // `find`/`findAll`), never consulted by `mutate()`/`MutationCache.build()`,
-  // which always constructs and executes a brand-new `Mutation` regardless
-  // of what else currently shares its key. A double-click on "Refresh"/"Try
-  // again"/"Refresh it" while a call is already in flight would therefore
-  // fire a SECOND, independently billed Labs call -- a concrete, trivially
-  // reachable double-spend, not a hypothetical one. That now outranks the
-  // recovery path this guard used to preserve: this app runs on Cloudflare
-  // Workers, whose requests carry their own platform-enforced timeout, so a
-  // paid call cannot actually hang forever the way it could behind a
-  // long-lived server. A hard reload (which clears the in-memory
-  // MutationCache outright) is still available in the meantime, same as
-  // before this change. See `start`'s own guard below.
+  // Informs the MANUAL `runAgain` path below too -- a reversal of this
+  // file's earlier stance, which left `runAgain` deliberately ungated as an
+  // escape hatch for a call that never settles. But the actual gate inside
+  // `start` does NOT read this value; it reads the live MutationCache
+  // directly via `queryClient.isMutating` (see `start`'s own comment for
+  // why a rendered value like this one is the wrong tool for an action
+  // gate -- in short, this updates on a `setTimeout(0)` macrotask, not
+  // synchronously with the click). Traced through `@tanstack/query-core`:
+  // `mutationKey` is lookup-only (`useIsMutating`, `find`/`findAll`), never
+  // consulted by `mutate()`/`MutationCache.build()`, which always
+  // constructs and executes a brand-new `Mutation` regardless of what else
+  // currently shares its key -- so nothing before this change actually
+  // deduped or serialized concurrent calls. A second click on
+  // "Refresh"/"Try again"/"Refresh it" while a call is already in flight
+  // would fire a SECOND, independently billed Labs call: a concrete,
+  // trivially reachable double-spend, not a hypothetical one.
+  //
+  // If the underlying call never settles, this DOES wedge both the
+  // automatic effect below and the manual retry -- only a hard reload
+  // (which clears the in-memory MutationCache outright) recovers. That is
+  // accepted, not an oversight: there is no client-side timeout anywhere in
+  // this codebase (see the `onSettled` comment above), and it stays that
+  // way deliberately -- a client-side abort/timeout is NOT the fix, because
+  // the SERVER may already have billed and recorded the run by the time any
+  // client-side deadline fires. Aborting would present a false failure for
+  // a call that actually succeeded, which is worse than staying stuck.
   const paidCallInFlight =
     useIsMutating({ mutationKey: keywordDiscoveryMutationKey(projectId) }) > 0;
 
   const start = useCallback(() => {
-    if (!domain) return;
-    // Silent no-op while a call is already in flight -- see
-    // `paidCallInFlight`'s own comment above for why this now applies to
-    // every UI call site that invokes `runAgain` (header Refresh, the
-    // failed banner's "Try again", the expired banner's "Refresh it"), not
-    // just the automatic effect below. Guarding HERE, once, rather than in
-    // each button's `onClick`, is what keeps every call site safe without
-    // having to remember to repeat the check at each one. Silent rather
-    // than surfacing an error: the card already renders an in-flight
-    // indicator (`isRunningPaid`) and swaps each button's own label while
-    // this is true, so a click that lands here was never going to tell the
-    // user anything they can't already see.
-    if (paidCallInFlight) return;
+    // `paidCallInFlight` fed in here is read LIVE, from `queryClient
+    // .isMutating` called right now -- deliberately NOT the
+    // `paidCallInFlight` value closed over above. That value only updates
+    // when THIS render commits, and TanStack Query's subscriber
+    // notification runs through `notifyManager`'s scheduler, which flushes
+    // on a `setTimeout(0)` MACROtask, not a microtask -- so at least one
+    // task-queue turn separates a `mutate()` call from the re-render that
+    // would refresh a closed-over snapshot. Browsers dispatch queued input
+    // (a second click) ahead of queued timers, so a second click fired
+    // while the main thread is busy (re-rendering the ~100-row table
+    // below, for instance) can run BEFORE that notification lands and
+    // close over a STALE `paidCallInFlight === false` -- a snapshot-based
+    // guard would let it through. `queryClient.isMutating` is a synchronous
+    // cache read (`findAll({...filters, status:"pending"}).length`
+    // underneath) with no render dependency, so calling it HERE, at click
+    // time, can't be stale this way. See `paidCallInFlight`'s own comment
+    // above for why blocking this at all matters (a second click would
+    // bill Labs twice) and why a client-side abort/timeout is deliberately
+    // not the alternative fix.
+    //
+    // `canStartPaidRun` itself only covers the ORDER of the two
+    // conditions (domain, then in-flight) -- that part is unit-tested
+    // because it needs no live QueryClient to exercise. It does NOT cover
+    // the fix above: fed a stale `paidCallInFlight`, it would happily
+    // return `true` for an already-in-flight call. That staleness is
+    // exactly why the value is computed fresh, inline, right here rather
+    // than reused from the render-time `paidCallInFlight` above.
+    if (
+      !canStartPaidRun({
+        hasDomain: domain != null,
+        paidCallInFlight:
+          queryClient.isMutating({
+            mutationKey: keywordDiscoveryMutationKey(projectId),
+          }) > 0,
+      })
+    ) {
+      return;
+    }
+    // Applies to every UI call site that invokes `runAgain` (header
+    // Refresh, the failed banner's "Try again", the expired banner's
+    // "Refresh it"), not just the automatic effect below -- guarding HERE,
+    // once, is what keeps every call site safe without having to repeat
+    // the check at each one. Silent no-op rather than surfacing an error:
+    // the card already renders an in-flight indicator (`isRunningPaid`)
+    // and swaps each button's own label while this is true, so a click
+    // that lands here was never going to tell the user anything they
+    // can't already see.
     const geo = resolveRunGeo(
       "keyword-volume",
       targetAreaScope.area,
@@ -280,7 +329,8 @@ export function useKeywordTargets(
     discovery,
     domain,
     market.locationCode,
-    paidCallInFlight,
+    projectId,
+    queryClient,
     targetAreaScope.area,
   ]);
 
