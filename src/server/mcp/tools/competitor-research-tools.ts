@@ -6,7 +6,10 @@ import {
   type CompetitorRow,
   type KeywordGapRow,
 } from "@/server/features/competitors/services/CompetitorsService";
-import { keywordGapModes } from "@/types/schemas/competitors";
+import {
+  keywordGapModes,
+  type DiscoveryMode,
+} from "@/types/schemas/competitors";
 import { buildProjectMeta } from "@/server/mcp/context";
 import { mcpResponse } from "@/server/mcp/formatters";
 import {
@@ -84,7 +87,9 @@ type FindCompetitorsArgs = z.infer<
   z.ZodObject<typeof findCompetitorsInputSchema>
 >;
 
-const COMPETITOR_COLUMNS: McpTableColumn<CompetitorRow>[] = [
+// Domain-overlap discovery: `intersections`/`organicKeywords`/`organicTraffic`
+// are real, site-wide DataForSEO domain metrics here.
+const DOMAIN_MODE_COMPETITOR_COLUMNS: McpTableColumn<CompetitorRow>[] = [
   { header: "domain", value: (row) => row.domain },
   { header: "shared_keywords", value: (row) => row.intersections },
   { header: "avg_position", value: (row) => row.avgPosition },
@@ -92,12 +97,55 @@ const COMPETITOR_COLUMNS: McpTableColumn<CompetitorRow>[] = [
   { header: "organic_traffic", value: (row) => row.organicTraffic },
 ];
 
+// Keyword-seeded (serp-mode) discovery answers a different question --
+// "which of these rivals outranks you on your OWN tracked keywords" -- and
+// shares no columns in common with domain mode above:
+// - `intersections` is always null here (rankSerpCompetitors.ts sets it
+//   explicitly: "Only meaningful for the domain-overlap endpoint; this path
+//   has none").
+// - `organicKeywords`/`organicTraffic` are scoped to this run's SEED
+//   (<=COMPETITOR_SEED_SIZE keywords sent to serp_competitors), not the
+//   domain's real site-wide footprint -- rendering them under
+//   "organic_keywords" would silently change what that header means between
+//   two calls with the same shape. Traffic is kept (as `est_traffic`, a
+//   different header, not "organic_traffic") for the same reason the UI
+//   table keeps an "Est. Traffic" column in this mode; keywords are dropped
+//   outright, mirroring that same table's own choice
+//   (CompetitorsTableColumns.tsx's `buildCompetitorColumns`).
+const SERP_MODE_COMPETITOR_COLUMNS: McpTableColumn<CompetitorRow>[] = [
+  { header: "domain", value: (row) => row.domain },
+  { header: "beats_you_on", value: (row) => row.beatsYouCount },
+  {
+    header: "coverage_pct",
+    value: (row) => row.coverage,
+    format: (value) =>
+      typeof value === "number" ? `${Math.round(value * 100)}%` : "—",
+  },
+  { header: "position_delta", value: (row) => row.positionDelta },
+  { header: "avg_position", value: (row) => row.avgPosition },
+  { header: "est_traffic", value: (row) => row.organicTraffic },
+];
+
+/**
+ * Which column set describes `page.rows` -- driven by the PAGE-level
+ * `discoveryMode`, never a per-row `source` (a synthesized pinned row
+ * hardcodes `source: "serp"` regardless of which mode actually produced the
+ * page it was folded into; see `applyProjectCompetitors.ts`).
+ */
+function competitorColumnsFor(
+  discoveryMode: DiscoveryMode,
+): McpTableColumn<CompetitorRow>[] {
+  return discoveryMode === "serp"
+    ? SERP_MODE_COMPETITOR_COLUMNS
+    : DOMAIN_MODE_COMPETITOR_COLUMNS;
+}
+
 export const findCompetitorsTool = {
   name: "find_competitors",
   config: {
     title: "Find competitors",
     description:
-      "Discovers organic search competitors for a domain: sites ranking for the same keywords, with shared keyword counts and domain metrics. Use get_keyword_gap to compare against a specific competitor. Charges credits.",
+      "Discovers organic search competitors for a domain: sites ranking for the same keywords, with shared keyword counts and domain metrics, or -- when the project has Search Console connected -- rivals ranked by how many of the project's own tracked keywords they outrank it on. Output columns vary accordingly. Use get_keyword_gap to compare against a specific competitor. Charges credits.",
     inputSchema: findCompetitorsInputSchema,
     outputSchema: {
       competitors: z.array(looseObjectOutputSchema),
@@ -128,7 +176,7 @@ export const findCompetitorsTool = {
     const text =
       page.rows.length === 0
         ? `No organic competitors found for ${args.target}.`
-        : `Found ${page.rows.length} competitors for ${args.target}${page.totalCount != null ? ` (of ${page.totalCount} total)` : ""}:\n${formatMcpTable(page.rows, COMPETITOR_COLUMNS)}`;
+        : `Found ${page.rows.length} competitors for ${args.target}${page.totalCount != null ? ` (of ${page.totalCount} total)` : ""}:\n${formatMcpTable(page.rows, competitorColumnsFor(page.discoveryMode))}`;
     return mcpResponse({
       text,
       meta: buildProjectMeta(
