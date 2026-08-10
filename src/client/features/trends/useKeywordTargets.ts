@@ -194,10 +194,15 @@ export function useKeywordTargets(
     // never settles at all (true network hang, not a failure) is a
     // different, pre-existing risk this doesn't newly introduce -- it's the
     // same class of risk the original `getKeywordDiscovery` call already
-    // carries with no client-side timeout anywhere in this codebase, and
-    // it's why `runAgain` below is deliberately never gated on
-    // `paidCallInFlight`: whatever is stuck, a fresh manual attempt is
-    // always available.
+    // carries with no CLIENT-side timeout anywhere in this codebase. That
+    // risk is bounded, not unlimited: this app runs on Cloudflare Workers,
+    // whose requests carry their own platform-enforced timeout, so neither
+    // this refetch nor the original call can hang forever. `runAgain` below
+    // is now gated on `paidCallInFlight` (a reversal of an earlier version
+    // of this comment -- see that guard's own comment for why), so a stuck
+    // refetch also blocks a manual retry until Workers' own timeout clears
+    // it, rather than offering the user a second, independently billed
+    // attempt while the first is still technically alive.
     //
     // Runs on BOTH success and failure (unlike onSuccess): the service
     // records an analysis_runs row for a failed attempt too (see
@@ -231,16 +236,39 @@ export function useKeywordTargets(
   // guard cannot close this window on its own: the row doesn't exist until
   // the call settles.
   //
-  // If the underlying call somehow never settles, this can only wedge the
-  // AUTOMATIC effect below -- the manual `runAgain` button below is never
-  // gated on it, so the user always has an escape hatch (a fresh `.mutate()`
-  // call, independent of whether an earlier one ever resolves), and a hard
-  // reload clears the in-memory MutationCache outright.
+  // Also gates the MANUAL `runAgain` path below -- a reversal of this file's
+  // earlier stance, which left `runAgain` deliberately ungated as an escape
+  // hatch for a call that never settles. Traced through
+  // `@tanstack/query-core`: `mutationKey` is lookup-only (`useIsMutating`,
+  // `find`/`findAll`), never consulted by `mutate()`/`MutationCache.build()`,
+  // which always constructs and executes a brand-new `Mutation` regardless
+  // of what else currently shares its key. A double-click on "Refresh"/"Try
+  // again"/"Refresh it" while a call is already in flight would therefore
+  // fire a SECOND, independently billed Labs call -- a concrete, trivially
+  // reachable double-spend, not a hypothetical one. That now outranks the
+  // recovery path this guard used to preserve: this app runs on Cloudflare
+  // Workers, whose requests carry their own platform-enforced timeout, so a
+  // paid call cannot actually hang forever the way it could behind a
+  // long-lived server. A hard reload (which clears the in-memory
+  // MutationCache outright) is still available in the meantime, same as
+  // before this change. See `start`'s own guard below.
   const paidCallInFlight =
     useIsMutating({ mutationKey: keywordDiscoveryMutationKey(projectId) }) > 0;
 
   const start = useCallback(() => {
     if (!domain) return;
+    // Silent no-op while a call is already in flight -- see
+    // `paidCallInFlight`'s own comment above for why this now applies to
+    // every UI call site that invokes `runAgain` (header Refresh, the
+    // failed banner's "Try again", the expired banner's "Refresh it"), not
+    // just the automatic effect below. Guarding HERE, once, rather than in
+    // each button's `onClick`, is what keeps every call site safe without
+    // having to remember to repeat the check at each one. Silent rather
+    // than surfacing an error: the card already renders an in-flight
+    // indicator (`isRunningPaid`) and swaps each button's own label while
+    // this is true, so a click that lands here was never going to tell the
+    // user anything they can't already see.
+    if (paidCallInFlight) return;
     const geo = resolveRunGeo(
       "keyword-volume",
       targetAreaScope.area,
@@ -248,7 +276,13 @@ export function useKeywordTargets(
     );
     attemptedRef.current = true;
     discovery.mutate({ geo, countryCode: market.locationCode });
-  }, [discovery, domain, market.locationCode, targetAreaScope.area]);
+  }, [
+    discovery,
+    domain,
+    market.locationCode,
+    paidCallInFlight,
+    targetAreaScope.area,
+  ]);
 
   useEffect(() => {
     if (paidCallInFlight) return;

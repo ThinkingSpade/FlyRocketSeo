@@ -47,22 +47,22 @@ export function KeywordTargetsCard({
             </p>
           </div>
           {targets.paidState === "ok" ? (
-            // Deliberately NOT `disabled={targets.isRunningPaid}`. This is
-            // the manual escape hatch useKeywordTargets.ts's own
-            // `paidCallInFlight` comment describes: there is no
-            // client-side timeout anywhere in this codebase, so a paid
-            // call that never settles would otherwise be recoverable only
-            // by a hard reload. The "Loading ranking data..." line below
-            // already tells the user a call is in flight; the "Try
-            // again"/"Refresh it" buttons in the failed/expired banners
-            // below carry no such `disabled` either, for the same reason.
+            // Deliberately NOT `disabled`. The guard against a concurrent
+            // paid call now lives in `runAgain` itself
+            // (useKeywordTargets.ts's `start`, gated on `paidCallInFlight`)
+            // rather than on this control -- a click that lands mid-flight
+            // is a silent no-op there, not a second bill. Disabling the
+            // button here would be redundant AND would remove the one
+            // thing worth keeping about staying clickable/focusable: the
+            // label below still confirms the click landed. Same reasoning
+            // applies to "Try again"/"Refresh it" below.
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={targets.runAgain}
             >
-              Refresh
+              {targets.isRunningPaid ? "Refreshing…" : "Refresh"}
             </Button>
           ) : null}
         </div>
@@ -77,7 +77,7 @@ export function KeywordTargetsCard({
               className="ml-2"
               onClick={targets.runAgain}
             >
-              Try again
+              {targets.isRunningPaid ? "Retrying…" : "Try again"}
             </Button>
           </Banner>
         ) : null}
@@ -95,7 +95,7 @@ export function KeywordTargetsCard({
               className="ml-2"
               onClick={targets.runAgain}
             >
-              Refresh it
+              {targets.isRunningPaid ? "Refreshing…" : "Refresh it"}
             </Button>
           </Banner>
         ) : null}
