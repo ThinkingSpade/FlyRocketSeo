@@ -38,19 +38,14 @@
     // reasoning as GeoLocationSelect.
     "src/types/schemas/keyword-discovery.ts",
     // The Keyword Trends tab's composed hook. Task 6. Still needed as its own
-    // entry even though Task 8's card below now imports `useKeywordTargets`
-    // itself: this file also exports the `PaidState`/`KeywordTargetsState`
-    // TYPES, which nothing imports by name (the card only reads
-    // `targets.paidState` as a value, which doesn't count) -- dropping this
-    // entry turned those into knip's "unused exported types" the moment it
-    // was tried.
+    // entry even though Task 8's KeywordTargetsCard (now wired into
+    // TrendsPage.tsx by Task 9, so it needs no entry of its own anymore)
+    // imports `useKeywordTargets` itself: this file also exports the
+    // `PaidState`/`KeywordTargetsState` TYPES, which nothing imports by name
+    // (the card only reads `targets.paidState` as a value, which doesn't
+    // count) -- dropping this entry turned those into knip's "unused
+    // exported types" the moment it was tried.
     "src/client/features/trends/useKeywordTargets.ts",
-    // The Keyword Trends tab's target-list card. Task 8. Imports the Task 7
-    // table directly, so that file's own entry (below, now removed) is no
-    // longer needed -- its one export is consumed by name. Has no importer of
-    // ITS OWN yet by design -- Task 9 wires it into TrendsPage.tsx, a
-    // deliberately separate plan per Task 1's brief.
-    "src/client/features/trends/KeywordTargetsCard.tsx",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",
