@@ -1,6 +1,7 @@
 import type {
   CompetitorRow,
   CompetitorsTab,
+  DiscoveryMode,
 } from "@/types/schemas/competitors";
 import { CompetitorsTable } from "./CompetitorsTable";
 import { KeywordGapTable } from "./KeywordGapTable";
@@ -13,19 +14,28 @@ import type {
 /** Whichever result table the selected tab calls for, or its empty state. */
 export function TabBody({
   tab,
+  projectId,
   target,
   competitor,
   competitorRows,
+  discoveryMode,
+  seedSize,
   competitorsState,
   gapQuery,
   linkGapQuery,
   onCompareCompetitor,
 }: {
   tab: CompetitorsTab;
+  projectId: string;
   target: string;
   competitor: string;
   /** Live rows, or a restored past run's when there is no live query. */
   competitorRows: CompetitorRow[];
+  /** Which single mode produced `competitorRows`, live or restored. */
+  discoveryMode: DiscoveryMode;
+  /** How many seed keywords that answer was drawn from; 0 on the fallback
+   *  path. */
+  seedSize: number;
   /**
    * Whether those rows are an ANSWER. `competitorRows` is built with
    * `data?.rows ?? restored?.result.rows ?? []`, so a failed discovery, one
@@ -73,6 +83,9 @@ export function TabBody({
     return (
       <CompetitorsTable
         rows={competitorRows}
+        projectId={projectId}
+        discoveryMode={discoveryMode}
+        seedSize={seedSize}
         onCompareCompetitor={onCompareCompetitor}
       />
     );

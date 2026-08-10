@@ -120,13 +120,3 @@ export function buildCompetitorsVerdict(
     ],
   };
 }
-
-export function competitorsRowNote(row: {
-  intersections: number | null;
-  organicKeywords: number | null;
-}): string | null {
-  if (row.intersections == null || row.organicKeywords == null) return null;
-  if (row.organicKeywords <= 0) return null;
-  const pct = Math.round((row.intersections / row.organicKeywords) * 100);
-  return `${pct}% keyword overlap`;
-}

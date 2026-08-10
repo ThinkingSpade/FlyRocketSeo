@@ -1,7 +1,5 @@
 import { useEffect, useState } from "react";
-import { Users } from "lucide-react";
 import type { UseQueryResult } from "@tanstack/react-query";
-import { DataFreshness } from "@/client/components/DataFreshness";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
@@ -21,6 +19,8 @@ import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoResto
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { TabBody } from "./CompetitorsTabBody";
+import { CompetitorsPageHeader } from "./CompetitorsPageHeader";
+import { CompetitorsDiscoveryNotice } from "./CompetitorsDiscoveryNotice";
 import { CompetitorsOverviewExtras } from "./CompetitorsOverviewExtras";
 import { CompetitorsRestoreNotice } from "./CompetitorsRestoreNotice";
 import { CompetitorsRestoredRunBanner } from "./CompetitorsRestoredRunBanner";
@@ -35,6 +35,7 @@ import {
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
 import { shouldAdoptRestoredRun } from "./shouldAdoptRestoredRun";
 import { resolveRestoreNotice } from "./resolveRestoreNotice";
+import { pickDiscoveryDisclosure } from "./pickDiscoveryDisclosure";
 import { writeHandoff } from "@/client/features/insights/handoffStore";
 import {
   COMPETITORS_ANALYZE_PREVIEW,
@@ -165,6 +166,8 @@ export function CompetitorsPage({
     restored,
     target,
   );
+  const { discoveryMode, seedSize, hiddenCount, hasResult } =
+    pickDiscoveryDisclosure(competitorsQuery.data, restoredRun);
   const restoreNotice = resolveRestoreNotice({
     target,
     hasLiveResult: competitorsQuery.data != null,
@@ -219,23 +222,11 @@ export function CompetitorsPage({
 
   return (
     <AppPageShell>
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div>
-          <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <Users className="size-6" />
-            Competitor Insights
-          </h1>
-          <p className="text-sm text-base-content/60">
-            Discover who you compete with in organic search and find the
-            keywords and links they have that you don&apos;t.
-          </p>
-        </div>
-        <DataFreshness
-          fetchedAt={activeQuery.data?.fetchedAt}
-          onRefresh={() => run.authorize()}
-          refreshing={activeQuery.isFetching && !activeQuery.isPending}
-        />
-      </div>
+      <CompetitorsPageHeader
+        fetchedAt={activeQuery.data?.fetchedAt}
+        onRefresh={() => run.authorize()}
+        refreshing={activeQuery.isFetching && !activeQuery.isPending}
+      />
 
       <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
         <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
@@ -354,6 +345,15 @@ export function CompetitorsPage({
         />
       ) : null}
 
+      {tab === "competitors" && hasResult ? (
+        <CompetitorsDiscoveryNotice
+          projectId={projectId}
+          discoveryMode={discoveryMode}
+          seedSize={seedSize}
+          hiddenCount={hiddenCount}
+        />
+      ) : null}
+
       {tab === "competitors" && target ? (
         <CompetitorsOverviewExtras
           projectId={projectId}
@@ -395,17 +395,20 @@ export function CompetitorsPage({
 
         <TabBody
           tab={tab}
+          projectId={projectId}
           target={target}
           competitor={competitor}
           competitorRows={competitorRows}
+          discoveryMode={discoveryMode}
+          seedSize={seedSize}
           competitorsState={{
             isError: competitorsQuery.isError,
             isFetching: competitorsQuery.isFetching,
             // A restored past run is a real answer too, even though no live
             // query ran for it -- but only an ADOPTED one (see
-            // `pickAdoptedRestore`), which is exactly what a non-null
-            // `restoredRun` means.
-            hasResult: competitorsQuery.data != null || restoredRun != null,
+            // `pickAdoptedRestore`), which is exactly what `hasResult` (from
+            // `pickDiscoveryDisclosure`) means.
+            hasResult,
           }}
           gapQuery={gapQuery}
           linkGapQuery={linkGapQuery}

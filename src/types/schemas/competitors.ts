@@ -136,6 +136,11 @@ export const competitorsPageSchema = z.object({
 
 export type CompetitorsPage = z.infer<typeof competitorsPageSchema>;
 
+/** How a competitors page's rows were found -- keyword-seeded, or the
+ *  domain-overlap fallback. Derived from the page schema so the table and
+ *  page components share one definition instead of retyping the union. */
+export type DiscoveryMode = CompetitorsPage["discoveryMode"];
+
 /* ------------------------------------------------------------------ */
 /*  Project competitor management schemas                             */
 /* ------------------------------------------------------------------ */

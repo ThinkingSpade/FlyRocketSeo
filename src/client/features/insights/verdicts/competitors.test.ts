@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildCompetitorsVerdict, competitorsRowNote } from "./competitors";
+import { buildCompetitorsVerdict } from "./competitors";
 
 describe("buildCompetitorsVerdict", () => {
   it("says so when no competitor data was found", () => {
@@ -184,31 +184,5 @@ describe("buildCompetitorsVerdict", () => {
     });
 
     expect(verdict.tone).toBe("good");
-  });
-});
-
-describe("competitorsRowNote", () => {
-  it("states the keyword-overlap percentage", () => {
-    expect(
-      competitorsRowNote({ intersections: 50, organicKeywords: 200 }),
-    ).toBe("25% keyword overlap");
-  });
-
-  it("says nothing when the shared-keyword count is missing", () => {
-    expect(
-      competitorsRowNote({ intersections: null, organicKeywords: 200 }),
-    ).toBeNull();
-  });
-
-  it("says nothing when the rival's own keyword count is missing", () => {
-    expect(
-      competitorsRowNote({ intersections: 50, organicKeywords: null }),
-    ).toBeNull();
-  });
-
-  it("says nothing when the rival's own keyword count is zero", () => {
-    expect(
-      competitorsRowNote({ intersections: 0, organicKeywords: 0 }),
-    ).toBeNull();
   });
 });

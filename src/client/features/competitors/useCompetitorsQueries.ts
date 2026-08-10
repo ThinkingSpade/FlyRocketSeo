@@ -1,20 +1,36 @@
 import { useEffect, useState } from "react";
 import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type QueryClient,
+} from "@tanstack/react-query";
+import { toast } from "sonner";
+import {
   getCompetitorsList,
   getKeywordGapPage,
   getLinkGapPage,
+  listProjectCompetitors,
+  removeProjectCompetitor,
+  setProjectCompetitor,
 } from "@/serverFunctions/competitors";
-import type { KeywordGapMode } from "@/types/schemas/competitors";
+import {
+  competitorsPageSchema,
+  type CompetitorsPage,
+  type KeywordGapMode,
+} from "@/types/schemas/competitors";
 import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
 import { useHandoff } from "@/client/features/insights/handoffStore";
 import {
   useProjectMarket,
   type ProjectMarket,
 } from "@/client/hooks/useProjectDomain";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 
 type CompetitorsRun = {
   authorized: boolean;
@@ -112,6 +128,17 @@ export function useCompetitorsTargetPrefill({
   }, [prefill.value]);
 }
 
+/**
+ * Shared prefix for every cached `competitors-list` page for a project, no
+ * matter its target/page/market. `useCompetitorsQuery` below builds on top of
+ * it, and `patchCachedCompetitorsPages` matches back against exactly this
+ * prefix (TanStack Query's default `queryKey` matching is "starts with") so
+ * the two can never drift apart.
+ */
+function competitorsListQueryKeyPrefix(projectId: string) {
+  return ["competitors-list", projectId] as const;
+}
+
 export function useCompetitorsQuery(input: {
   projectId: string;
   target: string;
@@ -129,8 +156,7 @@ export function useCompetitorsQuery(input: {
     runNonce: input.runNonce,
     enabled: input.enabled && target !== "",
     queryKey: [
-      "competitors-list",
-      input.projectId,
+      ...competitorsListQueryKeyPrefix(input.projectId),
       target,
       input.page,
       input.pageSize,
@@ -231,5 +257,209 @@ export function useLinkGapQuery(input: {
           pageSize: input.pageSize,
         },
       }),
+  });
+}
+
+/** Query key for this project's pin/exclude overrides -- a free D1 read, so
+ *  unlike the hooks above this is a plain `useQuery`, never `useMeteredQuery`. */
+function projectCompetitorsQueryKey(projectId: string) {
+  return ["project-competitors", projectId] as const;
+}
+
+/**
+ * This project's standing pin/exclude overrides. Free (one D1 read, no
+ * DataForSEO call), so it needs no `authorized` gate -- it is only ever
+ * mounted on demand by the hidden-domains manager, which is gate enough.
+ */
+export function useProjectCompetitorsQuery(projectId: string) {
+  return useQuery({
+    queryKey: projectCompetitorsQueryKey(projectId),
+    queryFn: () => listProjectCompetitors({ data: { projectId } }),
+  });
+}
+
+/**
+ * Rewrites every cached `competitors-list` page for this project in place,
+ * rather than invalidating them.
+ *
+ * `competitors-list` is a metered (`useMeteredQuery`) key, and pin/exclude
+ * are free D1 writes that must never cause a paid DataForSEO refetch. Calling
+ * `queryClient.invalidateQueries` here would risk exactly that: verified
+ * against the installed `@tanstack/query-core`, its default `refetchType:
+ * "active"` refetches any matching query whose observer has `enabled !==
+ * false` (`Query.isActive`) -- which describes a live, already-authorized
+ * competitors run sitting on screen, the normal moment a user clicks Pin.
+ * `setQueriesData` only ever writes the cache and touches the network not at
+ * all, so it keeps "no automatic spend" true even then. The `{ queryKey:
+ * competitorsListQueryKeyPrefix(projectId) }` filter partial-matches every
+ * cached page for this project regardless of its target/page/market suffix.
+ */
+function patchCachedCompetitorsPages(
+  queryClient: QueryClient,
+  projectId: string,
+  updater: (page: CompetitorsPage) => CompetitorsPage,
+): void {
+  queryClient.setQueriesData<CompetitorsPage>(
+    { queryKey: competitorsListQueryKeyPrefix(projectId) },
+    (page) => (page ? updater(page) : page),
+  );
+}
+
+/**
+ * Query key `useAutoRestoredRun` builds for this project's restored
+ * competitors run when no specific past run is selected -- the common case
+ * since Task 8 made restore-on-open the default rather than forcing an
+ * Analyze click, which is exactly when a live `competitors-list` entry
+ * (what `patchCachedCompetitorsPages` above patches) does NOT exist yet.
+ * Duplicated from `useAutoRestoredRun.ts`'s own `["analysisRun", runId ??
+ * "latest", projectId, feature]`, since that hook is feature-agnostic and
+ * exports no key-builder. A future drift between the two degrades safely,
+ * not silently wrong: `setQueryData` below would simply match nothing, and
+ * the mutation's own (already-successful) D1 write remains the only
+ * effect -- the row/hiddenCount just would not update until the next
+ * reload, same as before this function existed.
+ *
+ * Deliberately does NOT cover a specific past run opened from
+ * `RecentRunsList` (`runId` set to something other than the latest): that
+ * is a deliberate "look at history" action, not the default view, and
+ * reaching it here would need the page's own `selectedRunId` state threaded
+ * all the way down through `CompetitorsTable` into this hook.
+ */
+function restoredCompetitorsRunQueryKey(projectId: string) {
+  return [
+    "analysisRun",
+    "latest",
+    projectId,
+    RUN_FEATURES.competitors,
+  ] as const;
+}
+
+/** The slice of `useAutoRestoredRun`'s raw cached shape this patch needs --
+ *  structurally typed rather than imported, since that hook keeps its
+ *  outcome type private. */
+type RestoredRunCacheEntry = {
+  status: string;
+  run?: { resultJson: string };
+};
+
+function patchCachedRestoredCompetitorsRun(
+  queryClient: QueryClient,
+  projectId: string,
+  updater: (page: CompetitorsPage) => CompetitorsPage,
+): void {
+  queryClient.setQueryData<RestoredRunCacheEntry>(
+    restoredCompetitorsRunQueryKey(projectId),
+    (entry) => {
+      if (!entry || entry.status !== "ready" || !entry.run) return entry;
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(entry.run.resultJson);
+      } catch {
+        return entry;
+      }
+      const result = competitorsPageSchema.safeParse(parsed);
+      if (!result.success) return entry;
+      return {
+        ...entry,
+        run: { ...entry.run, resultJson: JSON.stringify(updater(result.data)) },
+      };
+    },
+  );
+}
+
+function reportProjectCompetitorError(error: unknown): void {
+  toast.error(
+    getStandardErrorMessage(error, "Couldn't update this competitor"),
+  );
+}
+
+/**
+ * Pins a competitor, or excludes (hides) it -- both free D1 writes. See
+ * `patchCachedCompetitorsPages` for why the competitors-list cache is
+ * patched directly instead of invalidated, and
+ * `patchCachedRestoredCompetitorsRun` for why a restored view needs the
+ * same patch applied a second time, to a differently-shaped cache entry.
+ */
+export function useSetProjectCompetitorMutation(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { domain: string; status: "pinned" | "excluded" }) =>
+      setProjectCompetitor({
+        data: { projectId, domain: input.domain, status: input.status },
+      }),
+    onSuccess: (overrides, variables) => {
+      queryClient.setQueryData(
+        projectCompetitorsQueryKey(projectId),
+        overrides,
+      );
+      const updater = (page: CompetitorsPage): CompetitorsPage => {
+        if (variables.status === "pinned") {
+          return {
+            ...page,
+            rows: page.rows.map((row) =>
+              row.domain === variables.domain ? { ...row, pinned: true } : row,
+            ),
+          };
+        }
+        // Excluded: drop it from the visible rows this project's other
+        // overrides already filtered server-side, and count it as hidden so
+        // the disclosure line stays accurate without a refetch.
+        const rows = page.rows.filter((row) => row.domain !== variables.domain);
+        const removed = page.rows.length - rows.length;
+        return removed === 0
+          ? page
+          : { ...page, rows, hiddenCount: page.hiddenCount + removed };
+      };
+      patchCachedCompetitorsPages(queryClient, projectId, updater);
+      patchCachedRestoredCompetitorsRun(queryClient, projectId, updater);
+      toast.success(
+        variables.status === "pinned"
+          ? `Pinned ${variables.domain}`
+          : `Excluded ${variables.domain}`,
+      );
+    },
+    onError: reportProjectCompetitorError,
+  });
+}
+
+/**
+ * Clears a standing override -- unpinning a visible row, or unhiding an
+ * excluded one from the hidden-domains manager. Both go through the same
+ * `removeProjectCompetitor` call (it just deletes the override row), but the
+ * two need different cache patches, so the caller says which this is rather
+ * than the mutation guessing from what's in cache.
+ */
+export function useRemoveProjectCompetitorMutation(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { domain: string; reason: "unpin" | "unhide" }) =>
+      removeProjectCompetitor({ data: { projectId, domain: input.domain } }),
+    onSuccess: (overrides, variables) => {
+      queryClient.setQueryData(
+        projectCompetitorsQueryKey(projectId),
+        overrides,
+      );
+      const updater = (page: CompetitorsPage): CompetitorsPage => {
+        if (variables.reason === "unpin") {
+          return {
+            ...page,
+            rows: page.rows.map((row) =>
+              row.domain === variables.domain ? { ...row, pinned: false } : row,
+            ),
+          };
+        }
+        return page.hiddenCount > 0
+          ? { ...page, hiddenCount: page.hiddenCount - 1 }
+          : page;
+      };
+      patchCachedCompetitorsPages(queryClient, projectId, updater);
+      patchCachedRestoredCompetitorsRun(queryClient, projectId, updater);
+      toast.success(
+        variables.reason === "unpin"
+          ? `Unpinned ${variables.domain}`
+          : `${variables.domain} is no longer hidden`,
+      );
+    },
+    onError: reportProjectCompetitorError,
   });
 }

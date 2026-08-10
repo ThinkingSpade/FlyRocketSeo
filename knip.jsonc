@@ -42,16 +42,6 @@
   "ignore": ["drizzle-prod.config.ts"],
   // Disable Drizzle plugin - it tries to load drizzle.config.ts which imports cloudflare:workers
   "drizzle": false,
-  // Per-export version of the `entry` mechanism above (verified against
-  // knip@5.88.1's own source, dist/graph/analyze.js -- entry-izing a whole
-  // file skips its ENTIRE export list, not just the intended ones, the moment
-  // any single export in it needs this; `tags` checks each export's own
-  // JSDoc tags individually instead). Tag an export `@knipEntryPending` with
-  // a comment naming its future caller (see
-  // src/serverFunctions/competitors.ts for the current use) instead of
-  // adding its file to `entry`, whenever a file mixes already-consumed
-  // exports with not-yet-wired ones.
-  "tags": ["-knipEntryPending"],
   "ignoreDependencies": [
     // Tailwindcss used via @tailwindcss/vite plugin
     "tailwindcss",
