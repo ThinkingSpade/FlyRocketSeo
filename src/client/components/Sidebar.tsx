@@ -156,11 +156,12 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
       </div>
 
       {projectId ? (
-        // Same underline tab idiom as the in-page tab strips (e.g. Domain
-        // Overview's Top Keywords / Top Pages).
+        // Same segmented idiom as the in-page tab strips (e.g. Domain
+        // Overview's Top Keywords / Top Pages) — see SegmentedToggle for why
+        // segmented is what the reference dashboard actually uses.
         <div className="px-3 pb-1">
           <Tabs
-            variant="underline"
+            variant="segmented"
             value={view}
             onValueChange={(next) => {
               // Chat has a side effect beyond selection (it navigates to /sam),

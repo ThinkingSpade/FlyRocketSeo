@@ -154,7 +154,7 @@ export function CitationTabsCard({
     <section className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="flex items-center justify-between gap-3 border-b border-base-300 px-4 py-3">
         <Tabs
-          variant="underline"
+          variant="segmented"
           value={queriesActive ? "queries" : "pages"}
           onValueChange={(next) => {
             if (next === "queries" || next === "pages") setActiveTab(next);

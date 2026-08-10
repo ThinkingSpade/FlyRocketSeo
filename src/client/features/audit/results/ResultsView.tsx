@@ -236,7 +236,7 @@ function ResultsHeader({
     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
       {hasPerformanceTab ? (
         <Tabs
-          variant="underline"
+          variant="segmented"
           value={activeTab}
           onValueChange={(next) => {
             const selected = tabs.find((t) => t.tab === next);
