@@ -53,7 +53,17 @@ const PRINT_STYLES = `
      dark theme every sheet came out of the printer as a black field. */
   html, body { background: #ffffff !important; }
   .report-no-print { display: none !important; }
-  .report-section { break-inside: avoid; }
+  /* Deliberately NOT \`.report-section { break-inside: avoid }\`. That reads as
+     "keep a section together" and behaves as "never split it": a section that
+     fits a sheet but not the space LEFT on this one is pushed wholesale to the
+     next, and the hole it leaves ran to about three-quarters of a sheet. It
+     also fired before the finer rules below, so tables that were explicitly
+     allowed to flow never got the chance.
+
+     The rules that actually matter are per-element and already here: rows stay
+     whole, headers repeat, and a heading never separates from what it
+     introduces. Those give the same protection where it counts without
+     reserving a whole sheet to get it. */
   /* Long tables may run onto the next sheet, but never mid-row, and the header
      repeats when they do — otherwise the overflow arrives as unlabelled rows. */
   #client-report table { break-inside: auto; }

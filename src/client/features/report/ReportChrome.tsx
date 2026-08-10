@@ -113,7 +113,6 @@ export function ReportPage({
   kicker,
   domain,
   title,
-  pageNumber,
   foot,
   children,
 }: {
@@ -121,8 +120,18 @@ export function ReportPage({
   kicker: string;
   domain: string | null;
   title: string;
-  pageNumber?: number;
-  /** Running foot, carried on every sheet so provenance survives the PDF. */
+  /**
+   * Provenance line closing the chapter — project and generation date.
+   *
+   * Not a running foot, despite where it sits: it is the last block INSIDE the
+   * section, so it prints once, at the end of the chapter's final sheet. That
+   * distinction is why the page number that used to sit opposite it is gone. It
+   * was `chapterIndex + 3`, an ordinal, and a chapter that overflows its sheet
+   * carries its one folio onto whichever physical sheet it happens to end on —
+   * a five-sheet chapter printed "Page 3" on sheet seven. Chrome supports no
+   * `@page` margin boxes, so a real page counter is not available here, and a
+   * page number that lies is worse in a client deliverable than none.
+   */
   foot?: string;
   children: ReactNode;
 }) {
@@ -162,13 +171,12 @@ export function ReportPage({
         {children}
       </div>
 
-      {pageNumber != null ? (
+      {foot ? (
         <div
-          className="ml-8 mr-7 flex items-baseline justify-between border-t pb-2 pt-3 text-[11px]"
+          className="ml-8 mr-7 border-t pb-2 pt-3 text-[11px]"
           style={{ borderColor: HAIRLINE, color: MUTED }}
         >
-          <span>{foot ?? ""}</span>
-          <span className="tabular-nums">Page {pageNumber}</span>
+          {foot}
         </div>
       ) : null}
     </section>

@@ -141,7 +141,6 @@ export function ReportPages({
         kicker="Summary"
         domain={domain}
         title="Overall summary"
-        pageNumber={2}
         foot={foot}
       >
         {narrativeInput ? (
@@ -170,8 +169,6 @@ export function ReportPages({
           kicker={spec.kicker}
           domain={domain}
           title={spec.title}
-          // The cover is 1 and the summary is 2, so chapters start at 3.
-          pageNumber={index + 3}
           foot={foot}
         >
           {spec.body}
