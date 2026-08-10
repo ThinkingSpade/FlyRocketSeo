@@ -17,17 +17,19 @@
 - **`RUN_FEATURES` values are a storage format.** Append only; never rename in place.
 - **Vitest runs in a `node` environment and cannot render hooks or components.** Every test in this plan is over a pure function. Do not add React Testing Library.
 - Verification command: `pnpm ci:check` (runs tsc + lint + vitest; use this rather than the three separately).
-- Comment style: this codebase explains *why*, not *what*, and records defects that were fixed so they are not reintroduced. Match it.
+- Comment style: this codebase explains _why_, not _what_, and records defects that were fixed so they are not reintroduced. Match it.
 
 ---
 
 ### Task 1: Result schema and run-feature slug
 
 **Files:**
+
 - Create: `src/types/schemas/keyword-discovery.ts`
 - Modify: `src/shared/analysis-run-features.ts:9-20`
 
 **Interfaces:**
+
 - Consumes: `storedMetricGeoSchema`, `STORED_GEO_BUNDLE_VERSION` from `src/types/schemas/geo.ts`
 - Produces:
   - `RUN_FEATURES.keywordDiscovery` — the string `"keyword_discovery"`
@@ -180,10 +182,12 @@ git commit -m "Keyword discovery: result schema that can hold a failed attempt"
 ### Task 2: The merge function
 
 **Files:**
+
 - Create: `src/client/features/trends/mergeKeywordRows.ts`
 - Create: `src/client/features/trends/mergeKeywordRows.test.ts`
 
 **Interfaces:**
+
 - Consumes: `TrendingOpportunity` from `./opportunityActions`, `KeywordDiscoveryKeyword` from `@/types/schemas/keyword-discovery`
 - Produces:
   - `type KeywordTargetRow`
@@ -469,10 +473,12 @@ git commit -m "Keyword targets: merge GSC and Labs rows without blending rank"
 ### Task 3: The auto-run guard
 
 **Files:**
+
 - Create: `src/client/features/trends/shouldAutoRunDiscovery.ts`
 - Create: `src/client/features/trends/shouldAutoRunDiscovery.test.ts`
 
 **Interfaces:**
+
 - Produces: `shouldAutoRunDiscovery(input: { outcome: RestoreOutcomeName | null; hasDomain: boolean; hasCredits: boolean; alreadyAttempted: boolean }): boolean`, `type RestoreOutcomeName = "none" | "expired" | "unreadable" | "ready"`
 
 - [ ] **Step 1: Write the failing test**
@@ -594,9 +600,11 @@ git commit -m "Keyword discovery: guard that makes 'run once' mean once"
 ### Task 4: The server service
 
 **Files:**
+
 - Create: `src/server/features/keywords/services/keywordDiscovery.ts`
 
 **Interfaces:**
+
 - Consumes: `getKeywordsPage` (`src/server/features/domain/services/domainKeywordsPage.ts:40`), `AnalysisRunService.record`, `RUN_FEATURES.keywordDiscovery`, `KeywordDiscoveryResult`
 - Produces: `runKeywordDiscovery(input, billingCustomer): Promise<KeywordDiscoveryResult>`
 
@@ -739,12 +747,15 @@ async function recordDiscoveryRun(
     domain: input.domain,
     locationCode: input.locationCode,
     languageCode: input.languageCode,
-    attemptedAt: result.status === "failed" ? result.attemptedAt : result.fetchedAt,
+    attemptedAt:
+      result.status === "failed" ? result.attemptedAt : result.fetchedAt,
   });
 
-  await setCached(cacheKey, result, DISCOVERY_RUN_TTL_SECONDS).catch((error) => {
-    console.error("keyword-discovery.cache-write failed:", error);
-  });
+  await setCached(cacheKey, result, DISCOVERY_RUN_TTL_SECONDS).catch(
+    (error) => {
+      console.error("keyword-discovery.cache-write failed:", error);
+    },
+  );
 
   await AnalysisRunService.record({
     projectId: input.projectId,
@@ -787,9 +798,11 @@ git commit -m "Keyword discovery: one paid call, and a recorded failure that sto
 ### Task 5: The server function
 
 **Files:**
+
 - Create: `src/serverFunctions/keywordDiscovery.ts`
 
 **Interfaces:**
+
 - Consumes: `runKeywordDiscovery`, `requireProjectContext` (`src/serverFunctions/middleware.ts`), `storedMetricGeoSchema`
 - Produces: `getKeywordDiscovery` server function taking `{ projectId, domain, locationCode, languageCode, geo }`
 
@@ -832,17 +845,18 @@ const inputSchema = z.object({
 export const getKeywordDiscovery = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(inputSchema)
-  .handler(async ({ data, context }): Promise<KeywordDiscoveryResult> =>
-    runKeywordDiscovery(
-      {
-        projectId: context.projectId,
-        domain: data.domain,
-        locationCode: data.locationCode,
-        languageCode: data.languageCode,
-        geo: data.geo,
-      },
-      context,
-    ),
+  .handler(
+    async ({ data, context }): Promise<KeywordDiscoveryResult> =>
+      runKeywordDiscovery(
+        {
+          projectId: context.projectId,
+          domain: data.domain,
+          locationCode: data.locationCode,
+          languageCode: data.languageCode,
+          geo: data.geo,
+        },
+        context,
+      ),
   );
 ```
 
@@ -863,9 +877,11 @@ git commit -m "Keyword discovery: server function"
 ### Task 6: The hook
 
 **Files:**
+
 - Create: `src/client/features/trends/useKeywordTargets.ts`
 
 **Interfaces:**
+
 - Consumes: `useTrendingOpportunities`, `useAutoRestoredRun`, `mergeKeywordRows`, `shouldAutoRunDiscovery`, `getKeywordDiscovery`, `useProjectDomain`, `useProjectMarket`, `useTargetAreaScope`, `resolveRunGeo`, `toStoredMetricGeo`, `parseStoredGeo`
 - Produces: `useKeywordTargets(projectId: string): KeywordTargetsState` where
 
@@ -902,9 +918,16 @@ import {
 } from "@/types/schemas/keyword-discovery";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
-import { useProjectDomain, useProjectMarket } from "@/client/hooks/useProjectDomain";
+import {
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
-import { parseStoredGeo, resolveRunGeo, toStoredMetricGeo } from "@/client/features/geo/resolveRunGeo";
+import {
+  parseStoredGeo,
+  resolveRunGeo,
+  toStoredMetricGeo,
+} from "@/client/features/geo/resolveRunGeo";
 import { resolveStoredGeo } from "@/client/features/geo/resolveRunGeo";
 import type { ResolvedGeo } from "@/shared/geo/types";
 import { useTrendingOpportunities } from "./useTrendingOpportunities";
@@ -1003,7 +1026,11 @@ export function useKeywordTargets(projectId: string, hasCredits: boolean) {
       restored.restored?.params,
     )?.rankings;
     return stored
-      ? resolveStoredGeo("keyword-volume", stored.locationCode, stored.languageCode)
+      ? resolveStoredGeo(
+          "keyword-volume",
+          stored.locationCode,
+          stored.languageCode,
+        )
       : null;
   }, [restored.restored?.params]);
 
@@ -1060,9 +1087,11 @@ git commit -m "Keyword targets: compose free GSC rows with the once-only paid ru
 ### Task 7: The table component
 
 **Files:**
+
 - Create: `src/client/features/trends/KeywordTargetsTable.tsx`
 
 **Interfaces:**
+
 - Consumes: `KeywordTargetRow`, `AppDataTable`/`useAppTable` (`src/client/components/table/AppDataTable`), `ExternalUrlCell`, `DifficultyBadge`, `momentumLabel`, `opportunityActionLabel`
 - Produces: `<KeywordTargetsTable rows={KeywordTargetRow[]} domain={string} />`
 
@@ -1077,7 +1106,10 @@ Create `src/client/features/trends/KeywordTargetsTable.tsx`:
 ```tsx
 import { memo, useMemo } from "react";
 import { createColumnHelper, type ColumnDef } from "@tanstack/react-table";
-import { AppDataTable, useAppTable } from "@/client/components/table/AppDataTable";
+import {
+  AppDataTable,
+  useAppTable,
+} from "@/client/components/table/AppDataTable";
 import { ExternalUrlCell } from "@/client/components/table/url";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
 import { formatNumber } from "@/client/features/domain/utils";
@@ -1125,7 +1157,9 @@ function KeywordTargetsTableComponent({
     () => [
       columnHelper.accessor("keyword", {
         header: () => "Keyword",
-        cell: ({ getValue }) => <span className="font-medium">{getValue()}</span>,
+        cell: ({ getValue }) => (
+          <span className="font-medium">{getValue()}</span>
+        ),
       }),
       columnHelper.display({
         id: "rank",
@@ -1145,7 +1179,9 @@ function KeywordTargetsTableComponent({
         header: () => "Trend",
         cell: ({ row }) =>
           row.original.momentum ? (
-            <span className="text-sm">{momentumLabel(row.original.momentum)}</span>
+            <span className="text-sm">
+              {momentumLabel(row.original.momentum)}
+            </span>
           ) : (
             // Blank, not zero: Search Console has nothing to say about a
             // keyword this site gets no impressions for.
@@ -1222,9 +1258,11 @@ git commit -m "Keyword targets: table that labels which rank number it is showin
 ### Task 8: The card, its states and the scope line
 
 **Files:**
+
 - Create: `src/client/features/trends/KeywordTargetsCard.tsx`
 
 **Interfaces:**
+
 - Consumes: `useKeywordTargets`, `KeywordTargetsTable`, `useProjectDomain`, `Button`, `Banner`, `Loader` from `@cloudflare/kumo/components/*`
 - Produces: `<KeywordTargetsCard projectId={string} hasCredits={boolean} />`
 
@@ -1367,9 +1405,11 @@ git commit -m "Keyword targets: card states, and location as a scope line"
 ### Task 9: Wire it into the page
 
 **Files:**
+
 - Modify: `src/client/features/trends/TrendsPage.tsx:386` (swap the card), `:388-453` (move the form below the results)
 
 **Interfaces:**
+
 - Consumes: `KeywordTargetsCard`
 
 - [ ] **Step 1: Replace the card**
@@ -1377,7 +1417,7 @@ git commit -m "Keyword targets: card states, and location as a scope line"
 In `src/client/features/trends/TrendsPage.tsx`, replace the `<TrendingOpportunitiesCard projectId={projectId} />` line at `:386` with:
 
 ```tsx
-      <KeywordTargetsCard projectId={projectId} hasCredits={hasCredits} />
+<KeywordTargetsCard projectId={projectId} hasCredits={hasCredits} />
 ```
 
 Update the import at `:35` from `TrendingOpportunitiesCard` to `KeywordTargetsCard`.
@@ -1386,7 +1426,7 @@ Update the import at `:35` from `TrendingOpportunitiesCard` to `KeywordTargetsCa
 
 - [ ] **Step 2: Move the Compare form below the results**
 
-The form block currently sits at `:388-453`, above the chart. Move that entire `<div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">…</div>` wrapper so it renders *after* the chart card that ends at `:522`. The tab now leads with the keyword table; the five-keyword comparison is a secondary tool.
+The form block currently sits at `:388-453`, above the chart. Move that entire `<div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">…</div>` wrapper so it renders _after_ the chart card that ends at `:522`. The tab now leads with the keyword table; the five-keyword comparison is a secondary tool.
 
 Do not change the form's behaviour, its handler, or the chart. This is a reorder only.
 
@@ -1454,6 +1494,7 @@ git commit -m "Keyword targets: fixes from auto-spend audit and browser verifica
 **Spec coverage.** Part A → Tasks 2, 7, 9. Part B → Tasks 1, 3, 4, 5, 6. Part C → Task 9 Step 2. Location-as-scope-line → Tasks 6, 8. States table → Task 8. Rank-never-blended → Tasks 2, 7. Failure recording → Tasks 1, 4. `expired` must not auto-run → Task 3. Sibling self-fetch check → Task 10. Retention assumption → surfaced in Task 3's test name and Task 8's expired banner.
 
 **Known deviations from the spec, deliberate:**
+
 - The spec named the merge file `mergeKeywordRows` and the guard `shouldAutoRunDiscovery`; both kept. The hook is `useKeywordTargets`, not named in the spec.
 - The spec left the default sort unstated. This plan fixes it as volume-desc-nulls-last and documents why in the code.
 

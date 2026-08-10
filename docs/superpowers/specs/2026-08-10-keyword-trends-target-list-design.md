@@ -15,7 +15,7 @@ Two distinct causes, and only one of them is a UI problem.
 
 **The list is thin because of its source, not its design.** `TrendingOpportunitiesCard`
 is built entirely on Google Search Console (`useTrendingOpportunities.ts:47`). GSC only
-contains queries the site was *shown* for, and `queryMomentum.ts:64` withholds a verdict
+contains queries the site was _shown_ for, and `queryMomentum.ts:64` withholds a verdict
 below ten impressions. For a young site that ceiling is a handful of rows, and no amount
 of layout work raises it. GSC also cannot answer "keywords to be targeting" at all — by
 construction it lists only what already ranks.
@@ -41,7 +41,7 @@ migration beyond one `RUN_FEATURES` value; the Trends chart's own behaviour is u
 1. **Free and paid on open.** Paid data runs automatically, but only once per project;
    thereafter it is served from history until the user explicitly clicks re-run. This is a
    deliberate, user-affirmed narrowing of the app's no-auto-spend rule, which elsewhere
-   requires a click before *any* spend. It is recorded here because a later reader will
+   requires a click before _any_ spend. It is recorded here because a later reader will
    otherwise read the auto-run as the bug that rule exists to prevent.
 2. **One table, rank source labeled per row.** Not two stacked sections, and not
    SERP-rank-only.
@@ -60,16 +60,16 @@ Reuses `AppDataTable`, `SortableHeader`, `DifficultyBadge` and `ExternalUrlCell`
 
 ### Two sources, merged by keyword
 
-| | Google Search Console | Labs `ranked_keywords` |
-|---|---|---|
-| Cost | free, every mount | paid, once (Part B) |
-| Via | `getQueryMomentum` (`trendingOpportunities.ts:179`) | `getDomainKeywordsPage` (`domain.ts:70`) |
+|             | Google Search Console                                     | Labs `ranked_keywords`                                   |
+| ----------- | --------------------------------------------------------- | -------------------------------------------------------- |
+| Cost        | free, every mount                                         | paid, once (Part B)                                      |
+| Via         | `getQueryMomentum` (`trendingOpportunities.ts:179`)       | `getDomainKeywordsPage` (`domain.ts:70`)                 |
 | Contributes | impressions, momentum, GSC average position, dominant URL | SERP rank, volume, difficulty, CPC, traffic, ranking URL |
 
 Merge is a pure function, `mergeKeywordRows(gscRows, labsRows)`, keyed on the trimmed
 lowercased keyword. A keyword present in both produces one row.
 
-For *display* the table drops `MIN_IMPRESSIONS_FOR_VERDICT`, so thin sites show every GSC
+For _display_ the table drops `MIN_IMPRESSIONS_FOR_VERDICT`, so thin sites show every GSC
 query rather than three. The floor stays where it is for verdict text: a row below ten
 impressions shows its numbers and no trend claim, which is what `queryMomentum.ts:56-64`
 already means by `direction: "unknown"`.
@@ -118,7 +118,7 @@ So: a new `getKeywordDiscovery` server function, thin, which calls the existing
 `getKeywordsPage` service (`domainKeywordsPage.ts:40`) once with `pageSize: 100` ordered by
 traffic, and then records the run the way `DomainService.ts:101` already does. The paid
 service itself is reused unchanged; only the caller and the recording are new. Its 12-hour
-R2 cache stays useful for the re-run path but is *not* the once-only guard — a 12-hour
+R2 cache stays useful for the re-run path but is _not_ the once-only guard — a 12-hour
 cache would re-bill on the next visit tomorrow, which is exactly what the user asked not
 to happen.
 
@@ -144,7 +144,7 @@ keywordDiscoveryResultSchema = z.discriminatedUnion("status", [
 ```
 
 This is deliberate rather than incidental: it makes "have we already tried?" and "what did
-we get?" the *same* question, answered by the one restore call the tab already makes. A
+we get?" the _same_ question, answered by the one restore call the tab already makes. A
 separate flag table or KV key would let the two answers drift, and the drifted state — a
 recorded failure the guard cannot see — is an unbounded billing loop.
 
@@ -183,8 +183,8 @@ row: `fetchRankedKeywords` takes one `location_code` per request (`labs.ts:205-2
 GSC call uses `dimensions: ["query"]` with no country dimension at all
 (`trendingOpportunities.ts:196`).
 
-So location renders once, above the table, as a scope line — *"Rankings in Dallas–Fort Worth,
-TX · English · fetched Aug 3"* — driven by the `ScopeControl` already on the page. The run's
+So location renders once, above the table, as a scope line — _"Rankings in Dallas–Fort Worth,
+TX · English · fetched Aug 3"_ — driven by the `ScopeControl` already on the page. The run's
 geography is captured at authorize-time through `resolveRunGeo` and persisted in the run's
 params bundle, exactly as the Trends chart already does (`TrendsPage.tsx:152-157`, `:274-280`).
 
@@ -194,17 +194,17 @@ exists to prevent.
 
 ## States
 
-| Condition | Renders |
-|---|---|
-| Restored run present | Full table + scope line + "Refresh" |
-| No run, preconditions met | Table with GSC rows only, paid rows streaming in |
-| No run, no domain or no credits | GSC rows + "Analyze americavending.com" prompt |
-| Paid run failed | GSC rows + error banner + "Try again" (never auto-retries) |
-| Run expired/unreadable | GSC rows + "saved list unavailable — refresh" |
-| GSC not connected, run present | Table with Labs rows only, no Trend/Action columns populated |
-| Neither source | Existing empty state, unchanged |
+| Condition                       | Renders                                                      |
+| ------------------------------- | ------------------------------------------------------------ |
+| Restored run present            | Full table + scope line + "Refresh"                          |
+| No run, preconditions met       | Table with GSC rows only, paid rows streaming in             |
+| No run, no domain or no credits | GSC rows + "Analyze americavending.com" prompt               |
+| Paid run failed                 | GSC rows + error banner + "Try again" (never auto-retries)   |
+| Run expired/unreadable          | GSC rows + "saved list unavailable — refresh"                |
+| GSC not connected, run present  | Table with Labs rows only, no Trend/Action columns populated |
+| Neither source                  | Existing empty state, unchanged                              |
 
-Every state renders *something* — the GSC half is free and always available once connected,
+Every state renders _something_ — the GSC half is free and always available once connected,
 so a paid failure degrades rather than blanks the page.
 
 ## Testing
