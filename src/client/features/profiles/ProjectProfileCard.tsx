@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { AlertCircle, Briefcase, Check, Wand2, X } from "lucide-react";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import { resolveDraftStatus, type DraftStatus } from "./draftStatus";
+import { applyPrefill } from "./profilePrefill";
+import { useProfilePrefill } from "./useProfilePrefill";
 import {
   SERVICE_AREA_KINDS,
   SERVICE_AREA_LABELS,
@@ -42,14 +44,20 @@ export function ProjectProfileCard({ projectId }: Props) {
   // is the whole reason the manual form is the foundation.
   const aiAvailable = useAiExplainAvailable();
   const drafter = useDraftProjectProfile(projectId);
+  const prefill = useProfilePrefill(projectId);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ProjectProfile>(profile);
 
-  // The profile arrives after first paint. Seed the form once it lands, but
-  // never over an edit in progress -- reopening is what resets the draft.
+  // What the form should start from: the stored profile with the free
+  // pre-fill laid over whichever fields nobody has answered yet.
+  const seed = applyPrefill(profile, prefill);
+
+  // The profile arrives after first paint, and so does the target area the
+  // pre-fill reads. Re-seed the form as each lands, but never over an edit in
+  // progress -- reopening is what resets the draft.
   useEffect(() => {
-    if (!open) setDraft(profile);
-  }, [open, profile]);
+    if (!open) setDraft(applyPrefill(profile, prefill));
+  }, [open, profile, prefill]);
 
   const isFilled = profile.offer.trim() !== "";
   if (isLoading) return null;
@@ -57,10 +65,15 @@ export function ProjectProfileCard({ projectId }: Props) {
   if (!open) {
     return (
       <ProfileSummary
-        profile={profile}
+        // The seed, not the stored row: `seed.offer` is always the stored
+        // offer (the pre-fill never touches it, so `isFilled` is unaffected),
+        // but the service area it shows must match what opening the editor
+        // will show, or the collapsed card claims "Nationwide" for a project
+        // the editor is about to call local.
+        profile={seed}
         isFilled={isFilled}
         onOpen={() => {
-          setDraft(profile);
+          setDraft(seed);
           setOpen(true);
         }}
       />
