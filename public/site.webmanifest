@@ -3,11 +3,6 @@
   "short_name": "FlyRocketSEO",
   "icons": [
     {
-      "src": "/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml"
-    },
-    {
       "src": "/android-chrome-192x192.png",
       "sizes": "192x192",
       "type": "image/png"
@@ -18,7 +13,7 @@
       "type": "image/png"
     }
   ],
-  "theme_color": "#4934c7",
+  "theme_color": "#0a1525",
   "background_color": "#ffffff",
   "display": "standalone"
 }

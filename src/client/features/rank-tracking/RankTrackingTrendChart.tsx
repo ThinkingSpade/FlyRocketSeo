@@ -43,6 +43,36 @@ function dashPattern(value: string | undefined): number[] | undefined {
   return parts.length > 0 ? parts : undefined;
 }
 
+/** Share of the plot's height the "not in top N" band occupies. */
+const BOTTOM_BAND_FRACTION = 0.08;
+
+/**
+ * Extra axis depth below `serpDepth`, in position units, that gives the bottom
+ * band a height you can actually see.
+ *
+ * The band used to run `serpDepth - 0.5` → `serpDepth`: half a position unit,
+ * which on a 1..100 axis in a 224px chart is about one and a half pixels. It
+ * was in the option object and nowhere on the screen. (The Recharts original
+ * drew the same half-unit ReferenceArea, so this is an inherited weakness, not
+ * something the port broke.)
+ *
+ * The fix adds room BELOW the deepest ranking rather than eating into the
+ * rankings. The band's top edge stays at `serpDepth - 0.5`, exactly where it
+ * was, so the set of positions it covers is unchanged: positions are integers,
+ * so the only one on or below that edge is `serpDepth` itself — the row nulls
+ * are plotted on. A genuine #95 of 100 is nowhere near it, and stays a real
+ * ranking. Everything the band gains is axis space no position can occupy.
+ *
+ * Solving `(depth + 0.5) / (serpDepth + depth - 1) = fraction` for `depth`
+ * keeps the band the same share of the plot whether the SERP is 10 deep or
+ * 100. It floors at 0 because a shallow SERP (a handful of positions) already
+ * gives half a unit enough height on its own.
+ */
+function bottomBandDepth(serpDepth: number): number {
+  const fraction = BOTTOM_BAND_FRACTION;
+  return Math.max(0, (fraction * (serpDepth - 1) - 0.5) / (1 - fraction));
+}
+
 /**
  * Shared inverted-axis line chart for rank trends. Y-axis is reversed so #1 is
  * pinned at the top and an improving line moves up. The very bottom of the
@@ -80,12 +110,17 @@ export function RankTrendChart({
       return checkedAt === null ? [] : [{ checkedAt, row }];
     });
 
+    // The axis runs past serpDepth only when the band is shown, so a chart
+    // without one keeps exactly the 1..serpDepth range it always had.
+    const bandDepth = showBottomBand ? bottomBandDepth(serpDepth) : 0;
+    const axisMax = serpDepth + bandDepth;
+
     // The muted band across the bottom of the plot, replacing Recharts'
     // ReferenceArea. Annotated rather than inferred because ECharts types a 2D
     // mark area as a fixed [start, end] tuple, and an array literal widens to
     // a plain array without the annotation.
     const bandData: Array<[{ yAxis: number }, { yAxis: number }]> = [
-      [{ yAxis: serpDepth - 0.5 }, { yAxis: serpDepth }],
+      [{ yAxis: serpDepth - 0.5 }, { yAxis: axisMax }],
     ];
 
     return {
@@ -133,9 +168,17 @@ export function RankTrendChart({
         // line moves UP. Dropping this silently inverts the chart's meaning.
         inverse: true,
         min: 1,
-        max: serpDepth,
+        max: axisMax,
         // Positions are integers — Recharts' allowDecimals={false}.
         minInterval: 1,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          // The axis is deliberately deeper than the SERP so the band has
+          // somewhere to live, but there is no position 108 on a 100-result
+          // page — that stretch is labelled by the band, not by a tick.
+          formatter: (value: number) =>
+            value > serpDepth ? "" : String(value),
+        },
       },
       series: series.map((s, index) => ({
         type: "line" as const,
@@ -171,8 +214,21 @@ export function RankTrendChart({
           index === 0 && showBottomBand
             ? {
                 silent: true,
-                itemStyle: { color: theme.text, opacity: 0.06 },
-                label: { show: false },
+                itemStyle: { color: theme.text, opacity: 0.07 },
+                // Now that the band is tall enough to hold text, it says what
+                // it is. A grey stripe with no caption is only marginally
+                // better than no stripe at all — the point is that a reader
+                // who has never hovered the chart can tell that the bottom of
+                // the plot means "we did not find it", not "position 100".
+                label: {
+                  show: true,
+                  position: "insideLeft" as const,
+                  color: theme.text,
+                  opacity: 0.55,
+                  fontSize: 9,
+                  padding: [0, 0, 0, 4],
+                  formatter: `Not in top ${serpDepth}`,
+                },
                 data: bandData,
               }
             : undefined,

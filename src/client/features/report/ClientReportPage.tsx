@@ -12,6 +12,21 @@ import { Loader } from "@cloudflare/kumo/components/loader";
 // the browser's Print → Save as PDF produces a clean client deliverable
 // regardless of the app shell around it.
 const PRINT_STYLES = `
+/* The report must not track the viewer's light/dark theme — it is printed and
+   emailed, and the client opening the PDF should get the sheet the agency saw.
+   \`color-scheme\` is the entire mechanism the app's palette turns on: every
+   surface token resolves through light-dark(), so pinning it here holds this
+   whole subtree to the light palette in one declaration, and any section added
+   later inherits that for free. Without it, a viewer on the dark theme printed
+   near-white type and charcoal tiles onto a near-black sheet.
+   The explicit background and colour cover what \`color-scheme\` cannot: text
+   that carries no token class inherits from <body>, which is themed. */
+#client-report {
+  color-scheme: light;
+  background: #ffffff;
+  color: #2f3a49;
+}
+
 /* Table styling is applied at the report root so every existing section picks
    it up without each one re-implementing the look. */
 #client-report table { width: 100%; border-collapse: collapse; }
@@ -21,26 +36,57 @@ const PRINT_STYLES = `
   font-size: 12.5px; font-weight: 600; letter-spacing: 0.01em;
 }
 #client-report tbody td {
-  padding: 9px 12px; font-size: 12.5px; color: #2b3340;
-  border-bottom: 1px solid #f0e4dc;
+  padding: 9px 12px; font-size: 12.5px; color: #2f3a49;
+  border-bottom: 1px solid #dfe4ec;
 }
-#client-report tbody tr:nth-child(even) { background: #fdf7f3; }
+/* Hairline and zebra are Ink desaturated toward white. The warm peach tints
+   these replace were left over from the indigo palette and read as a different
+   report to the Ink header sitting directly above them. */
+#client-report tbody tr:nth-child(even) { background: #f5f7fa; }
 #client-report .report-page:first-of-type { break-before: auto; }
 
 @media print {
   body * { visibility: hidden; }
   #client-report, #client-report * { visibility: visible; }
   #client-report { position: absolute; left: 0; top: 0; width: 100%; padding: 0; }
+  /* \`visibility\` hides the app but leaves its background painted, so on the
+     dark theme every sheet came out of the printer as a black field. */
+  html, body { background: #ffffff !important; }
   .report-no-print { display: none !important; }
   .report-section { break-inside: avoid; }
-  /* One topic per sheet, mirroring how a chaptered report paginates. */
+  /* Long tables may run onto the next sheet, but never mid-row, and the header
+     repeats when they do — otherwise the overflow arrives as unlabelled rows. */
+  #client-report table { break-inside: auto; }
+  #client-report thead { display: table-header-group; }
+  #client-report tr { break-inside: avoid; }
+  h2, h3 { break-after: avoid; }
+
+  /* One topic per sheet, mirroring how a chaptered report paginates. Each page
+     takes the whole sheet so the chapter spine runs its full height and the
+     folio sits on the bottom margin, instead of both stopping wherever the
+     content happened to end — which left every sheet two-thirds empty.
+     99%, not 100: a rounded-up full height spills a blank sheet after each. */
+  .report-page, .report-cover { min-height: 99vh; }
   .report-page { break-before: page; }
   .report-cover { break-after: page; }
+  /* The on-screen gap between pages would otherwise ride into the break and
+     push each sheet's content down off its own page. */
+  #client-report > * { margin-top: 0 !important; margin-bottom: 0 !important; }
 }
 /* Colour bands and tinted rows must survive the print pipeline — Chrome drops
    backgrounds otherwise, which would flatten the whole design to white. */
 #client-report { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-@page { margin: 0; }
+
+/* A real page margin, rather than the full bleed this replaced.
+   The bands and the cover no longer run to the paper edge, and that is the
+   point: the two richest chapters (the link profile, the quick wins) hold four
+   tables each and genuinely overflow onto a second sheet. A continuation sheet
+   carries no chapter band and no folio — only rows — and under a zero margin
+   those rows started hard against the top trim and ran off the bottom one,
+   which every physical printer clips. Chrome ignores named @page rules here, so
+   a full-bleed cover with inset body sheets is not available; one honest margin
+   for the whole document is. */
+@page { margin: 12mm; }
 `;
 
 const PREPARED_BY_KEY = "flyrocket:report:preparedBy";
@@ -163,9 +209,18 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
           agency={agency}
         />
 
-        <ReportPages data={data} generatedAt={generatedAt} />
+        <ReportPages
+          data={data}
+          generatedAt={generatedAt}
+          foot={`Prepared with FlyRocketSEO · ${generatedAt}${
+            agency ? ` · ${agency}` : ""
+          }`}
+        />
 
-        <footer className="border-t border-base-300 pt-3 text-xs text-base-content/50">
+        {/* Screen-only: in print the same line runs as a foot on every sheet.
+            As a single trailing block it landed on a fourteenth sheet of its
+            own once each page was given the full page height. */}
+        <footer className="report-no-print border-t border-base-300 pt-3 text-xs text-base-content/50">
           Prepared with FlyRocketSEO · {generatedAt}
           {agency ? ` · ${agency}` : ""}
         </footer>

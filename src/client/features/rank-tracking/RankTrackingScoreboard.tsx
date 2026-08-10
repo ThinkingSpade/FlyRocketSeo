@@ -248,8 +248,13 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
 
   const first = rows[0]?.averagePosition;
   const last = rows[rows.length - 1]?.averagePosition;
-  // Positions improve downward, so a negative delta is the good direction.
-  const delta =
+  // POSITIONS GAINED, not the change in the position number — `first - last`,
+  // so 34.5 → 13.9 is +20.6 and means the ranking climbed 20.6 places. Named
+  // for what it measures because the old name (`delta`) was what made the
+  // display read backwards: it was rendered with a leading "+" next to a
+  // number that had visibly gone DOWN, so the sign contradicted the figures
+  // either side of it. The sign is no longer shown; see below.
+  const gained =
     first != null && last != null
       ? Math.round((first - last) * 100) / 100
       : null;
@@ -265,11 +270,21 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
           <span className="text-xs text-base-content/60 tabular-nums">
             {first.toFixed(1)} →{" "}
             <span className="font-semibold">{last.toFixed(1)}</span>
-            {delta != null && delta !== 0 ? (
-              <span className={delta > 0 ? "text-success" : "text-error"}>
+            {gained != null && gained !== 0 ? (
+              // Direction is carried by the arrow, not by a sign: for rank,
+              // lower is better, so "+20.6" beside "34.5 → 13.9" reads as a
+              // contradiction even when the colour says otherwise. ▲/▼ is
+              // already how the rest of rank tracking states a move (see
+              // RankTrackingHistoryMatrix), and it points the same way as the
+              // chart below, where an improving line climbs. The magnitude is
+              // unsigned; the arrow and the colour agree on the direction.
+              <span className={gained > 0 ? "text-success" : "text-error"}>
                 {" "}
-                ({delta > 0 ? "+" : ""}
-                {delta.toFixed(1)})
+                (<span aria-hidden>{gained > 0 ? "▲" : "▼"}</span>
+                <span className="sr-only">
+                  {gained > 0 ? "improved by" : "worsened by"}
+                </span>{" "}
+                {Math.abs(gained).toFixed(1)})
               </span>
             ) : null}
           </span>
