@@ -105,12 +105,21 @@ fetchSerpCompetitors(input: {
 `useCompetitorsRun` — never read live, for the billing-safety reason that hook already
 documents. A local operator is measured against its own metro, not against US-national SERPs.
 
-Cost per call is **unverified**. No price for `serp_competitors` could be established from the
-repo or the vendored client typings, and the Codex pass commissioned to check it exhausted its
-quota before reporting. The wrapper returns `buildTaskBilling(task)` like every sibling, so the
-real cost is recorded on the first live run; the number goes in the runbook then. This does not
-block implementation — the call sits behind the same authorize gate as every other metered
-query.
+**Cost, verified against DataForSEO's published pricing (2026-08-10):**
+`serp_competitors` bills **$0.012 per task plus $0.00012 per returned domain row**. A live call
+carries one task and takes the keywords as an array, so **a 40-keyword seed is one billed task,
+not forty** — the whole design rests on this and it holds. `competitors_domain` bills on the
+identical schedule, so switching endpoints is not a cost regression at equal row counts.
+Documented caps: **200 keywords per request** (our seed of 40 is well inside) and a **1,000-row
+`limit`**. The wrapper still returns `buildTaskBilling(task)`, so the observed cost is recorded
+on the first live run and can be checked against this figure.
+
+**`item_types` must be pinned to `["organic"]`.** The endpoint's default item types include
+*paid* results as well as organic. Left at the default, a competitor's ad placement would be
+compared against the client's organic GSC position and counted as "outranking" them — inflating
+the headline metric with positions the client is not competing for. `keywords_positions` is
+`Record<string, number[]>` (a domain can hold several positions for one keyword), so the ranking
+reduces each to the best/minimum rank explicitly rather than assuming a scalar.
 
 ### 3. Ranking — "who actually beats you"
 
