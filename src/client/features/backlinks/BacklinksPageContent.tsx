@@ -14,6 +14,7 @@ import {
 } from "./BacklinksProfileInsights";
 import { BacklinksCompareSection } from "./BacklinksCompareSection";
 import { BacklinksResultsCard } from "./BacklinksPageSections";
+import { BacklinksRestoredResultsCard } from "./BacklinksRestoredResultsCard";
 import {
   BacklinksErrorState,
   BacklinksLoadingState,
@@ -39,9 +40,12 @@ import {
 } from "@/client/features/search-tabs/SearchTabStrip";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildBacklinksVerdict } from "@/client/features/insights/verdicts/backlinks";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import type { BacklinksRestoredResultsPresentation } from "./backlinksRestoredState";
 
 type BacklinksBodyProps = {
   projectId: string;
+  hasTarget: boolean;
   meteredAuthorized: boolean;
   meteredRunNonce: number;
   history: BacklinksSearchHistoryItem[];
@@ -60,10 +64,13 @@ type BacklinksBodyProps = {
   tabErrorMessage: string | null;
   tabLoading: boolean;
   tabFetching: boolean;
+  restoredResults: BacklinksRestoredResultsPresentation | null;
+  restoredOverviewNotice: string | null;
   onPageChange: (nextPage: number) => void;
   onPageSizeChange: (nextPageSize: number) => void;
   onRemoveHistoryItem: (timestamp: number) => void;
   onRetryOverview: () => void;
+  onRefreshRestored: () => void;
   onSortingChange: OnChangeFn<SortingState>;
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
@@ -78,6 +85,7 @@ type BacklinksBodyProps = {
 
 export function BacklinksBody({
   projectId,
+  hasTarget,
   meteredAuthorized,
   meteredRunNonce,
   history,
@@ -96,10 +104,13 @@ export function BacklinksBody({
   tabErrorMessage,
   tabLoading,
   tabFetching,
+  restoredResults,
+  restoredOverviewNotice,
   onPageChange,
   onPageSizeChange,
   onRemoveHistoryItem,
   onRetryOverview,
+  onRefreshRestored,
   onSortingChange,
   onTabChange,
   onViewChange,
@@ -136,12 +147,10 @@ export function BacklinksBody({
       onViewed={searchTabs.onViewed}
     />
   ) : null;
+  const restoredRowsLoaded = restoredResults?.kind === "loaded";
+  const showTimeline = restoredResults == null || restoredRowsLoaded;
 
-  // A restored run supplies overview data without a target in the URL, so the
-  // "get started" prompt is only right when there is nothing at all to show.
-  const isRestoredRun = !searchState.target && overviewData != null;
-
-  if (!searchState.target && !isRestoredRun) {
+  if (!hasTarget && restoredResults == null) {
     return (
       <BacklinksHistorySection
         projectId={projectId}
@@ -176,6 +185,13 @@ export function BacklinksBody({
   return (
     <>
       {tabStrip}
+      {restoredOverviewNotice ? (
+        <Banner
+          variant="secondary"
+          title="Showing the saved summary"
+          description={restoredOverviewNotice}
+        />
+      ) : null}
       <BacklinksOverviewPanels
         projectId={projectId}
         data={overviewData}
@@ -216,28 +232,12 @@ export function BacklinksBody({
         projectId={projectId}
         tab="Backlinks"
       />
-      {isRestoredRun ? null : <BrokenLinkReclaimCard topPages={topPagesPage} />}
-      {/* Every card in here is metered and starts disabled, but a restored run
-          should not even offer buttons that spend against a target the user
-          didn't just ask for. */}
-      {isRestoredRun ? null : (
-        <BacklinksCompareSection
-          projectId={projectId}
-          target={overviewData.displayTarget || searchState.target}
+      {restoredResults?.kind === "empty" ? (
+        <BacklinksRestoredResultsCard
+          presentation={restoredResults}
+          onRefresh={onRefreshRestored}
         />
-      )}
-      {/* Both of these fetch on their own — the timeline is a metered history
-          call, and the results card drives the paginated sub-tabs. A restored
-          run is meant to cost nothing, so they wait for "Run again". */}
-      {isRestoredRun ? null : (
-        <BacklinksTimelineSection
-          projectId={projectId}
-          target={overviewData.displayTarget || searchState.target}
-          authorized={meteredAuthorized}
-          runNonce={meteredRunNonce}
-        />
-      )}
-      {isRestoredRun ? null : (
+      ) : (
         <BacklinksResultsCard
           projectId={projectId}
           activeTab={searchState.tab}
@@ -263,6 +263,25 @@ export function BacklinksBody({
           onViewChange={onViewChange}
         />
       )}
+      {restoredResults == null ? (
+        <BrokenLinkReclaimCard topPages={topPagesPage} />
+      ) : null}
+      {/* Compare owns separate authorization for each paid action, so its
+          launchers are safe even while only a saved summary is visible. */}
+      <BacklinksCompareSection
+        projectId={projectId}
+        target={overviewData.displayTarget || searchState.target}
+      />
+      {/* Timeline authorizes through the page run and fetches on mount. A
+          restored refresh therefore waits for the links query to succeed. */}
+      {showTimeline ? (
+        <BacklinksTimelineSection
+          projectId={projectId}
+          target={overviewData.displayTarget || searchState.target}
+          authorized={meteredAuthorized}
+          runNonce={meteredRunNonce}
+        />
+      ) : null}
     </>
   );
 }

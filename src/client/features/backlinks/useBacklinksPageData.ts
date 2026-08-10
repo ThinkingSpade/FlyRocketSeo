@@ -91,6 +91,7 @@ export function useBacklinksTargetPrefill(
 type UseBacklinksPageDataArgs = {
   projectId: string;
   searchState: BacklinksSearchState;
+  hasTarget: boolean;
   filters: BacklinksFiltersState;
   authorized: boolean;
   runNonce: number;
@@ -133,6 +134,7 @@ function toSort<T extends string>(
 export function useBacklinksPageData({
   projectId,
   searchState,
+  hasTarget,
   filters,
   authorized,
   runNonce,
@@ -147,7 +149,6 @@ export function useBacklinksPageData({
 
   const { target, scope, tab, page, pageSize, sort, order, view } = searchState;
   const rowsMode = view === "all" ? "as_is" : "one_per_domain";
-  const targetReady = Boolean(target);
   const baseQueryKeyParts = [projectId, scope, target] as const;
   const pageInputBase = { projectId, target, scope, page, pageSize };
 
@@ -155,7 +156,7 @@ export function useBacklinksPageData({
     authorized,
     runNonce,
     queryKey: ["backlinksOverview", ...baseQueryKeyParts],
-    enabled: targetReady,
+    enabled: hasTarget,
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () => getBacklinksOverview({ data: { projectId, target, scope } }),
   });
@@ -183,7 +184,7 @@ export function useBacklinksPageData({
       rowsFilters,
       rowsMode,
     ],
-    enabled: targetReady && tab === "backlinks",
+    enabled: hasTarget && tab === "backlinks",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksRows({
@@ -219,7 +220,7 @@ export function useBacklinksPageData({
       domainsSort.order,
       domainsFilters,
     ],
-    enabled: targetReady && tab === "domains",
+    enabled: hasTarget && tab === "domains",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksReferringDomains({
@@ -254,7 +255,7 @@ export function useBacklinksPageData({
       pagesSort.order,
       pagesFilters,
     ],
-    enabled: targetReady && tab === "pages",
+    enabled: hasTarget && tab === "pages",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksTopPages({
@@ -289,7 +290,7 @@ export function useBacklinksPageData({
       anchorsSort.order,
       anchorsFilters,
     ],
-    enabled: targetReady && tab === "anchors",
+    enabled: hasTarget && tab === "anchors",
     gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksAnchors({
@@ -335,6 +336,7 @@ export function useBacklinksPageData({
 export function navigateToBacklinksSearch(
   navigate: BacklinksPageProps["navigate"],
   values: Pick<BacklinksSearchState, "target" | "scope">,
+  options?: { view?: "all" },
 ) {
   navigate({
     search: (prev) => ({
@@ -345,6 +347,7 @@ export function navigateToBacklinksSearch(
       page: undefined,
       sort: undefined,
       order: undefined,
+      ...(options?.view === "all" ? { view: "all" as const } : {}),
     }),
     replace: true,
   });
