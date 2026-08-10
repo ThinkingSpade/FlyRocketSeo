@@ -3,6 +3,7 @@ import { getKeywordsPage } from "@/server/features/domain/services/domainKeyword
 import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { buildCacheKey, setCached } from "@/server/lib/r2-cache";
+import { asAppError } from "@/server/lib/errors";
 import type {
   KeywordDiscoveryResult,
   KeywordDiscoveryKeyword,
@@ -152,11 +153,33 @@ async function recordDiscoveryRun(
  *  governs the short-lived cache object. */
 const DISCOVERY_RUN_TTL_SECONDS = 12 * 60 * 60;
 
-/** A short tag safe to render. Never the raw provider message, which can carry
- *  account identifiers and endpoint detail. */
+/**
+ * A short tag safe to render. Never the raw provider message, which can carry
+ * account identifiers and endpoint detail.
+ *
+ * Classifies by `AppError.code`, NOT by matching text in `error.message`.
+ * An earlier version of this function ran `/credit/i` and `/rate|429/i`
+ * against `error.message` and happened to work: `new AppError(
+ * "INSUFFICIENT_CREDITS")` defaults its `.message` to the code string
+ * (errors.ts), which happens to contain "CREDIT", and DataForSEO's
+ * HTTP-status AppError happens to format its message as `DataForSEO HTTP 429
+ * on ${path}` (dataforseo/core.ts), which happens to contain "429". Both were
+ * accidents of the current message wording, not a contract -- a copy edit to
+ * either message would silently stop the match and misclassify every
+ * subsequent failure as "provider_error". `code` IS the contract (see
+ * ErrorCode in shared/error-codes.ts), so read that instead. This is the same
+ * pattern used to detect insufficient credits elsewhere in the codebase (e.g.
+ * serverFunctions/rank-tracking.ts, ai-search/services/brandLookup.ts):
+ * `error instanceof AppError && error.code === "INSUFFICIENT_CREDITS"`.
+ *
+ * `asAppError` additionally recognises an error whose `.message` IS itself a
+ * valid error code -- the shape an error takes after crossing
+ * `toClientError`'s client boundary (errors.ts) -- so this keeps working if
+ * this call site ever ends up behind one, without needing a second check.
+ */
 function describeFailure(error: unknown): string {
-  const message = error instanceof Error ? error.message : String(error);
-  if (/credit/i.test(message)) return "insufficient_credits";
-  if (/rate|429/i.test(message)) return "rate_limited";
+  const appError = asAppError(error);
+  if (appError?.code === "INSUFFICIENT_CREDITS") return "insufficient_credits";
+  if (appError?.code === "RATE_LIMITED") return "rate_limited";
   return "provider_error";
 }
