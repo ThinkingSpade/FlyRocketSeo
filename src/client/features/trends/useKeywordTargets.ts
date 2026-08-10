@@ -157,24 +157,61 @@ export function useKeywordTargets(
       setFresh(result);
       setFreshGeo(variables.geo);
     },
-    onSettled: () => {
-      // Runs on BOTH success and failure (unlike onSuccess): the service
-      // records an analysis_runs row for a failed attempt too (see
-      // "RECORD THE FAILURE, then rethrow" in
-      // src/server/features/keywords/services/keywordDiscovery.ts), so the
-      // D1 guard is already updated either way -- the client cache of it
-      // must catch up either way too. Without this running on failure,
-      // `useAutoRestoredRun`'s own query would still be serving the
-      // fresh-but-pre-call "none" it cached before THIS call ran, for up to
-      // its own 60s staleTime. A quick navigate-away-and-back would then
-      // remount this hook with a fresh (false) `attemptedRef` and that
-      // stale "none" outcome -- exactly the combination
-      // `shouldAutoRunDiscovery` treats as safe to run, firing a second
-      // paid call on a path DataForSEO may already have billed.
-      void queryClient.invalidateQueries({
+    // MUST `return` this promise, never `void` it -- this is the one
+    // `invalidateQueries` call in this codebase where that distinction is
+    // load-bearing, not style. query-core's `Mutation.execute` AWAITS
+    // `onSettled` before dispatching the `"success"`/`"error"` action that
+    // flips `status` out of "pending" (see mutation.js: onSuccess, then
+    // onSettled, THEN `dispatch({type:"success"})`; the error path is the
+    // same shape). `void`-ing the call here makes the awaited value
+    // `undefined` immediately, so the dispatch -- and with it
+    // `paidCallInFlight` dropping to false -- fires before the
+    // invalidation's own refetch has actually landed. In that gap `outcome`
+    // is STILL "none" (the query is mid-refetch, `useAutoRestoredRun.ts`
+    // derives `outcome` from the OLD `query.data` until the new response
+    // arrives) and `paidCallInFlight` has already gone false, so a
+    // just-then remount sails straight through both of Critical 2's guards
+    // and fires a second paid call -- the same double-spend the mutation
+    // key was added to prevent, just delayed by the length of the first
+    // call instead of eliminated. Returning the promise keeps the mutation
+    // "pending" (and `paidCallInFlight` true) until this invalidation --
+    // and, since a query observer is still active during that gap, its
+    // triggered refetch -- has actually settled.
+    //
+    // This cannot wedge the mutation in "pending" forever if the REFETCH
+    // itself fails: `invalidateQueries` -> `refetchQueries`
+    // (queryClient.js) calls `query.fetch()` and, whenever
+    // `options.throwOnError` isn't explicitly set (this app's QueryClient,
+    // src/client/tanstack-db/queryClient.ts, never sets it), wraps that
+    // fetch in `.catch(noop)` -- so a failed refetch resolves the returned
+    // promise, it never rejects it. That matters because query-core's
+    // SUCCESS path (unlike its error path) does not wrap its `onSettled`
+    // await in a try/catch: a REJECTED onSettled after a successful paid
+    // call would fall into the outer catch and flip a genuinely successful
+    // run to `status: "error"`, corrupting `discovery.isError` for no
+    // reason. Since the promise here is verified to never reject on a
+    // refetch failure, that miscategorization can't happen. A refetch that
+    // never settles at all (true network hang, not a failure) is a
+    // different, pre-existing risk this doesn't newly introduce -- it's the
+    // same class of risk the original `getKeywordDiscovery` call already
+    // carries with no client-side timeout anywhere in this codebase, and
+    // it's why `runAgain` below is deliberately never gated on
+    // `paidCallInFlight`: whatever is stuck, a fresh manual attempt is
+    // always available.
+    //
+    // Runs on BOTH success and failure (unlike onSuccess): the service
+    // records an analysis_runs row for a failed attempt too (see
+    // "RECORD THE FAILURE, then rethrow" in
+    // src/server/features/keywords/services/keywordDiscovery.ts), so the
+    // D1 guard is already updated either way -- the client cache of it
+    // must catch up either way too. Without this running on failure,
+    // `useAutoRestoredRun`'s own query would still be serving the
+    // fresh-but-pre-call "none" it cached before THIS call ran, for up to
+    // its own 60s staleTime.
+    onSettled: () =>
+      queryClient.invalidateQueries({
         queryKey: latestRunQueryKey(projectId),
-      });
-    },
+      }),
     // No retry. A failed paid call may already have been billed (Labs can
     // charge for a task that subsequently errors) -- see
     // src/server/features/keywords/services/keywordDiscovery.ts.
