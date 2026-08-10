@@ -61,6 +61,13 @@ function mapCompetitorItem(item: CompetitorDomainItem): CompetitorRow | null {
     intersections: item.intersections ?? null,
     organicKeywords: readMetric(item.full_domain_metrics, "count"),
     organicTraffic: readMetric(item.full_domain_metrics, "etv"),
+    // These rows come from the domain-overlap fallback path, which has no
+    // discovery metrics and is not seeded. Legacy rows report this honestly.
+    coverage: null,
+    beatsYouCount: null,
+    positionDelta: null,
+    source: "domain",
+    pinned: false,
   };
 }
 
@@ -140,6 +147,11 @@ async function getCompetitors(
     rows,
     totalCount: response.totalCount,
     fetchedAt: new Date().toISOString(),
+    // This endpoint is the domain-overlap fallback path: no seed keywords,
+    // no filtered exclusions, and domain-based ranking (not SERP-seeded).
+    seedSize: 0,
+    hiddenCount: 0,
+    discoveryMode: "domain",
   };
 
   if (rows.length > 0) {
