@@ -135,3 +135,23 @@ export const competitorsPageSchema = z.object({
 });
 
 export type CompetitorsPage = z.infer<typeof competitorsPageSchema>;
+
+/* ------------------------------------------------------------------ */
+/*  Project competitor management schemas                             */
+/* ------------------------------------------------------------------ */
+
+export const projectCompetitorListRequestSchema = z.object({
+  projectId: z.string().uuid(),
+});
+
+export const projectCompetitorSetRequestSchema = z.object({
+  projectId: z.string().uuid(),
+  domain: domainField,
+  status: z.enum(["pinned", "excluded"]),
+  note: z.string().max(280).default(""),
+});
+
+export const projectCompetitorRemoveRequestSchema = z.object({
+  projectId: z.string().uuid(),
+  domain: domainField,
+});
