@@ -137,6 +137,7 @@ export function createDataforseoClient(customer: BillingCustomerContext) {
     competitors: {
       domainCompetitors: lazyMeter(customer, (f) => f.fetchCompetitorsDomain),
       keywordGap: lazyMeter(customer, (f) => f.fetchDomainIntersection),
+      serpCompetitors: lazyMeter(customer, (f) => f.fetchSerpCompetitors),
       trafficEstimation: lazyMeter(
         customer,
         (f) => f.fetchBulkTrafficEstimation,
