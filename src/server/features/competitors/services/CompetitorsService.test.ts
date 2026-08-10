@@ -145,6 +145,38 @@ function override(domain: string, status: "pinned" | "excluded") {
   };
 }
 
+/** A pristine (no override applied) cached CompetitorRow, matching what
+ *  `getCompetitors` now writes to the R2 cache. */
+function cachedRow(domain: string) {
+  return {
+    domain,
+    avgPosition: 5,
+    intersections: null,
+    organicKeywords: 40,
+    organicTraffic: 300,
+    coverage: 0.6,
+    beatsYouCount: 12,
+    positionDelta: -3.1,
+    source: "serp" as const,
+    pinned: false,
+  };
+}
+
+/** A pristine CompetitorsPage as `getCached` would return it: `hiddenCount:
+ *  0` because nothing has been applied to it yet -- see
+ *  reapplyProjectCompetitors's own doc comment. */
+function cachedPage(domains: string[]) {
+  return {
+    rows: domains.map(cachedRow),
+    totalCount: domains.length,
+    fetchedAt: "2026-08-01T00:00:00.000Z",
+    seedSize: 20,
+    hiddenCount: 0,
+    discoveryMode: "serp" as const,
+    seedTruncated: false,
+  };
+}
+
 describe("CompetitorsService.getCompetitors", () => {
   beforeEach(() => {
     vi.resetModules();
@@ -154,9 +186,7 @@ describe("CompetitorsService.getCompetitors", () => {
     mocks.setCached.mockResolvedValue(undefined);
     mocks.record.mockResolvedValue(undefined);
     mocks.getConnection.mockResolvedValue(null);
-    mocks.getAnalyticsPerformance.mockRejectedValue(
-      new Error("not connected"),
-    );
+    mocks.getAnalyticsPerformance.mockRejectedValue(new Error("not connected"));
     mocks.getByProject.mockResolvedValue(null);
     mocks.listByProject.mockResolvedValue([]);
     mocks.domainCompetitors.mockResolvedValue({ items: [], totalCount: 0 });
@@ -165,9 +195,7 @@ describe("CompetitorsService.getCompetitors", () => {
 
   it("falls back to domain mode and still returns a valid page when the GSC pull throws", async () => {
     mocks.getConnection.mockResolvedValue({ id: "conn_1" });
-    mocks.getAnalyticsPerformance.mockRejectedValue(
-      new Error("revoked grant"),
-    );
+    mocks.getAnalyticsPerformance.mockRejectedValue(new Error("revoked grant"));
     mocks.domainCompetitors.mockResolvedValue({
       items: [domainItem("rival.com")],
       totalCount: 1,
@@ -230,9 +258,7 @@ describe("CompetitorsService.getCompetitors", () => {
     const rows = seedClearingGscRows();
     // rowLimit equal to rows.length simulates a pull that filled the page it
     // asked for -- pullWasTruncated's signal that there may be more.
-    mocks.getAnalyticsPerformance.mockResolvedValue(
-      gscPull(rows, rows.length),
-    );
+    mocks.getAnalyticsPerformance.mockResolvedValue(gscPull(rows, rows.length));
     mocks.serpCompetitors.mockResolvedValue({
       items: [serpItem("rival.com", { "keyword 0": [3] })],
       totalCount: 1,
@@ -385,5 +411,62 @@ describe("CompetitorsService.getCompetitors", () => {
       "competitors:list",
       expect.objectContaining({ hasGscConnection: false }),
     );
+  });
+
+  describe("cache hit", () => {
+    it("hides a domain excluded AFTER the page was cached, without calling the vendor again", async () => {
+      mocks.getCached.mockResolvedValue(
+        cachedPage(["webstaurantstore.com", "kept-rival.com"]),
+      );
+      // The exclusion did not exist when this page was cached (hiddenCount: 0
+      // above) -- it was added afterward, e.g. by clicking Exclude on a
+      // previous view of this same cached run.
+      mocks.listByProject.mockResolvedValue([
+        override("webstaurantstore.com", "excluded"),
+      ]);
+      const { CompetitorsService } = await import("./CompetitorsService");
+
+      const result = await CompetitorsService.getCompetitors(
+        input,
+        billingCustomer,
+      );
+
+      const domains = result.rows.map((r) => r.domain);
+      expect(domains).not.toContain("webstaurantstore.com");
+      expect(domains).toContain("kept-rival.com");
+      expect(result.hiddenCount).toBe(1);
+      // A cache hit must never re-spend: neither vendor call fires.
+      expect(mocks.serpCompetitors).not.toHaveBeenCalled();
+      expect(mocks.domainCompetitors).not.toHaveBeenCalled();
+    });
+
+    it("still records the run on a cache hit (unchanged pre-existing behavior)", async () => {
+      mocks.getCached.mockResolvedValue(cachedPage(["rival.com"]));
+      const { CompetitorsService } = await import("./CompetitorsService");
+
+      await CompetitorsService.getCompetitors(input, billingCustomer);
+
+      expect(mocks.record).toHaveBeenCalledTimes(1);
+    });
+
+    it("pins a domain on a cache hit even though the cached page never saw that pin", async () => {
+      mocks.getCached.mockResolvedValue(cachedPage(["rival.com"]));
+      mocks.listByProject.mockResolvedValue([
+        override("never-discovered.com", "pinned"),
+      ]);
+      const { CompetitorsService } = await import("./CompetitorsService");
+
+      const result = await CompetitorsService.getCompetitors(
+        input,
+        billingCustomer,
+      );
+
+      const pinnedRow = result.rows.find(
+        (r) => r.domain === "never-discovered.com",
+      );
+      expect(pinnedRow?.pinned).toBe(true);
+      // Never fabricate a metric for a domain the vendor did not return.
+      expect(pinnedRow?.beatsYouCount).toBeNull();
+    });
   });
 });

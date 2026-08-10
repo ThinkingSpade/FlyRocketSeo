@@ -65,8 +65,8 @@ export function CompetitorsDiscoveryNotice({
       {seedTruncated ? (
         <p className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
           <AlertTriangle className="size-3.5 shrink-0" aria-hidden="true" />
-          Search Console had more queries than we could pull in one run —
-          this list may be missing ones you rank lower for.
+          Search Console had more queries than we could pull in one run — this
+          list may be missing ones you rank lower for.
         </p>
       ) : null}
       {managing ? (

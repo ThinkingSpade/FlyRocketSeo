@@ -6,7 +6,6 @@ import {
   DEFAULT_COMPETITORS_PAGE_SIZE,
   DEFAULT_KEYWORD_GAP_PAGE_SIZE,
   DEFAULT_LINK_GAP_PAGE_SIZE,
-  competitorsPageSchema,
   keywordGapModes,
   type CompetitorsTab,
   type KeywordGapMode,
@@ -14,7 +13,6 @@ import {
 import { AnalyzeDomainPrompt } from "@/client/components/AnalyzeDomainPrompt";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
-import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { TabBody } from "./CompetitorsTabBody";
@@ -30,6 +28,7 @@ import {
   useCompetitorsTargetPrefill,
   useKeywordGapQuery,
   useLinkGapQuery,
+  useRestoredCompetitorsRun,
 } from "./useCompetitorsQueries";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
 import { pickAdoptedRestore } from "./pickAdoptedRestore";
@@ -101,10 +100,12 @@ export function CompetitorsPage({
   // Only the competitor list restores. Keyword gap and link gap need a chosen
   // competitor and are separately metered, so they stay on demand.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
-  const { restored, outcome, expired } = useAutoRestoredRun({
+  // Overrides re-applied on every read (see useRestoredCompetitorsRun's own
+  // doc comment) -- the stored payload underneath is a byte-for-byte
+  // snapshot that nothing ever rewrites, so without this a standing
+  // exclusion or pin would only last the rest of the current session.
+  const { restored, outcome, expired } = useRestoredCompetitorsRun({
     projectId,
-    feature: RUN_FEATURES.competitors,
-    schema: competitorsPageSchema,
     enabled: tab === "competitors",
     runId: selectedRunId,
   });

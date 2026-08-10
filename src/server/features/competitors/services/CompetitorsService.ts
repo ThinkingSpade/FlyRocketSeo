@@ -28,7 +28,7 @@ import { ProjectProfileRepository } from "@/server/features/profiles/repositorie
 import { ProjectCompetitorRepository } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
 import { buildCompetitorSeed } from "@/server/features/competitors/competitorSeed";
 import { rankSerpCompetitors } from "@/server/features/competitors/rankSerpCompetitors";
-import { applyProjectCompetitors } from "@/server/features/competitors/applyProjectCompetitors";
+import { reapplyProjectCompetitors } from "@/server/features/competitors/applyProjectCompetitors";
 import { resolveDiscoveryMode } from "@/server/features/competitors/resolveDiscoveryMode";
 
 /** Competitor and keyword-gap data refresh cadence, matching domain overview. */
@@ -160,7 +160,15 @@ async function getCompetitors(
   const cached = competitorsPageSchema.safeParse(await getCached(cacheKey));
   if (cached.success && cached.data.rows.length > 0) {
     await recordRun();
-    return cached.data;
+    // Free D1 read. `cached.data.rows` is the PRISTINE discovery result (see
+    // reapplyProjectCompetitors's own doc comment for why that invariant
+    // matters) -- exclusions/pins may have changed since this page was
+    // cached, and a cache hit must never hand back a domain the project has
+    // since excluded, or omit hiddenCount for one it has.
+    const overrides = await ProjectCompetitorRepository.listByProject(
+      input.projectId,
+    );
+    return reapplyProjectCompetitors(cached.data, overrides);
   }
 
   // Moved above the seed-building block below: both the serp and the
@@ -280,20 +288,24 @@ async function getCompetitors(
     });
 
     const ranked = rankSerpCompetitors(response.items, seedKeywords, target);
-    const applied = applyProjectCompetitors(ranked, overrides);
 
-    const result: CompetitorsPage = {
-      rows: applied.rows,
+    // PRISTINE: no pin/exclude view applied. Cached and recorded exactly as
+    // the vendor produced it -- see reapplyProjectCompetitors's own doc
+    // comment for why a stored page must never carry a prior override
+    // application. `hiddenCount: 0` is honest here, not a placeholder: zero
+    // rows have been hidden from a page nothing has been applied to yet.
+    const stored: CompetitorsPage = {
+      rows: ranked,
       totalCount: response.totalCount,
       fetchedAt: new Date().toISOString(),
       seedSize: seedKeywords.length,
-      hiddenCount: applied.hiddenCount,
+      hiddenCount: 0,
       discoveryMode: "serp",
       seedTruncated,
     };
 
-    if (applied.rows.length > 0) {
-      void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch(
+    if (stored.rows.length > 0) {
+      void setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
         (error) => {
           console.error("competitors.list.cache-write failed:", error);
         },
@@ -301,7 +313,7 @@ async function getCompetitors(
       await recordRun();
     }
 
-    return result;
+    return reapplyProjectCompetitors(stored, overrides);
   }
 
   const response = await dataforseo.competitors.domainCompetitors({
@@ -320,31 +332,31 @@ async function getCompetitors(
     .filter((row): row is CompetitorRow => row != null)
     // The target itself is always its own top "competitor"; drop it.
     .filter((row) => row.domain !== target);
-  const applied = applyProjectCompetitors(rows, overrides);
 
-  const result: CompetitorsPage = {
-    rows: applied.rows,
+  // PRISTINE, same reasoning as the serp branch above.
+  const stored: CompetitorsPage = {
+    rows,
     totalCount: response.totalCount,
     fetchedAt: new Date().toISOString(),
     // This endpoint is the domain-overlap fallback path: no seed keywords,
     // and domain-based ranking (not SERP-seeded) -- but pin/exclude still
     // applies, same as the serp path.
     seedSize: 0,
-    hiddenCount: applied.hiddenCount,
+    hiddenCount: 0,
     discoveryMode: "domain",
     // No seed was consulted to produce this answer, so there is no seed bias
     // to report here even if the GSC pull above happened to come back full.
     seedTruncated: false,
   };
 
-  if (applied.rows.length > 0) {
-    void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
+  if (stored.rows.length > 0) {
+    void setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch((error) => {
       console.error("competitors.list.cache-write failed:", error);
     });
     await recordRun();
   }
 
-  return result;
+  return reapplyProjectCompetitors(stored, overrides);
 }
 
 function readKeywordInfoNumber(item: DomainIntersectionItem, key: string) {

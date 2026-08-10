@@ -31,10 +31,12 @@ import {
   type ProjectMarket,
 } from "@/client/hooks/useProjectDomain";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import {
   applyRemoveProjectCompetitorPatch,
   applySetProjectCompetitorPatch,
 } from "./competitorsCacheUpdaters";
+import { reapplyRestoredOverrides } from "./reapplyRestoredOverrides";
 
 type CompetitorsRun = {
   authorized: boolean;
@@ -272,14 +274,46 @@ function projectCompetitorsQueryKey(projectId: string) {
 
 /**
  * This project's standing pin/exclude overrides. Free (one D1 read, no
- * DataForSEO call), so it needs no `authorized` gate -- it is only ever
- * mounted on demand by the hidden-domains manager, which is gate enough.
+ * DataForSEO call), so it needs no `authorized` gate. Mounted both on demand
+ * by the hidden-domains manager, and unconditionally by
+ * `useRestoredCompetitorsRun` below -- TanStack Query dedupes by query key,
+ * so the second mount is a cache hit whenever the first already ran, not a
+ * second request.
  */
 export function useProjectCompetitorsQuery(projectId: string) {
   return useQuery({
     queryKey: projectCompetitorsQueryKey(projectId),
     queryFn: () => listProjectCompetitors({ data: { projectId } }),
   });
+}
+
+/**
+ * The restored run for a tab, with this project's CURRENT pin/exclude
+ * overrides re-applied -- a thin wrapper around `useAutoRestoredRun` so
+ * `CompetitorsPage` doesn't have to. `useAutoRestoredRun`'s own result is a
+ * byte-for-byte snapshot taken when the run was recorded, and nothing ever
+ * rewrites it; the overrides read here is what makes a standing exclusion or
+ * pin survive a reload instead of only lasting the rest of the session (see
+ * `reapplyRestoredOverrides`'s own doc comment for the full reasoning).
+ */
+export function useRestoredCompetitorsRun(input: {
+  projectId: string;
+  enabled: boolean;
+  runId: string | null;
+}) {
+  const { restored, outcome, expired } = useAutoRestoredRun({
+    projectId: input.projectId,
+    feature: RUN_FEATURES.competitors,
+    schema: competitorsPageSchema,
+    enabled: input.enabled,
+    runId: input.runId,
+  });
+  const overrides = useProjectCompetitorsQuery(input.projectId);
+  return {
+    restored: reapplyRestoredOverrides(restored, overrides.data ?? []),
+    outcome,
+    expired,
+  };
 }
 
 /**
