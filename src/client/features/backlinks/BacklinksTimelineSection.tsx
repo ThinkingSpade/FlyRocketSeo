@@ -9,16 +9,23 @@ import {
   YAxis,
 } from "recharts";
 import type { TooltipContentProps } from "recharts";
+import { Empty } from "@cloudflare/kumo/components/empty";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
+import {
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
+} from "@/client/components/chart/chartTheme";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
 import { getBacklinksTimeline } from "@/serverFunctions/backlinks";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
 import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_BAR,
-} from "@/client/components/chart/chartTheme";
-import { Loader } from "@cloudflare/kumo/components/loader";
+  classifyNumericSeries,
+  type NumericSeriesInformation,
+} from "./backlinksChartInformation";
 
 type TimelineRow = {
   label: string;
@@ -80,10 +87,28 @@ export function BacklinksTimelineSection({
     lost: point.lostReferringDomains,
     referringDomains: point.referringDomains,
   }));
-
-  if (!timelineQuery.isPending && !timelineQuery.isError && rows.length < 2) {
-    return null;
-  }
+  const gainedInformation = classifyNumericSeries(
+    rows.map((row) => row.gained),
+  );
+  const lostInformation = classifyNumericSeries(rows.map((row) => row.lost));
+  const totalInformation = classifyNumericSeries(
+    rows.map((row) => row.referringDomains),
+  );
+  const hasRecordedActivity =
+    isActivitySeries(gainedInformation) || isActivitySeries(lostInformation);
+  const emptyPresentation =
+    gainedInformation.kind === "insufficient"
+      ? {
+          title: "Not enough history",
+          description: "At least 2 monthly snapshots are needed.",
+        }
+      : !hasRecordedActivity && totalInformation.kind !== "varying"
+        ? {
+            title:
+              "No referring-domain gains or losses were recorded in this period.",
+            description: undefined,
+          }
+        : null;
 
   return (
     <section className="rounded-2xl border border-base-300 bg-base-100 p-5">
@@ -105,6 +130,13 @@ export function BacklinksTimelineSection({
           message="The backlink timeline could not be loaded."
           retrying={timelineQuery.isFetching}
           onRetry={() => void timelineQuery.refetch()}
+        />
+      ) : emptyPresentation ? (
+        <Empty
+          size="sm"
+          className="mt-3 h-[220px] rounded-none border-0 bg-transparent"
+          title={emptyPresentation.title}
+          description={emptyPresentation.description}
         />
       ) : (
         <div
@@ -131,6 +163,7 @@ export function BacklinksTimelineSection({
                 tick={CHART_AXIS_TICK}
                 tickLine={false}
                 axisLine={false}
+                minTickGap={CHART_X_TICK_GAP}
               />
               <YAxis
                 yAxisId="delta"
@@ -150,7 +183,7 @@ export function BacklinksTimelineSection({
                 allowDecimals={false}
               />
               <Tooltip
-                cursor={CHART_CURSOR_BAR}
+                cursor={CHART_CURSOR_LINE}
                 content={(props: TooltipContentProps<number, string>) => {
                   const candidates = (props.payload ?? []).map(
                     (entry: { payload?: unknown }) => entry.payload,
@@ -176,7 +209,7 @@ export function BacklinksTimelineSection({
                 yAxisId="delta"
                 dataKey="gained"
                 stackId="delta"
-                fill="#16a34a"
+                fill="var(--color-success)"
                 fillOpacity={0.75}
                 isAnimationActive={false}
               />
@@ -184,7 +217,7 @@ export function BacklinksTimelineSection({
                 yAxisId="delta"
                 dataKey="lostNegative"
                 stackId="delta"
-                fill="#dc2626"
+                fill="var(--color-error)"
                 fillOpacity={0.65}
                 isAnimationActive={false}
               />
@@ -192,9 +225,10 @@ export function BacklinksTimelineSection({
                 yAxisId="total"
                 type="monotone"
                 dataKey="referringDomains"
-                stroke="#2563eb"
+                stroke="var(--color-primary)"
                 strokeWidth={2}
                 dot={false}
+                activeDot={<ChartActiveDot />}
                 connectNulls
                 isAnimationActive={false}
               />
@@ -204,4 +238,8 @@ export function BacklinksTimelineSection({
       )}
     </section>
   );
+}
+
+function isActivitySeries(information: NumericSeriesInformation) {
+  return information.kind === "varying" || information.kind === "constant";
 }
