@@ -45,10 +45,10 @@
     // paid discovery call. Task 3. Has no importer yet by design -- Task 6
     // (the hook) will consume it.
     "src/client/features/trends/shouldAutoRunDiscovery.ts",
-    // Keyword discovery's one paid call + the recorded-run write that stops
-    // it firing twice. Task 4. Has no importer yet by design -- Task 5 (the
-    // server function) will consume it.
-    "src/server/features/keywords/services/keywordDiscovery.ts",
+    // Keyword discovery server function: exposes the paid service as a
+    // TanStack server function. Task 5. Has no importer yet by design -- Task 6
+    // (the hook) will consume it.
+    "src/serverFunctions/keywordDiscovery.ts",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",
