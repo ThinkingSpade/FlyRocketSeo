@@ -141,7 +141,15 @@ export function MoreMenu({
     <ToolbarMenu icon={<DotsThree className="size-4" />} title="More actions">
       <MenuItem
         icon={<Play className="size-3.5" />}
-        label={checkBusy ? "Running..." : "Check rankings"}
+        // The metered one of the pair. "Update keyword stats" below has carried
+        // a credits label all along while this -- which fetches live Google
+        // positions for every tracked keyword -- carried none, so the cheaper
+        // action was the one that looked like it cost money.
+        label={
+          checkBusy
+            ? "Running..."
+            : meteredActionLabel("Check rankings", { kind: "credits" })
+        }
         description={checkBlockedReason ?? "Fetch current Google positions"}
         onClick={onCheckNow}
         disabled={checkBusy || checkBlockedReason !== null}
