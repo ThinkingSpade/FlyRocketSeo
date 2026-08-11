@@ -367,9 +367,11 @@ async function getCompetitors(
   if (stored.rows.length > 0) {
     // Awaited for the same reason as the serp branch above: `recordRun` reads
     // this object back to make the run's durable copy.
-    await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch((error) => {
-      console.error("competitors.list.cache-write failed:", error);
-    });
+    await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
+      (error) => {
+        console.error("competitors.list.cache-write failed:", error);
+      },
+    );
     await recordRun();
   }
 
