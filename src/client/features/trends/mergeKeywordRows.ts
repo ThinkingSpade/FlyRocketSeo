@@ -19,10 +19,11 @@ import type { QueryMomentum } from "./queryMomentum";
  *
  * Low-impression GSC rows are KEPT here. They arrive with
  * `direction: "unknown"` and `action: "watch"` (see queryMomentum.ts's
- * MIN_IMPRESSIONS_FOR_VERDICT), which the old card filtered out via
- * `isActionable` -- that filter is why a real site showed three rows. The
- * floor still governs what we CLAIM about a row; it no longer governs whether
- * the row exists.
+ * MIN_IMPRESSIONS_FOR_VERDICT), which the old card filtered out with an
+ * `action !== "watch"` test -- that filter is why a real site showed three
+ * rows, and it is why the helper that encoded it (`isActionable`) no longer
+ * exists. The floor still governs what we CLAIM about a row; it no longer
+ * governs whether the row exists.
  */
 
 export type KeywordTargetRow = {
@@ -36,6 +37,24 @@ export type KeywordTargetRow = {
   cpc: number | null;
   traffic: number | null;
   url: string | null;
+  /**
+   * WHICH KIND OF URL `url` is, and it has to travel with it for the same
+   * reason `serpRank` and `gscAveragePosition` are separate fields.
+   *
+   * `"serp"` is Labs naming the exact page Google ranks for this keyword.
+   * `"impressions"` is Search Console's dominant page: the page taking the
+   * largest KNOWN share of this query's impressions, which is a share
+   * estimate and can sit well under half (see `DOMINANT_PAGE_SHARE` in
+   * opportunityActions.ts, where a share below 0.6 is treated as "no single
+   * page owns this"). Rendering both bare in one column silently presents a
+   * guess as a fact.
+   */
+  urlSource: "serp" | "impressions" | null;
+  /** The impression share behind an `"impressions"` URL, so the UI can say
+   *  how strong the guess actually is. Null for a `"serp"` URL (Labs names
+   *  the page outright, no share involved) and when GSC's page attribution
+   *  call did not cover this query. */
+  pageShare: number | null;
   impressions: number | null;
   /** Null for a Labs-only keyword: GSC has nothing to say about a term the
    *  site gets no impressions for, and an empty cell says so more honestly
@@ -71,6 +90,8 @@ export function mergeKeywordRows(input: {
       cpc: item.cpc,
       traffic: item.traffic,
       url: item.url,
+      urlSource: item.url == null ? null : "serp",
+      pageShare: null,
       impressions: null,
       momentum: null,
       action: null,
@@ -82,6 +103,11 @@ export function mergeKeywordRows(input: {
     const key = matchKey(item.keyword);
     if (key === "") continue;
     const existing = rows.get(key);
+    // Labs names the ranking URL exactly; GSC's dominant page is a share
+    // estimate, so it is only used when Labs has no URL at all -- and when it
+    // IS used, `urlSource`/`pageShare` travel with it so the cell can say so
+    // rather than passing the guess off as the ranking page.
+    const serpUrl = existing?.url ?? null;
     rows.set(key, {
       keyword: existing?.keyword ?? item.keyword.trim(),
       serpRank: existing?.serpRank ?? null,
@@ -90,9 +116,9 @@ export function mergeKeywordRows(input: {
       keywordDifficulty: existing?.keywordDifficulty ?? null,
       cpc: existing?.cpc ?? null,
       traffic: existing?.traffic ?? null,
-      // Labs names the ranking URL exactly; GSC's dominant page is a share
-      // estimate, so it is only used when Labs has no row at all.
-      url: existing?.url ?? item.page,
+      url: serpUrl ?? item.page,
+      urlSource: serpUrl ? "serp" : item.page == null ? null : "impressions",
+      pageShare: serpUrl ? null : item.pageShare,
       impressions: item.momentum.impressions,
       momentum: item.momentum,
       action: item.action,

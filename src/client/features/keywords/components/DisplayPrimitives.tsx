@@ -19,16 +19,34 @@ export function HeaderHelpLabel({
   label,
   helpText,
   delayMs = 150,
+  focusable = false,
 }: {
   label: string;
   helpText: string;
   delayMs?: number;
+  /**
+   * Give the trigger its own tab stop.
+   *
+   * Off by default because most call sites nest this INSIDE a `<button>`
+   * (SortableHeader, SortHeader), where the button already carries the tab
+   * stop -- React's `onFocus` is `focusin`, which bubbles, so focusing that
+   * button opens this tooltip already. Adding a second focusable there would
+   * mean interactive content inside a button: invalid HTML and an extra tab
+   * stop for no gain.
+   *
+   * Turn it ON when the trigger stands alone in a cell or header with no
+   * focusable ancestor. Without it, such a trigger is mouse-hover-only --
+   * exactly the gap `title` has, which is usually the reason this component
+   * was chosen over `title` in the first place.
+   */
+  focusable?: boolean;
 }) {
   const tooltip = useFloatingTooltip<HTMLSpanElement>({ delayMs });
 
   return (
     <span
       ref={tooltip.triggerRef}
+      tabIndex={focusable ? 0 : undefined}
       className="relative inline-flex items-center"
       onMouseEnter={tooltip.scheduleOpen}
       onMouseLeave={tooltip.close}

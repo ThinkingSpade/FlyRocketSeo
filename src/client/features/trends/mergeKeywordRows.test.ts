@@ -123,6 +123,53 @@ describe("mergeKeywordRows", () => {
     ]);
   });
 
+  it("marks a Labs URL as the ranking page, with no impression share", () => {
+    const [row] = mergeKeywordRows({ gsc: [gscRow()], labs: [labsRow()] });
+    expect(row.url).toBe("https://americavending.com/dallas");
+    expect(row.urlSource).toBe("serp");
+    // The GSC share describes GSC's guess, and there is no guess here.
+    expect(row.pageShare).toBeNull();
+  });
+
+  it("marks a GSC-only URL as an impression estimate and carries its share", () => {
+    // The honesty this field exists for: 0.42 means no single page owns the
+    // query (opportunityActions.ts treats anything under 0.6 that way), so
+    // presenting this URL the same way as a Labs ranking URL is a guess
+    // dressed as a fact.
+    const [row] = mergeKeywordRows({
+      gsc: [
+        gscRow({
+          keyword: "office snack refreshment program",
+          page: "https://americavending.com/snacks",
+          pageShare: 0.42,
+        }),
+      ],
+      labs: [],
+    });
+    expect(row.url).toBe("https://americavending.com/snacks");
+    expect(row.urlSource).toBe("impressions");
+    expect(row.pageShare).toBe(0.42);
+  });
+
+  it("falls back to the GSC page when Labs knows the keyword but names no URL", () => {
+    const [row] = mergeKeywordRows({
+      gsc: [gscRow()],
+      labs: [labsRow({ url: null })],
+    });
+    expect(row.url).toBe("https://americavending.com/dallas");
+    expect(row.urlSource).toBe("impressions");
+    expect(row.pageShare).toBe(0.9);
+  });
+
+  it("reports no URL source when neither provider names a page", () => {
+    const [row] = mergeKeywordRows({
+      gsc: [gscRow({ page: null, pageShare: null })],
+      labs: [labsRow({ url: null })],
+    });
+    expect(row.url).toBeNull();
+    expect(row.urlSource).toBeNull();
+  });
+
   it("returns an empty array when neither source has anything", () => {
     expect(mergeKeywordRows({ gsc: [], labs: [] })).toEqual([]);
   });

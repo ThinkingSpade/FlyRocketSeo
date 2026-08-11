@@ -4,6 +4,7 @@ import {
   AppDataTable,
   useAppTable,
 } from "@/client/components/table/AppDataTable";
+import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { ExternalUrlCell } from "@/client/components/table/url";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
@@ -15,6 +16,19 @@ import type { KeywordTargetRow } from "./mergeKeywordRows";
 const columnHelper = createColumnHelper<KeywordTargetRow>();
 
 /**
+ * The one glyph this table uses for "we have no value here", in the one
+ * colour.
+ *
+ * `formatNumber(null)` returns a hyphen in the inherited colour, while every
+ * hand-written empty cell here renders an em dash at `text-base-content/40`.
+ * Two different marks for the same meaning, side by side in the same row,
+ * read as two different meanings.
+ */
+function EmptyCell() {
+  return <span className="text-base-content/40">—</span>;
+}
+
+/**
  * The Rank cell.
  *
  * Shows the live SERP position when Labs has one, and otherwise Search
@@ -23,13 +37,15 @@ const columnHelper = createColumnHelper<KeywordTargetRow>();
  * URL, so presenting it bare as "you rank #7" is a claim we cannot support.
  * There is deliberately no arithmetic between the two numbers anywhere.
  *
- * The explanation lives in `HeaderHelpLabel` rather than a `title` attribute:
- * a native `title` is mouse-hover-only and unreachable by keyboard, and most
- * screen readers do not announce it. `HeaderHelpLabel` is this codebase's
- * existing answer to that gap (see SortableHeader and the backlinks overview
- * stat tiles) -- a positioned tooltip with `role="tooltip"` wired through
- * `aria-describedby`, so this cell reuses it rather than inventing a second
- * tooltip mechanism.
+ * The explanation lives in `HeaderHelpLabel` rather than a `title` attribute
+ * because `title` is mouse-hover-only and most screen readers do not announce
+ * it; `HeaderHelpLabel` is a positioned tooltip with `role="tooltip"` wired
+ * through `aria-describedby` (see SortableHeader and the backlinks overview
+ * stat tiles), so this cell reuses it rather than inventing a second tooltip
+ * mechanism. `focusable` is passed because that argument only holds with it:
+ * this trigger stands alone in a `<td>` with no focusable ancestor to lend it
+ * a tab stop, so without `focusable` the replacement would be exactly as
+ * keyboard-unreachable as the `title` it replaced.
  */
 function RankCell({ row }: { row: KeywordTargetRow }) {
   if (row.serpRank != null) {
@@ -41,14 +57,63 @@ function RankCell({ row }: { row: KeywordTargetRow }) {
         {Math.round(row.gscAveragePosition)}
         <span className="text-xs text-base-content/50">
           <HeaderHelpLabel
+            focusable
             label="avg"
-            helpText="Search Console's average position for this query across your whole site. It is an average across every impression and does not name a single page, so it is not a SERP rank."
+            helpText="Search Console's average position for this query across your whole site. It is an average across every impression and does not name a single page, so it is not a SERP rank — and sorting by Rank ignores it."
           />
         </span>
       </span>
     );
   }
-  return <span className="text-base-content/40">—</span>;
+  return <EmptyCell />;
+}
+
+/**
+ * The "Your URL" cell, and the reason it is not just a link.
+ *
+ * Two different things arrive in `row.url`. Labs names the exact page Google
+ * ranks for the keyword. Search Console offers its dominant page: whichever
+ * page took the largest KNOWN share of that query's impressions, which is an
+ * estimate that can sit well under half — `opportunityActions.ts` treats a
+ * share below 0.6 as "no single page owns this query" and changes its whole
+ * recommendation because of it. Rendering both bare in one column presents
+ * the second as if it were the first.
+ *
+ * So a GSC-derived URL carries the same visible marker treatment the Rank
+ * column already uses for a GSC average, with the actual share named in the
+ * tooltip when we have it.
+ */
+function UrlCell({ row, domain }: { row: KeywordTargetRow; domain: string }) {
+  const link = (
+    <ExternalUrlCell
+      value={row.url}
+      label={row.url ?? ""}
+      baseDomain={domain}
+      // Matches `EmptyCell`'s glyph; ExternalUrlCell already renders its
+      // empty state at text-base-content/40.
+      empty="—"
+    />
+  );
+
+  if (row.urlSource !== "impressions") return link;
+
+  const share =
+    row.pageShare == null
+      ? "Search Console does not report how much of this query's impressions it takes."
+      : `It takes ${Math.round(row.pageShare * 100)}% of this query's known impressions.`;
+
+  return (
+    <span className="inline-flex items-center gap-1">
+      {link}
+      <span className="shrink-0 text-xs text-base-content/50">
+        <HeaderHelpLabel
+          focusable
+          label="est."
+          helpText={`Search Console's estimate, not a ranking URL: the page taking the largest known share of this query's impressions. ${share}`}
+        />
+      </span>
+    </span>
+  );
 }
 
 function KeywordTargetsTableComponent({
@@ -70,22 +135,73 @@ function KeywordTargetsTableComponent({
           <span className="font-medium">{getValue()}</span>
         ),
       }),
-      columnHelper.display({
+      // SORTING MUST NOT BLEND THE TWO RANK SOURCES, so this column sorts on
+      // `serpRank` ALONE and pins every row without one to the bottom, in
+      // both directions.
+      //
+      // `sortUndefined: "last"` is what makes "both directions" true:
+      // getSortedRowModel applies it BEFORE the desc inversion and returns
+      // early, so those rows never flip to the top on a second click (see
+      // table-core getSortedRowModel.js). That is the whole point -- a GSC
+      // average and a Labs SERP position are different measurements, and any
+      // ordering that interleaves them is the blended rank this feature
+      // exists to avoid. Rows pinned at the bottom keep `mergeKeywordRows`'
+      // own volume-descending order, because table-core's final tiebreak is
+      // the original row index.
+      //
+      // `?? undefined` is not cosmetic: the check is `value === undefined`,
+      // so returning `null` here would silently fall through to the default
+      // comparator and interleave after all.
+      columnHelper.accessor((row) => row.serpRank ?? undefined, {
         id: "rank",
-        header: () => "Rank",
+        sortUndefined: "last",
+        header: ({ column }) => (
+          <SortableHeader
+            column={column}
+            label="Rank"
+            helpText="Sorts by the live SERP position from ranked-keywords data. Rows showing a Search Console average (avg) have no SERP position, so they always sort to the bottom — the two numbers are different measurements and are never ordered against each other."
+          />
+        ),
         cell: ({ row }) => <RankCell row={row.original} />,
       }),
-      columnHelper.accessor("searchVolume", {
-        header: () => "Volume",
-        cell: ({ getValue }) => formatNumber(getValue()),
+      columnHelper.accessor((row) => row.searchVolume ?? undefined, {
+        id: "searchVolume",
+        sortUndefined: "last",
+        header: ({ column }) => (
+          <SortableHeader column={column} label="Volume" />
+        ),
+        cell: ({ getValue }) => {
+          const value = getValue();
+          return value == null ? <EmptyCell /> : formatNumber(value);
+        },
       }),
-      columnHelper.accessor("keywordDifficulty", {
-        header: () => "KD",
-        cell: ({ getValue }) => <DifficultyBadge value={getValue()} />,
+      columnHelper.accessor((row) => row.keywordDifficulty ?? undefined, {
+        id: "keywordDifficulty",
+        sortUndefined: "last",
+        header: ({ column }) => (
+          <SortableHeader
+            column={column}
+            label="KD"
+            helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10. Only keywords covered by ranking data have one."
+          />
+        ),
+        cell: ({ getValue }) => <DifficultyBadge value={getValue() ?? null} />,
       }),
-      columnHelper.display({
+      // Sorts on the percentage swing, so the biggest movers group at either
+      // end. A row with no readable swing sorts last in both directions
+      // rather than being treated as 0%: `percent` is null both for a
+      // Labs-only keyword (Search Console has nothing to say about it) and
+      // for a row under MIN_IMPRESSIONS_FOR_VERDICT, and neither is "flat".
+      columnHelper.accessor((row) => row.momentum?.percent ?? undefined, {
         id: "trend",
-        header: () => "Trend",
+        sortUndefined: "last",
+        header: ({ column }) => (
+          <SortableHeader
+            column={column}
+            label="Trend"
+            helpText="Change in Search Console impressions against the previous period. Rows with too few impressions to call, or with no Search Console data at all, sort last."
+          />
+        ),
         cell: ({ row }) =>
           row.original.momentum ? (
             <span className="text-sm">
@@ -94,19 +210,13 @@ function KeywordTargetsTableComponent({
           ) : (
             // Blank, not zero: Search Console has nothing to say about a
             // keyword this site gets no impressions for.
-            <span className="text-base-content/40">—</span>
+            <EmptyCell />
           ),
       }),
       columnHelper.display({
         id: "url",
         header: () => "Your URL",
-        cell: ({ row }) => (
-          <ExternalUrlCell
-            value={row.original.url}
-            label={row.original.url ?? ""}
-            baseDomain={domain}
-          />
-        ),
+        cell: ({ row }) => <UrlCell row={row.original} domain={domain} />,
         meta: { cellClassName: "max-w-[240px] truncate" },
       }),
       columnHelper.display({
@@ -118,7 +228,7 @@ function KeywordTargetsTableComponent({
               {opportunityActionLabel(row.original.action)}
             </span>
           ) : (
-            <span className="text-base-content/40">—</span>
+            <EmptyCell />
           ),
       }),
     ],
@@ -128,6 +238,11 @@ function KeywordTargetsTableComponent({
   const table = useAppTable({
     data: rows,
     columns,
+    // Up to 100 rows arrive at once and none of them are paginated or
+    // re-fetched, so sorting is pure client-side reordering -- no request,
+    // no cost. Without `withSorting` the headers above would render their
+    // arrows and do nothing.
+    withSorting: true,
     getRowId: (row) => row.keyword,
   });
 
