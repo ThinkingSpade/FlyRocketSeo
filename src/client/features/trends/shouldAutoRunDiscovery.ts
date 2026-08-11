@@ -11,6 +11,16 @@
  * firing before the first request resolves -- it is NOT the guard, and it must
  * never become the guard, because component state resets on every navigation
  * and would bill on every visit.
+ *
+ * KNOWN AND ACCEPTED: this guard is per-client, so it cannot stop two browser
+ * tabs opened on the same project at the same moment from both reading "no run
+ * exists" and both spending. Closing it needs an admission lock the server
+ * side owns (a KV lease, or an INSERT that loses a uniqueness race), which was
+ * judged not worth the machinery for a same-instant double-open. An
+ * independent adversarial review named this as one of only two remaining
+ * repeat-charge mechanisms, so it is a deliberate trade rather than an
+ * oversight -- reconsider it here first if duplicate charges are ever
+ * reported.
  */
 
 export type RestoreOutcomeName = "none" | "expired" | "unreadable" | "ready";
