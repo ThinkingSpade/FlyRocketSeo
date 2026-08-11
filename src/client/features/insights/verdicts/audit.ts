@@ -32,7 +32,7 @@ type AuditVerdictInput = {
  * not to a tag this app rewrites. An action only links where the destination
  * can genuinely finish the job.
  */
-const ON_PAGE_FIXABLE = new Set([
+export const ON_PAGE_FIXABLE = new Set([
   "missing-title",
   "missing-meta-description",
   "missing-h1",

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Warning } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { extractPathname, StatCard } from "@/client/features/audit/shared";
@@ -20,6 +21,7 @@ import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import {
   auditRowNote,
   buildAuditVerdict,
+  ON_PAGE_FIXABLE,
   type AuditIssueSummary,
 } from "@/client/features/insights/verdicts/audit";
 import { getContentPerformance } from "@/serverFunctions/searchPerformance";
@@ -115,7 +117,7 @@ export function ResultsView({
       <AuditComparison projectId={projectId} current={data} />
 
       <NextStepsCard verdict={verdict} projectId={projectId} tab="Site Audit" />
-      <AuditIssuesList issues={issues} />
+      <AuditIssuesList issues={issues} projectId={projectId} />
 
       <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
         <div className="flex flex-auto flex-col gap-3 p-6 text-sm">
@@ -173,7 +175,13 @@ function useResultStats(
 
 /** Issue types the crawl found, most-affected first, each with its literal
  *  fix as a muted note -- absent entirely on a clean crawl. */
-function AuditIssuesList({ issues }: { issues: AuditIssueSummary[] }) {
+function AuditIssuesList({
+  issues,
+  projectId,
+}: {
+  issues: AuditIssueSummary[];
+  projectId: string;
+}) {
   if (issues.length === 0) return null;
   const sorted = issues.toSorted((a, b) => b.pageCount - a.pageCount);
 
@@ -195,7 +203,22 @@ function AuditIssuesList({ issues }: { issues: AuditIssueSummary[] }) {
                 className="flex items-baseline justify-between gap-2 text-sm"
               >
                 <div className="min-w-0">
-                  <span>{issue.label}</span>
+                  {/* The four issue types On-Page Fixes can actually rewrite
+                      become links to it; the rest (broken pages, thin
+                      content) are edits to the page itself and stay text.
+                      This list finds the problem, that tab resolves it, and
+                      until now nothing connected the two. */}
+                  {ON_PAGE_FIXABLE.has(issue.key) ? (
+                    <Link
+                      to="/p/$projectId/on-page"
+                      params={{ projectId }}
+                      className="app-link"
+                    >
+                      {issue.label}
+                    </Link>
+                  ) : (
+                    <span>{issue.label}</span>
+                  )}
                   {rowNote ? (
                     <p className="text-xs text-base-content/45">{rowNote}</p>
                   ) : null}

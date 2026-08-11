@@ -8,6 +8,7 @@ import {
 } from "@phosphor-icons/react";
 import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { wantsGeoModifiers } from "@/shared/keyword-fit/profileTypes";
 import type { SerpResultItem } from "@/types/keywords";
 import { assessRanking, rankingVerdictLabel } from "./rankingVerdict";
@@ -56,6 +57,7 @@ export function KeywordActionPlanCard({
   ownDomainRating,
 }: Props) {
   const { profile } = useProjectProfile(projectId);
+  const projectDomain = useProjectDomain(projectId);
   const { ratings, loadRatings } = useAhrefsDomainRatings(projectId);
 
   // Sorted by rank before slicing: the API returns results in rank order
@@ -66,6 +68,19 @@ export function KeywordActionPlanCard({
     .slice(0, ASSESSED_RESULTS);
   const competitorDomains = pageOne.map((item) => item.domain);
   const domainKey = competitorDomains.join(",");
+
+  // The rival the "see who links to them" step actually sends you to: the
+  // highest-ranked page-one domain that isn't this project's own.
+  //
+  // Without an explicit target that link passed only `params`, and Backlinks
+  // resolves its field through `resolvePrefill({ kind: "domain" })`. Keyword
+  // Research publishes a handoff of kind "keyword", which `resolvePrefill`
+  // skips on a kind mismatch -- so the chain fell through to `projectDefault`
+  // and the user, told to go look at a competitor, landed prefilled with
+  // their own site.
+  const linkTarget = pageOne.find(
+    (item) => item.domain && item.domain !== projectDomain,
+  )?.domain;
 
   // Free and keyless, the same class of call the page already makes on mount
   // for the project's own domain -- so it loads on render rather than behind
@@ -152,6 +167,7 @@ export function KeywordActionPlanCard({
             <Link
               to="/p/$projectId/backlinks"
               params={{ projectId }}
+              search={linkTarget ? { target: linkTarget } : undefined}
               className="app-link"
             >
               Open Backlinks

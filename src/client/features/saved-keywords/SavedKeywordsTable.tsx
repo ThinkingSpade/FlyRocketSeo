@@ -6,6 +6,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { MagnifyingGlass } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
   AppDataTable,
@@ -31,6 +32,7 @@ export function SavedKeywordsTable({
   sorting,
   isLoading,
   hasActiveFilters,
+  projectId,
   onRowSelectionChange,
   onSortingChange,
 }: {
@@ -39,6 +41,7 @@ export function SavedKeywordsTable({
   sorting: SortingState;
   isLoading: boolean;
   hasActiveFilters: boolean;
+  projectId: string;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   onSortingChange: OnChangeFn<SortingState>;
 }) {
@@ -133,7 +136,12 @@ export function SavedKeywordsTable({
       table={table}
       isLoading={isLoading}
       loading={<SavedKeywordsSkeleton />}
-      empty={<SavedKeywordsEmptyState hasActiveFilters={hasActiveFilters} />}
+      empty={
+        <SavedKeywordsEmptyState
+          hasActiveFilters={hasActiveFilters}
+          projectId={projectId}
+        />
+      }
     />
   );
 }
@@ -186,17 +194,31 @@ function SavedKeywordsSkeleton() {
 
 function SavedKeywordsEmptyState({
   hasActiveFilters,
+  projectId,
 }: {
   hasActiveFilters: boolean;
+  projectId: string;
 }) {
   return (
     <div className="py-12 text-center text-sm text-base-content/55">
       <MagnifyingGlass className="mx-auto mb-2 size-8 opacity-40" />
-      <p>
-        {hasActiveFilters
-          ? "No saved keywords match the current filters."
-          : "No saved keywords yet. Use the Keyword Research page to find and save keywords."}
-      </p>
+      {hasActiveFilters ? (
+        <p>No saved keywords match the current filters.</p>
+      ) : (
+        // This is the tab's entire first-run experience, and it named the
+        // destination without offering a way to get there.
+        <p>
+          No saved keywords yet. Find and save some in{" "}
+          <Link
+            to="/p/$projectId/keywords"
+            params={{ projectId }}
+            className="app-link"
+          >
+            Keyword Research
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }

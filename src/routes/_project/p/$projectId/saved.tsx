@@ -317,6 +317,7 @@ function SavedKeywordsPage() {
               totalCount={totalCount}
               onRetry={() => void savedKeywordsQuery.refetch()}
               tableProps={{
+                projectId,
                 rows: savedKeywords,
                 rowSelection,
                 sorting,

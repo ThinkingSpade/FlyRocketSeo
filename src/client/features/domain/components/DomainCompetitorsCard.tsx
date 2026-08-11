@@ -45,6 +45,10 @@ export function DomainCompetitorsCard({
           <Link
             to="/p/$projectId/competitors"
             params={{ projectId }}
+            // The card is about one domain and the destination accepts
+            // `target`; without it "Full analysis" landed on an empty form and
+            // the user retyped the domain they had just analysed.
+            search={{ target: domain.trim() }}
             className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             Full analysis
@@ -87,9 +91,17 @@ export function DomainCompetitorsCard({
                 {rows.map((row) => (
                   <Table.Row key={row.domain}>
                     <Table.Cell className="max-w-xs">
-                      <span className="line-clamp-1 font-medium">
+                      {/* Analysing a rival is the whole point of listing it,
+                          and this tab already takes `domain`. */}
+                      <Link
+                        to="/p/$projectId/domain"
+                        params={{ projectId }}
+                        search={{ domain: row.domain }}
+                        className="app-link line-clamp-1 font-medium"
+                        title={`Analyze ${row.domain}`}
+                      >
                         {row.domain}
-                      </span>
+                      </Link>
                     </Table.Cell>
                     <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.intersections)}
