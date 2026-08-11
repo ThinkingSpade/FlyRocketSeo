@@ -29,7 +29,14 @@ const ACTION: Record<
   OpportunityKind,
   { label: string; to: string; withQuery?: boolean }
 > = {
-  consolidate: { label: "Review", to: "/p/$projectId/cannibalization" },
+  // `withQuery` now too: the destination accepts `q` and sorts that row to
+  // the top, so "Review" lands on the split it is talking about instead of an
+  // unfiltered list of up to fifty cards.
+  consolidate: {
+    label: "Review",
+    to: "/p/$projectId/cannibalization",
+    withQuery: true,
+  },
   ctr: { label: "Review", to: "/p/$projectId/search-performance" },
   "quick-win": {
     label: "Build brief",

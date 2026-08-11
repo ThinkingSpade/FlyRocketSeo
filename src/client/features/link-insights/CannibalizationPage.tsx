@@ -45,13 +45,32 @@ const SEVERITY_BADGE: Record<
   },
 };
 
-export function CannibalizationPage({ projectId }: { projectId: string }) {
+export function CannibalizationPage({
+  projectId,
+  focusQuery = null,
+}: {
+  projectId: string;
+  /** The query an inbound link asked about; sorted first and marked, so the
+   *  user lands on the row they clicked rather than hunting for it. */
+  focusQuery?: string | null;
+}) {
   const insightsQuery = useLinkInsights(projectId);
   const data = insightsQuery.data;
-  const rows = useMemo(
+  const scored = useMemo(
     () => scoreCannibalization(data?.connected ? data.cannibalization : []),
     [data],
   );
+  const focus = focusQuery?.trim().toLowerCase() ?? null;
+  // Sorted, not filtered: the surrounding rows are the context that makes one
+  // consolidation decision sensible, and a filtered view would hide them.
+  const rows = useMemo(() => {
+    if (!focus) return scored;
+    return scored.toSorted((a, b) => {
+      const aHit = a.query.toLowerCase() === focus ? 0 : 1;
+      const bHit = b.query.toLowerCase() === focus ? 0 : 1;
+      return aHit - bHit;
+    });
+  }, [scored, focus]);
 
   return (
     <AppPageShell>
@@ -144,7 +163,11 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
       {rows.map((row) => (
         <div
           key={row.query}
-          className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
+          className={`relative flex flex-col rounded-xl border bg-base-100 ${
+            focus && row.query.toLowerCase() === focus
+              ? "border-primary"
+              : "border-base-300"
+          }`}
         >
           <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
