@@ -84,6 +84,20 @@ export const backlinksRowsFiltersSchema = z.object({
   hideBroken: z.boolean().optional(),
   /** Exact-match on the linking domain; used to expand one domain's links. */
   domainFrom: z.string().max(255).optional(),
+  /**
+   * The six profile-breakdown drill-downs: clicking a row in a breakdown card
+   * narrows the link list to that slice. Each holds the raw DataForSEO value
+   * (`IN`, `com`, `blogs`), never a humanized label, and costs one condition.
+   *
+   * `itemType` is the link's kind (anchor, image, redirect) and is NOT
+   * `linkType` above, which despite its name is follow status.
+   */
+  sourceCountry: z.string().max(255).optional(),
+  sourceTld: z.string().max(255).optional(),
+  itemType: z.string().max(255).optional(),
+  linkAttribute: z.string().max(255).optional(),
+  sourcePlatformType: z.string().max(255).optional(),
+  semanticLocation: z.string().max(255).optional(),
 });
 
 /**

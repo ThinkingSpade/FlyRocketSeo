@@ -83,6 +83,7 @@ export function ReportPages({
             }
           : null,
         queriesTracked: gsc.queryTotals.length,
+        clientOffer: data.clientOffer,
       }
     : null;
 
@@ -284,8 +285,11 @@ export function ReportPages({
             <ReportHeroStats
               items={[
                 {
-                  label: "Domain Rank",
-                  value: backlinks.summary.rank?.toLocaleString("en-US") ?? "—",
+                  label: "Domain authority",
+                  value:
+                    backlinks.summary.rank == null
+                      ? "—"
+                      : `${backlinks.summary.rank.toLocaleString("en-US")}/100`,
                 },
                 {
                   label: "Total Backlinks",

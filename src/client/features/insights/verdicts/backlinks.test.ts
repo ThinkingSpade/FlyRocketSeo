@@ -45,7 +45,7 @@ describe("buildBacklinksVerdict", () => {
 
     expect(verdict.tone).toBe("good");
     expect(verdict.read).toBe(
-      "No backlinks currently point at broken pages. The backlink spam score is 5, a healthy level.",
+      "No backlinks currently point at broken pages. The backlink spam score is 5/100 · Low signal.",
     );
     expect(verdict.actions).toEqual([]);
   });
@@ -61,7 +61,7 @@ describe("buildBacklinksVerdict", () => {
 
     expect(verdict.tone).toBe("mixed");
     expect(verdict.read).toBe(
-      "142 of your 1,200 backlinks (12%) point at pages that no longer exist -- redirecting or restoring them recovers links you already earned. The backlink spam score is 10, a healthy level.",
+      "142 of your 1,200 backlinks (12%) point at pages that no longer exist -- redirecting or restoring them recovers links you already earned. The backlink spam score is 10/100 · Low signal.",
     );
     expect(verdict.actions).toEqual([
       {
@@ -72,7 +72,7 @@ describe("buildBacklinksVerdict", () => {
     ]);
   });
 
-  it("calls the profile bad when spam risk is high, and ranks the broken-link action above the spam action", () => {
+  it("calls the profile mixed when spam is worth reviewing, and ranks the broken-link action above the spam action", () => {
     const verdict = buildBacklinksVerdict({
       target: "example.com",
       backlinks: 1200,
@@ -81,9 +81,9 @@ describe("buildBacklinksVerdict", () => {
       backlinksSpamScore: 42,
     });
 
-    expect(verdict.tone).toBe("bad");
+    expect(verdict.tone).toBe("mixed");
     expect(verdict.read).toBe(
-      "142 of your 1,200 backlinks (12%) point at pages that no longer exist -- redirecting or restoring them recovers links you already earned. The backlink spam score is 42, high enough to be worth a review of the referring domains.",
+      "142 of your 1,200 backlinks (12%) point at pages that no longer exist -- redirecting or restoring them recovers links you already earned. The backlink spam score is 42/100 · Worth reviewing.",
     );
     expect(verdict.actions).toHaveLength(2);
     expect(verdict.actions[0]).toEqual({
@@ -94,7 +94,7 @@ describe("buildBacklinksVerdict", () => {
     expect(verdict.actions[1]).toEqual({
       label:
         "Review the referring domains behind this backlink profile for spam",
-      evidence: "Backlink spam score 42 (30+ is high risk)",
+      evidence: "Backlink spam score 42/100 · Worth reviewing",
       weight: 70,
     });
     // Broken-link recovery is free (links already earned); it must always
@@ -104,7 +104,7 @@ describe("buildBacklinksVerdict", () => {
     );
   });
 
-  it("stays mixed one point below the high-spam-score floor", () => {
+  it("uses the low-signal tier through 29", () => {
     const verdict = buildBacklinksVerdict({
       target: "example.com",
       backlinks: 100,
@@ -114,10 +114,10 @@ describe("buildBacklinksVerdict", () => {
     });
 
     expect(verdict.tone).toBe("mixed");
-    expect(verdict.read).toContain("spam score is 29, a healthy level");
+    expect(verdict.read).toContain("spam score is 29/100 · Low signal");
   });
 
-  it("flips to bad exactly at the high-spam-score floor", () => {
+  it("uses the review tier from 30", () => {
     const verdict = buildBacklinksVerdict({
       target: "example.com",
       backlinks: 100,
@@ -126,10 +126,21 @@ describe("buildBacklinksVerdict", () => {
       backlinksSpamScore: 30,
     });
 
+    expect(verdict.tone).toBe("mixed");
+    expect(verdict.read).toContain("spam score is 30/100 · Worth reviewing");
+  });
+
+  it("uses the high-risk tier from 60", () => {
+    const verdict = buildBacklinksVerdict({
+      target: "example.com",
+      backlinks: 100,
+      referringDomains: 40,
+      brokenBacklinks: 0,
+      backlinksSpamScore: 60,
+    });
+
     expect(verdict.tone).toBe("bad");
-    expect(verdict.read).toContain(
-      "spam score is 30, high enough to be worth a review",
-    );
+    expect(verdict.read).toContain("spam score is 60/100 · High-risk signal");
   });
 
   it("states broken-link count without a percentage when the total backlink count is unknown", () => {

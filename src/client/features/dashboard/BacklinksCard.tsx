@@ -2,10 +2,8 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link2 } from "lucide-react";
 import { getBacklinksOverview } from "@/serverFunctions/backlinks";
-import {
-  formatDecimal,
-  formatNumber,
-} from "@/client/features/backlinks/backlinksPageUtils";
+import { formatNumber } from "@/client/features/backlinks/backlinksPageUtils";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { StatCard } from "@/client/features/audit/shared";
 import {
   CardEmpty,
@@ -42,6 +40,7 @@ export function BacklinksCard({
   });
 
   const summary = overviewQuery.data?.summary ?? null;
+  const spam = describeSpamScore(summary?.backlinksSpamScore);
 
   return (
     <DashboardCard icon={Link2} title="Backlinks" headerLink={backlinksLink}>
@@ -90,10 +89,19 @@ export function BacklinksCard({
             label="Ref. domains"
             value={formatNumber(summary.referringDomains)}
           />
-          <StatCard label="Rank" value={formatNumber(summary.rank)} />
           <StatCard
-            label="Spam score"
-            value={formatDecimal(summary.backlinksSpamScore)}
+            label="Domain authority"
+            value={
+              summary.rank == null ? "—" : `${formatNumber(summary.rank)}/100`
+            }
+          />
+          <StatCard
+            label={`Spam score · ${spam.label}`}
+            value={
+              spam.tier === "unavailable"
+                ? spam.formatted
+                : `${spam.formatted}/100`
+            }
           />
         </div>
       )}

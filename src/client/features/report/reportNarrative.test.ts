@@ -47,6 +47,76 @@ describe("describeChange", () => {
   });
 });
 
+describe("buildSummaryNarrative — who the client is", () => {
+  it("opens by naming the business when the client has confirmed one", () => {
+    // A printed deliverable that opens on a bare impressions count reads as a
+    // dashboard export. Naming the business first makes it a report about
+    // them.
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: "Managed break room programs across DFW.",
+    });
+
+    expect(paragraphs[0]).toBe(
+      "This report covers search performance for Managed break room programs across DFW.",
+    );
+    // One full stop, not two: the offer is the client's own prose and may
+    // already end in one.
+    expect(paragraphs[0]).not.toContain("DFW..");
+    expect(paragraphs[1]).toContain("33,616 impressions");
+  });
+
+  it("says nothing at all when no profile has been confirmed", () => {
+    // Never hedged, never templated around an absence. An unconfirmed AI
+    // draft arrives here as null precisely so this report cannot describe a
+    // business back to its owner from a guess.
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: null,
+    });
+
+    expect(paragraphs[0]).toContain("33,616 impressions");
+    expect(paragraphs.join(" ")).not.toContain("This report covers");
+  });
+
+  it("drops the opener rather than printing a pasted essay to a client", () => {
+    // The offer field accepts 2,000 characters and pasting an About page is
+    // an ordinary thing to do. Survivable in a form, not in a PDF whose
+    // first line the client reads.
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: "We do many things. ".repeat(40),
+    });
+    expect(paragraphs[0]).toContain("33,616 impressions");
+    expect(paragraphs.join(" ")).not.toContain("This report covers");
+  });
+
+  it("still uses a long-but-realistic description", () => {
+    // ~210 chars is what drafting a real domain actually produced, so the
+    // cap must not be tight enough to reject genuine descriptions.
+    const realistic =
+      "Fully managed DFW break room programs including free-installed vending machines, micro markets, office pantries, coffee and water stations, smart coolers and fresh food, with no upfront cost and zero contracts";
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: realistic,
+    });
+    expect(paragraphs[0]).toContain(realistic);
+  });
+
+  it("ignores a profile that is present but blank", () => {
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: "   ",
+    });
+    expect(paragraphs[0]).toContain("33,616 impressions");
+  });
+});
+
 describe("buildSummaryNarrative", () => {
   it("reports both declines honestly and cites the top page", () => {
     const paragraphs = buildSummaryNarrative({
@@ -149,7 +219,7 @@ describe("buildBacklinkNarrative", () => {
     }).join(" ");
     expect(text).toContain("6,286 backlinks");
     expect(text).toContain("439 referring domains");
-    expect(text).toContain("domain rank of 44");
+    expect(text).toContain("domain authority of 44/100");
     expect(text).toContain("46 backlinks currently point");
   });
 
@@ -165,7 +235,7 @@ describe("buildBacklinkNarrative", () => {
     ).toEqual([]);
   });
 
-  it("only raises spam score when it is actually high", () => {
+  it("only raises spam score when it is worth reviewing", () => {
     const clean = buildBacklinkNarrative({
       rank: 44,
       backlinks: 100,
@@ -182,6 +252,8 @@ describe("buildBacklinkNarrative", () => {
       spamScore: 42,
       brokenBacklinks: 0,
     }).join(" ");
-    expect(dirty).toContain("spam score of 42%");
+    expect(dirty).toContain(
+      "spam score of 42/100 · Worth reviewing · Review referring domains before taking action.",
+    );
   });
 });

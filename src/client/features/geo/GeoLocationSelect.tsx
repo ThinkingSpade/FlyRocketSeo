@@ -98,12 +98,30 @@ function GeoOptionGroup({
           const isActive = index === activeIndex;
           const isSelected = isSameArea(selected, area);
           return (
-            <li key={key} role="option" aria-selected={isSelected}>
+            <li
+              key={key}
+              id={`geo-option-${key}`}
+              role="option"
+              aria-selected={isSelected}
+            >
               <button
                 type="button"
+                // Click target only -- the option owns the label. Keeping
+                // these focusable made every location its own Tab stop.
+                tabIndex={-1}
+                aria-hidden="true"
                 ref={isActive ? activeRowRef : undefined}
+                // The active row needs real contrast, not a tint. Arrow keys
+                // leave focus in the search input, so this background is the
+                // ONLY thing telling a keyboard user what Enter will select --
+                // and `bg-base-200` on `bg-base-100` is about 1.07:1, far
+                // under the 3:1 guidance for a state indicator. The primary
+                // tint plus a ring is visible in both themes; hover stays a
+                // quiet tint because the pointer already says where it is.
                 className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors ${
-                  isActive ? "bg-base-200" : "hover:bg-base-200/60"
+                  isActive
+                    ? "bg-primary/15 ring-1 ring-inset ring-primary/50 font-medium"
+                    : "hover:bg-base-200"
                 }`}
                 onClick={() => onSelect(area)}
                 onMouseEnter={() => onHover(index)}
@@ -294,9 +312,23 @@ export function GeoLocationSelect({
         <div className="absolute inset-x-0 z-30 mt-2 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
           <label className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2 focus-within:border-primary">
             <Search className="size-4 shrink-0 text-base-content/45" />
+            {/* The input is the real combobox: focus never leaves it and
+                arrow keys only move `activeIndex`, so without these a screen
+                reader went silent as the user arrowed and never said which
+                location Enter would choose. */}
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-expanded="true"
+              aria-controls="geo-location-listbox"
+              aria-activedescendant={
+                flatAreas[activeIndex]
+                  ? `geo-option-${areaKey(flatAreas[activeIndex])}`
+                  : undefined
+              }
+              aria-autocomplete="list"
+              aria-label="Search locations"
               className="grow min-w-0 bg-transparent text-sm outline-none placeholder:text-base-content/40"
               placeholder="Search locations"
               value={query}
@@ -320,6 +352,8 @@ export function GeoLocationSelect({
               same with or without DaisyUI's component layer present. */}
           <ul
             role="listbox"
+            id="geo-location-listbox"
+            aria-label="Locations"
             className="mt-2 flex max-h-64 w-full flex-col overflow-y-auto overflow-x-hidden p-0"
           >
             {flatAreas.length === 0 ? (

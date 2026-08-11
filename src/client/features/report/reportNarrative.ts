@@ -1,3 +1,5 @@
+import { describeSpamScore } from "@/client/lib/spamScore";
+
 /**
  * Plain-English narrative for the Client Report, generated from the numbers
  * we already fetched — no model call, so it costs nothing and never invents a
@@ -72,7 +74,39 @@ type NarrativeInput = {
   topQuery?: { query: string; impressions: number; clicks: number } | null;
   pagesTracked?: number;
   queriesTracked?: number;
+  /**
+   * What the client sells, in their own words, from their CONFIRMED business
+   * profile. Absent for a profile nobody has filled in or accepted — the
+   * report must never open by describing a business back to its owner from an
+   * AI guess they have not agreed to.
+   */
+  clientOffer?: string | null;
 };
+
+/**
+ * Longest client description this report will read back in its opening
+ * sentence.
+ *
+ * The field behind it accepts 2,000 characters, and someone pasting their
+ * whole About page is an ordinary thing to do. That is survivable in a form
+ * and not in a printed deliverable: "This report covers search performance
+ * for …" followed by four paragraphs is the first thing the client reads.
+ * Generous enough for any real one-or-two-sentence description (the drafted
+ * one for a live domain measured ~210 characters), and the opener is dropped
+ * rather than truncated past it — cutting someone's description of their own
+ * business mid-word in a document they hand to a client is worse than the
+ * report simply opening on its numbers, which is what it did before.
+ */
+const MAX_OPENER_OFFER_CHARS = 400;
+
+/**
+ * Drops one trailing full stop so an offer written as a sentence can be
+ * embedded mid-sentence without doubling up. Only one, and only at the end:
+ * the offer is the client's own prose and nothing else about it is rewritten.
+ */
+function trimTrailingPeriod(text: string): string {
+  return text.endsWith(".") ? text.slice(0, -1) : text;
+}
 
 /**
  * The opening summary — the one page most clients actually read. Leads with
@@ -93,6 +127,17 @@ export function buildSummaryNarrative(input: NarrativeInput): string[] {
   const opener = bothDown
     ? `Your site recorded ${count(totals.impressions)} impressions and ${count(totals.clicks)} clicks this period. Impressions saw ${impressions.phrase} and clicks ${clicks.phrase}, while the site held an average position of ${totals.position.toFixed(1)}.`
     : `Your site recorded ${count(totals.impressions)} impressions and ${count(totals.clicks)} clicks this period — impressions ${impressions.direction === "flat" ? "holding steady" : impressions.phrase}, clicks ${clicks.direction === "flat" ? "holding steady" : clicks.phrase} — at an average position of ${totals.position.toFixed(1)}.`;
+
+  // Names the business before the numbers, when the client has told us what
+  // it is. A report that opens on a bare impressions count reads as a
+  // dashboard export; one that opens on who the client is reads as being
+  // about them. Omitted entirely rather than hedged when we don't know.
+  const offer = input.clientOffer?.trim();
+  if (offer && offer.length <= MAX_OPENER_OFFER_CHARS) {
+    paragraphs.push(
+      `This report covers search performance for ${trimTrailingPeriod(offer)}.`,
+    );
+  }
   paragraphs.push(opener);
 
   if (input.topPage) {
@@ -211,7 +256,7 @@ export function buildBacklinkNarrative(
   if (input.backlinks == null && input.referringDomains == null) return [];
 
   const paragraphs = [
-    `Your site has ${count(input.backlinks ?? 0)} backlinks from ${count(input.referringDomains ?? 0)} referring domains${input.rank != null ? `, at a domain rank of ${Math.round(input.rank)}` : ""}.`,
+    `Your site has ${count(input.backlinks ?? 0)} backlinks from ${count(input.referringDomains ?? 0)} referring domains${input.rank != null ? `, at a domain authority of ${Math.round(input.rank)}/100` : ""}.`,
   ];
 
   paragraphs.push(
@@ -224,10 +269,13 @@ export function buildBacklinkNarrative(
     );
   }
 
-  if (input.spamScore != null && input.spamScore >= 30) {
-    paragraphs.push(
-      `A spam score of ${Math.round(input.spamScore)}% is high enough to be worth a review of the referring domains before pursuing new links.`,
-    );
+  if (input.spamScore != null) {
+    const spam = describeSpamScore(input.spamScore);
+    if (spam.reviewRecommended && spam.guidance) {
+      paragraphs.push(
+        `A backlink spam score of ${spam.formatted}/100 · ${spam.label} · ${spam.guidance}`,
+      );
+    }
   }
 
   return paragraphs;

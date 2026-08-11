@@ -14,11 +14,15 @@ import type { TooltipContentProps } from "recharts";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
-import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
+import type { CompetitorRow, DiscoveryMode } from "@/types/schemas/competitors";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { domainOverviewResultSchema } from "@/types/schemas/domain";
 import { CHART_AXIS_TICK } from "@/client/components/chart/chartTheme";
+import {
+  buildPositioningMapBubbles,
+  type PositioningMapBubble,
+} from "./buildPositioningMapBubbles";
 
 // Series palette shared with the trends charts.
 const DOT_COLORS = [
@@ -32,16 +36,8 @@ const DOT_COLORS = [
   "#65a30d",
 ];
 const TARGET_COLOR = "#111827";
-const MAX_BUBBLES = 8;
 
-type Bubble = {
-  domain: string;
-  keywords: number;
-  traffic: number;
-  overlap: number;
-  isTarget: boolean;
-  fill: string;
-};
+type Bubble = PositioningMapBubble & { fill: string };
 
 function formatCompact(value: number): string {
   return new Intl.NumberFormat(undefined, {
@@ -62,19 +58,37 @@ function isBubble(value: unknown): value is Bubble {
   );
 }
 
+/** Assigns render-only fill colors -- the target's bubble is always last (see
+ *  buildPositioningMapBubbles) and gets the sentinel color; every rival keeps
+ *  the same palette index it would have had before the target was appended. */
+function withFill(bubbles: PositioningMapBubble[]): Bubble[] {
+  return bubbles.map((bubble, index) => ({
+    ...bubble,
+    fill: bubble.isTarget
+      ? TARGET_COLOR
+      : DOT_COLORS[index % DOT_COLORS.length],
+  }));
+}
+
 /**
  * Semrush-style competitive positioning map: organic keywords × organic
  * traffic, bubble sized by keyword overlap with the target. The target's own
  * bubble comes from the (server-cached) domain overview.
+ *
+ * Domain-mode discovery only -- see `buildPositioningMapBubbles`'s own doc
+ * comment for why a keyword-seeded (serp-mode) run cannot be plotted on these
+ * same axes honestly.
  */
 export function CompetitorsPositioningMap({
   projectId,
   target,
   rows,
+  discoveryMode,
 }: {
   projectId: string;
   target: string;
   rows: CompetitorRow[];
+  discoveryMode: DiscoveryMode;
 }) {
   const {
     restored: targetRun,
@@ -85,44 +99,23 @@ export function CompetitorsPositioningMap({
     projectId,
     feature: RUN_FEATURES.domainOverview,
     schema: domainOverviewResultSchema,
-    enabled: target.trim() !== "",
+    // Serp-mode discovery never renders this chart (see the `unavailable`
+    // branch below), so there is nothing to restore this bubble data for --
+    // skip the free-but-pointless fetch entirely rather than let it resolve
+    // and go unused on every serp-mode render.
+    enabled: discoveryMode === "domain" && target.trim() !== "",
   });
 
-  const bubbles = useMemo<Bubble[]>(() => {
-    const competitors = rows
-      .filter(
-        (row) => row.organicKeywords != null && row.organicTraffic != null,
-      )
-      .toSorted((a, b) => (b.intersections ?? 0) - (a.intersections ?? 0))
-      .slice(0, MAX_BUBBLES)
-      .map((row, index) => ({
-        domain: row.domain,
-        keywords: row.organicKeywords ?? 0,
-        traffic: row.organicTraffic ?? 0,
-        overlap: row.intersections ?? 0,
-        isTarget: false,
-        fill: DOT_COLORS[index % DOT_COLORS.length],
-      }));
+  const overview = useMemo(
+    () =>
+      targetRun?.result.domain === target.trim() ? targetRun.result : null,
+    [targetRun, target],
+  );
 
-    const overview =
-      targetRun?.result.domain === target.trim() ? targetRun.result : null;
-    if (
-      overview?.hasData &&
-      overview.organicKeywords != null &&
-      overview.organicTraffic != null
-    ) {
-      const maxOverlap = Math.max(1, ...competitors.map((c) => c.overlap));
-      competitors.push({
-        domain: `${overview.domain} (you)`,
-        keywords: overview.organicKeywords,
-        traffic: overview.organicTraffic,
-        overlap: maxOverlap,
-        isTarget: true,
-        fill: TARGET_COLOR,
-      });
-    }
-    return competitors;
-  }, [rows, target, targetRun]);
+  const result = useMemo(
+    () => buildPositioningMapBubbles({ rows, discoveryMode, overview }),
+    [rows, discoveryMode, overview],
+  );
 
   const { containerRef, width: chartWidth } = useChartWidth();
   const height = 260;
@@ -135,7 +128,30 @@ export function CompetitorsPositioningMap({
       />
     );
   }
-  if (bubbles.length < 2) return null;
+
+  if (result.kind === "unavailable") {
+    return (
+      <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+        <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
+          <h2 className="flex items-center gap-1.5 text-sm font-semibold">
+            <InsightIcon icon={Map} tone="primary" />
+            Competitive positioning
+          </h2>
+          <p className="text-xs text-base-content/60">
+            This chart compares site-wide organic keywords and traffic, which a
+            keyword-seeded run like this one doesn&apos;t measure -- it only
+            knows how each rival performs on your own tracked keywords. See the
+            &quot;Beats you on&quot; and &quot;Coverage&quot; columns in the
+            table below instead.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (result.kind === "insufficient") return null;
+
+  const bubbles = withFill(result.bubbles);
 
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">

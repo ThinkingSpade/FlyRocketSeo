@@ -18,6 +18,7 @@ import { SamProjectMemoryRepository } from "@/server/features/sam/SamProjectMemo
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { buildSamMcpTools } from "@/server/features/sam/samChatTools";
 import { buildSamSystemPrompt } from "@/server/features/sam/samSystemPrompt";
+import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import { buildChatAgentModel } from "@/server/lib/openrouter";
 import {
   getEnvValueSync,
@@ -165,6 +166,22 @@ export class SamChatAgent extends Think {
         ctx.project.id,
         MEMORY_BLOCK,
       );
+      // Only a CONFIRMED profile is passed through. An unconfirmed row is an
+      // AI draft awaiting review, and SAM stating a draft back to the user as
+      // a fact about their own business would be worse than not knowing it.
+      const profileRow = await ProjectProfileRepository.getByProject(
+        ctx.project.id,
+      );
+      const profile =
+        profileRow && profileRow.confirmedAt
+          ? {
+              offer: profileRow.offer,
+              customer: profileRow.customer,
+              exclusions: profileRow.exclusions,
+              brandTerms: profileRow.brandTerms,
+            }
+          : null;
+
       return buildSamSystemPrompt(
         {
           projectId: ctx.project.id,
@@ -172,6 +189,7 @@ export class SamChatAgent extends Think {
           domain: ctx.project.domain,
           locationCode: ctx.project.locationCode,
           languageCode: ctx.project.languageCode,
+          profile,
         },
         { memoryIsEmpty: !memory?.trim() },
       );

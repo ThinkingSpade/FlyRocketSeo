@@ -9,6 +9,7 @@ import {
   RESULT_LIMITS,
 } from "@/client/features/keywords/keywordResearchTypes";
 import { countryLabelForCode } from "@/shared/geo/resolveGeo";
+import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { SeedSuggestionButton } from "@/client/features/profiles/SeedSuggestionButton";
@@ -281,9 +282,21 @@ export function KeywordResearchSearchBar({
               );
             }
 
+            // The country this control is ALREADY pointing at -- picking an
+            // area sets `locationCode` to its own parent country -- so the
+            // label, the reset below and the request that follows all name
+            // the same place. Reverting to `projectCountryCode` instead (what
+            // the picker's own Clear does, correctly, for "drop my targeting")
+            // would charge a UK project for the UK under a button reading
+            // "Search United States instead".
+            const countryCode = locationField.state.value;
             const countryLabel =
-              countryLabelForCode(locationField.state.value) ||
-              "the whole country";
+              countryLabelForCode(countryCode) || "the whole country";
+            // Does going national actually buy difficulty and intent? Not for
+            // a country Labs doesn't cover -- an Icelandic city's national
+            // fallback is still Google Ads.
+            const nationalHasLabs =
+              getKeywordDataProvider(countryCode) === "labs";
 
             return (
               <div
@@ -295,8 +308,11 @@ export function KeywordResearchSearchBar({
                   Narrowing to {notice.areaLabel} switches this search to Google
                   Ads, which has no keyword difficulty or search intent — and
                   often no volume at all for longer phrases at this scale.
-                  Searching {countryLabel} usually returns far more keywords,
-                  with difficulty and intent included.
+                  Searching {countryLabel} usually returns far more keywords
+                  {nationalHasLabs
+                    ? ", with difficulty and intent included"
+                    : ""}
+                  .
                 </span>
                 <Button
                   type="button"
@@ -304,12 +320,17 @@ export function KeywordResearchSearchBar({
                   variant="secondary"
                   className="shrink-0 self-start"
                   onClick={() => {
-                    // Same pair the picker's own Clear does: drop the
-                    // confirmed area and put the country half back to the
-                    // project's own country, so one click fully reverts the
-                    // narrowing rather than leaving half of it applied.
-                    locationField.handleChange(projectCountryCode);
+                    // Drop the area only. `locationCode` already holds the
+                    // country named on this button, so leaving it alone is
+                    // what makes the label and the request agree.
                     scope.onClear();
+                    // And actually run it. The button says "Search <country>
+                    // instead"; without this it only changed the picker and
+                    // left the user to find the Search button themselves,
+                    // which is not what the label promises. An empty keyword
+                    // still fails the form's own validation rather than
+                    // spending anything.
+                    void controlsForm.handleSubmit();
                   }}
                 >
                   Search {countryLabel} instead

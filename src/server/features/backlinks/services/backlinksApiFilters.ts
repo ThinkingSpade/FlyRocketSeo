@@ -132,6 +132,28 @@ export function buildBacklinksRowsApiFilters(
   if (filters.domainFrom) {
     conditions.push(["domain_from", "=", filters.domainFrom]);
   }
+  // The six profile-breakdown drill-downs. DataForSEO picks operators by field
+  // TYPE, not by field: `attributes` and `domain_from_platform_type` are
+  // `array.str` and accept only `has`/`has_not`, so `=` on either would filter
+  // nothing and quietly return the unfiltered list.
+  collectExactCondition(
+    conditions,
+    "domain_from_country",
+    filters.sourceCountry,
+  );
+  collectExactCondition(conditions, "tld_from", filters.sourceTld);
+  collectExactCondition(conditions, "item_type", filters.itemType);
+  collectExactCondition(
+    conditions,
+    "semantic_location",
+    filters.semanticLocation,
+  );
+  collectHasCondition(conditions, "attributes", filters.linkAttribute);
+  collectHasCondition(
+    conditions,
+    "domain_from_platform_type",
+    filters.sourcePlatformType,
+  );
 
   return finishFilters("url_from", filters.include, conditions);
 }
@@ -209,6 +231,31 @@ export function buildAnchorsApiFilters(filters: AnchorsFilters): unknown[] {
   );
 
   return finishFilters("anchor", filters.include, conditions);
+}
+
+/** One `=` condition for a scalar (`str`) field, skipping unset/blank values. */
+function collectExactCondition(
+  out: FilterClause[],
+  field: string,
+  value: string | undefined,
+) {
+  const trimmed = value?.trim();
+  if (trimmed) out.push([field, "=", trimmed]);
+}
+
+/**
+ * One `has` condition for an `array.str` field. DataForSEO defines operators per
+ * field type, and array fields accept only `has`/`has_not` -- see
+ * https://docs.dataforseo.com/v3/backlinks-filters/. The vendored client typings
+ * list only the `str` operators, so they are not the reference here.
+ */
+function collectHasCondition(
+  out: FilterClause[],
+  field: string,
+  value: string | undefined,
+) {
+  const trimmed = value?.trim();
+  if (trimmed) out.push([field, "has", trimmed]);
 }
 
 function collectExcludeConditions(

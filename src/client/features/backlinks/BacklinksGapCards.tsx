@@ -1,5 +1,6 @@
 import { Download, Network, Plus, Radar, Target } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { exportLinkGap } from "./exportLinkGap";
 import type {
   CompetingDomainsResult,
@@ -26,6 +27,17 @@ const NETWORK_PREVIEW_LIMIT = 10;
 
 function formatNumber(value: number | null): string {
   return value == null ? "—" : Math.round(value).toLocaleString();
+}
+
+function SpamScoreValue({ value }: { value: number | null }) {
+  const spam = describeSpamScore(value);
+  return (
+    <span
+      className={`${spam.reviewRecommended ? "font-medium " : ""}${spam.className}`}
+    >
+      {spam.formatted}
+    </span>
+  );
 }
 
 function CardShell({
@@ -124,7 +136,7 @@ export function LinkIntersectCard({
                 <tr>
                   <th>Referring domain</th>
                   <th className="text-right">Links to</th>
-                  <th className="text-right">DR</th>
+                  <th className="text-right">Domain authority</th>
                   <th className="text-right">Backlinks</th>
                   <th className="text-right">Spam</th>
                 </tr>
@@ -156,15 +168,7 @@ export function LinkIntersectCard({
                       {formatNumber(row.backlinks)}
                     </td>
                     <td className="text-right tabular-nums">
-                      <span
-                        className={
-                          row.spamScore != null && row.spamScore >= 40
-                            ? "font-medium text-error"
-                            : "text-base-content/60"
-                        }
-                      >
-                        {formatNumber(row.spamScore)}
-                      </span>
+                      <SpamScoreValue value={row.spamScore} />
                     </td>
                   </tr>
                 ))}
@@ -267,7 +271,7 @@ export function CompetingDomainsCard({
                 {row.domain}
               </span>
               <span className="shrink-0 text-xs tabular-nums text-base-content/55">
-                {formatNumber(row.intersections)} shared · DR{" "}
+                {formatNumber(row.intersections)} shared · Domain authority{" "}
                 {formatNumber(row.rank)}
               </span>
               <Button

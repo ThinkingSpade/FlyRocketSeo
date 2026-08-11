@@ -174,7 +174,6 @@ export function useKeywordResearchData(
     },
     enabled: request !== null,
     gcTime: KEYWORD_RESEARCH_STALE_TIME_MS,
-    retry: false,
   });
 
   const handledSuccessKeyRef = useRef<string | null>(null);

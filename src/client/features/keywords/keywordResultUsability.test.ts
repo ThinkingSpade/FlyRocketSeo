@@ -5,9 +5,11 @@ import {
   resolveKeywordResultUsability,
 } from "./keywordResultUsability";
 
+const SEED = "office snack refreshment program";
+
 function row(overrides: Partial<KeywordResearchRow> = {}): KeywordResearchRow {
   return {
-    keyword: "office snack refreshment program",
+    keyword: SEED,
     searchVolume: null,
     trend: [],
     keywordDifficulty: null,
@@ -28,14 +30,17 @@ describe("hasUsableMetrics", () => {
     ["cpc", { cpc: 3.15 }],
     ["competition", { competition: 0.42 }],
     ["keyword difficulty", { keywordDifficulty: 27 }],
+    ["search intent alone", { intent: "transactional" as const }],
   ])("accepts a row carrying %s", (_label, overrides) => {
     expect(hasUsableMetrics(row(overrides))).toBe(true);
   });
 
-  it("treats zero volume as absent, not as a measurement", () => {
-    // A table of zeroes is exactly as useless as a table of dashes, and
-    // Google Ads reports "no data" this way once it reaches our row type.
-    expect(hasUsableMetrics(row({ searchVolume: 0 }))).toBe(false);
+  it("treats a MEASURED zero volume as data, not absence", () => {
+    // The mapper preserves 0 separately from null, and "Google measured this
+    // and found no demand" is an answer. Calling it absence would hide a real
+    // verdict and invite the user to pay for the same search again.
+    expect(hasUsableMetrics(row({ searchVolume: 0 }))).toBe(true);
+    expect(hasUsableMetrics(row({ cpc: 0 }))).toBe(true);
   });
 
   it("ignores an all-zero trend but accepts one that actually moved", () => {
@@ -45,41 +50,51 @@ describe("hasUsableMetrics", () => {
     ];
     expect(hasUsableMetrics(row({ trend: flat }))).toBe(false);
     expect(
-      hasUsableMetrics({
-        ...row(),
-        trend: [...flat, { year: 2026, month: 8, searchVolume: 12 }],
-      }),
+      hasUsableMetrics(
+        row({ trend: [...flat, { year: 2026, month: 8, searchVolume: 12 }] }),
+      ),
     ).toBe(true);
   });
 });
 
 describe("resolveKeywordResultUsability", () => {
-  it("reports no-metrics for the real Texas failure: one row, every field null", () => {
-    expect(resolveKeywordResultUsability([row()])).toEqual({
+  it("reports no-metrics for the real Texas failure: the seed alone, every field null", () => {
+    expect(resolveKeywordResultUsability([row()], SEED)).toEqual({
       kind: "no-metrics",
       rowCount: 1,
     });
   });
 
-  it("reports no-metrics for a full page that is entirely empty", () => {
-    const rows = Array.from({ length: 150 }, (_, i) =>
-      row({ keyword: `keyword ${i}` }),
-    );
-    expect(resolveKeywordResultUsability(rows)).toEqual({
-      kind: "no-metrics",
-      rowCount: 150,
+  it("NEVER hides a page of keyword ideas, even with no figures on any of them", () => {
+    // The list of ideas is itself what the user paid for. Suppressing the
+    // table would take export, save and rank-tracking with it.
+    const rows = [
+      row(),
+      ...Array.from({ length: 149 }, (_, i) => row({ keyword: `idea ${i}` })),
+    ];
+    expect(resolveKeywordResultUsability(rows, SEED)).toEqual({
+      kind: "usable",
     });
   });
 
   it("is usable when even one row carries a figure", () => {
     expect(
-      resolveKeywordResultUsability([row(), row({ searchVolume: 90 })]),
+      resolveKeywordResultUsability([row(), row({ searchVolume: 90 })], SEED),
     ).toEqual({ kind: "usable" });
+  });
+
+  it("matches the seed case-insensitively and ignores surrounding space", () => {
+    expect(
+      resolveKeywordResultUsability(
+        [row({ keyword: "  Office Snack Refreshment Program " })],
+        SEED,
+      ),
+    ).toEqual({ kind: "no-metrics", rowCount: 1 });
   });
 
   it("leaves an empty result to the tab's own no-results state", () => {
     // Reporting no-metrics here would put two competing empty states on
     // screen for the same run.
-    expect(resolveKeywordResultUsability([])).toEqual({ kind: "usable" });
+    expect(resolveKeywordResultUsability([], SEED)).toEqual({ kind: "usable" });
   });
 });

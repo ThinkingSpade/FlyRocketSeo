@@ -897,6 +897,42 @@ export const projectProfiles = sqliteTable(
   ],
 );
 
+/**
+ * An operator's standing corrections to competitor discovery, per project.
+ *
+ * Discovery is a heuristic over one keyword seed; an agency running many
+ * clients knows things it cannot. A pinned domain is always shown (and
+ * labelled as pinned, never passed off as a discovery result); an excluded
+ * one never is. Scoped per project so one account holds a different list per
+ * client.
+ */
+export const projectCompetitors = sqliteTable(
+  "project_competitors",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** Normalized via normalizeDomainInput before it ever reaches here. */
+    domain: text("domain").notNull(),
+    status: text("status", { enum: ["pinned", "excluded"] }).notNull(),
+    /** Why, in the operator's own words. Shown back to them. */
+    note: text("note").notNull().default(""),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+    updatedAt: text("updated_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("project_competitors_project_domain_idx").on(
+      table.projectId,
+      table.domain,
+    ),
+  ],
+);
+
 // One keyword's fit against the profile above, cached so re-opening a run
 // never re-derives (and, once Phase 2 lands, never re-pays for) a verdict.
 //

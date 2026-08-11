@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Plus, Swords, X } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { MAX_COMPARE_COMPETITORS } from "@/types/schemas/backlinks-compare";
 import type {
   BacklinksCompareResult,
@@ -147,7 +148,7 @@ function ComparisonTable({ result }: { result: BacklinksCompareResult }) {
         <thead>
           <tr>
             <th>Domain</th>
-            <th className="text-right">DR</th>
+            <th className="text-right">Domain authority</th>
             <th className="text-right">Referring domains</th>
             <th className="text-right">Backlinks</th>
             <th className="text-right">Spam</th>
@@ -178,6 +179,8 @@ function ComparisonTableRow({
   maxDomains: number;
   maxBacklinks: number;
 }) {
+  const spam = describeSpamScore(row.spamScore);
+
   return (
     <tr className={row.isYou ? "bg-base-200/50" : undefined}>
       <td className="max-w-xs truncate" title={row.target}>
@@ -199,13 +202,9 @@ function ComparisonTableRow({
       </td>
       <td className="text-right tabular-nums">
         <span
-          className={
-            row.spamScore != null && row.spamScore >= 40
-              ? "font-medium text-error"
-              : "text-base-content/60"
-          }
+          className={`${spam.reviewRecommended ? "font-medium " : ""}${spam.className}`}
         >
-          {formatNumber(row.spamScore)}
+          {spam.formatted}
         </span>
       </td>
       <td className="text-right tabular-nums">

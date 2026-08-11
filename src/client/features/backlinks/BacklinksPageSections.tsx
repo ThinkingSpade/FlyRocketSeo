@@ -2,6 +2,15 @@ import { useEffect, useMemo } from "react";
 import { SlidersHorizontal } from "lucide-react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
+import { BacklinksCategoryChips } from "./BacklinksCategoryChips";
+import {
+  activeCategoryFilters,
+  BACKLINKS_RESULTS_REGION_ID,
+  hasActiveCategoryFilter,
+  type CategoryFilterField,
+} from "./backlinksCategoryFilters";
+import { resolveBacklinksEmptyState } from "./backlinksEmptyState";
+import { BacklinksEmptyResults } from "./BacklinksPageEmptyTableState";
 import { BacklinksTable } from "./BacklinksTable";
 import { ReferringDomainsTable } from "./ReferringDomainsTable";
 import { TopPagesTable } from "./TopPagesTable";
@@ -18,6 +27,7 @@ import {
 import { buildBacklinksTabExport } from "./export";
 import type { BacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
+import type { BreakdownOrigin } from "./useBacklinksRowsTransaction";
 import { useAhrefsDomainRatings } from "./useAhrefsDomainRatings";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import {
@@ -56,6 +66,10 @@ export function BacklinksResultsCard({
   onSortingChange,
   onTabChange,
   onViewChange,
+  onClearCategory,
+  origin,
+  onReturnToBreakdown,
+  tabInsights,
 }: {
   projectId: string;
   activeTab: BacklinksSearchState["tab"];
@@ -79,6 +93,11 @@ export function BacklinksResultsCard({
   onSortingChange: OnChangeFn<SortingState>;
   onTabChange: (tab: BacklinksSearchState["tab"]) => void;
   onViewChange: (view: "all" | undefined) => void;
+  onClearCategory: (field: CategoryFilterField) => void;
+  origin: BreakdownOrigin | null;
+  onReturnToBreakdown: () => void;
+  /** Cards derived from the active tab's rows, rendered above its table. */
+  tabInsights?: React.ReactNode;
 }) {
   const {
     ratings: domainRatings,
@@ -86,6 +105,39 @@ export function BacklinksResultsCard({
     loadRatings,
   } = useAhrefsDomainRatings(projectId);
   const activeFilterCount = filters[activeTab].activeFilterCount;
+  const categoryFiltersActive = hasActiveCategoryFilter(
+    filters.backlinks.values,
+  );
+  const activeTabRows =
+    activeTab === "backlinks"
+      ? tabRows.backlinks
+      : activeTab === "domains"
+        ? tabRows.referringDomains
+        : activeTab === "pages"
+          ? tabRows.topPages
+          : tabRows.anchors;
+  // activeFilterCount counts the drill-downs too, so subtract them to learn
+  // whether the user set anything in the panel itself.
+  const manualFilterCount =
+    activeTab === "backlinks"
+      ? activeFilterCount -
+        activeCategoryFilters(filters.backlinks.values).length
+      : activeFilterCount;
+  const emptyState = resolveBacklinksEmptyState({
+    hasCategoryFilter: activeTab === "backlinks" && categoryFiltersActive,
+    hasManualFilter: manualFilterCount > 0,
+    page: pagination.page,
+  });
+  // Announces loading, the result, and failure -- a drill-down that only ever
+  // announced success would leave a screen-reader user waiting on a table that
+  // is never coming.
+  const liveMessage = tabErrorMessage
+    ? `Could not load ${TAB_LOADING_LABELS[activeTab].replace("Loading ", "")}.`
+    : isTabLoading
+      ? `${TAB_LOADING_LABELS[activeTab]}...`
+      : activeTabRows.length === 0
+        ? emptyState.title
+        : `Showing ${activeTabRows.length.toLocaleString()} ${activeTabRows.length === 1 ? "row" : "rows"}.`;
   const exportTable = useMemo(
     () =>
       buildBacklinksTabExport({ tab: activeTab, rows: tabRows, domainRatings }),
@@ -109,7 +161,19 @@ export function BacklinksResultsCard({
   }, [domainRatings, ratableDomains, loadRatings]);
 
   return (
-    <div className="border border-base-300 rounded-xl bg-base-100 overflow-hidden">
+    <div
+      id={BACKLINKS_RESULTS_REGION_ID}
+      role="region"
+      aria-label="Backlink table"
+      tabIndex={-1}
+      aria-busy={isTabLoading || pagination.isFetching}
+      className="scroll-mt-4 overflow-hidden rounded-xl border border-base-300 bg-base-100 md:scroll-mt-6"
+    >
+      {/* One region for the whole card. A second persistent region elsewhere
+          would double-announce every change. */}
+      <p role="status" aria-live="polite" className="sr-only">
+        {liveMessage}
+      </p>
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 px-4 py-3 border-b border-base-300">
         <div className="space-y-2">
           <Tabs
@@ -164,7 +228,10 @@ export function BacklinksResultsCard({
             </Badge>
           ) : null}
         </Button>
-        {activeTab === "backlinks" ? (
+        {/* Hidden while a drill-down is applied: one-per-domain collapses a
+            domain's links to its strongest, so a 14-link slice could show 3
+            rows and read as a broken filter. All links is the invariant. */}
+        {activeTab === "backlinks" && !categoryFiltersActive ? (
           <Tabs
             // The only strip in the app that was `tabs-xs`. Kumo has one
             // compact step (`sm`), which is what every other small control here
@@ -193,6 +260,15 @@ export function BacklinksResultsCard({
         />
       ) : null}
 
+      <BacklinksCategoryChips
+        values={filters.backlinks.values}
+        origin={origin}
+        onClear={onClearCategory}
+        onReturn={onReturnToBreakdown}
+      />
+
+      {tabInsights}
+
       <div className="p-4">
         {tabErrorMessage ? (
           <Banner variant="error" className="mb-3">
@@ -202,7 +278,17 @@ export function BacklinksResultsCard({
         {isTabLoading && !tabErrorMessage ? (
           <TabLoadingState label={TAB_LOADING_LABELS[activeTab]} />
         ) : null}
-        {!isTabLoading && !tabErrorMessage ? (
+        {!isTabLoading && !tabErrorMessage && activeTabRows.length === 0 ? (
+          <BacklinksEmptyResults
+            state={emptyState}
+            onClearFilters={() => {
+              filters[activeTab].reset();
+              onPageChange(1);
+            }}
+            onPreviousPage={() => onPageChange(pagination.page - 1)}
+          />
+        ) : null}
+        {!isTabLoading && !tabErrorMessage && activeTabRows.length > 0 ? (
           <>
             {activeTab === "backlinks" ? (
               <BacklinksTable

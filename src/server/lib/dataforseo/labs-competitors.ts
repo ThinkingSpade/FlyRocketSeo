@@ -6,6 +6,7 @@ import {
   DataforseoLabsGoogleHistoricalRankOverviewLiveRequestInfo,
   DataforseoLabsGoogleKeywordsForSiteLiveRequestInfo,
   DataforseoLabsGoogleSearchIntentLiveRequestInfo,
+  DataforseoLabsGoogleSerpCompetitorsLiveRequestInfo,
   DataforseoLabsGoogleSubdomainsLiveRequestInfo,
   type DataforseoLabsBulkKeywordDifficultyLiveItem,
   type DataforseoLabsCompetitorsDomainLiveItem,
@@ -13,6 +14,7 @@ import {
   type DataforseoLabsGoogleBulkTrafficEstimationLiveItem,
   type DataforseoLabsGoogleHistoricalRankOverviewLiveItem,
   type DataforseoLabsGoogleSearchIntentLiveItem,
+  type DataforseoLabsSerpCompetitorsLiveItem,
   type DataforseoLabsSubdomainsLiveItem,
 } from "dataforseo-client";
 import { labsApi } from "@/server/lib/dataforseo/core";
@@ -64,6 +66,62 @@ export async function fetchCompetitorsDomain(input: {
       item_types: input.itemTypes,
       exclude_top_domains: input.excludeTopDomains,
       max_rank_group: input.maxRankGroup,
+      filters: input.filters,
+      order_by: input.orderBy,
+    }),
+  ]);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  return {
+    data: {
+      items: task.result?.[0]?.items ?? [],
+      totalCount: task.result?.[0]?.total_count ?? null,
+    },
+    billing: buildTaskBilling(task),
+  };
+}
+
+type SerpCompetitorItem = DataforseoLabsSerpCompetitorsLiveItem;
+
+type SerpCompetitorsPage = {
+  items: SerpCompetitorItem[];
+  totalCount: number | null;
+};
+
+/**
+ * Competitors discovered from a KEYWORD LIST rather than a domain.
+ *
+ * `competitors_domain` above answers "who shares ranked keywords with this
+ * domain", which ranks by absolute overlap and therefore favours whichever
+ * candidate has the largest keyword footprint. This endpoint answers "who
+ * appears in the SERPs for these specific keywords", so the caller controls
+ * the market being measured -- and each item carries `keywords_positions`,
+ * the per-keyword ranks needed to say whether a domain actually outranks the
+ * client.
+ *
+ * Callers MUST pass `itemTypes: ["organic"]`. The endpoint's default item
+ * types include paid results, which would let a rival's AD placement count as
+ * outranking the client's organic position. Billing (verified 2026-08-10):
+ * $0.012 per task + $0.00012 per returned row, and the keyword array is ONE
+ * task regardless of its length. Documented caps: 200 keywords, limit 1,000.
+ */
+export async function fetchSerpCompetitors(input: {
+  keywords: string[];
+  locationCode: number;
+  languageCode: string;
+  limit: number;
+  offset?: number;
+  itemTypes?: DataforseoLabsItemType[];
+  filters?: unknown[];
+  orderBy?: string[];
+}): Promise<DataforseoApiResponse<SerpCompetitorsPage>> {
+  const response = await labsApi().googleSerpCompetitorsLive([
+    new DataforseoLabsGoogleSerpCompetitorsLiveRequestInfo({
+      keywords: input.keywords,
+      location_code: input.locationCode,
+      language_code: input.languageCode,
+      limit: input.limit,
+      offset: input.offset,
+      item_types: input.itemTypes,
       filters: input.filters,
       order_by: input.orderBy,
     }),

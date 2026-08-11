@@ -4,6 +4,7 @@ import {
   AppDataTable,
   useAppTable,
 } from "@/client/components/table/AppDataTable";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import type { LinkGapRow } from "@/server/features/competitors/services/CompetitorsService";
 
 function formatNumber(value: number | null): string {
@@ -34,7 +35,7 @@ export function LinkGapTable({ rows }: { rows: LinkGapRow[] }) {
       },
       {
         id: "rank",
-        header: "Domain Rank",
+        header: "Domain authority",
         cell: ({ row }) => formatNumber(row.original.rank),
       },
       {
@@ -45,18 +46,16 @@ export function LinkGapTable({ rows }: { rows: LinkGapRow[] }) {
       {
         id: "spamScore",
         header: "Spam Score",
-        cell: ({ row }) =>
-          row.original.spamScore == null ? (
-            "—"
-          ) : (
+        cell: ({ row }) => {
+          const spam = describeSpamScore(row.original.spamScore);
+          return (
             <span
-              className={
-                row.original.spamScore >= 40 ? "text-error font-medium" : ""
-              }
+              className={`${spam.reviewRecommended ? "font-medium " : ""}${spam.className}`}
             >
-              {row.original.spamScore}
+              {spam.formatted}
             </span>
-          ),
+          );
+        },
       },
       {
         id: "firstSeen",

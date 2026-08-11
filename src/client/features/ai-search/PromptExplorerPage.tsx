@@ -160,7 +160,6 @@ function PromptExplorerPageInner({
       hasActivePrompt &&
       (authorizedInput?.models.length ?? 0) > 0 &&
       !planGate.isFreePlan,
-    retry: false,
   });
 
   // Sync form to URL state — covers initial mount, browser back/forward, and

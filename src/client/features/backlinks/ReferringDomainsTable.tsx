@@ -8,6 +8,7 @@ import {
 } from "@/client/components/table/AppDataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { EmptyTableState } from "./BacklinksPageEmptyTableState";
 import type { ReferringDomainRow } from "./backlinksPageTypes";
 import type { ReferringDomainsSortField } from "@/types/schemas/backlinks";
@@ -73,8 +74,8 @@ const baseColumns = [
     header: ({ column }) => (
       <SortableHeader
         column={column}
-        label="Rank"
-        helpText="Authority score for the referring domain."
+        label="Domain authority"
+        helpText="DataForSEO Domain Rank, a 0–100 authority score for the referring domain."
       />
     ),
     cell: ({ getValue }) => formatNumber(getValue()),
@@ -89,7 +90,16 @@ const baseColumns = [
         helpText="Spam risk score for this referring domain."
       />
     ),
-    cell: ({ getValue }) => formatDecimal(getValue()),
+    cell: ({ getValue }) => {
+      const spam = describeSpamScore(getValue());
+      return (
+        <span
+          className={`tabular-nums ${spam.reviewRecommended ? "font-medium " : ""}${spam.className}`}
+        >
+          {spam.formatted}
+        </span>
+      );
+    },
     sortDescFirst: true,
   }),
   columnHelper.accessor("firstSeen", {
@@ -127,9 +137,9 @@ const baseColumns = [
 
 /**
  * Columns for the referring domains table. When `domainRatings` is provided
- * (the user clicked "Ahrefs DR"), an Ahrefs DR column is inserted after Rank;
- * otherwise it stays hidden. DR is loaded client-side from Ahrefs, so it can't
- * participate in server-side sorting.
+ * (the user clicked "Ahrefs DR"), an Ahrefs DR column is inserted after Domain
+ * authority; otherwise it stays hidden. DR is loaded client-side from Ahrefs,
+ * so it can't participate in server-side sorting.
  */
 function buildReferringDomainColumns(domainRatings: DomainRatings | null) {
   if (!domainRatings) return baseColumns;

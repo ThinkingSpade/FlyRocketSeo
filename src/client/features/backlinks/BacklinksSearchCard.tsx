@@ -13,6 +13,8 @@ import {
   resolveBacklinksSearchScope,
 } from "./backlinksSearchScope";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InputGroup } from "@cloudflare/kumo/components/input-group";
+import { Toolbar } from "@cloudflare/kumo/components/toolbar";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
@@ -53,6 +55,7 @@ function getBacklinksValidationErrors(
 
 export function BacklinksSearchCard({
   canOpenSearch,
+  compact = false,
   errorMessage,
   initialValues,
   onSubmit,
@@ -60,6 +63,7 @@ export function BacklinksSearchCard({
   tabLimit,
 }: {
   canOpenSearch?: (values: SearchDraft) => boolean;
+  compact?: boolean;
   errorMessage: string | null;
   initialValues: SearchDraft;
   onSubmit: (values: SearchDraft) => void;
@@ -125,9 +129,109 @@ export function BacklinksSearchCard({
     form.setFieldValue("target", prefillTarget, { dontUpdateMeta: true });
   }, [targetIsDirty, currentTarget, prefillTarget, form]);
 
+  const targetField = (
+    <form.Field name="target">
+      {(field) => {
+        const targetError = getFieldError(field.state.meta.errors);
+        const handleTargetChange = (nextTarget: string) => {
+          field.handleChange(nextTarget);
+          if (!userSelectedScope) {
+            form.setFieldValue(
+              "scope",
+              inferBacklinksSearchScopeFromTarget(nextTarget),
+            );
+          }
+        };
+
+        return compact ? (
+          <Toolbar.InputGroup
+            aria-label="Backlink search target"
+            className="w-full min-w-0 lg:flex-1"
+          >
+            <InputGroup.Addon>
+              <Search className="text-base-content/60" />
+            </InputGroup.Addon>
+            <InputGroup.Input
+              aria-label="Domain or URL"
+              aria-invalid={targetError ? true : undefined}
+              placeholder="Enter a domain or URL"
+              value={field.state.value}
+              onChange={(event) => handleTargetChange(event.target.value)}
+            />
+          </Toolbar.InputGroup>
+        ) : (
+          <label
+            className={`input input-bordered flex flex-1 items-center gap-2 ${targetError ? "input-error" : ""}`}
+          >
+            <Search className="size-4 text-base-content/60" />
+            <input
+              placeholder="Enter a domain or URL"
+              value={field.state.value}
+              onChange={(event) => handleTargetChange(event.target.value)}
+            />
+          </label>
+        );
+      }}
+    </form.Field>
+  );
+  const scopeField = (
+    <form.Field name="scope">
+      {(field) => (
+        <SegmentedToggle
+          showLabels
+          items={[
+            { value: "domain", label: "Site-wide" },
+            { value: "page", label: "Exact page" },
+          ]}
+          value={field.state.value === "page" ? "page" : "domain"}
+          onChange={(scope) => {
+            setUserSelectedScope(true);
+            field.handleChange(scope);
+          }}
+        />
+      )}
+    </form.Field>
+  );
+  const submitButton = (
+    <form.Subscribe selector={(state) => state.isSubmitting}>
+      {(isSubmitting) =>
+        compact ? (
+          <Toolbar.Button
+            type="submit"
+            className="shrink-0"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Loading..." : "Search"}
+          </Toolbar.Button>
+        ) : (
+          <Button
+            type="submit"
+            variant="primary"
+            className="shrink-0 px-6"
+            disabled={isSubmitting}
+          >
+            {isSubmitting ? "Loading..." : "Search"}
+          </Button>
+        )
+      }
+    </form.Subscribe>
+  );
+
   return (
-    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
-      <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
+    <div
+      className={
+        compact
+          ? undefined
+          : "relative flex flex-col rounded-xl border border-base-300 bg-base-100"
+      }
+    >
+      <div
+        className={
+          compact
+            ? "space-y-3 text-sm"
+            : "flex flex-auto flex-col gap-4 p-6 text-sm"
+        }
+      >
         <form
           className="space-y-3"
           onSubmit={(event) => {
@@ -135,89 +239,45 @@ export function BacklinksSearchCard({
             void form.handleSubmit();
           }}
         >
-          <div className="space-y-3">
-            <div className="flex flex-col gap-3 lg:flex-row">
-              <form.Field name="target">
-                {(field) => {
-                  const targetError = getFieldError(field.state.meta.errors);
+          {compact ? (
+            <Toolbar
+              size="sm"
+              className="w-full flex-col items-stretch gap-3 p-4 lg:flex-row lg:items-center"
+            >
+              {targetField}
+              {scopeField}
+              {submitButton}
+            </Toolbar>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex flex-col gap-3 lg:flex-row">
+                {targetField}
+                {submitButton}
+              </div>
 
-                  return (
-                    <label
-                      className={`input input-bordered flex flex-1 items-center gap-2 ${targetError ? "input-error" : ""}`}
-                    >
-                      <Search className="size-4 text-base-content/60" />
-                      <input
-                        placeholder="Enter a domain or URL"
-                        value={field.state.value}
-                        onChange={(event) => {
-                          const nextTarget = event.target.value;
-                          field.handleChange(nextTarget);
-                          if (!userSelectedScope) {
-                            form.setFieldValue(
-                              "scope",
-                              inferBacklinksSearchScopeFromTarget(nextTarget),
-                            );
-                          }
-                        }}
-                      />
-                    </label>
-                  );
-                }}
-              </form.Field>
-
-              <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) => (
-                  <Button
-                    type="submit"
-                    variant="primary"
-                    className="shrink-0 px-6"
-                    disabled={isSubmitting}
-                  >
-                    {isSubmitting ? "Loading..." : "Search"}
-                  </Button>
-                )}
-              </form.Subscribe>
+              <div className="flex items-center gap-1">{scopeField}</div>
             </div>
+          )}
 
-            <form.Field name="target">
-              {(field) => {
-                const targetError = getFieldError(field.state.meta.errors);
+          <form.Field name="target">
+            {(field) => {
+              const targetError = getFieldError(field.state.meta.errors);
 
-                return targetError ? (
-                  <p className="text-sm text-error">{targetError}</p>
-                ) : null;
-              }}
-            </form.Field>
+              return targetError ? (
+                <p className="text-sm text-error">{targetError}</p>
+              ) : null;
+            }}
+          </form.Field>
 
-            <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
-              {(submitError) => {
-                const formError = getFormError(submitError);
+          <form.Subscribe selector={(state) => state.errorMap.onSubmit}>
+            {(submitError) => {
+              const formError = getFormError(submitError);
 
-                return formError ? (
-                  <p className="text-sm text-error">{formError}</p>
-                ) : null;
-              }}
-            </form.Subscribe>
-
-            <div className="flex items-center gap-1">
-              <form.Field name="scope">
-                {(field) => (
-                  <SegmentedToggle
-                    showLabels
-                    items={[
-                      { value: "domain", label: "Site-wide" },
-                      { value: "page", label: "Exact page" },
-                    ]}
-                    value={field.state.value === "page" ? "page" : "domain"}
-                    onChange={(scope) => {
-                      setUserSelectedScope(true);
-                      field.handleChange(scope);
-                    }}
-                  />
-                )}
-              </form.Field>
-            </div>
-          </div>
+              return formError ? (
+                <p className="text-sm text-error">{formError}</p>
+              ) : null;
+            }}
+          </form.Subscribe>
         </form>
 
         {errorMessage ? (
