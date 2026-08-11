@@ -5,7 +5,7 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { MagnifyingGlass } from "@phosphor-icons/react";
+import { MagnifyingGlass, UserMinus } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
@@ -17,6 +17,7 @@ import {
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
 import { IntentBadge } from "@/client/features/keywords/components";
+import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import type { KeywordIntent, SavedKeywordRow } from "@/types/keywords";
 import { TagChip } from "./TagChip";
 import {
@@ -26,6 +27,25 @@ import {
 
 const columnHelper = createColumnHelper<SavedKeywordRow>();
 
+/**
+ * The one visual mark a fit verdict earns, deliberately identical in shape to
+ * Keyword Research's own (`KeywordResearchDesktopTable`): only
+ * `wrong-customer` renders anything, because marking the expected cases would
+ * put an icon on nearly every row. A bare muted glyph rather than a coloured
+ * badge -- this table already carries difficulty, intent and tag colours.
+ */
+function FitMarker({ fit }: { fit: FitResult | undefined }) {
+  if (fit?.verdict !== "wrong-customer") return null;
+  return (
+    <UserMinus
+      className="size-3.5 shrink-0 text-base-content/40"
+      aria-label={fit.reason}
+    >
+      <title>{fit.reason}</title>
+    </UserMinus>
+  );
+}
+
 export function SavedKeywordsTable({
   rows,
   rowSelection,
@@ -33,6 +53,7 @@ export function SavedKeywordsTable({
   isLoading,
   hasActiveFilters,
   projectId,
+  fit,
   onRowSelectionChange,
   onSortingChange,
 }: {
@@ -42,6 +63,11 @@ export function SavedKeywordsTable({
   isLoading: boolean;
   hasActiveFilters: boolean;
   projectId: string;
+  /** Verdicts for the rows on this page. Empty when the project has no
+   *  usable profile, in which case no row is marked at all. Computed by the
+   *  page rather than here so the marker, the hide-wrong-fit filter and its
+   *  count can never disagree about the same row. */
+  fit: ReadonlyMap<string, FitResult>;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   onSortingChange: OnChangeFn<SortingState>;
 }) {
@@ -54,7 +80,10 @@ export function SavedKeywordsTable({
           <SortableHeader column={column} label="Keyword" />
         ),
         cell: ({ getValue }) => (
-          <span className="font-medium">{getValue()}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium">{getValue()}</span>
+            <FitMarker fit={fit.get(getValue())} />
+          </span>
         ),
       }),
       columnHelper.accessor("searchVolume", {
@@ -118,7 +147,7 @@ export function SavedKeywordsTable({
         ),
       }),
     ],
-    [selectAnchorRef],
+    [fit, selectAnchorRef],
   );
   const table = useAppTable({
     data: rows,

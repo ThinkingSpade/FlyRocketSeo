@@ -41,6 +41,10 @@ type Props = {
    * this over the config's own stored location.
    */
   defaultArea?: TargetArea;
+  /** Prefills the domain field for a brand-new config, so an inbound
+   *  "track this domain" link lands on a filled form. Ignored when editing:
+   *  an existing config's own domain always wins. */
+  defaultDomain?: string;
   onClose: () => void;
   onSaved: (createdConfigId?: string) => void;
   onConfigCreated?: () => void;
@@ -93,13 +97,16 @@ export function RankTrackingConfigModal({
   projectId,
   existingConfig,
   defaultArea,
+  defaultDomain,
   onClose,
   onSaved,
   onConfigCreated,
 }: Props) {
   const isEdit = !!existingConfig;
   const [step, setStep] = useState<"config" | "keywords">("config");
-  const [domain, setDomain] = useState(existingConfig?.domain ?? "");
+  const [domain, setDomain] = useState(
+    existingConfig?.domain ?? defaultDomain ?? "",
+  );
   const [devices, setDevices] = useState<"both" | "desktop" | "mobile">(
     existingConfig?.devices ?? "mobile",
   );

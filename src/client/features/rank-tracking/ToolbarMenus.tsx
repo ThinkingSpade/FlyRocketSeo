@@ -117,29 +117,35 @@ function MenuItem({
 export function MoreMenu({
   onCheckNow,
   checkBusy,
-  checkDisabled,
+  checkBlockedReason,
   onRefreshMetrics,
   metricsRefreshing,
   hasData,
 }: {
   onCheckNow: () => void;
   checkBusy: boolean;
-  checkDisabled: boolean;
+  /**
+   * Why a rank check cannot be run right now, or null when it can. Rendered
+   * on a DISABLED item rather than hiding the item: this used to be shown
+   * enabled whenever the plan allowed it, and a config with no keywords sent
+   * the click into `if (count > 0)` in the parent, where it vanished with no
+   * toast and no explanation. A capability you cannot use is still worth
+   * seeing, provided it says why.
+   */
+  checkBlockedReason: string | null;
   onRefreshMetrics: () => void;
   metricsRefreshing: boolean;
   hasData: boolean;
 }) {
   return (
     <ToolbarMenu icon={<DotsThree className="size-4" />} title="More actions">
-      {!checkDisabled && (
-        <MenuItem
-          icon={<Play className="size-3.5" />}
-          label={checkBusy ? "Running..." : "Check rankings"}
-          description="Fetch current Google positions"
-          onClick={onCheckNow}
-          disabled={checkBusy}
-        />
-      )}
+      <MenuItem
+        icon={<Play className="size-3.5" />}
+        label={checkBusy ? "Running..." : "Check rankings"}
+        description={checkBlockedReason ?? "Fetch current Google positions"}
+        onClick={onCheckNow}
+        disabled={checkBusy || checkBlockedReason !== null}
+      />
       <MenuItem
         icon={
           <ArrowsClockwise

@@ -1,11 +1,25 @@
 import { createFileRoute, Outlet } from "@tanstack/react-router";
+import { z } from "zod";
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
 import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { AppPageShell } from "@/client/components/AppPageShell";
 
+/**
+ * `domain` is the site an inbound link wants tracked -- every tab that names
+ * a competitor or a client domain can now hand it over instead of dropping
+ * the user on the domain list to find or retype it. Declared on the LAYOUT so
+ * both children inherit it; `rank-tracking/index.tsx` is what consumes it,
+ * either by opening that domain's existing tracker or by starting the create
+ * flow already filled in.
+ */
+const rankTrackingSearchSchema = z.object({
+  domain: z.string().optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/_project/p/$projectId/rank-tracking")({
+  validateSearch: rankTrackingSearchSchema,
   component: RankTrackingLayout,
 });
 

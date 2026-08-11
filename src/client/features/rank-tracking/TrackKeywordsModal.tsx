@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
+import { useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Info, CircleNotch, X } from "@phosphor-icons/react";
 import {
@@ -7,6 +8,7 @@ import {
   createRankTrackingConfig,
   getRankTrackingConfigSummaries,
 } from "@/serverFunctions/rank-tracking";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { Modal } from "@/client/components/Modal";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -38,7 +40,6 @@ type Props = {
   keywords: string[];
   defaultLocationCode: number;
   defaultLanguageCode: string;
-  projectDomain?: string;
   /** Set by callers whose selection spans multiple locations (see saved.tsx). */
   mixedLocations?: boolean;
   /** Fires after keywords are added, before the modal closes (e.g. to clear selection). */
@@ -64,12 +65,18 @@ export function TrackKeywordsModal({
   keywords,
   defaultLocationCode,
   defaultLanguageCode,
-  projectDomain,
   mixedLocations,
   onSuccess,
   onClose,
 }: Props) {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  // Was a `projectDomain` prop that not one of the three call sites passed,
+  // so the "New domain" tab always opened blank on the domain the user is
+  // nearly always tracking. Read here instead: `useProjectDomain` shares the
+  // dashboard's ["projects"] cache entry, so it costs nothing and no caller
+  // has to remember to thread it.
+  const projectDomain = useProjectDomain(projectId);
 
   const configsQuery = useQuery({
     queryKey: ["rankTrackingConfigSummaries", projectId],
@@ -84,7 +91,11 @@ export function TrackKeywordsModal({
   const [selectedConfigId, setSelectedConfigId] = useState("");
   const effectiveConfigId = selectedConfigId || configs[0]?.id || "";
 
-  const [domain, setDomain] = useState(projectDomain ?? "");
+  // Null until the user types. `["projects"]` can resolve AFTER this modal
+  // mounts, and a `useState(projectDomain ?? "")` initializer would have
+  // frozen whichever value it happened to see first.
+  const [domainDraft, setDomainDraft] = useState<string | null>(null);
+  const domain = domainDraft ?? projectDomain ?? "";
   const [locationCode, setLocationCode] = useState(defaultLocationCode);
   const [languageCode, setLanguageCode] = useState(defaultLanguageCode);
   const [schedule, setSchedule] =
@@ -133,7 +144,13 @@ export function TrackKeywordsModal({
         configId = created.configId;
       }
       if (!configId) throw new Error("Select a domain to track keywords for");
-      return addTrackingKeywords({ data: { projectId, configId, keywords } });
+      const added = await addTrackingKeywords({
+        data: { projectId, configId, keywords },
+      });
+      // Carried out of the mutation so the success handler can navigate to
+      // the tracker it just filled -- in the create branch the id does not
+      // exist until this function has run.
+      return { ...added, configId };
     },
     onSuccess: (result) => {
       toast.success(
@@ -144,6 +161,14 @@ export function TrackKeywordsModal({
       });
       onSuccess?.();
       onClose();
+      // Someone who just committed 40 keywords to a tracker was left on the
+      // table they started from, with no route to the thing they created --
+      // the same handoff `rank-tracking/index.tsx` already makes after the
+      // full config flow.
+      void navigate({
+        to: "/p/$projectId/rank-tracking/$configId",
+        params: { projectId, configId: result.configId },
+      });
     },
     onError: (error) => {
       toast.error(getStandardErrorMessage(error, "Failed to track keywords"));
@@ -152,7 +177,7 @@ export function TrackKeywordsModal({
 
   const handleDomainBlur = () => {
     try {
-      setDomain(normalizeDomain(domain));
+      setDomainDraft(normalizeDomain(domain));
     } catch {
       // Keep invalid partial input editable; submit validation will show the error.
     }
@@ -262,7 +287,7 @@ export function TrackKeywordsModal({
                   placeholder="example.com"
                   className="w-full"
                   value={domain}
-                  onChange={(e) => setDomain(e.target.value)}
+                  onChange={(e) => setDomainDraft(e.target.value)}
                   onBlur={handleDomainBlur}
                 />
               </div>

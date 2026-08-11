@@ -27,7 +27,7 @@ export function RankTrackingTableToolbar({
   onRefreshMetrics,
   metricsRefreshing,
   checkBusy,
-  checkDisabled,
+  checkBlockedReason,
   hasData,
 }: {
   showFilters: boolean;
@@ -49,7 +49,8 @@ export function RankTrackingTableToolbar({
   onRefreshMetrics: () => void;
   metricsRefreshing: boolean;
   checkBusy: boolean;
-  checkDisabled: boolean;
+  /** Null when a rank check may be run; otherwise the reason it may not. */
+  checkBlockedReason: string | null;
   hasData: boolean;
 }) {
   return (
@@ -132,7 +133,7 @@ export function RankTrackingTableToolbar({
       <MoreMenu
         onCheckNow={onCheckNow}
         checkBusy={checkBusy}
-        checkDisabled={checkDisabled}
+        checkBlockedReason={checkBlockedReason}
         onRefreshMetrics={onRefreshMetrics}
         metricsRefreshing={metricsRefreshing}
         hasData={hasData}

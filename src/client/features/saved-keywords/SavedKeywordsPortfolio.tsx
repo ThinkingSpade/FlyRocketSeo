@@ -3,6 +3,10 @@ import { useQuery } from "@tanstack/react-query";
 import { ChartBar, Bookmark, Gauge, Target } from "@phosphor-icons/react";
 import { InsightTile, type InsightTone } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
+import {
+  useKeywordFit,
+  useProjectProfile,
+} from "@/client/features/profiles/useProjectProfile";
 import { exportSavedKeywords } from "@/serverFunctions/keywords";
 import type { ExportSavedKeywordsInput } from "@/types/schemas/keywords";
 import type { AppliedSavedKeywordsFilters } from "./savedKeywordsFilterTypes";
@@ -21,6 +25,16 @@ function difficultyTone(value: number | null): InsightTone {
   if (value < 30) return "success";
   if (value < 60) return "warning";
   return "error";
+}
+
+/** How the quick-wins tile describes itself, which depends on whether the
+ *  profile was in a position to rule anything out. Claiming the count is
+ *  fit-aware when no verdict was available would be the same kind of lie the
+ *  old "KD under 30 with volume" definition told by omission. */
+function quickWinHint(fitApplied: boolean, offTarget: number): string {
+  if (!fitApplied) return "KD under 30 with volume";
+  if (offTarget === 0) return "Low difficulty, real volume, on-offer";
+  return `Low difficulty, real volume, on-offer · ${offTarget} off-target excluded`;
 }
 
 /**
@@ -63,6 +77,18 @@ export function SavedKeywordsPortfolio({
   });
 
   const rows = portfolioQuery.data?.rows;
+  // Fit over the WHOLE filtered set, not the page: this strip is the only
+  // place that answers "is what I have saved any good", and it answered it
+  // with difficulty alone -- so a list of off-target terms reported a healthy
+  // portfolio. Free (see useProjectProfile), and computed before the early
+  // returns below because hooks cannot be called conditionally.
+  const { profile } = useProjectProfile(projectId);
+  const keywords = useMemo(
+    () => (rows ?? []).map((row) => row.keyword),
+    [rows],
+  );
+  const fit = useKeywordFit(profile, keywords);
+
   if (portfolioQuery.isError) {
     return (
       <InlineQueryError
@@ -73,7 +99,7 @@ export function SavedKeywordsPortfolio({
     );
   }
   if (!rows || rows.length === 0) return null;
-  const portfolio = computeSavedPortfolio(rows);
+  const portfolio = computeSavedPortfolio(rows, fit);
   const mixTotal = portfolio.intentMix.reduce((sum, m) => sum + m.count, 0);
 
   return (
@@ -101,7 +127,7 @@ export function SavedKeywordsPortfolio({
           icon={Target}
           label="Quick wins"
           value={portfolio.quickWins}
-          hint="KD under 30 with volume"
+          hint={quickWinHint(fit.size > 0, portfolio.offTarget)}
           tone={portfolio.quickWins > 0 ? "success" : "neutral"}
         />
       </div>
