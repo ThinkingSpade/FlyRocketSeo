@@ -4,7 +4,12 @@ import { AppError } from "@/server/lib/errors";
 import { getChatAgentModel } from "@/server/lib/openrouter";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 import { PageOptimizationRepository } from "@/server/features/onpage/repositories/PageOptimizationRepository";
+import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import { META_MAX, TITLE_MAX } from "@/server/lib/onpage/suggestions";
+import {
+  buildProfileBlock,
+  type RewriteProfile,
+} from "@/server/lib/onpage/promptProfile";
 
 // Never rewrite more than this in one click — one OpenRouter call, bounded cost.
 const MAX_REWRITE = 25;
@@ -31,7 +36,30 @@ async function isAiRewriteAvailable(): Promise<boolean> {
   return Boolean(await getOptionalEnvValue("OPENROUTER_API_KEY"));
 }
 
-function buildPrompt(targets: RewriteTarget[]): string {
+/**
+ * What the user already told the app their business is, when they have
+ * confirmed it.
+ *
+ * Null covers both "never filled in" and "an AI draft nobody has accepted" —
+ * the same gate SAM applies, because writing marketing copy from an
+ * unconfirmed draft states a proposal as fact about someone's business.
+ */
+async function getConfirmedProfile(
+  projectId: string,
+): Promise<RewriteProfile | null> {
+  const row = await ProjectProfileRepository.getByProject(projectId);
+  if (!row || !row.confirmedAt) return null;
+  return {
+    offer: row.offer,
+    customer: row.customer,
+    exclusions: row.exclusions,
+  };
+}
+
+function buildPrompt(
+  targets: RewriteTarget[],
+  profile: RewriteProfile | null,
+): string {
   const lines = targets.map((target) => {
     const limit = target.element === "title" ? TITLE_MAX : META_MAX;
     return [
@@ -44,6 +72,7 @@ function buildPrompt(targets: RewriteTarget[]): string {
   });
 
   return [
+    ...buildProfileBlock(profile),
     "You are an SEO copywriter improving on-page metadata. For each item below,",
     "write a single better version of the requested element. Keep the meaning,",
     "stay within the character limit, front-load the most important keyword, and",
@@ -88,11 +117,15 @@ async function rewrite(
 
   if (targets.length === 0) return { rewritten: 0 };
 
+  // Read after the early return: a rewrite with nothing to rewrite should not
+  // cost a D1 query either.
+  const profile = await getConfirmedProfile(projectId);
+
   const model = await getChatAgentModel();
   const { object } = await generateObject({
     model,
     schema: rewriteSchema,
-    prompt: buildPrompt(targets),
+    prompt: buildPrompt(targets, profile),
   });
 
   const byId = new Map(targets.map((target) => [target.id, target]));
