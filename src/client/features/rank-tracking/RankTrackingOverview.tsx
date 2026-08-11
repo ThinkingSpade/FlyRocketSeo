@@ -1,25 +1,18 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import type { TooltipContentProps } from "recharts";
+import { Chart } from "@cloudflare/kumo/components/chart";
 import { getRankConfigTrend } from "@/serverFunctions/rank-tracking";
 import {
   formatDateTick,
+  tooltipAxisTime,
   TrendRangeToggle,
-  useChartWidth,
 } from "./RankTrackingTrendChart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_LINE,
-  CHART_X_TICK_GAP,
-} from "@/client/components/chart/chartTheme";
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
 
 const BUCKETS = [
@@ -29,11 +22,7 @@ const BUCKETS = [
   { key: "notRanking", label: "Not in top 20", color: "#6b7280" },
 ] as const;
 
-/** Narrowed recharts tooltip payload entry (typed `any` upstream). */
-interface PayloadEntry {
-  dataKey?: string | number;
-  value?: number | string | null;
-}
+const CHART_HEIGHT = 220;
 
 export function RankTrackingOverview({
   device,
@@ -66,7 +55,80 @@ export function RankTrackingOverview({
     [trend],
   );
 
-  const { containerRef, width } = useChartWidth();
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        dangerousHtmlFormatter: (params: unknown) => {
+          const label = tooltipAxisTime(params);
+          if (label === null) return "";
+          // Keyed by series name, so a bucket ECharts left out of the hovered
+          // params (an empty series) still prints its zero, as the Recharts
+          // tooltip did.
+          const byName = new Map(
+            tooltipRows(params).map((row) => [row.seriesName, row.value ?? 0]),
+          );
+          const date = new Date(label).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          });
+          return [
+            `<div style="font-size:11px;opacity:0.6">${date}</div>`,
+            ...BUCKETS.map(
+              (b) =>
+                `<div style="display:flex;align-items:center;gap:6px;font-size:12px">` +
+                `<span style="width:8px;height:8px;border-radius:2px;background:${b.color}"></span>` +
+                `<span style="opacity:0.6">${b.label}:</span>` +
+                `<span style="font-weight:500;font-variant-numeric:tabular-nums">${byName.get(b.label) ?? 0}</span>` +
+                `</div>`,
+            ),
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        // A real time scale, as Recharts' `type="number" scale="time"` was.
+        type: "time" as const,
+        min: "dataMin" as const,
+        max: "dataMax" as const,
+        // CartesianGrid was horizontal-only (`vertical={false}`).
+        splitLine: { show: false },
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          formatter: (value: number) => formatDateTick(value),
+          // ECharts' own overlap avoidance, in place of Recharts' minTickGap.
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        // Keyword counts — Recharts' allowDecimals={false}.
+        minInterval: 1,
+      },
+      // One band per bucket, stacked into the tracked total. Every series
+      // shares a `stack` id and carries an areaStyle, which is what makes this
+      // a stacked area rather than four overlapping lines.
+      series: BUCKETS.map((b) => ({
+        type: "line" as const,
+        name: b.label,
+        stack: "total",
+        data: chartData.map((row) => [row.checkedAt, row[b.key]]),
+        smooth: true,
+        symbol: "none" as const,
+        showSymbol: false,
+        lineStyle: { width: 2, color: b.color },
+        itemStyle: { color: b.color },
+        areaStyle: { color: b.color, opacity: 0.7 },
+      })),
+    }),
+    [base, chartData],
+  );
 
   return (
     <div className="px-4 pt-4 pb-4">
@@ -95,7 +157,10 @@ export function RankTrackingOverview({
           // 220 is the chart's own height below, not a guess: a spinner in a
           // p-8 box was two thirds shorter, so the card grew when data landed
           // and everything under it jumped down the page.
-          <ChartSkeleton height={220} label="Loading position distribution" />
+          <ChartSkeleton
+            height={CHART_HEIGHT}
+            label="Loading position distribution"
+          />
         ) : chartData.length <= 1 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-8 text-center text-xs text-base-content/60">
             {chartData.length === 0
@@ -103,112 +168,15 @@ export function RankTrackingOverview({
               : "Only 1 check so far — the trend fills in after the next check."}
           </div>
         ) : (
-          <div
-            ref={containerRef}
+          <Chart
+            echarts={echarts}
+            options={options}
+            height={CHART_HEIGHT}
+            isDarkMode={theme.isDark}
             className="w-full min-w-0"
-            style={{ height: 220 }}
-          >
-            {width > 0 ? (
-              <AreaChart
-                width={width}
-                height={220}
-                data={chartData}
-                margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-              >
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  stroke="currentColor"
-                  opacity={0.1}
-                  vertical={false}
-                />
-                <XAxis
-                  dataKey="checkedAt"
-                  type="number"
-                  scale="time"
-                  domain={["dataMin", "dataMax"]}
-                  tickFormatter={formatDateTick}
-                  tick={CHART_AXIS_TICK}
-                  tickLine={false}
-                  axisLine={false}
-                  minTickGap={CHART_X_TICK_GAP}
-                />
-                <YAxis
-                  allowDecimals={false}
-                  tick={CHART_AXIS_TICK}
-                  tickLine={false}
-                  axisLine={false}
-                  width={28}
-                />
-                <Tooltip
-                  content={(props: TooltipContentProps<number, string>) => {
-                    const { active, payload, label } = props;
-                    if (
-                      !active ||
-                      !payload?.length ||
-                      typeof label !== "number"
-                    ) {
-                      return null;
-                    }
-                    const byKey = new Map(
-                      payload.map((p: PayloadEntry) => [
-                        String(p.dataKey),
-                        typeof p.value === "number" ? p.value : 0,
-                      ]),
-                    );
-                    return <DistributionTooltip label={label} byKey={byKey} />;
-                  }}
-                  cursor={CHART_CURSOR_LINE}
-                />
-                {BUCKETS.map((b) => (
-                  <Area
-                    key={b.key}
-                    type="monotone"
-                    dataKey={b.key}
-                    name={b.label}
-                    stackId="positions"
-                    stroke={b.color}
-                    fill={b.color}
-                    fillOpacity={0.7}
-                    isAnimationActive={false}
-                  />
-                ))}
-              </AreaChart>
-            ) : null}
-          </div>
+          />
         )}
       </div>
-    </div>
-  );
-}
-
-function DistributionTooltip({
-  label,
-  byKey,
-}: {
-  label: number;
-  byKey: Map<string, number>;
-}) {
-  return (
-    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm space-y-0.5">
-      <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
-      </p>
-      {BUCKETS.map((b) => (
-        <p key={b.key} className="text-xs flex items-center gap-1.5">
-          <span
-            className="size-2 rounded-sm"
-            style={{ backgroundColor: b.color }}
-          />
-          <span className="text-base-content/60">{b.label}:</span>
-          <span className="font-medium tabular-nums">
-            {byKey.get(b.key) ?? 0}
-          </span>
-        </p>
-      ))}
     </div>
   );
 }

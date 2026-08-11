@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Rocket, TriangleAlert, X } from "lucide-react";
+import { Check, CircleNotch, Rocket, Warning, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { DashboardCard } from "@/client/features/dashboard/dashboardShared";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -27,6 +27,7 @@ import {
   useSeedSuggestions,
 } from "@/client/features/dashboard/SeedKeywordField";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 /**
  * Runs the project's analyses in one go, so a new project stops being a grid of
@@ -303,12 +304,10 @@ export function AnalyzeProjectCard({
           const blocked = analysis.needsKeyword && keyword === "";
           return (
             <li key={analysis.key} className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
+              <Checkbox
                 checked={selected.has(analysis.key) && !blocked}
                 disabled={running || blocked}
-                onChange={() => toggle(analysis.key)}
+                onCheckedChange={() => toggle(analysis.key)}
                 aria-label={analysis.label}
               />
               <div className="min-w-0 flex-1">
@@ -339,7 +338,7 @@ export function AnalyzeProjectCard({
       {confirming ? (
         <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3">
           <p className="flex items-start gap-2 text-sm">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
             <span>
               This spends. Running {chosen.length}{" "}
               {chosen.length === 1 ? "analysis" : "analyses"} for {domain}
@@ -379,7 +378,7 @@ export function AnalyzeProjectCard({
           onClick={() => setConfirming(true)}
         >
           {running ? (
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch className="size-4 animate-spin" />
           ) : (
             <Rocket className="size-4" />
           )}
@@ -394,7 +393,9 @@ export function AnalyzeProjectCard({
 
 function StatusGlyph({ status }: { status: RunStatus | undefined }) {
   if (status === "running") {
-    return <Loader2 className="size-4 shrink-0 animate-spin text-primary" />;
+    return (
+      <CircleNotch className="size-4 shrink-0 animate-spin text-primary" />
+    );
   }
   if (status === "done") {
     return <Check className="size-4 shrink-0 text-success" />;

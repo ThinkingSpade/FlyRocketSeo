@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Copy } from "lucide-react";
+import { Check, Copy } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
+import { useReveal } from "@/client/hooks/useReveal";
 
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
@@ -23,9 +24,14 @@ function SupportPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto max-w-xl">
+      <div ref={revealRef} className="mx-auto max-w-xl">
         <p className="text-sm font-medium text-base-content/40">
           Help & Community
         </p>

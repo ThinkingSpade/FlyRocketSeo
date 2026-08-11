@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X } from "@phosphor-icons/react";
 import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
 import {
   useConfirmTargetArea,

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { TrendingUp } from "lucide-react";
+import { TrendUp } from "@phosphor-icons/react";
 import {
   getLatestRankResults,
   getRankTrackingConfigSummaries,
@@ -18,6 +18,7 @@ import {
   pointsDelta,
   useProjectNavLinks,
 } from "./dashboardShared";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 export function RankTrackingCard({ projectId }: { projectId: string }) {
   const nav = useProjectNavLinks(projectId);
@@ -59,11 +60,7 @@ export function RankTrackingCard({ projectId }: { projectId: string }) {
   );
 
   return (
-    <DashboardCard
-      icon={TrendingUp}
-      title="Rank tracking"
-      headerLink={rankLink}
-    >
+    <DashboardCard icon={TrendUp} title="Rank tracking" headerLink={rankLink}>
       {summariesQuery.isError ? (
         <CardError error={summariesQuery.error} />
       ) : summariesQuery.isPending ? (
@@ -71,7 +68,10 @@ export function RankTrackingCard({ projectId }: { projectId: string }) {
       ) : summaries.length === 0 || primary === null ? (
         <CardEmpty>
           <p>No tracked domains yet.</p>
-          <Link {...rankLink} className="btn btn-primary btn-sm mt-3">
+          <Link
+            {...rankLink}
+            className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
+          >
             Start tracking rankings
           </Link>
         </CardEmpty>

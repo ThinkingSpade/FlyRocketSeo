@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link2 } from "lucide-react";
+import { LinkSimple } from "@phosphor-icons/react";
 import { getBacklinksOverview } from "@/serverFunctions/backlinks";
 import { formatNumber } from "@/client/features/backlinks/backlinksPageUtils";
 import { describeSpamScore } from "@/client/lib/spamScore";
@@ -43,7 +43,11 @@ export function BacklinksCard({
   const spam = describeSpamScore(summary?.backlinksSpamScore);
 
   return (
-    <DashboardCard icon={Link2} title="Backlinks" headerLink={backlinksLink}>
+    <DashboardCard
+      icon={LinkSimple}
+      title="Backlinks"
+      headerLink={backlinksLink}
+    >
       {domain === null ? (
         <CardEmpty>
           Set a domain for this project to load its backlink profile.

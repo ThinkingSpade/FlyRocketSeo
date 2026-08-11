@@ -21,6 +21,8 @@ import {
   applyShiftRangeSelection,
   type SelectionAnchor,
 } from "./tableSelection";
+import { Table as KumoTable } from "@cloudflare/kumo/components/table";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 type AppColumnMeta<TData> = {
   headerClassName?: string;
@@ -68,11 +70,10 @@ export function makeSelectionColumn<TData>(
     size: 32,
     enableSorting: false,
     header: ({ table }) => (
-      <input
-        type="checkbox"
-        className="checkbox checkbox-xs [--radius-selector:0.25rem]"
+      <Checkbox
         checked={table.getIsAllRowsSelected()}
-        onChange={table.getToggleAllRowsSelectedHandler()}
+        indeterminate={table.getIsSomeRowsSelected()}
+        onCheckedChange={(checked) => table.toggleAllRowsSelected(checked)}
         aria-label="Select all rows"
       />
     ),
@@ -93,13 +94,20 @@ function SelectionCheckbox<TData>({
 }) {
   const rangeHandledRef = useRef(false);
   return (
-    <input
-      type="checkbox"
-      className="checkbox checkbox-xs [--radius-selector:0.25rem]"
-      checked={row.getIsSelected()}
-      aria-label="Select row"
-      onClick={(event) => {
-        event.stopPropagation();
+    // Shift-click range selection needs to read shiftKey BEFORE the toggle
+    // decision, and Kumo's CheckboxProps is a narrowed type that does not carry
+    // onClick — so the handlers live on a wrapper instead.
+    //
+    // mousedown, not click: it fires before the checkbox changes, which is the
+    // ordering the ref-suppression depends on. Capture-phase click would also
+    // fire early, but stopPropagation there would stop the event reaching the
+    // checkbox at all and nothing would ever toggle.
+    //
+    // The separate onClick exists only to keep the row underneath from
+    // navigating, which is what the old stopPropagation was for.
+    <span
+      className="inline-flex"
+      onMouseDown={(event) => {
         rangeHandledRef.current = applyShiftRangeSelection(
           event,
           row,
@@ -107,20 +115,26 @@ function SelectionCheckbox<TData>({
           anchorRef,
         );
       }}
-      onChange={(event) => {
-        if (rangeHandledRef.current) {
-          rangeHandledRef.current = false;
-          return;
-        }
-        row.getToggleSelectedHandler()(event);
-      }}
-    />
+      onClick={(event) => event.stopPropagation()}
+    >
+      <Checkbox
+        checked={row.getIsSelected()}
+        aria-label="Select row"
+        onCheckedChange={(checked) => {
+          if (rangeHandledRef.current) {
+            rangeHandledRef.current = false;
+            return;
+          }
+          row.toggleSelected(checked);
+        }}
+      />
+    </span>
   );
 }
 
 export function AppDataTable<TData>({
   table,
-  className = "table table-sm",
+  className,
   wrapperClassName = "overflow-x-auto",
   empty,
   isLoading,
@@ -151,10 +165,9 @@ export function AppDataTable<TData>({
 
   return (
     <div className={wrapperClassName}>
-      <table
-        className={className}
-        style={fixedLayout ? { tableLayout: "fixed" } : undefined}
-      >
+      {/* `layout` replaces the inline tableLayout style — Kumo drives the same
+          CSS from a prop, and the colgroup below still supplies the widths. */}
+      <KumoTable className={className} layout={fixedLayout ? "fixed" : "auto"}>
         {fixedLayout ? (
           <colgroup>
             {table.getVisibleLeafColumns().map((column) => (
@@ -162,9 +175,9 @@ export function AppDataTable<TData>({
             ))}
           </colgroup>
         ) : null}
-        <thead>
+        <KumoTable.Header>
           {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
+            <KumoTable.Row key={headerGroup.id}>
               {headerGroup.headers.map((header) => (
                 <HeaderCell
                   key={header.id}
@@ -173,15 +186,19 @@ export function AppDataTable<TData>({
                   stickyHeader={stickyHeader}
                 />
               ))}
-            </tr>
+            </KumoTable.Row>
           ))}
-        </thead>
-        <tbody>
+        </KumoTable.Header>
+        <KumoTable.Body>
           {table.getRowModel().rows.map((row) => {
             const rowProps = getRowProps?.(row);
             return (
-              <tr
+              <KumoTable.Row
                 key={row.id}
+                // Kumo has a `selected` row variant, and this is where it would
+                // go — but selection here is TanStack's, and the existing
+                // getRowClassName callbacks already paint it per table. Wiring
+                // both would mean two sources of truth for one visual state.
                 onClick={rowProps?.onClick}
                 className={[getRowClassName?.(row), rowProps?.className]
                   .filter(Boolean)
@@ -190,7 +207,7 @@ export function AppDataTable<TData>({
                 {row.getVisibleCells().map((cell) => {
                   const metaClass = cell.column.columnDef.meta?.cellClassName;
                   return (
-                    <td
+                    <KumoTable.Cell
                       key={cell.id}
                       className={[
                         typeof metaClass === "function"
@@ -205,14 +222,14 @@ export function AppDataTable<TData>({
                         cell.column.columnDef.cell,
                         cell.getContext(),
                       )}
-                    </td>
+                    </KumoTable.Cell>
                   );
                 })}
-              </tr>
+              </KumoTable.Row>
             );
           })}
-        </tbody>
-      </table>
+        </KumoTable.Body>
+      </KumoTable>
     </div>
   );
 }
@@ -228,7 +245,7 @@ function HeaderCell<TData>({
 }) {
   const meta = header.column.columnDef.meta;
   return (
-    <th
+    <KumoTable.Head
       className={[
         stickyHeader ? "bg-base-200" : undefined,
         meta?.headerClassName,
@@ -240,6 +257,6 @@ function HeaderCell<TData>({
       {header.isPlaceholder
         ? null
         : flexRender(header.column.columnDef.header, header.getContext())}
-    </th>
+    </KumoTable.Head>
   );
 }

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, Copy } from "lucide-react";
+import { Check, CaretDown, Copy } from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -42,7 +42,7 @@ export function Collapsible({
             ) : null}
           </div>
         </div>
-        <ChevronDown
+        <CaretDown
           className={`size-4 shrink-0 text-base-content/50 transition-transform ${
             open ? "rotate-180" : ""
           }`}

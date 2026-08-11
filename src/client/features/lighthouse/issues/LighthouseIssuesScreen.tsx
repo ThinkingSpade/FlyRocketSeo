@@ -1,5 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { AlertCircle, TriangleAlert } from "lucide-react";
+import { WarningCircle, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   exportAuditLighthouseIssues,
@@ -97,14 +97,14 @@ export function LighthouseIssuesScreen(props: LighthouseIssuesScreenProps) {
           <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
             {issuesQuery.isError ? (
               <Banner variant="error">
-                <AlertCircle className="size-4" />
+                <WarningCircle className="size-4" />
                 <span>{issuesErrorMessage}</span>
               </Banner>
             ) : null}
 
             {showsLegacyPayloadNotice ? (
               <Banner variant="alert">
-                <TriangleAlert className="size-4" />
+                <Warning className="size-4" />
                 <span>
                   This Lighthouse run was stored before issue details were
                   preserved. Re-run the audit to see category counts and issue

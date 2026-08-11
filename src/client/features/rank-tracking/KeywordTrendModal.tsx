@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Copy, Download } from "lucide-react";
+import { Copy, Download } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { useQuery } from "@tanstack/react-query";
 import { Modal } from "@/client/components/Modal";
@@ -16,6 +16,7 @@ import {
 } from "./RankTrackingTrendChart";
 import { ChartSkeleton } from "@/client/components/chart/ChartSkeleton";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 const DEVICE_STYLE: Record<
   "desktop" | "mobile",
@@ -167,14 +168,14 @@ export function KeywordTrendModal({
             series={series}
             serpDepth={serpDepth}
             showBottomBand
-            renderTooltip={(label, entries) => (
-              <ChartTooltip
-                label={label}
-                entries={entries}
-                serpDepth={serpDepth}
-                bottomBandKeys={bottomBandKeys}
-              />
-            )}
+            renderTooltip={(label, entries) =>
+              chartTooltipHtml({
+                label,
+                entries,
+                serpDepth,
+                bottomBandKeys,
+              })
+            }
           />
 
           <div className="flex items-center justify-end gap-2">
@@ -189,16 +190,16 @@ export function KeywordTrendModal({
           </div>
 
           <div className="max-h-64 overflow-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead className="sticky top-0 bg-base-100">
-                <tr>
-                  <th>Date</th>
-                  {devices.length > 1 && <th>Device</th>}
-                  <th>Position</th>
-                  <th>Δ vs previous check</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header className="sticky top-0 bg-base-100">
+                <Table.Row>
+                  <Table.Head>Date</Table.Head>
+                  {devices.length > 1 && <Table.Head>Device</Table.Head>}
+                  <Table.Head>Position</Table.Head>
+                  <Table.Head>Δ vs previous check</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {historyRows.map((r, idx) => {
                   // No prior ranking to compare against (first check, or the
                   // previous check was unranked): show the lone position as a
@@ -207,16 +208,16 @@ export function KeywordTrendModal({
                   const noPrevious =
                     r.position !== null && r.previousPosition === null;
                   return (
-                    <tr key={`${r.device}-${r.checkedAt}-${idx}`}>
-                      <td className="whitespace-nowrap text-xs">
+                    <Table.Row key={`${r.device}-${r.checkedAt}-${idx}`}>
+                      <Table.Cell className="whitespace-nowrap text-xs">
                         {new Date(r.checkedAt).toLocaleDateString()}
-                      </td>
+                      </Table.Cell>
                       {devices.length > 1 && (
-                        <td className="text-xs">
+                        <Table.Cell className="text-xs">
                           {DEVICE_STYLE[r.device].label}
-                        </td>
+                        </Table.Cell>
                       )}
-                      <td>
+                      <Table.Cell>
                         {r.position === null ? (
                           <span className="text-base-content/40 text-xs">
                             Not in top {serpDepth}
@@ -226,8 +227,8 @@ export function KeywordTrendModal({
                             {r.position}
                           </span>
                         )}
-                      </td>
-                      <td>
+                      </Table.Cell>
+                      <Table.Cell>
                         {noPrevious ? (
                           // Invisible placeholders matching the "before → after"
                           // layout so the lone pill lines up under the position
@@ -251,12 +252,12 @@ export function KeywordTrendModal({
                             }}
                           />
                         )}
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   );
                 })}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </>
       )}
@@ -280,7 +281,15 @@ function EmptyState({ count }: { count: number }) {
   );
 }
 
-function ChartTooltip({
+/**
+ * The trend chart's tooltip body.
+ *
+ * A string rather than a component because ECharts formats its tooltip instead
+ * of rendering one — there is no React subtree to hand it. The chart's own
+ * option supplies the surface, border and text colour, so this is only the
+ * inner rows.
+ */
+function chartTooltipHtml({
   label,
   entries,
   serpDepth,
@@ -290,37 +299,28 @@ function ChartTooltip({
   entries: Array<{ dataKey?: string | number; value: number | null }>;
   serpDepth: number;
   bottomBandKeys: Set<string>;
-}) {
-  return (
-    <div className="rounded-md border border-base-300 bg-base-100 px-3 py-2 shadow-sm space-y-0.5">
-      <p className="text-xs text-base-content/60">
-        {new Date(label).toLocaleDateString("en-US", {
-          month: "short",
-          day: "numeric",
-          year: "numeric",
-        })}
-      </p>
-      {entries.map((e) => {
-        const device =
-          e.dataKey === "desktop" || e.dataKey === "mobile"
-            ? DEVICE_STYLE[e.dataKey].label
-            : String(e.dataKey ?? "");
-        const inBottomBand = bottomBandKeys.has(`${label}:${e.dataKey}`);
-        return (
-          <p key={String(e.dataKey)} className="text-sm font-medium">
-            {device}:{" "}
-            {inBottomBand ? (
-              <span className="text-base-content/60">
-                Not in top {serpDepth}
-              </span>
-            ) : (
-              e.value
-            )}
-          </p>
-        );
-      })}
-    </div>
-  );
+}): string {
+  const date = new Date(label).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+  const rows = entries.map((e) => {
+    const device =
+      e.dataKey === "desktop" || e.dataKey === "mobile"
+        ? DEVICE_STYLE[e.dataKey].label
+        : String(e.dataKey ?? "");
+    // `bottomBandKeys` rather than `value === serpDepth`: a genuine position at
+    // exactly serpDepth is a real ranking, not a miss.
+    const value = bottomBandKeys.has(`${label}:${e.dataKey}`)
+      ? `<span style="opacity:0.6">Not in top ${serpDepth}</span>`
+      : String(e.value ?? "");
+    return `<div style="font-size:13px;font-weight:500">${device}: ${value}</div>`;
+  });
+  return [
+    `<div style="font-size:11px;opacity:0.6">${date}</div>`,
+    ...rows,
+  ].join("");
 }
 
 // ---------------------------------------------------------------------------

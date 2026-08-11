@@ -1,4 +1,4 @@
-import { Info } from "lucide-react";
+import { Info } from "@phosphor-icons/react";
 import { BrandLookupMentionTrendCard } from "@/client/features/ai-search/components/BrandLookupMentionTrendCard";
 import { BrandLookupShareOfVoice } from "@/client/features/ai-search/components/BrandLookupShareOfVoice";
 import { CitationTabsCard } from "@/client/features/ai-search/components/BrandLookupCitationsCard";
@@ -9,6 +9,7 @@ import {
 } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 
 type Props = {
   result: BrandLookupResult;
@@ -148,9 +149,9 @@ function StatBlock({
     <div className="flex flex-1 flex-col justify-center p-4">
       <p className="inline-flex items-center gap-1 text-xs font-medium uppercase tracking-wider text-base-content/50">
         {label}
-        <span className="tooltip inline-flex normal-case" data-tip={tooltip}>
+        <Tooltip className="inline-flex normal-case" content={tooltip}>
           <Info className="size-3 text-base-content/40" />
-        </span>
+        </Tooltip>
       </p>
       <p className="mt-1 text-3xl font-semibold tabular-nums">
         {formatCount(value)}
@@ -181,12 +182,12 @@ function PlatformStatRow({
         />
         {formatPlatformLabel(row.platform)}
         {row.platform === "chat_gpt" ? (
-          <span
-            className="tooltip z-20 inline-flex"
-            data-tip="DataForSEO indexes ChatGPT mentions for US English only — country selection is not available for this platform."
+          <Tooltip
+            className="z-20 inline-flex"
+            content="DataForSEO indexes ChatGPT mentions for US English only — country selection is not available for this platform."
           >
             <Info className="size-3 text-base-content/40" />
-          </span>
+          </Tooltip>
         ) : null}
         {row.status === "error" ? (
           <span className="text-error">unavailable</span>

@@ -1,7 +1,8 @@
-import { ChevronLeft, ChevronRight, ExternalLink } from "lucide-react";
+import { CaretLeft, CaretRight, ArrowSquareOut } from "@phosphor-icons/react";
 import { ExportToSheetsButton } from "@/client/components/table/ExportToSheetsButton";
 import type { SerpResultItem } from "@/types/keywords";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 export function SerpAnalysisCard({
   items,
@@ -84,23 +85,23 @@ export function SerpAnalysisCard({
 function SerpAnalysisTable({ items }: { items: SerpResultItem[] }) {
   return (
     <div className="overflow-x-auto">
-      <table className="table table-xs w-full">
-        <thead>
-          <tr className="text-xs text-base-content/60">
-            <th className="w-8">#</th>
-            <th>Page</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table className="w-full">
+        <Table.Header>
+          <Table.Row className="text-xs text-base-content/60">
+            <Table.Head className="w-8">#</Table.Head>
+            <Table.Head>Page</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {items.map((item) => (
-            <tr
+            <Table.Row
               key={`${item.rank}-${item.url}`}
               className="hover:bg-base-200/50"
             >
-              <td className="font-mono text-base-content/50 text-xs">
+              <Table.Cell className="font-mono text-base-content/50 text-xs">
                 {item.rank}
-              </td>
-              <td className="min-w-0 max-w-0">
+              </Table.Cell>
+              <Table.Cell className="min-w-0 max-w-0">
                 <div className="flex flex-col gap-0.5">
                   <a
                     href={item.url}
@@ -110,17 +111,17 @@ function SerpAnalysisTable({ items }: { items: SerpResultItem[] }) {
                     title={item.title}
                   >
                     {item.title || item.url}
-                    <ExternalLink className="size-3 shrink-0 opacity-40" />
+                    <ArrowSquareOut className="size-3 shrink-0 opacity-40" />
                   </a>
                   <span className="text-xs text-base-content/40 truncate">
                     {item.domain}
                   </span>
                 </div>
-              </td>
-            </tr>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     </div>
   );
 }
@@ -148,7 +149,7 @@ function SerpAnalysisPagination({
           disabled={page === 0}
           onClick={() => onPageChange(page - 1)}
         >
-          <ChevronLeft className="size-3.5" />
+          <CaretLeft className="size-3.5" />
           Prev
         </Button>
         <Button
@@ -158,7 +159,7 @@ function SerpAnalysisPagination({
           onClick={() => onPageChange(page + 1)}
         >
           Next
-          <ChevronRight className="size-3.5" />
+          <CaretRight className="size-3.5" />
         </Button>
       </div>
     </div>

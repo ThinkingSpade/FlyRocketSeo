@@ -1,5 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { AlertCircle, Briefcase, Check, Wand2, X } from "lucide-react";
+import {
+  Briefcase,
+  Check,
+  MagicWand,
+  WarningCircle,
+  X,
+} from "@phosphor-icons/react";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { resolveDraftStatus, type DraftStatus } from "./draftStatus";
@@ -18,6 +24,7 @@ import {
   useSaveProjectProfile,
 } from "./useProjectProfile";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InputArea } from "@cloudflare/kumo/components/input";
 
 /**
  * The editor for what a project's business actually is.
@@ -200,7 +207,7 @@ export function ProjectProfileCard({ projectId }: Props) {
                 });
               }}
             >
-              <Wand2 className="size-3.5 text-base-content/60" />
+              <MagicWand className="size-3.5 text-base-content/60" />
               {drafter.isPending
                 ? "Reading the site…"
                 : "Draft this from their site"}
@@ -296,7 +303,7 @@ function DraftStatusLine({ status }: { status: DraftStatus }) {
         className="flex items-center gap-1.5 text-sm text-error"
         role="alert"
       >
-        <AlertCircle className="size-3.5 shrink-0" />
+        <WarningCircle className="size-3.5 shrink-0" />
         {status.message}
       </span>
     );
@@ -355,8 +362,8 @@ function ProfileField({
   return (
     <label className="flex flex-col gap-1.5">
       <span className="text-sm font-medium">{label}</span>
-      <textarea
-        className="textarea textarea-bordered w-full text-sm leading-6"
+      <InputArea
+        className="w-full text-sm leading-6"
         rows={rows}
         placeholder={placeholder}
         value={value}

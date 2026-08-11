@@ -46,7 +46,7 @@ function DomainPagesTableComponent({
             value={row.original.relativePath ?? row.original.page}
             label={row.original.relativePath ?? row.original.page}
             baseDomain={domain}
-            className="link link-primary inline-flex items-center gap-1"
+            className="app-link inline-flex items-center gap-1"
           />
         ),
         meta: {
@@ -92,7 +92,6 @@ function DomainPagesTableComponent({
   return (
     <AppDataTable
       table={table}
-      className="table table-sm"
       empty={
         <div className="py-6 text-center text-base-content/60">
           No pages match this search.

@@ -1,12 +1,12 @@
 import {
-  ChevronDown,
+  CaretDown,
   Copy,
   Download,
-  FileWarning,
+  WarningOctagon,
   Info,
-  Sheet,
-  TriangleAlert,
-} from "lucide-react";
+  GridFour,
+  Warning,
+} from "@phosphor-icons/react";
 import type {
   CategoryTab,
   ExportPayload,
@@ -20,6 +20,8 @@ import { categoryLabel } from "./utils";
 import { categoryTabs } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
+import { Table } from "@cloudflare/kumo/components/table";
 
 export function LighthouseIssuesHeader({
   backLabel,
@@ -62,11 +64,11 @@ export function LighthouseIssuesHeader({
           <LighthouseIssuesSummary scores={scores} metrics={metrics} />
           <div className="flex flex-wrap gap-2 text-xs">
             <Badge className="border border-error/30 bg-error/10 text-error/80 gap-1">
-              <FileWarning className="size-3" />
+              <WarningOctagon className="size-3" />
               Critical {severityCounts.critical}
             </Badge>
             <Badge className="border border-warning/30 bg-warning/10 text-warning/80 gap-1">
-              <TriangleAlert className="size-3" />
+              <Warning className="size-3" />
               Warning {severityCounts.warning}
             </Badge>
             <Badge className="border border-info/30 bg-info/10 text-info/80 gap-1">
@@ -193,42 +195,42 @@ function ExportMenu({
   visibleIssues: LighthouseIssue[];
 }) {
   return (
-    <div className="dropdown dropdown-end">
-      <div tabIndex={0} role="button" className="btn btn-sm gap-1">
-        <Download className="size-4" />
-        Export
-        <ChevronDown className="size-3 opacity-60" />
-      </div>
-      <ul
-        tabIndex={0}
-        className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-72"
-      >
-        <li className="menu-title">
-          <span>Export to Sheets</span>
-        </li>
-        <li>
-          <button
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button size="sm">
+            <Download className="size-4" />
+            Export
+            <CaretDown className="size-3 opacity-60" />
+          </Button>
+        }
+      />
+      {/* Every Label sits inside its own Group. Base UI reads the label from
+          group context and throws without one — the flat `menu-title` list
+          this replaces has no equivalent. */}
+      <DropdownMenu.Content align="end" className="w-72">
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Export to Sheets</DropdownMenu.Label>
+          <DropdownMenu.Item
+            icon={GridFour}
             disabled={!visibleIssues.length}
             onClick={() => onExportSheets(visibleIssues, "current")}
           >
-            <Sheet className="size-4" />
             Open in Sheets — {categoryLabelLower}
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            icon={GridFour}
             disabled={!allIssues.length}
             onClick={() => onExportSheets(allIssues, "all")}
           >
-            <Sheet className="size-4" />
             Open in Sheets — all actionable
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Copy</span>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Copy</DropdownMenu.Label>
+          <DropdownMenu.Item
+            icon={Copy}
             disabled={isBusy}
             onClick={() =>
               onCopy(
@@ -237,77 +239,72 @@ function ExportMenu({
               )
             }
           >
-            <Copy className="size-4" />
             Copy {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            icon={Copy}
             disabled={isBusy}
             onClick={() =>
               onCopy({ mode: "issues" }, "Copied all actionable issues")
             }
           >
-            <Copy className="size-4" />
             Copy all actionable issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            icon={Copy}
             disabled={isBusy}
             onClick={() =>
               onCopy({ mode: "full" }, "Copied saved Lighthouse payload")
             }
           >
-            <Copy className="size-4" />
             Copy saved Lighthouse payload
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Download JSON</span>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Download JSON</DropdownMenu.Label>
+          <DropdownMenu.Item
+            inset
             disabled={isBusy}
             onClick={() => onExport(exportCurrentCategory)}
           >
             Download {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            inset
             disabled={isBusy}
             onClick={() => onExport({ mode: "issues" })}
           >
             Download all actionable issues
-          </button>
-        </li>
-        <li>
-          <button disabled={isBusy} onClick={() => onExport({ mode: "full" })}>
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            inset
+            disabled={isBusy}
+            onClick={() => onExport({ mode: "full" })}
+          >
             Download saved Lighthouse payload
-          </button>
-        </li>
-        <li className="menu-title">
-          <span>Download CSV</span>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+
+        <DropdownMenu.Group>
+          <DropdownMenu.Label>Download CSV</DropdownMenu.Label>
+          <DropdownMenu.Item
+            inset
             disabled={!visibleIssues.length}
             onClick={() => onExportCsv(visibleIssues, "current")}
           >
             Download {categoryLabelLower} issues
-          </button>
-        </li>
-        <li>
-          <button
+          </DropdownMenu.Item>
+          <DropdownMenu.Item
+            inset
             disabled={!allIssues.length}
             onClick={() => onExportCsv(allIssues, "all")}
           >
             Download all actionable issues
-          </button>
-        </li>
-      </ul>
-    </div>
+          </DropdownMenu.Item>
+        </DropdownMenu.Group>
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }
 
@@ -331,7 +328,7 @@ export function LighthouseIssueList({
     );
   }
   return (
-    <table className="table table-sm w-full table-fixed">
+    <Table className="w-full" layout="fixed">
       <colgroup>
         <col className="w-8" />
         <col className="w-24" />
@@ -340,26 +337,28 @@ export function LighthouseIssueList({
         <col className="w-28 hidden md:table-column" />
         <col className="w-14" />
       </colgroup>
-      <thead>
-        <tr className="text-xs text-base-content/50 uppercase tracking-wide border-b border-base-300">
-          <th />
-          <th className="font-medium">Severity</th>
-          <th className="font-medium">Issue</th>
-          <th className="font-medium hidden sm:table-cell">Category</th>
-          <th className="font-medium hidden md:table-cell text-right">
+      <Table.Header>
+        <Table.Row className="text-xs text-base-content/50 uppercase tracking-wide border-b border-base-300">
+          <Table.Head />
+          <Table.Head className="font-medium">Severity</Table.Head>
+          <Table.Head className="font-medium">Issue</Table.Head>
+          <Table.Head className="font-medium hidden sm:table-cell">
+            Category
+          </Table.Head>
+          <Table.Head className="font-medium hidden md:table-cell text-right">
             Impact
-          </th>
-          <th className="font-medium text-right">Score</th>
-        </tr>
-      </thead>
-      <tbody className="divide-y divide-base-300/60">
+          </Table.Head>
+          <Table.Head className="font-medium text-right">Score</Table.Head>
+        </Table.Row>
+      </Table.Header>
+      <Table.Body className="divide-y divide-base-300/60">
         {issues.map((issue, issueIndex) => (
           <LighthouseIssueRow
             key={`${issue.category}-${issue.auditKey}-${issueIndex}`}
             issue={issue}
           />
         ))}
-      </tbody>
-    </table>
+      </Table.Body>
+    </Table>
   );
 }

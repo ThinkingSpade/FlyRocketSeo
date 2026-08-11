@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import { MIN_PAGES } from "@/client/features/audit/launch/types";
 import type { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
 import { getFieldError, getFormError } from "@/client/lib/forms";
@@ -8,6 +8,7 @@ import { SUBSCRIBE_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Switch } from "@cloudflare/kumo/components/switch";
 
 type Props = {
   launchForm: ReturnType<typeof useLaunchController>["launchForm"];
@@ -37,20 +38,21 @@ export function LaunchFormCard({
               const urlError = getFieldError(field.state.meta.errors);
 
               return (
-                <label
-                  className={`input input-bordered w-full lg:col-span-9 ${urlError ? "input-error" : ""}`}
-                >
-                  <input
-                    placeholder="https://example.com"
-                    value={field.state.value}
-                    onChange={(event) => {
-                      field.handleChange(event.target.value);
-                      if (launchForm.state.errorMap.onSubmit) {
-                        launchForm.setErrorMap({ onSubmit: undefined });
-                      }
-                    }}
-                  />
-                </label>
+                // DaisyUI 5 styled the <label> as the field and left the inner
+                // <input> bare. Kumo styles the input itself, so the wrapper
+                // has nothing left to do.
+                <Input
+                  className="w-full lg:col-span-9"
+                  variant={urlError ? "error" : "default"}
+                  placeholder="https://example.com"
+                  value={field.state.value}
+                  onChange={(event) => {
+                    field.handleChange(event.target.value);
+                    if (launchForm.state.errorMap.onSubmit) {
+                      launchForm.setErrorMap({ onSubmit: undefined });
+                    }
+                  }}
+                />
               );
             }}
           </launchForm.Field>
@@ -66,7 +68,7 @@ export function LaunchFormCard({
               >
                 {isSubmitting ? (
                   <>
-                    <Loader2 className="size-4 animate-spin" /> Starting...
+                    <CircleNotch className="size-4 animate-spin" /> Starting...
                   </>
                 ) : (
                   "Start Audit"
@@ -136,7 +138,7 @@ function LaunchOptions({
             <Link
               to={SUBSCRIBE_ROUTE}
               search={{ upgrade: true }}
-              className="link link-primary"
+              className="app-link"
             >
               Upgrade
             </Link>{" "}
@@ -151,24 +153,22 @@ function LaunchOptions({
 function LighthouseOptions({ launchForm }: Pick<Props, "launchForm">) {
   return (
     <div className="rounded-lg border border-base-300 bg-base-200/20 p-3 space-y-2">
-      <label className="label cursor-pointer justify-start gap-2 p-0">
-        <launchForm.Field name="runLighthouse">
-          {(field) => (
-            <input
-              type="checkbox"
-              className="toggle toggle-sm toggle-primary"
-              checked={Boolean(field.state.value)}
-              onChange={(event) => field.handleChange(event.target.checked)}
-            />
-          )}
-        </launchForm.Field>
-        <span
-          className="text-sm font-medium text-base-content/80"
-          title="Lighthouse measures the performance of your pages and identifies issues."
-        >
-          Include Lighthouse
-        </span>
-      </label>
+      <launchForm.Field name="runLighthouse">
+        {(field) => (
+          <Switch
+            checked={Boolean(field.state.value)}
+            onCheckedChange={(checked) => field.handleChange(checked)}
+            label={
+              <span
+                className="text-sm font-medium text-base-content/80"
+                title="Lighthouse measures the performance of your pages and identifies issues."
+              >
+                Include Lighthouse
+              </span>
+            }
+          />
+        )}
+      </launchForm.Field>
 
       <launchForm.Subscribe
         selector={(snapshot) => snapshot.values.runLighthouse}

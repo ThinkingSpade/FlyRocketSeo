@@ -67,7 +67,18 @@ backend for installs that outgrow D1 — see
 - `AUTH_MODE=local_noauth`: local trusted mode, no auth check, injects `admin@localhost`.
 - `AUTH_MODE=hosted`: Better Auth-backed email/password mode. Requires Better Auth schema generation plus `BETTER_AUTH_SECRET` and `BETTER_AUTH_URL`.
 
-Local scripts (`pnpm dev` and `pnpm dev:agents`) set `AUTH_MODE=local_noauth` automatically.
-Use `AUTH_MODE=cloudflare_access pnpm dev` when you specifically want to test Access validation locally.
+Local runs do **not** pick a mode for you. `wrangler.jsonc` sets `AUTH_MODE=hosted`
+for the deployed Worker and `vite dev` reads the same value, so a fresh clone without
+Better Auth configured serves `/api/auth/get-session` a 500 (`AUTH_CONFIG_MISSING`)
+and the app sits on its loading spinner forever.
+
+Add this to `.env.local` before running `pnpm dev`:
+
+```sh
+AUTH_MODE=local_noauth
+```
+
+Use `AUTH_MODE=cloudflare_access` there instead when you specifically want to test
+Access validation locally.
 
 For Cloudflare deployments, ensure Cloudflare Access is enabled on your Worker route/domain and provide `TEAM_DOMAIN` + `POLICY_AUD` in environment variables.

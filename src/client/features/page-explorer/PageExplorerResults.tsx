@@ -1,13 +1,13 @@
 import {
-  Award,
+  Trophy,
   FileText,
-  KeyRound,
-  Link2,
+  Key,
+  LinkSimple,
   Medal,
   Network,
   Target,
-  TrendingUp,
-} from "lucide-react";
+  TrendUp,
+} from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import { computePageRealEstate } from "./pageInsights";
 import {
@@ -17,6 +17,7 @@ import {
 } from "./PageInsightsCards";
 import type { getPageExplorer } from "@/serverFunctions/page-explorer";
 import type { analyzeContentCompetitor } from "@/serverFunctions/content";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type PageExplorerData = NonNullable<
   Awaited<ReturnType<typeof getPageExplorer>>
@@ -41,14 +42,14 @@ export function PageExplorerResults({
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-8">
         <InsightTile
-          icon={TrendingUp}
+          icon={TrendUp}
           label="Est. monthly traffic"
           value={formatCount(result.estimatedTraffic)}
           hint="Sum of keyword-level estimates"
           tone="primary"
         />
         <InsightTile
-          icon={KeyRound}
+          icon={Key}
           label="Ranking keywords"
           value={formatCount(result.totalKeywords ?? result.keywords.length)}
           hint={`Top ${result.keywords.length} shown`}
@@ -59,7 +60,7 @@ export function PageExplorerResults({
             data and when the call FAILED. `backlinksStatus` separates them, so
             a failure now says so instead of quietly reading as zero. */}
         <InsightTile
-          icon={Link2}
+          icon={LinkSimple}
           label="Backlinks"
           value={formatCount(result.backlinks?.backlinks)}
           hint={
@@ -79,7 +80,7 @@ export function PageExplorerResults({
           }
         />
         <InsightTile
-          icon={Award}
+          icon={Trophy}
           label="#1 rankings"
           value={realEstate.numberOne}
           tone={realEstate.numberOne > 0 ? "success" : "neutral"}
@@ -104,53 +105,53 @@ export function PageExplorerResults({
         <div className="flex min-w-0 flex-col gap-3 xl:col-span-3">
           <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
             <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Keyword</th>
-                    <th className="text-right">Position</th>
-                    <th className="text-right">Volume</th>
-                    <th className="text-right">KD</th>
-                    <th className="text-right">CPC</th>
-                    <th className="text-right">Traffic</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>Keyword</Table.Head>
+                    <Table.Head className="text-right">Position</Table.Head>
+                    <Table.Head className="text-right">Volume</Table.Head>
+                    <Table.Head className="text-right">KD</Table.Head>
+                    <Table.Head className="text-right">CPC</Table.Head>
+                    <Table.Head className="text-right">Traffic</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {result.keywords.map((item) => (
-                    <tr key={item.keyword}>
-                      <td className="max-w-md">
+                    <Table.Row key={item.keyword}>
+                      <Table.Cell className="max-w-md">
                         <span className="line-clamp-1">{item.keyword}</span>
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {item.position ?? "—"}
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {formatCount(item.searchVolume)}
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {item.keywordDifficulty ?? "—"}
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {item.cpc != null ? `$${item.cpc.toFixed(2)}` : "—"}
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {formatCount(item.traffic)}
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   ))}
                   {result.keywords.length === 0 ? (
-                    <tr>
-                      <td
+                    <Table.Row>
+                      <Table.Cell
                         colSpan={6}
                         className="py-8 text-center text-sm text-base-content/50"
                       >
                         No ranked keywords found for this exact page in this
                         location.
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   ) : null}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table>
             </div>
           </div>
         </div>

@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
-  BarChart3,
-  CircleDollarSign,
+  ChartBar,
+  CurrencyCircleDollar,
   Gauge,
-  HelpCircle,
-  ListOrdered,
-  Search,
-} from "lucide-react";
+  Question,
+  ListNumbers,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getSerpOverview } from "@/serverFunctions/serp";
 import { serpOverviewSchema } from "@/types/schemas/serp";
@@ -74,6 +74,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type SerpNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -182,12 +183,16 @@ function AnalyzeButton({
     <div className="form-control">
       <span
         aria-hidden="true"
-        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+        className="hidden pb-1 text-xs font-medium invisible sm:block"
       >
         Analyze
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         Analyze
       </Button>
     </div>
@@ -237,9 +242,7 @@ function SerpSearchForm({
         >
           <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
             <label className="form-control w-full">
-              <span className="label-text pb-1 text-xs font-medium">
-                Keyword
-              </span>
+              <span className="pb-1 text-xs font-medium">Keyword</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -264,9 +267,7 @@ function SerpSearchForm({
             />
           </div>
           <label className="form-control w-full sm:max-w-56">
-            <span className="label-text pb-1 text-xs font-medium">
-              Location
-            </span>
+            <span className="pb-1 text-xs font-medium">Location</span>
             <select
               className="app-select app-select-sm w-full"
               value={locationInput}
@@ -352,7 +353,7 @@ function SerpKeywordStatsTiles({
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <InsightTile
-          icon={BarChart3}
+          icon={ChartBar}
           label={formatGeoMetricLabel("Volume", geo.volume)}
           value={formatCount(result.keywordStats?.searchVolume)}
           tone="primary"
@@ -364,7 +365,7 @@ function SerpKeywordStatsTiles({
           tone={difficultyTone(difficultyValue)}
         />
         <InsightTile
-          icon={CircleDollarSign}
+          icon={CurrencyCircleDollar}
           label={formatGeoMetricLabel("CPC", geo.volume)}
           value={
             result.keywordStats?.cpc != null
@@ -374,7 +375,7 @@ function SerpKeywordStatsTiles({
           tone="info"
         />
         <InsightTile
-          icon={ListOrdered}
+          icon={ListNumbers}
           label={formatGeoMetricLabel("Organic results", geo.serp)}
           value={result.totalOrganic}
           // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
@@ -623,7 +624,7 @@ export function SerpOverviewPage({
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-semibold">
-            <ListOrdered className="size-6" />
+            <ListNumbers className="size-6" />
             SERP Overview
           </h1>
           <p className="text-sm text-base-content/60">
@@ -782,7 +783,7 @@ export function SerpOverviewPage({
             <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
               <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
                 <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-                  <InsightIcon icon={HelpCircle} tone="info" />
+                  <InsightIcon icon={Question} tone="info" />
                   People also ask
                 </h2>
                 <ul className="list-inside list-disc space-y-1 text-sm text-base-content/80">
@@ -832,29 +833,29 @@ function SerpResultsTable({
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="overflow-x-auto">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th className="w-14">#</th>
-              <th>Result</th>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head className="w-14">#</Table.Head>
+              <Table.Head>Result</Table.Head>
               {trafficShare ? (
-                <th
+                <Table.Head
                   className="text-right"
                   title="Estimated monthly clicks for this result: search volume × a standard CTR-by-position curve"
                 >
                   {formatGeoMetricLabel("Est. clicks", geo.volume)}
-                </th>
+                </Table.Head>
               ) : null}
-              <th className="text-right">DR</th>
-              <th
+              <Table.Head className="text-right">DR</Table.Head>
+              <Table.Head
                 className="text-right"
                 title="Estimated monthly organic traffic for the whole domain"
               >
                 {formatGeoMetricLabel("Domain traffic", geo.domainAnalytics)}
-              </th>
-            </tr>
-          </thead>
-          <tbody>
+              </Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {result.results.map((item) => {
               const estimate =
                 item.rank != null ? trafficShare?.get(item.rank) : undefined;
@@ -867,8 +868,8 @@ function SerpResultsTable({
                 { ownDomainRating },
               );
               return (
-                <tr key={`${item.rank}-${item.url}`}>
-                  <td className="align-top">
+                <Table.Row key={`${item.rank}-${item.url}`}>
+                  <Table.Cell className="align-top">
                     <div className="flex items-center gap-1 tabular-nums">
                       {item.rank ?? "—"}
                       {item.isNew ? (
@@ -879,8 +880,8 @@ function SerpResultsTable({
                         <ArrowDown className="size-3 text-error" />
                       ) : null}
                     </div>
-                  </td>
-                  <td className="max-w-xl align-top">
+                  </Table.Cell>
+                  <Table.Cell className="max-w-xl align-top">
                     <a
                       href={item.url ?? undefined}
                       target="_blank"
@@ -902,9 +903,9 @@ function SerpResultsTable({
                         {item.description}
                       </div>
                     ) : null}
-                  </td>
+                  </Table.Cell>
                   {trafficShare ? (
-                    <td className="text-right align-top">
+                    <Table.Cell className="text-right align-top">
                       <div className="tabular-nums">
                         {estimate ? formatCount(estimate.clicks) : "—"}
                       </div>
@@ -918,21 +919,21 @@ function SerpResultsTable({
                           />
                         </div>
                       ) : null}
-                    </td>
+                    </Table.Cell>
                   ) : null}
-                  <td className="text-right align-top tabular-nums">
+                  <Table.Cell className="text-right align-top tabular-nums">
                     {item.domain != null && ratings?.[item.domain] != null
                       ? ratings[item.domain]
                       : "—"}
-                  </td>
-                  <td className="text-right align-top tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell className="text-right align-top tabular-nums">
                     {formatCount(item.domainEtv)}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               );
             })}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
     </div>
   );

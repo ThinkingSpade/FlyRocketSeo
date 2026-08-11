@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { AlertCircle, Search } from "lucide-react";
+import { WarningCircle, MagnifyingGlass } from "@phosphor-icons/react";
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import type { DomainOverviewControlsForm } from "@/client/features/domain/DomainOverviewPage";
 import { toSortMode } from "@/client/features/domain/utils";
@@ -7,6 +7,8 @@ import type { DomainSortMode } from "@/client/features/domain/types";
 import { LABS_LOCATION_OPTIONS } from "@/client/features/keywords/locations";
 import { LocationSelect } from "@/client/components/LocationSelect";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 type Props = {
   controlsForm: DomainOverviewControlsForm;
@@ -35,21 +37,20 @@ export function DomainSearchCard({
               const domainError = getFieldError(field.state.meta.errors);
 
               return (
-                <label
-                  className={`input input-bordered flex items-center gap-2 w-full lg:flex-1 lg:min-w-0 lg:max-w-md ${domainError ? "input-error" : ""}`}
-                >
-                  <Search className="size-4 text-base-content/60" />
-                  <input
-                    className="grow min-w-0"
+                <div className="relative flex w-full items-center lg:min-w-0 lg:max-w-md lg:flex-1">
+                  <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+                  <Input
+                    className="w-full min-w-0 pl-9"
                     placeholder="Enter a domain"
                     value={field.state.value}
+                    variant={domainError ? "error" : "default"}
                     onChange={(event) => field.handleChange(event.target.value)}
                     aria-invalid={domainError ? true : undefined}
                     aria-describedby={
                       domainError ? "domain-input-error" : undefined
                     }
                   />
-                </label>
+                </div>
               );
             }}
           </controlsForm.Field>
@@ -120,7 +121,7 @@ export function DomainSearchCard({
 
             return errorMessage ? (
               <div className="rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error flex items-start gap-2">
-                <AlertCircle className="size-4 shrink-0 mt-0.5" />
+                <WarningCircle className="size-4 shrink-0 mt-0.5" />
                 <span>{errorMessage}</span>
               </div>
             ) : null;
@@ -128,19 +129,15 @@ export function DomainSearchCard({
         </controlsForm.Subscribe>
 
         <div className="flex flex-wrap items-center gap-3">
-          <label className="label cursor-pointer gap-2 py-0">
-            <controlsForm.Field name="subdomains">
-              {(field) => (
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm"
-                  checked={field.state.value}
-                  onChange={(event) => field.handleChange(event.target.checked)}
-                />
-              )}
-            </controlsForm.Field>
-            <span className="label-text">Include subdomains</span>
-          </label>
+          <controlsForm.Field name="subdomains">
+            {(field) => (
+              <Checkbox
+                checked={field.state.value}
+                onCheckedChange={(checked) => field.handleChange(checked)}
+                label="Include subdomains"
+              />
+            )}
+          </controlsForm.Field>
         </div>
       </div>
     </div>

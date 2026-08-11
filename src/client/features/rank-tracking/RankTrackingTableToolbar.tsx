@@ -1,8 +1,14 @@
-import { CalendarDays, Loader2, SlidersHorizontal, Table } from "lucide-react";
+import {
+  CalendarDots,
+  CircleNotch,
+  SlidersHorizontal,
+  Table,
+} from "@phosphor-icons/react";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { ExportMenu, MoreMenu } from "./ToolbarMenus";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 export function RankTrackingTableToolbar({
   showFilters,
@@ -61,7 +67,7 @@ export function RankTrackingTableToolbar({
             },
             {
               value: "history" as const,
-              icon: <CalendarDays className="size-3.5" />,
+              icon: <CalendarDots className="size-3.5" />,
               label: "History",
             },
           ]}
@@ -92,7 +98,7 @@ export function RankTrackingTableToolbar({
 
       {isRunning && latestRun ? (
         <div className="flex items-center gap-2 text-sm text-base-content/70">
-          <Loader2 className="size-3.5 animate-spin text-primary" />
+          <CircleNotch className="size-3.5 animate-spin text-primary" />
           <span>
             {latestRun.status === "pending"
               ? "Preparing..."
@@ -100,10 +106,11 @@ export function RankTrackingTableToolbar({
             {latestRun.keywordsChecked}/{latestRun.keywordsTotal || "?"}
           </span>
           {latestRun.keywordsTotal > 0 && (
-            <progress
-              className="progress progress-primary w-24"
+            <ProgressBar
+              className="w-24"
               value={latestRun.keywordsChecked}
               max={latestRun.keywordsTotal}
+              label="Keywords checked"
             />
           )}
         </div>

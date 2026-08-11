@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { MapPin } from "lucide-react";
+import { MapPin } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { useGbpCapabilityState } from "@/client/features/auth/useEmailVerificationBypassed";
@@ -29,7 +29,7 @@ import { Loader } from "@cloudflare/kumo/components/loader";
  *  3. Connected -- which location, who connected it, and a way to change or
  *     disconnect.
  *
- * ICON RULE: bare muted lucide glyphs via InsightIcon, no chip/pill
+ * ICON RULE: bare muted Phosphor glyphs via InsightIcon, no chip/pill
  * backgrounds -- unlike SearchConsoleConnectionCard's StatusPill, which
  * predates that rule.
  */

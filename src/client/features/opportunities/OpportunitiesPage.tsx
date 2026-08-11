@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpRight, Lightbulb, PenLine, Split, Wrench } from "lucide-react";
+import { ArrowUpRight, Lightbulb, Wrench } from "@phosphor-icons/react";
 import { AppCard } from "@/client/components/AppCard";
 import { SectionHeader } from "@/client/components/SectionHeader";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
@@ -14,30 +14,15 @@ import {
   buildOpportunities,
   buildTechnicalIssues,
   isSourceUnavailable,
-  type Opportunity,
-  type OpportunityKind,
 } from "./opportunityModel";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
 import { OpportunityTiles } from "./OpportunityTiles";
-import type { ComponentProps } from "react";
+import { OpportunityRow } from "./OpportunityRow";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
-
-type BadgeVariant = ComponentProps<typeof Badge>["variant"];
-
-const KIND_META: Record<
-  OpportunityKind,
-  { label: string; icon: typeof PenLine; variant: BadgeVariant }
-> = {
-  "quick-win": {
-    label: "Quick win",
-    icon: ArrowUpRight,
-    variant: "success",
-  },
-  ctr: { label: "Rewrite title", icon: PenLine, variant: "warning" },
-  consolidate: { label: "Consolidate", icon: Split, variant: "error" },
-};
+import { buttonVariants } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 const SEVERITY_CLASS = {
   high: "error",
@@ -187,7 +172,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/search-performance"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-3"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
             >
               Connect Search Console
             </Link>
@@ -200,18 +185,20 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Action</th>
-                  <th>Keyword</th>
-                  <th>Page</th>
-                  <th className="text-right">Impressions</th>
-                  <th className="text-right">Clicks at stake</th>
-                  <th />
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Action</Table.Head>
+                  <Table.Head>Keyword</Table.Head>
+                  <Table.Head>Page</Table.Head>
+                  <Table.Head className="text-right">Impressions</Table.Head>
+                  <Table.Head className="text-right">
+                    Clicks at stake
+                  </Table.Head>
+                  <Table.Head />
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {opportunities.slice(0, OPPORTUNITY_LIMIT).map((row) => (
                   <OpportunityRow
                     key={`${row.kind}-${row.query}-${row.page}`}
@@ -219,8 +206,8 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
                     projectId={projectId}
                   />
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
             {opportunities.length > OPPORTUNITY_LIMIT ? (
               <p className="px-1 pt-2 text-xs text-base-content/50">
                 Showing the top {OPPORTUNITY_LIMIT} of{" "}
@@ -241,7 +228,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/audit"
               params={{ projectId }}
-              className="btn btn-ghost btn-xs"
+              className={buttonVariants({ variant: "ghost", size: "xs" })}
             >
               Open Site Audit
             </Link>
@@ -279,7 +266,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/audit"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-3"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
             >
               Run a site audit
             </Link>
@@ -317,77 +304,5 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
         )}
       </AppCard>
     </AppPageShell>
-  );
-}
-
-function OpportunityRow({
-  row,
-  projectId,
-}: {
-  row: Opportunity;
-  projectId: string;
-}) {
-  const meta = KIND_META[row.kind];
-  return (
-    <tr>
-      <td>
-        <Badge variant={meta.variant}>
-          <meta.icon className="size-3" />
-          {meta.label}
-        </Badge>
-      </td>
-      <td className="max-w-64">
-        <span className="line-clamp-1 font-medium" title={row.query}>
-          {row.query}
-        </span>
-        <span className="line-clamp-1 text-xs text-base-content/50">
-          {row.detail}
-        </span>
-      </td>
-      <td className="max-w-72">
-        <a
-          href={row.page}
-          target="_blank"
-          rel="noreferrer"
-          className="line-clamp-1 text-xs hover:underline"
-        >
-          {toPath(row.page)}
-        </a>
-      </td>
-      <td className="text-right tabular-nums">
-        {row.impressions.toLocaleString()}
-      </td>
-      <td className="text-right font-semibold tabular-nums">
-        +{row.clicksAtStake.toLocaleString()}
-      </td>
-      <td className="text-right">
-        {row.kind === "consolidate" ? (
-          <Link
-            to="/p/$projectId/cannibalization"
-            params={{ projectId }}
-            className="btn btn-ghost btn-xs"
-          >
-            Review
-          </Link>
-        ) : row.kind === "ctr" ? (
-          <Link
-            to="/p/$projectId/search-performance"
-            params={{ projectId }}
-            className="btn btn-ghost btn-xs"
-          >
-            Review
-          </Link>
-        ) : (
-          <Link
-            to="/p/$projectId/content"
-            params={{ projectId }}
-            search={{ q: row.query }}
-            className="btn btn-ghost btn-xs"
-          >
-            Build brief
-          </Link>
-        )}
-      </td>
-    </tr>
   );
 }

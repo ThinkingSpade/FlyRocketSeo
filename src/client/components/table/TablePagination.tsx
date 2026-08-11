@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 
@@ -80,7 +80,7 @@ export function TablePagination({
               disabled={!canGoPrev || isLoading}
               onClick={() => onPageChange(page - 1)}
             >
-              <ChevronLeft className="size-4" />
+              <CaretLeft className="size-4" />
             </Button>
             <Button
               type="button"
@@ -91,7 +91,7 @@ export function TablePagination({
               disabled={!canGoNext || isLoading}
               onClick={() => onPageChange(page + 1)}
             >
-              <ChevronRight className="size-4" />
+              <CaretRight className="size-4" />
             </Button>
           </div>
         </div>

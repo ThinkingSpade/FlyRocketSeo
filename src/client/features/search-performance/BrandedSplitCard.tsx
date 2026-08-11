@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Globe2, Tags } from "lucide-react";
+import { SealCheck, Globe, Tag } from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import { getProjects } from "@/serverFunctions/projects";
 import {
@@ -58,7 +58,7 @@ export function BrandedSplitCard({
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <InsightIcon icon={Tags} tone="primary" />
+            <InsightIcon icon={Tag} tone="primary" />
             Branded vs non-branded
           </h2>
           <label className="flex items-center gap-2 text-xs text-base-content/60">
@@ -80,28 +80,28 @@ export function BrandedSplitCard({
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <InsightTile
-            icon={BadgeCheck}
+            icon={SealCheck}
             label="Branded click share"
             value={share != null ? `${Math.round(share * 100)}%` : "—"}
             tone="primary"
             hint="Of clicks in the analyzed queries"
           />
           <InsightTile
-            icon={BadgeCheck}
+            icon={SealCheck}
             label="Branded"
             value={formatCount(split.branded.clicks)}
             hint={`${formatCount(split.branded.queries)} queries`}
             tone="info"
           />
           <InsightTile
-            icon={Globe2}
+            icon={Globe}
             label="Non-branded"
             value={formatCount(split.nonBranded.clicks)}
             hint={`${formatCount(split.nonBranded.queries)} queries`}
             tone="success"
           />
           <InsightTile
-            icon={Globe2}
+            icon={Globe}
             label="Non-branded impressions"
             value={formatCount(split.nonBranded.impressions)}
             hint="Your SEO growth surface"

@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BarChart3, Bookmark, Gauge, Target } from "lucide-react";
+import { ChartBar, Bookmark, Gauge, Target } from "@phosphor-icons/react";
 import { InsightTile, type InsightTone } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { exportSavedKeywords } from "@/serverFunctions/keywords";
@@ -86,7 +86,7 @@ export function SavedKeywordsPortfolio({
           tone="primary"
         />
         <InsightTile
-          icon={BarChart3}
+          icon={ChartBar}
           label="Total volume"
           value={portfolio.totalVolume.toLocaleString()}
           hint="Monthly searches combined"

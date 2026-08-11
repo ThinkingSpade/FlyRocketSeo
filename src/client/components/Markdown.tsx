@@ -1,6 +1,7 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type Props = {
   /** Raw Markdown source to render. */
@@ -44,7 +45,7 @@ function SafeAnchor({ href, children, ...rest }: AnchorProps) {
       href={safeHref}
       target="_blank"
       rel="noreferrer"
-      className="link link-primary"
+      className="app-link"
     >
       {children}
     </a>
@@ -122,20 +123,26 @@ export const MARKDOWN_COMPONENTS = {
   ),
   table: ({ children }: { children?: ReactNode }) => (
     <div className="my-3 overflow-x-auto">
-      <table className="table table-sm border border-base-300">
-        {children}
-      </table>
+      <Table className="border border-base-300">{children}</Table>
     </div>
   ),
-  thead: ({ children }: { children?: ReactNode }) => <thead>{children}</thead>,
-  tbody: ({ children }: { children?: ReactNode }) => <tbody>{children}</tbody>,
+  thead: ({ children }: { children?: ReactNode }) => (
+    <Table.Header>{children}</Table.Header>
+  ),
+  tbody: ({ children }: { children?: ReactNode }) => (
+    <Table.Body>{children}</Table.Body>
+  ),
   tr: ({ children }: { children?: ReactNode }) => (
-    <tr className="border-b border-base-300 last:border-0">{children}</tr>
+    <Table.Row className="border-b border-base-300 last:border-0">
+      {children}
+    </Table.Row>
   ),
   th: ({ children }: { children?: ReactNode }) => (
-    <th className="px-2 py-1.5 text-left font-semibold">{children}</th>
+    <Table.Head className="px-2 py-1.5 text-left font-semibold">
+      {children}
+    </Table.Head>
   ),
   td: ({ children }: { children?: ReactNode }) => (
-    <td className="px-2 py-1.5 align-top">{children}</td>
+    <Table.Cell className="px-2 py-1.5 align-top">{children}</Table.Cell>
   ),
 };

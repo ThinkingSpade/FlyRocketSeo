@@ -1,6 +1,11 @@
 import { useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowRight, MapPin, PenLine, Target } from "lucide-react";
+import {
+  ArrowRight,
+  MapPin,
+  PencilSimpleLine,
+  Target,
+} from "@phosphor-icons/react";
 import { useAhrefsDomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { wantsGeoModifiers } from "@/shared/keyword-fit/profileTypes";
@@ -101,7 +106,7 @@ export function KeywordActionPlanCard({
         </div>
 
         {hasUsableShape && shape ? (
-          <PlanStep icon={<PenLine className="size-3.5" />}>
+          <PlanStep icon={<PencilSimpleLine className="size-3.5" />}>
             <span className="font-medium">Write the shape that wins.</span>{" "}
             {shape.count} of the {shape.total} results are{" "}
             {serpPageTypeLabel(shape.dominant)}. Match that format before trying
@@ -111,7 +116,7 @@ export function KeywordActionPlanCard({
               params={{ projectId }}
               // Content Optimizer's own search param for the target keyword.
               search={{ q: keyword }}
-              className="link link-primary"
+              className="app-link"
             >
               Open Content Optimizer
               <ArrowRight className="ml-0.5 inline size-3" />
@@ -130,7 +135,7 @@ export function KeywordActionPlanCard({
             <Link
               to="/p/$projectId/local"
               params={{ projectId }}
-              className="link link-primary"
+              className="app-link"
             >
               Open Local SEO
               <ArrowRight className="ml-0.5 inline size-3" />
@@ -147,7 +152,7 @@ export function KeywordActionPlanCard({
             <Link
               to="/p/$projectId/backlinks"
               params={{ projectId }}
-              className="link link-primary"
+              className="app-link"
             >
               Open Backlinks
               <ArrowRight className="ml-0.5 inline size-3" />

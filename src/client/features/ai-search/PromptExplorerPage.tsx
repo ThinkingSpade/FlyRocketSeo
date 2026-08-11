@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
-  AlertCircle,
+  WarningCircle,
   ArrowLeft,
-  Columns3,
-  SearchCheck,
-  Sparkles,
-} from "lucide-react";
+  Columns,
+  Quotes,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { explorePrompt } from "@/serverFunctions/ai-search";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
@@ -37,6 +37,7 @@ import {
   domainStem,
 } from "@/client/features/search-performance/projectGscInsights";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type PromptExplorerFormValues = {
   prompt: string;
@@ -54,17 +55,17 @@ type Props = {
 
 const PROMPT_EXPLORER_BULLETS = [
   {
-    icon: Columns3,
+    icon: Columns,
     title: "Four models side-by-side",
     body: "Run one prompt across ChatGPT, Claude, Gemini, and Perplexity and compare answers in a single view.",
   },
   {
-    icon: SearchCheck,
+    icon: Quotes,
     title: "See what the models cite",
     body: "Every answer lists the sources it drew from, so you can audit where each model gets its information.",
   },
   {
-    icon: Sparkles,
+    icon: Sparkle,
     title: "Check brand mentions",
     body: "Highlight a brand to instantly see whether it shows up in the answer text or the cited sources.",
   },
@@ -290,7 +291,7 @@ function PromptExplorerPageInner({
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
             >
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <WarningCircle className="mt-0.5 size-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           ) : null}
@@ -306,7 +307,7 @@ function PromptExplorerPageInner({
                   params={{ projectId }}
                   search={{}}
                   replace
-                  className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+                  className={`${buttonVariants({ variant: "ghost", size: "sm" })} gap-2 px-0 text-base-content/70 hover:bg-transparent`}
                 >
                   <ArrowLeft className="size-4" />
                   Recent searches

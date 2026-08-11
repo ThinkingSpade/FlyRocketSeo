@@ -1,4 +1,10 @@
-import { Download, Gauge, ShieldAlert, Tag, Waypoints } from "lucide-react";
+import {
+  Download,
+  Gauge,
+  ShieldWarning,
+  Tag,
+  Graph,
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { downloadTextFile } from "@/client/lib/csv";
 import { describeSpamScore } from "@/client/lib/spamScore";
@@ -22,6 +28,7 @@ import type {
   BacklinksReferringDomainsData,
 } from "./backlinksPageTypes";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * Four reads on the link profile that cost nothing extra: each derives from
@@ -117,7 +124,7 @@ export function FollowSplitCard({
         : "text-success";
 
   return (
-    <InsightCard title="Nofollow exposure" icon={Waypoints}>
+    <InsightCard title="Nofollow exposure" icon={Graph}>
       {presentation.kind === "message" ? (
         <>
           <p className={`text-sm font-medium ${tone}`}>
@@ -269,7 +276,7 @@ export function ToxicLinksCard({
   return (
     <InsightCard
       title="Toxic links worth reviewing"
-      icon={ShieldAlert}
+      icon={ShieldWarning}
       action={
         <Button
           type="button"
@@ -302,39 +309,42 @@ export function ToxicLinksCard({
         since disavowing a good link costs ranking.
       </p>
       <div className="overflow-x-auto">
-        <table className="table table-sm">
-          <thead>
-            <tr>
-              <th>Domain</th>
-              <th className="text-right">Spam score</th>
-              <th className="text-right">Domain authority</th>
-              <th className="text-right">Backlinks</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Domain</Table.Head>
+              <Table.Head className="text-right">Spam score</Table.Head>
+              <Table.Head className="text-right">Domain authority</Table.Head>
+              <Table.Head className="text-right">Backlinks</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {preview.map((candidate) => {
               const spam = describeSpamScore(candidate.spamScore);
               return (
-                <tr key={candidate.domain}>
-                  <td className="max-w-md truncate" title={candidate.domain}>
+                <Table.Row key={candidate.domain}>
+                  <Table.Cell
+                    className="max-w-md truncate"
+                    title={candidate.domain}
+                  >
                     {candidate.domain}
-                  </td>
-                  <td
+                  </Table.Cell>
+                  <Table.Cell
                     className={`text-right tabular-nums font-medium ${spam.className}`}
                   >
                     {spam.formatted}
-                  </td>
-                  <td className="text-right tabular-nums text-base-content/60">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums text-base-content/60">
                     {candidate.rank ?? "—"}
-                  </td>
-                  <td className="text-right tabular-nums text-base-content/60">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums text-base-content/60">
                     {formatNumber(candidate.backlinks)}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               );
             })}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
       {audit.candidates.length > preview.length ? (
         <p className="text-xs text-base-content/40">

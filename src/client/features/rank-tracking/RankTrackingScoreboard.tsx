@@ -5,21 +5,18 @@ import {
   Crosshair,
   Megaphone,
   Minus,
-} from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import type { TooltipContentProps } from "recharts";
+} from "@phosphor-icons/react";
+import { Chart } from "@cloudflare/kumo/components/chart";
 import { BarList } from "@/client/components/BarList";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
+import {
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
-import { useChartWidth } from "./RankTrackingTrendChart";
 import {
   computeBucketTransitions,
   computeScorecards,
@@ -28,24 +25,8 @@ import {
   computeAveragePositionTrend,
   computeVisibilityTrend,
 } from "./visibilityTrend";
-import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_LINE,
-  CHART_X_TICK_GAP,
-} from "@/client/components/chart/chartTheme";
-import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 
-type ChartRow = { label: string; averagePosition: number };
-
-/** Recharts types tooltip payloads as any; narrow structurally instead. */
-function isChartRow(value: unknown): value is ChartRow {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "label" in value &&
-    "averagePosition" in value
-  );
-}
+const AVERAGE_POSITION_COLOR = "#2563eb";
 
 function formatDate(iso: string): string {
   const parsed = new Date(iso);
@@ -186,17 +167,94 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
       ),
     [cells],
   );
-  const { containerRef, width: chartWidth } = useChartWidth();
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
   const height = 150;
 
-  const rows: ChartRow[] = points.map((point) => ({
-    label: formatDate(point.checkedAt),
-    averagePosition: Math.round(point.averagePosition * 100) / 100,
-  }));
+  // Memoized because it feeds the options below, which would otherwise be
+  // rebuilt on every render of the surrounding scoreboard.
+  const rows = useMemo(
+    () =>
+      points.map((point) => ({
+        label: formatDate(point.checkedAt),
+        averagePosition: Math.round(point.averagePosition * 100) / 100,
+      })),
+    [points],
+  );
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        dangerousHtmlFormatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          return [
+            `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
+            `<div style="font-size:13px;font-weight:500">avg #${(first.value ?? 0).toFixed(1)}</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        type: "category" as const,
+        data: rows.map((row) => row.label),
+        boundaryGap: false,
+        // CartesianGrid was horizontal-only (`vertical={false}`).
+        splitLine: { show: false },
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          // ECharts' own overlap avoidance, in place of Recharts' minTickGap.
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        // Rank #1 at the TOP, so a line climbing means positions improving.
+        // Without this the chart says the opposite of what it means.
+        inverse: true,
+        // Recharts' domain={["auto", "auto"]}: fit the data rather than
+        // anchoring to zero, which ECharts would otherwise do.
+        scale: true,
+        minInterval: 1,
+      },
+      series: [
+        {
+          type: "line" as const,
+          name: "Average position",
+          data: rows.map((row) => row.averagePosition),
+          smooth: true,
+          // Hollow ring on the hovered point — surface fill, series colour on
+          // the border — the marker the Recharts charts drew on hover.
+          symbol: "circle" as const,
+          symbolSize: 8,
+          showSymbol: false,
+          lineStyle: { width: 2, color: AVERAGE_POSITION_COLOR },
+          itemStyle: { color: AVERAGE_POSITION_COLOR },
+          emphasis: {
+            itemStyle: {
+              color: theme.surface,
+              borderColor: AVERAGE_POSITION_COLOR,
+              borderWidth: 2,
+            },
+          },
+        },
+      ],
+    }),
+    [base, rows, theme.surface],
+  );
+
   const first = rows[0]?.averagePosition;
   const last = rows[rows.length - 1]?.averagePosition;
-  // Positions improve downward, so a negative delta is the good direction.
-  const delta =
+  // POSITIONS GAINED, not the change in the position number — `first - last`,
+  // so 34.5 → 13.9 is +20.6 and means the ranking climbed 20.6 places. Named
+  // for what it measures because the old name (`delta`) was what made the
+  // display read backwards: it was rendered with a leading "+" next to a
+  // number that had visibly gone DOWN, so the sign contradicted the figures
+  // either side of it. The sign is no longer shown; see below.
+  const gained =
     first != null && last != null
       ? Math.round((first - last) * 100) / 100
       : null;
@@ -212,11 +270,21 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
           <span className="text-xs text-base-content/60 tabular-nums">
             {first.toFixed(1)} →{" "}
             <span className="font-semibold">{last.toFixed(1)}</span>
-            {delta != null && delta !== 0 ? (
-              <span className={delta > 0 ? "text-success" : "text-error"}>
+            {gained != null && gained !== 0 ? (
+              // Direction is carried by the arrow, not by a sign: for rank,
+              // lower is better, so "+20.6" beside "34.5 → 13.9" reads as a
+              // contradiction even when the colour says otherwise. ▲/▼ is
+              // already how the rest of rank tracking states a move (see
+              // RankTrackingHistoryMatrix), and it points the same way as the
+              // chart below, where an improving line climbs. The magnitude is
+              // unsigned; the arrow and the colour agree on the direction.
+              <span className={gained > 0 ? "text-success" : "text-error"}>
                 {" "}
-                ({delta > 0 ? "+" : ""}
-                {delta.toFixed(1)})
+                (<span aria-hidden>{gained > 0 ? "▲" : "▼"}</span>
+                <span className="sr-only">
+                  {gained > 0 ? "improved by" : "worsened by"}
+                </span>{" "}
+                {Math.abs(gained).toFixed(1)})
               </span>
             ) : null}
           </span>
@@ -227,68 +295,13 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
           The trend fills in after the next check.
         </div>
       ) : (
-        <div
-          ref={containerRef}
+        <Chart
+          echarts={echarts}
+          options={options}
+          height={height}
+          isDarkMode={theme.isDark}
           className="mt-2 w-full min-w-0"
-          style={{ height }}
-        >
-          {chartWidth > 0 ? (
-            <LineChart
-              width={chartWidth}
-              height={height}
-              data={rows}
-              margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="currentColor"
-                opacity={0.1}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                minTickGap={CHART_X_TICK_GAP}
-              />
-              <YAxis
-                reversed
-                domain={["auto", "auto"]}
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                width={30}
-                allowDecimals={false}
-              />
-              <Tooltip
-                cursor={CHART_CURSOR_LINE}
-                content={(props: TooltipContentProps<number, string>) => {
-                  const candidates = (props.payload ?? []).map(
-                    (entry: { payload?: unknown }) => entry.payload,
-                  );
-                  const row = candidates[0];
-                  if (!props.active || !isChartRow(row)) return null;
-                  return (
-                    <div className="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-xs shadow">
-                      <div className="font-medium">{row.label}</div>
-                      <div>avg #{row.averagePosition.toFixed(1)}</div>
-                    </div>
-                  );
-                }}
-              />
-              <Line
-                type="monotone"
-                dataKey="averagePosition"
-                stroke="#2563eb"
-                strokeWidth={2}
-                dot={false}
-                activeDot={<ChartActiveDot />}
-                isAnimationActive={false}
-              />
-            </LineChart>
-          ) : null}
-        </div>
+        />
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import type { CitationTab } from "@/client/features/ai-search/brandLookupFilterTypes";
 import { formatPlatformLabel } from "@/client/features/ai-search/platformLabels";
 import type { BrandLookupFiltersState } from "@/client/features/ai-search/useBrandLookupFilters";
@@ -236,7 +236,7 @@ export function BrandLookupFilterPanel({
           onClick={current.reset}
           disabled={current.activeFilterCount === 0}
         >
-          <RotateCcw className="size-3" />
+          <ArrowCounterClockwise className="size-3" />
           Clear all
         </Button>
       </div>

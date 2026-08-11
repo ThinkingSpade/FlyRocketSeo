@@ -1,7 +1,7 @@
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { CalendarClock, TriangleAlert } from "lucide-react";
+import { CalendarCheck, Warning } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { scheduleGbpPost } from "@/serverFunctions/gbp";
@@ -14,7 +14,7 @@ import {
   type GbpPostValidationError,
 } from "./gbpPostSchedule";
 import { Button } from "@cloudflare/kumo/components/button";
-import { Input } from "@cloudflare/kumo/components/input";
+import { Input, InputArea } from "@cloudflare/kumo/components/input";
 
 const CTA_OPTIONS: { value: GbpCallToActionType; label: string }[] = [
   { value: "BOOK", label: "Book" },
@@ -118,16 +118,16 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={CalendarClock} tone="neutral" />
+          <InsightIcon icon={CalendarCheck} tone="neutral" />
           Schedule a post
         </h2>
 
         <label className="form-control">
-          <span className="label-text pb-1 text-xs font-medium">
+          <span className="pb-1 text-xs font-medium">
             What&apos;s the post about?
           </span>
-          <textarea
-            className="textarea textarea-bordered textarea-sm"
+          <InputArea
+            size="sm"
             rows={3}
             value={content}
             onChange={(event) => setContent(event.target.value)}
@@ -140,9 +140,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         </label>
 
         <label className="form-control">
-          <span className="label-text pb-1 text-xs font-medium">
-            Photo URL (optional)
-          </span>
+          <span className="pb-1 text-xs font-medium">Photo URL (optional)</span>
           <Input
             passwordManagerIgnore
             type="text"
@@ -154,7 +152,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
 
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="form-control">
-            <span className="label-text pb-1 text-xs font-medium">
+            <span className="pb-1 text-xs font-medium">
               Action button (optional)
             </span>
             <select
@@ -172,9 +170,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
           </label>
           {ctaType && ctaType !== "CALL" ? (
             <label className="form-control">
-              <span className="label-text pb-1 text-xs font-medium">
-                Button URL
-              </span>
+              <span className="pb-1 text-xs font-medium">Button URL</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -187,9 +183,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         </div>
 
         <label className="form-control w-fit">
-          <span className="label-text pb-1 text-xs font-medium">
-            Publish at
-          </span>
+          <span className="pb-1 text-xs font-medium">Publish at</span>
           <Input
             passwordManagerIgnore
             type="datetime-local"
@@ -210,7 +204,7 @@ export function GbpPostComposer({ projectId }: { projectId: string }) {
         {confirming ? (
           <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3">
             <p className="flex items-start gap-2 text-sm">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
               <span>
                 This queues the post for{" "}
                 {scheduledAtIso

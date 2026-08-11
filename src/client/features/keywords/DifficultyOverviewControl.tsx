@@ -1,4 +1,4 @@
-import { Gauge } from "lucide-react";
+import { Gauge } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 

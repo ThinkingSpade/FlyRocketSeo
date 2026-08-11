@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Copy, Loader2, Save } from "lucide-react";
+import { Copy, CircleNotch, FloppyDisk } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   AppDataTable,
@@ -220,13 +220,7 @@ export function DimensionTable({
   // knows whether the pull behind these rows actually ran to completion. A
   // second empty message here would drift from that one, which is how the
   // pre-boundary code ended up claiming an absence it had not established.
-  return (
-    <AppDataTable
-      table={table}
-      className="table table-zebra table-sm"
-      wrapperClassName="overflow-x-auto"
-    />
-  );
+  return <AppDataTable table={table} wrapperClassName="overflow-x-auto" />;
 }
 
 export function StrikingDistanceTable({
@@ -328,11 +322,7 @@ export function StrikingDistanceTable({
           Queries ranking at positions 5 to 20, sorted by impressions. Improve
           the listed page to move them into the top results.
         </p>
-        <AppDataTable
-          table={table}
-          className="table table-zebra table-sm"
-          wrapperClassName="overflow-x-auto"
-        />
+        <AppDataTable table={table} wrapperClassName="overflow-x-auto" />
       </div>
       <TablePagination
         page={pagination.pageIndex + 1}
@@ -359,9 +349,9 @@ export function StrikingDistanceTable({
             <TableBulkActionButton
               icon={
                 save.isPending ? (
-                  <Loader2 className="size-3.5 animate-spin" />
+                  <CircleNotch className="size-3.5 animate-spin" />
                 ) : (
-                  <Save className="size-3.5" />
+                  <FloppyDisk className="size-3.5" />
                 )
               }
               onClick={() => save.mutate(selectedQueries)}

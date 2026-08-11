@@ -1,5 +1,5 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight } from "lucide-react";
+import { CaretRight } from "@phosphor-icons/react";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import { backlinksRowNote } from "@/client/features/insights/verdicts/backlinks";
@@ -113,7 +113,7 @@ function SourceCell({
           aria-expanded={expanded}
           onClick={() => onToggleDomain(row.domainFrom ?? "")}
         >
-          <ChevronRight
+          <CaretRight
             className={`size-4 transition-transform ${expanded ? "rotate-90" : ""}`}
           />
         </Button>

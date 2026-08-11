@@ -32,7 +32,7 @@ function isBlank(value: string | null): boolean {
 
 /** Matches audit/shared.tsx's extractPathname exactly, duplicated locally
  *  rather than imported so this module stays a self-contained pure function
- *  with no React/lucide-react in its module graph (that file exports
+ *  with no React or icon library in its module graph (that file exports
  *  components alongside it). */
 function pathnameOf(url: string): string {
   try {

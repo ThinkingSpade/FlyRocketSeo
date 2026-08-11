@@ -1,12 +1,12 @@
 import { useState } from "react";
 import {
-  Award,
-  FileSearch,
-  KeyRound,
-  Link2,
-  Search,
-  TrendingUp,
-} from "lucide-react";
+  Medal,
+  FileMagnifyingGlass,
+  Key,
+  LinkSimple,
+  MagnifyingGlass,
+  TrendUp,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getPageExplorer } from "@/serverFunctions/page-explorer";
 import { pageExplorerSchema } from "@/types/schemas/page-explorer";
@@ -48,22 +48,22 @@ function normalizePageUrlInput(value: string): string {
 
 const PAGE_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
-    icon: KeyRound,
+    icon: Key,
     title: "Every keyword it ranks for",
     description: "Positions, volume, difficulty and estimated traffic",
   },
   {
-    icon: Award,
+    icon: Medal,
     title: "Ranking real estate",
     description: "#1s, top-3, top-10 and striking-distance counts",
   },
   {
-    icon: TrendingUp,
+    icon: TrendUp,
     title: "Traffic concentration",
     description: "Which few keywords actually carry the page",
   },
   {
-    icon: Link2,
+    icon: LinkSimple,
     title: "Links & on-page",
     description: "Backlinks, referring domains, and the heading outline",
   },
@@ -146,7 +146,7 @@ export function PageExplorerPage({
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <FileSearch className="size-6" />
+          <FileMagnifyingGlass className="size-6" />
           Page Explorer
         </h1>
         <p className="text-sm text-base-content/60">
@@ -179,9 +179,7 @@ export function PageExplorerPage({
             }}
           >
             <label className="form-control w-full sm:max-w-xl">
-              <span className="label-text pb-1 text-xs font-medium">
-                Page URL
-              </span>
+              <span className="pb-1 text-xs font-medium">Page URL</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -193,9 +191,7 @@ export function PageExplorerPage({
               />
             </label>
             <label className="form-control w-full sm:max-w-56">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={locationInput}
@@ -217,7 +213,7 @@ export function PageExplorerPage({
               {pageQuery.isFetching ? (
                 <Loader size="sm" />
               ) : (
-                <Search className="size-3.5" />
+                <MagnifyingGlass className="size-3.5" />
               )}
               Inspect
             </Button>

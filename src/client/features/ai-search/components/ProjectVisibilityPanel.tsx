@@ -10,7 +10,7 @@ import {
 } from "@/shared/analysis-costs";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Radar, RefreshCw } from "lucide-react";
+import { CircleNotch, Broadcast, ArrowsClockwise } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getProjects } from "@/serverFunctions/projects";
 import {
@@ -100,7 +100,7 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
     <section className="space-y-4 rounded-2xl border border-base-300 bg-base-200/40 p-4 md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <Radar className="mt-0.5 size-5 text-base-content/50" />
+          <Broadcast className="mt-0.5 size-5 text-base-content/50" />
           <div>
             <h2 className="text-lg font-semibold">
               AI visibility for {domain}
@@ -124,9 +124,9 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
           }
         >
           {analyzing ? (
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch className="size-4 animate-spin" />
           ) : (
-            <RefreshCw className="size-4" />
+            <ArrowsClockwise className="size-4" />
           )}
           {meteredActionLabel(
             latest ? "Re-analyze" : `Analyze ${domain}`,
@@ -167,7 +167,7 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
 
       {historyQuery.isPending && Boolean(domain) ? (
         <div className="flex items-center gap-2 py-4 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" /> Loading tracked
+          <CircleNotch className="size-4 animate-spin" /> Loading tracked
           visibility…
         </div>
       ) : latest ? (
@@ -199,8 +199,8 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
 
       {analyzing ? (
         <div className="flex items-center gap-2 py-2 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" /> Analyzing {domain} across
-          ChatGPT and Google AI Overview…
+          <CircleNotch className="size-4 animate-spin" /> Analyzing {domain}{" "}
+          across ChatGPT and Google AI Overview…
         </div>
       ) : null}
 

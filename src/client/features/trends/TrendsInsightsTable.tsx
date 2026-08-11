@@ -1,11 +1,11 @@
 import { useMemo } from "react";
 import {
-  Activity,
+  Pulse,
   ArrowDownRight,
   ArrowUpRight,
-  CalendarDays,
+  CalendarDots,
   Minus,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
   computeMonthlyInterest,
@@ -13,6 +13,7 @@ import {
   type KeywordTrendInsight,
 } from "@/client/features/trends/trendsInsights";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Table } from "@cloudflare/kumo/components/table";
 
 // Series palette matching the rank-tracking charts; shared with the chart in
 // TrendsPage so row dots line up with the plotted lines.
@@ -84,35 +85,35 @@ export function TrendsInsightsTable({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={Activity} tone="primary" />
+          <InsightIcon icon={Pulse} tone="primary" />
           Momentum &amp; seasonality
         </h2>
         <div className="overflow-x-auto">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Keyword</th>
-                <th className="text-right">Interest now</th>
-                <th
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>Keyword</Table.Head>
+                <Table.Head className="text-right">Interest now</Table.Head>
+                <Table.Head
                   className="text-right"
                   title="Average interest over the last 90 days vs the 90 days before"
                 >
                   90-day momentum
-                </th>
-                <th
+                </Table.Head>
+                <Table.Head
                   className="text-right"
                   title="Latest interest vs roughly one year earlier"
                 >
                   Year over year
-                </th>
-                <th className="text-right">Peak month</th>
-                <th className="text-right">Low month</th>
-              </tr>
-            </thead>
-            <tbody>
+                </Table.Head>
+                <Table.Head className="text-right">Peak month</Table.Head>
+                <Table.Head className="text-right">Low month</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {insights.map((insight, index) => (
-                <tr key={insight.keyword}>
-                  <td className="font-medium">
+                <Table.Row key={insight.keyword}>
+                  <Table.Cell className="font-medium">
                     <span className="inline-flex items-center gap-1.5">
                       <span
                         className="inline-block size-2.5 rounded-full"
@@ -120,30 +121,30 @@ export function TrendsInsightsTable({
                       />
                       {insight.keyword}
                     </span>
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums">
                     {insight.latest ?? "—"}
-                  </td>
-                  <td className="text-right">
+                  </Table.Cell>
+                  <Table.Cell className="text-right">
                     <MomentumBadge insight={insight} />
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums">
                     {formatPercent(insight.yoyPercent)}
-                  </td>
-                  <td className="text-right">
+                  </Table.Cell>
+                  <Table.Cell className="text-right">
                     {insight.peakMonth != null
                       ? MONTH_LABELS[insight.peakMonth]
                       : "—"}
-                  </td>
-                  <td className="text-right">
+                  </Table.Cell>
+                  <Table.Cell className="text-right">
                     {insight.lowMonth != null
                       ? MONTH_LABELS[insight.lowMonth]
                       : "—"}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </div>
         <p className="text-xs text-base-content/50">
           Momentum compares the last 90 days to the 90 before; peak and low
@@ -172,29 +173,29 @@ export function TrendsSeasonalHeatmap({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={CalendarDays} tone="info" />
+          <InsightIcon icon={CalendarDots} tone="info" />
           Seasonal heatmap
         </h2>
         <div className="overflow-x-auto">
-          <table className="table table-xs">
-            <thead>
-              <tr>
-                <th>Keyword</th>
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>Keyword</Table.Head>
                 {MONTH_LABELS.map((label) => (
-                  <th key={label} className="text-center">
+                  <Table.Head key={label} className="text-center">
                     {label}
-                  </th>
+                  </Table.Head>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {rows.map((row) => (
-                <tr key={row.keyword}>
-                  <td className="max-w-48 font-medium">
+                <Table.Row key={row.keyword}>
+                  <Table.Cell className="max-w-48 font-medium">
                     <span className="line-clamp-1">{row.keyword}</span>
-                  </td>
+                  </Table.Cell>
                   {row.months.map((value, month) => (
-                    <td key={month} className="p-1 text-center">
+                    <Table.Cell key={month} className="p-1 text-center">
                       {value == null ? (
                         <span className="text-base-content/30">—</span>
                       ) : (
@@ -211,12 +212,12 @@ export function TrendsSeasonalHeatmap({
                           {value}
                         </span>
                       )}
-                    </td>
+                    </Table.Cell>
                   ))}
-                </tr>
+                </Table.Row>
               ))}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </div>
         <p className="text-xs text-base-content/50">
           Average Google Trends interest per calendar month across the charted

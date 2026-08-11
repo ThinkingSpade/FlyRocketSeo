@@ -132,7 +132,7 @@ export function LocalGscContext({
           <Link
             to="/p/$projectId/search-performance"
             params={{ projectId }}
-            className="link link-hover"
+            className="app-link-subtle"
           >
             Open GSC Insights
           </Link>

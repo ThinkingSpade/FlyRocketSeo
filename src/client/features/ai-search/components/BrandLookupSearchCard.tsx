@@ -1,5 +1,5 @@
 import type { FormEvent } from "react";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { applyBillingMarkupUsd } from "@/shared/billing";
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/shared/analysis-costs";
 import { BRAND_LOOKUP_MAX_INPUT_LENGTH } from "@/types/schemas/ai-search";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type Props = {
   query: string;
@@ -47,27 +48,28 @@ export function BrandLookupSearchCard({
       <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
         <form onSubmit={onSubmit} className="flex flex-col gap-3">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <label
-              className={`input input-bordered flex flex-1 items-center gap-2 ${
-                queryError ? "input-error" : ""
-              }`}
-            >
-              <Search className="size-4 text-base-content/60" />
-              <input
+            {/* Kumo's Input has no icon slot, so the search glyph is
+                positioned over a padded input rather than sharing a wrapper
+                with it — which also stops the icon being a click target that
+                does not focus the field. */}
+            <div className="relative flex flex-1 items-center">
+              <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+              <Input
                 type="text"
                 placeholder="Enter a brand name or domain"
                 value={query}
                 maxLength={BRAND_LOOKUP_MAX_INPUT_LENGTH}
                 onChange={(event) => onQueryChange(event.target.value)}
+                variant={queryError ? "error" : "default"}
                 aria-invalid={queryError || undefined}
                 aria-describedby={
                   queryError ? "brand-lookup-input-error" : undefined
                 }
                 autoComplete="off"
                 spellCheck={false}
-                className="grow"
+                className="w-full pl-9"
               />
-            </label>
+            </div>
 
             <Button
               type="submit"
@@ -80,16 +82,15 @@ export function BrandLookupSearchCard({
           </div>
 
           <div className="flex flex-col gap-1">
-            <input
+            <Input
               type="text"
               placeholder="Add competitors (comma-separated)"
               value={competitors}
               onChange={(event) => onCompetitorsChange(event.target.value)}
               autoComplete="off"
               spellCheck={false}
-              className={`input input-bordered w-full ${
-                competitorsError ? "input-error" : ""
-              }`}
+              className="w-full"
+              variant={competitorsError ? "error" : "default"}
               aria-label="Competitors"
               aria-invalid={competitorsError || undefined}
               aria-describedby={

@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import type { KeywordResearchControllerState } from "./types";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Switch } from "@cloudflare/kumo/components/switch";
 
 function FilterTextInput({
   form,
@@ -129,22 +130,22 @@ function FilterQuestionsToggle({
   return (
     <form.Field name="questionsOnly">
       {(field) => (
-        <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
-          <input
-            type="checkbox"
-            className="toggle toggle-primary toggle-sm"
+        <div className="flex items-center gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-2">
+          <Switch
             checked={field.state.value === "1"}
-            onChange={(event) =>
-              field.handleChange(event.target.checked ? "1" : "")
+            onCheckedChange={(checked) =>
+              field.handleChange(checked ? "1" : "")
+            }
+            label={
+              <span className="text-sm">
+                Questions only
+                <span className="ml-1 text-xs text-base-content/50">
+                  (how, what, why…)
+                </span>
+              </span>
             }
           />
-          <span className="text-sm">
-            Questions only
-            <span className="ml-1 text-xs text-base-content/50">
-              (how, what, why…)
-            </span>
-          </span>
-        </label>
+        </div>
       )}
     </form.Field>
   );
@@ -163,7 +164,7 @@ export function SerpPanelActions({
         to="/p/$projectId/serp"
         params={{ projectId }}
         search={{ q: keyword }}
-        className="btn btn-ghost btn-xs"
+        className={buttonVariants({ variant: "ghost", size: "xs" })}
       >
         Full SERP
       </Link>
@@ -171,7 +172,7 @@ export function SerpPanelActions({
         to="/p/$projectId/content"
         params={{ projectId }}
         search={{ q: keyword }}
-        className="btn btn-ghost btn-xs"
+        className={buttonVariants({ variant: "ghost", size: "xs" })}
       >
         Build brief
       </Link>
@@ -179,7 +180,7 @@ export function SerpPanelActions({
         to="/p/$projectId/trends"
         params={{ projectId }}
         search={{ q: keyword }}
-        className="btn btn-ghost btn-xs"
+        className={buttonVariants({ variant: "ghost", size: "xs" })}
       >
         Trends
       </Link>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "@phosphor-icons/react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
 import { BacklinksFilterPanel } from "./BacklinksFilterPanel";
 import { BacklinksCategoryChips } from "./BacklinksCategoryChips";

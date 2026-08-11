@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
-import { Archive, Loader2, Plus, X } from "lucide-react";
+import { Archive, CircleNotch, Plus, X } from "@phosphor-icons/react";
 import { archiveSamSession, createSamSession } from "@/serverFunctions/sam";
 import {
   invalidateSamSessions,
@@ -45,7 +45,7 @@ function BetaNotice() {
         For more powerful AI workflows, use the FlyRocketSEO MCP with your own
         agent like Claude Code or Hermes.
       </p>
-      <Link to="/ai" className="link link-primary mt-1.5 inline-block text-xs">
+      <Link to="/ai" className="app-link mt-1.5 inline-block text-xs">
         Set up the MCP →
       </Link>
     </div>
@@ -122,12 +122,12 @@ export function SamSidebarPanel({
           type="button"
           variant="ghost"
           size="sm"
-          className="btn-block justify-start font-normal text-base-content/70 hover:text-base-content"
+          className="w-full justify-start font-normal text-base-content/70 hover:text-base-content"
           disabled={createSession.isPending}
           onClick={() => createSession.mutate()}
         >
           {createSession.isPending ? (
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch className="size-4 animate-spin" />
           ) : (
             <Plus className="size-4" />
           )}
@@ -138,7 +138,7 @@ export function SamSidebarPanel({
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
         {sessionsQuery.isLoading ? (
           <div className="flex justify-center py-6 text-base-content/50">
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch className="size-4 animate-spin" />
           </div>
         ) : sessions.length === 0 ? (
           <p className="px-2 py-6 text-center text-xs text-base-content/50">

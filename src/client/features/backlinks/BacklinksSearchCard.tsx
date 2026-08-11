@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import {
   createFormValidationErrors,
   getFieldError,
@@ -16,6 +16,7 @@ import { Button } from "@cloudflare/kumo/components/button";
 import { InputGroup } from "@cloudflare/kumo/components/input-group";
 import { Toolbar } from "@cloudflare/kumo/components/toolbar";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Input } from "@cloudflare/kumo/components/input";
 
 type SearchDraft = Pick<BacklinksSearchState, "target" | "scope">;
 
@@ -149,7 +150,7 @@ export function BacklinksSearchCard({
             className="w-full min-w-0 lg:flex-1"
           >
             <InputGroup.Addon>
-              <Search className="text-base-content/60" />
+              <MagnifyingGlass className="text-base-content/60" />
             </InputGroup.Addon>
             <InputGroup.Input
               aria-label="Domain or URL"
@@ -163,7 +164,7 @@ export function BacklinksSearchCard({
           <label
             className={`input input-bordered flex flex-1 items-center gap-2 ${targetError ? "input-error" : ""}`}
           >
-            <Search className="size-4 text-base-content/60" />
+            <MagnifyingGlass className="size-4 text-base-content/60" />
             <input
               placeholder="Enter a domain or URL"
               value={field.state.value}

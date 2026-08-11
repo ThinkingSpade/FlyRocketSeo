@@ -1,4 +1,4 @@
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "@phosphor-icons/react";
 import { SavedKeywordsFilterPanel } from "./SavedKeywordsFilterPanel";
 import { SavedKeywordsTagFilter } from "./SavedKeywordsTagFilter";
 import type { TagColorKey } from "@/shared/tag-colors";

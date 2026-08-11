@@ -1,12 +1,12 @@
 import { useCallback, useState } from "react";
 import {
-  BadgeCheck,
+  SealCheck,
   MapPin,
-  MessageSquareReply,
-  Search,
+  ChatCenteredDots,
+  MagnifyingGlass,
   Star,
-  TrendingUp,
-} from "lucide-react";
+  TrendUp,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getBusinessProfile } from "@/serverFunctions/local-seo";
 import {
@@ -43,17 +43,17 @@ const LOCAL_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
     description: "Star rating, review count, and the newest reviews",
   },
   {
-    icon: MessageSquareReply,
+    icon: ChatCenteredDots,
     title: "Response coverage",
     description: "Reply rate and unanswered negative reviews",
   },
   {
-    icon: TrendingUp,
+    icon: TrendUp,
     title: "Review velocity",
     description: "How steadily reviews arrive, month by month",
   },
   {
-    icon: BadgeCheck,
+    icon: SealCheck,
     title: "Profile completeness",
     description: "Categories, hours, claimed status and description",
   },
@@ -184,7 +184,7 @@ export function LocalSeoPage({
             }}
           >
             <label className="form-control w-full">
-              <span className="label-text pb-1 text-xs font-medium">
+              <span className="pb-1 text-xs font-medium">
                 Business name (add a city for precision)
               </span>
               <Input
@@ -212,7 +212,7 @@ export function LocalSeoPage({
               {profileQuery.isFetching ? (
                 <Loader size="sm" />
               ) : (
-                <Search className="size-3.5" />
+                <MagnifyingGlass className="size-3.5" />
               )}
               {meteredActionLabel(
                 "Look up",
@@ -389,7 +389,7 @@ function ProfileField({
         <span className="text-base-content/40">—</span>
       ) : isLink ? (
         <a
-          className="link link-hover break-all"
+          className="app-link-subtle break-all"
           href={value}
           target="_blank"
           rel="noopener noreferrer"

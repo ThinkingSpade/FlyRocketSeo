@@ -5,7 +5,13 @@ import {
   type FormEvent,
   type KeyboardEvent,
 } from "react";
-import { ArrowUp, Check, Globe, Loader2, Sparkles } from "lucide-react";
+import {
+  ArrowUp,
+  Check,
+  Globe,
+  CircleNotch,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { FREE_ONBOARDING_QUESTION_LIMIT } from "@/shared/onboardingChat";
 import { Button } from "@cloudflare/kumo/components/button";
 
@@ -30,7 +36,7 @@ export function SuggestedQuestions({
             className="inline-flex items-center gap-1.5 rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
             onClick={() => onSelect(question)}
           >
-            <Sparkles className="size-3.5" />
+            <Sparkle className="size-3.5" />
             {question}
           </button>
         ) : (
@@ -65,7 +71,7 @@ export function WelcomeMessage({
   return (
     <div className="flex gap-3">
       <div className="flex size-7 flex-shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary">
-        <Sparkles className="size-4" />
+        <Sparkle className="size-4" />
       </div>
       <div className="min-w-0 flex-1 space-y-3 pt-0.5 text-sm">
         <div className="space-y-3 text-base-content/80">
@@ -82,15 +88,12 @@ export function WelcomeMessage({
               href={DISCORD_URL}
               target="_blank"
               rel="noreferrer"
-              className="link link-primary"
+              className="app-link"
             >
               join the Discord
             </a>{" "}
             or email{" "}
-            <a
-              href="mailto:huy1999nguyen@gmail.com"
-              className="link link-primary"
-            >
+            <a href="mailto:huy1999nguyen@gmail.com" className="app-link">
               huy1999nguyen@gmail.com
             </a>{" "}
             if you have any questions I can’t help you with.
@@ -208,7 +211,7 @@ export function UpgradeSidebar({
               href={DISCORD_URL}
               target="_blank"
               rel="noreferrer"
-              className="link link-primary"
+              className="app-link"
             >
               Join the Discord
             </a>
@@ -330,7 +333,7 @@ export function ChatComposer({
         size="sm"
       >
         {busy ? (
-          <Loader2 className="size-4 animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
         ) : (
           <ArrowUp className="size-4" />
         )}

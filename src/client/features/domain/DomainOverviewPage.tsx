@@ -10,11 +10,11 @@ import {
 import { useForm, useStore } from "@tanstack/react-form";
 import {
   ArrowLeft,
-  BarChart3,
+  ChartBar,
   FileText,
-  TrendingUp,
+  TrendUp,
   Users,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   DEFAULT_DOMAIN_KEYWORDS_PAGE_SIZE,
@@ -598,12 +598,12 @@ export type DomainOverviewControlsForm = ReturnType<
 
 const DOMAIN_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
-    icon: TrendingUp,
+    icon: TrendUp,
     title: "Traffic & keywords",
     description: "Estimated organic traffic and how many keywords rank",
   },
   {
-    icon: BarChart3,
+    icon: ChartBar,
     title: "Ranking distribution",
     description: "How positions split across #1–3, #4–10, #11–20 and beyond",
   },

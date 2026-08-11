@@ -1,6 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Download, FileSpreadsheet, Save, Sheet } from "lucide-react";
+import {
+  Copy,
+  Download,
+  FileXls,
+  FloppyDisk,
+  Table,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   TableBulkActionBar,
@@ -289,7 +295,7 @@ export function KeywordsTab({
         actions={
           <div className="flex items-center px-1.5">
             <TableBulkActionButton
-              icon={<Save className="size-3.5" />}
+              icon={<FloppyDisk className="size-3.5" />}
               onClick={handleSaveKeywords}
               disabled={!canSaveKeywords}
             >
@@ -299,7 +305,7 @@ export function KeywordsTab({
               actions={[
                 {
                   label: "Export to Sheets",
-                  icon: <Sheet className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {
@@ -325,7 +331,7 @@ export function KeywordsTab({
         exportActions={[
           {
             label: "Export to Sheets",
-            icon: <Sheet className="size-4" />,
+            icon: <Table className="size-4" />,
             onClick: handleExportToSheets,
           },
           {
@@ -340,7 +346,7 @@ export function KeywordsTab({
           },
           {
             label: "Download Excel",
-            icon: <FileSpreadsheet className="size-4" />,
+            icon: <FileXls className="size-4" />,
             onClick: () => handleDownload("xls"),
           },
         ]}

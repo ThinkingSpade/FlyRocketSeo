@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Layers, TrendingDown, TrendingUp } from "lucide-react";
+import { Stack, TrendDown, TrendUp } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
@@ -17,6 +17,7 @@ import {
   type ContentGroupRow,
 } from "./contentGroups";
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type TrendFilter = "all" | "growing" | "decaying";
 
@@ -238,7 +239,7 @@ export function ContentPerformanceTab({
           <div className="rounded-lg border border-base-300 bg-base-100 p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <h3 className="flex items-center gap-1.5 text-sm font-semibold">
-                <InsightIcon icon={Layers} tone="primary" />
+                <InsightIcon icon={Stack} tone="primary" />
                 Content groups
               </h3>
               <SegmentedToggle
@@ -283,21 +284,23 @@ export function ContentPerformanceTab({
                 </p>
               ) : null}
               <div className="mt-2 overflow-x-auto">
-                <table className="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Group</th>
-                      <th className="text-right">Pages</th>
-                      <th className="text-right">Clicks</th>
-                      <th className="text-right">Impressions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.Head>Group</Table.Head>
+                      <Table.Head className="text-right">Pages</Table.Head>
+                      <Table.Head className="text-right">Clicks</Table.Head>
+                      <Table.Head className="text-right">
+                        Impressions
+                      </Table.Head>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
                     {filteredGroups.map((group) => (
                       <ContentGroupRowView key={group.key} group={group} />
                     ))}
-                  </tbody>
-                </table>
+                  </Table.Body>
+                </Table>
               </div>
             </QueryStateBoundary>
           </div>
@@ -315,9 +318,9 @@ function ContentGroupRowView({ group }: { group: ContentGroupRow }) {
       <td>
         <span className="inline-flex items-center gap-1.5 font-medium">
           {growing ? (
-            <TrendingUp className="size-3.5 text-success/80" />
+            <TrendUp className="size-3.5 text-success/80" />
           ) : decaying ? (
-            <TrendingDown className="size-3.5 text-error/80" />
+            <TrendDown className="size-3.5 text-error/80" />
           ) : null}
           {group.label}
         </span>

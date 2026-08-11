@@ -10,6 +10,9 @@ import { authClient } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const forgotPasswordSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -97,13 +100,16 @@ function ForgotPasswordPage() {
                 </p>
               }
             >
+              {/* Kumo's Banner has no success variant (default / alert /
+                  error / secondary), and "check your inbox" is informational
+                  rather than a result, so default is the honest fit. */}
               {isSuccess ? (
-                <div className="alert alert-success">
+                <Banner variant="default">
                   <span>
                     If an account exists for that email, you'll receive password
                     reset instructions shortly.
                   </span>
-                </div>
+                </Banner>
               ) : (
                 <form
                   className="space-y-4"
@@ -118,9 +124,9 @@ function ForgotPasswordPage() {
 
                       return (
                         <div>
-                          <input
+                          <Input
                             type="email"
-                            className="input input-bordered w-full"
+                            className="w-full"
                             placeholder="Email address..."
                             value={field.state.value}
                             onChange={(event) =>
@@ -141,12 +147,13 @@ function ForgotPasswordPage() {
                   {errorMessage ? (
                     <p className="text-sm text-error">{errorMessage}</p>
                   ) : null}
-                  <button
-                    className="btn btn-soft w-full"
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     disabled={!isHostedMode || isSubmitting}
                   >
                     {isSubmitting ? "Sending reset link..." : "Send reset link"}
-                  </button>
+                  </Button>
                 </form>
               )}
             </AuthPageCard>

@@ -1,4 +1,4 @@
-import { MapPin, X } from "lucide-react";
+import { MapPin, X } from "@phosphor-icons/react";
 import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
 import type { TargetArea } from "@/shared/geo/types";
 import { Button } from "@cloudflare/kumo/components/button";

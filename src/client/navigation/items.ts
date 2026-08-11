@@ -1,28 +1,28 @@
 import {
-  Activity,
+  Pulse,
   Bookmark,
-  Bot,
-  ClipboardCheck,
-  FileSearch,
+  Robot,
+  ClipboardText,
+  FileMagnifyingGlass,
   FileText,
   Globe,
-  Grid3x3,
-  LayoutDashboard,
+  GridNine,
+  House,
   Lightbulb,
-  Link2,
-  ListOrdered,
+  LinkSimple,
+  ListNumbers,
   MapPin,
-  MessageSquare,
+  ChatCentered,
   Network,
-  NotebookPen,
+  NotePencil,
   PencilRuler,
-  Search,
-  Sparkles,
-  Split,
-  TrendingUp,
+  MagnifyingGlass,
+  Sparkle,
+  ArrowsSplit,
+  TrendUp,
   Users,
-  Waypoints,
-} from "lucide-react";
+  Graph,
+} from "@phosphor-icons/react";
 import { linkOptions } from "@tanstack/react-router";
 import { GoogleGlyphMuted } from "@/client/features/gsc/GoogleGlyph";
 
@@ -30,32 +30,32 @@ const projectNavItems = [
   {
     to: "/p/$projectId" as const,
     label: "Overview",
-    icon: LayoutDashboard,
+    icon: House,
   },
   {
     to: "/p/$projectId/keywords" as const,
     label: "Keyword Research",
-    icon: Search,
+    icon: MagnifyingGlass,
   },
   {
     to: "/p/$projectId/trends" as const,
     label: "Keyword Trends",
-    icon: Activity,
+    icon: Pulse,
   },
   {
     to: "/p/$projectId/serp" as const,
     label: "SERP Overview",
-    icon: ListOrdered,
+    icon: ListNumbers,
   },
   {
     to: "/p/$projectId/content" as const,
     label: "Content Optimizer",
-    icon: NotebookPen,
+    icon: NotePencil,
   },
   {
     to: "/p/$projectId/page" as const,
     label: "Page Explorer",
-    icon: FileSearch,
+    icon: FileMagnifyingGlass,
   },
   {
     to: "/p/$projectId/clusters" as const,
@@ -70,7 +70,7 @@ const projectNavItems = [
   {
     to: "/p/$projectId/rank-tracking" as const,
     label: "Rank Tracking",
-    icon: TrendingUp,
+    icon: TrendUp,
   },
   {
     to: "/p/$projectId/opportunities" as const,
@@ -85,17 +85,17 @@ const projectNavItems = [
   {
     to: "/p/$projectId/links" as const,
     label: "Link Opportunities",
-    icon: Waypoints,
+    icon: Graph,
   },
   {
     to: "/p/$projectId/cannibalization" as const,
     label: "Cannibalization",
-    icon: Split,
+    icon: ArrowsSplit,
   },
   {
     to: "/p/$projectId/local-grid" as const,
     label: "Local Rank Grid",
-    icon: Grid3x3,
+    icon: GridNine,
   },
   {
     to: "/p/$projectId/domain" as const,
@@ -105,7 +105,7 @@ const projectNavItems = [
   {
     to: "/p/$projectId/backlinks" as const,
     label: "Backlinks",
-    icon: Link2,
+    icon: LinkSimple,
   },
   {
     to: "/p/$projectId/competitors" as const,
@@ -115,7 +115,7 @@ const projectNavItems = [
   {
     to: "/p/$projectId/audit" as const,
     label: "Site Audit",
-    icon: ClipboardCheck,
+    icon: ClipboardText,
   },
   {
     to: "/p/$projectId/on-page" as const,
@@ -130,12 +130,12 @@ const projectNavItems = [
   {
     to: "/p/$projectId/brand-lookup" as const,
     label: "AI Visibility",
-    icon: Sparkles,
+    icon: Sparkle,
   },
   {
     to: "/p/$projectId/prompt-explorer" as const,
     label: "Prompt Explorer",
-    icon: MessageSquare,
+    icon: ChatCentered,
   },
   {
     to: "/p/$projectId/local" as const,
@@ -147,7 +147,7 @@ const projectNavItems = [
 const aiNavItem = linkOptions({
   to: "/ai" as const,
   label: "AI & MCP",
-  icon: Bot,
+  icon: Robot,
 });
 
 // Always-visible sidebar group (not project-scoped, unlike the groups below).

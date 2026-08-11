@@ -1,6 +1,6 @@
 import * as React from "react";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowDown, ArrowUp, ChevronRight, FolderKanban } from "lucide-react";
+import { ArrowDown, ArrowUp, CaretRight, Kanban } from "@phosphor-icons/react";
 import type { ColumnDef, SortingState } from "@tanstack/react-table";
 import {
   AppDataTable,
@@ -90,7 +90,7 @@ function buildColumns(
                 {project.domain ?? "No domain set"}
               </span>
             </span>
-            <ChevronRight className="size-4 shrink-0 text-base-content/35 transition-transform group-hover:translate-x-0.5" />
+            <CaretRight className="size-4 shrink-0 text-base-content/35 transition-transform group-hover:translate-x-0.5" />
           </Link>
         );
       },
@@ -264,7 +264,6 @@ export function PortfolioTable({
   return (
     <AppDataTable
       table={table}
-      className="table table-sm"
       wrapperClassName="overflow-x-auto rounded-lg border border-base-300 bg-base-100"
       getRowProps={(row) => ({
         className: "cursor-pointer hover:bg-base-200/40",
@@ -283,7 +282,7 @@ export function PortfolioTable({
       })}
       empty={
         <div className="rounded-lg border border-base-300 bg-base-100 px-6 py-10 text-center">
-          <FolderKanban className="mx-auto size-5 text-base-content/40" />
+          <Kanban className="mx-auto size-5 text-base-content/40" />
           <h2 className="mt-2 font-medium">No active projects</h2>
           <p className="mt-1 text-sm text-base-content/55">
             Create a project to start your portfolio.

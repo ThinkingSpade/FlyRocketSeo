@@ -12,6 +12,9 @@ import { authClient, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { getSignInSearch, normalizeAuthRedirect } from "@/lib/auth-redirect";
 import { z } from "zod";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Banner } from "@cloudflare/kumo/components/banner";
 
 const verificationIssueSchema = z
   .enum(["invalid_token", "token_expired", "user_not_found", "unknown"])
@@ -215,36 +218,37 @@ function VerifyEmailPage() {
       >
         {!isHostedMode ? null : errorMessage ? (
           <div className="space-y-3">
-            <div className="alert alert-error">
+            <Banner variant="error">
               <span>{errorMessage}</span>
-            </div>
+            </Banner>
             <Link
               to="/sign-in"
               search={getSignInSearch(redirectTo)}
-              className="btn btn-soft w-full"
+              className={`${buttonVariants({ variant: "secondary" })} w-full`}
             >
               Back to sign in
             </Link>
           </div>
         ) : isPending || isRuntimeConfigPending || isRedirecting ? (
           <div className="flex justify-center py-4">
-            <span className="loading loading-spinner loading-md" />
+            <Loader />
           </div>
         ) : email ? (
           <div className="space-y-3">
             {resendError ? (
-              <div className="alert alert-error" role="alert">
+              <Banner variant="error" role="alert">
                 <span>{resendError}</span>
-              </div>
+              </Banner>
             ) : null}
-            <button
+            <Button
               type="button"
-              className="btn btn-soft w-full"
+              variant="secondary"
+              className="w-full"
               onClick={() => void handleResend()}
               disabled={isResending}
             >
               {isResending ? "Sending email..." : "Resend email"}
-            </button>
+            </Button>
           </div>
         ) : null}
       </AuthPageCard>

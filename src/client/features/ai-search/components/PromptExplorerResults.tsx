@@ -1,10 +1,10 @@
 import {
-  AlertCircle,
-  CheckCircle2,
-  ExternalLink,
+  WarningCircle,
+  CheckCircle,
+  ArrowSquareOut,
   Globe,
   XCircle,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { MarkdownAnswer } from "@/client/features/ai-search/components/MarkdownAnswer";
 import {
   formatModelLabel,
@@ -59,7 +59,7 @@ function ModelResultCard({
           status="error"
         />
         <div className="flex items-start gap-2 px-5 py-4 text-sm text-error">
-          <AlertCircle className="mt-0.5 size-4 shrink-0" />
+          <WarningCircle className="mt-0.5 size-4 shrink-0" />
           <span>{modelResult.message}</span>
         </div>
       </article>
@@ -100,14 +100,14 @@ function ModelResultCard({
                   href={citation.url}
                   target="_blank"
                   rel="noreferrer"
-                  className={`link inline-flex items-start gap-1 ${
+                  className={`app-link inline-flex items-start gap-1 ${
                     citation.matchedBrand ? "link-primary font-medium" : ""
                   }`}
                 >
                   <span className="break-all">
                     {citation.title || formatUrlForDisplay(citation.url)}
                   </span>
-                  <ExternalLink className="mt-1 size-3 shrink-0" />
+                  <ArrowSquareOut className="mt-1 size-3 shrink-0" />
                 </a>
                 {citation.matchedBrand && highlightBrand ? (
                   <Badge variant="primary">{highlightBrand}</Badge>
@@ -197,7 +197,7 @@ function BrandMentionBadge({
   if (mentioned) {
     return (
       <span className="inline-flex items-center gap-1 rounded-full bg-success/15 px-2 py-0.5 text-xs font-medium text-success">
-        <CheckCircle2 className="size-3" />
+        <CheckCircle className="size-3" />
         {highlightBrand}
       </span>
     );

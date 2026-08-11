@@ -1,4 +1,4 @@
-import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { WarningCircle, CheckCircle, CircleNotch } from "@phosphor-icons/react";
 import { Badge } from "@cloudflare/kumo/components/badge";
 
 export function extractPathname(url: string): string {
@@ -38,7 +38,7 @@ export function StatusBadge({ status }: { status: string }) {
   if (status === "running") {
     return (
       <Badge variant="info" className="gap-1">
-        <Loader2 className="size-3 animate-spin" /> Running
+        <CircleNotch className="size-3 animate-spin" /> Running
       </Badge>
     );
   }
@@ -56,7 +56,7 @@ export function StatusBadge({ status }: { status: string }) {
 
   return (
     <Badge variant="error" className="gap-1">
-      <AlertCircle className="size-3" /> Failed
+      <WarningCircle className="size-3" /> Failed
     </Badge>
   );
 }

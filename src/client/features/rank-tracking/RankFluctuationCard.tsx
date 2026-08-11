@@ -2,11 +2,11 @@ import { useMemo } from "react";
 import {
   ArrowDownRight,
   ArrowUpRight,
-  Loader2,
-  LogIn,
-  LogOut,
+  CircleNotch,
+  SignIn,
+  SignOut,
   Waves,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import {
   InsightIcon,
   InsightTile,
@@ -83,7 +83,7 @@ export function RankFluctuationCard({
     return (
       <div className="px-4 pt-4 pb-4">
         <div className="flex items-center justify-center rounded-lg border border-base-300 bg-base-100 p-4">
-          <Loader2 className="size-4 animate-spin text-base-content/50" />
+          <CircleNotch className="size-4 animate-spin text-base-content/50" />
         </div>
       </div>
     );
@@ -124,7 +124,7 @@ export function RankFluctuationCard({
               above, since most checks have none. */}
           {result.breadth.enteredCount > 0 && (
             <InsightTile
-              icon={LogIn}
+              icon={SignIn}
               label={`Entered top ${serpDepth}`}
               value={result.breadth.enteredCount}
               tone="success"
@@ -132,7 +132,7 @@ export function RankFluctuationCard({
           )}
           {result.breadth.leftCount > 0 && (
             <InsightTile
-              icon={LogOut}
+              icon={SignOut}
               label={`Left top ${serpDepth}`}
               value={result.breadth.leftCount}
               tone="error"

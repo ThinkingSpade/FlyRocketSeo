@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { Split, Trophy } from "lucide-react";
+import { ArrowsSplit, Trophy } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   scoreCannibalization,
@@ -17,6 +17,8 @@ import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
+import { Table } from "@cloudflare/kumo/components/table";
 
 const SEVERITY_BADGE: Record<
   CannibalizationSeverity,
@@ -55,7 +57,7 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Split className="size-6" />
+          <ArrowsSplit className="size-6" />
           Cannibalization
         </h1>
         {/* States what the data shows, then what it might mean — in that order.
@@ -97,7 +99,7 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
             <Link
               to="/p/$projectId/search-performance"
               params={{ projectId }}
-              className="btn btn-primary btn-sm mt-2"
+              className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-2`}
             >
               Go to GSC Insights
             </Link>
@@ -163,19 +165,19 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Page</th>
-                    <th className="text-right">Position</th>
-                    <th className="text-right">Clicks</th>
-                    <th className="text-right">Impressions</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head>Page</Table.Head>
+                    <Table.Head className="text-right">Position</Table.Head>
+                    <Table.Head className="text-right">Clicks</Table.Head>
+                    <Table.Head className="text-right">Impressions</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {row.pages.map((page) => (
-                    <tr key={page.page}>
-                      <td className="max-w-md">
+                    <Table.Row key={page.page}>
+                      <Table.Cell className="max-w-md">
                         <span className="inline-flex items-center gap-1.5">
                           <a
                             href={page.page}
@@ -193,20 +195,20 @@ export function CannibalizationPage({ projectId }: { projectId: string }) {
                             </span>
                           ) : null}
                         </span>
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {Math.round(page.position)}
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {page.clicks.toLocaleString()}
-                      </td>
-                      <td className="text-right tabular-nums">
+                      </Table.Cell>
+                      <Table.Cell className="text-right tabular-nums">
                         {page.impressions.toLocaleString()}
-                      </td>
-                    </tr>
+                      </Table.Cell>
+                    </Table.Row>
                   ))}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table>
             </div>
           </div>
         </div>

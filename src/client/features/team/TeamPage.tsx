@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, UserPlus } from "lucide-react";
+import { CircleNotch, UserPlus } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { CopyButton } from "@/client/features/ai-mcp/SetupControls";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
@@ -14,6 +14,7 @@ import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
+import { useReveal } from "@/client/hooks/useReveal";
 
 const INVITES_QUERY_KEY = ["teamInvites"] as const;
 
@@ -61,9 +62,14 @@ export function TeamPage() {
 
   const invites = invitesQuery.data ?? [];
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto w-full max-w-2xl space-y-8">
+      <div ref={revealRef} className="mx-auto w-full max-w-2xl space-y-8">
         <div>
           <h1 className="text-2xl font-semibold">Team</h1>
           <p className="mt-1 text-sm text-base-content/60">
@@ -100,7 +106,7 @@ export function TeamPage() {
               disabled={createMutation.isPending || email.trim() === ""}
             >
               {createMutation.isPending ? (
-                <Loader2 className="size-4 animate-spin" />
+                <CircleNotch className="size-4 animate-spin" />
               ) : (
                 <UserPlus className="size-4" />
               )}

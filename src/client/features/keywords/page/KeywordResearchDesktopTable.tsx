@@ -21,7 +21,7 @@ import { TrendSparkline } from "@/client/components/TrendSparkline";
 import { formatNumber } from "@/client/features/keywords/utils";
 import { keywordRowNote } from "@/client/features/insights/verdicts/keywords";
 import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
-import { UserX } from "lucide-react";
+import { UserMinus } from "@phosphor-icons/react";
 import type { FitMap } from "@/client/features/keywords/hooks/useKeywordFiltering";
 import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import type { ResolvedGeo } from "@/shared/geo/types";
@@ -42,12 +42,12 @@ import type { KeywordResearchRow } from "@/types/keywords";
 function FitMarker({ fit }: { fit: FitResult | undefined }) {
   if (fit?.verdict !== "wrong-customer") return null;
   return (
-    <UserX
+    <UserMinus
       className="size-3.5 shrink-0 text-base-content/40"
       aria-label={fit.reason}
     >
       <title>{fit.reason}</title>
-    </UserX>
+    </UserMinus>
   );
 }
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
@@ -312,7 +312,7 @@ export function KeywordResearchDesktopTable({
       ) : (
         <AppDataTable
           table={table}
-          className="table table-xs min-w-max md:w-full"
+          className="min-w-max md:w-full"
           wrapperClassName="h-full overflow-auto"
           getRowProps={(row) => ({
             className: `cursor-pointer border-b border-base-200 hover:bg-base-200/50 ${

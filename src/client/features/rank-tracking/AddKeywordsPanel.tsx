@@ -4,8 +4,9 @@ import { useMutation } from "@tanstack/react-query";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { MAX_TRACKED_KEYWORD_LENGTH } from "@/shared/rank-tracking";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { Loader2 } from "lucide-react";
+import { CircleNotch } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InputArea } from "@cloudflare/kumo/components/input";
 
 export function AddKeywordsPanel({
   configId,
@@ -33,8 +34,9 @@ export function AddKeywordsPanel({
   const isPending = mutation.isPending;
   return (
     <div className="flex gap-2 items-end">
-      <textarea
-        className="textarea textarea-bordered textarea-sm flex-1"
+      <InputArea
+        size="sm"
+        className="flex-1"
         rows={3}
         placeholder="Enter keywords, one per line"
         value={keywordInput}
@@ -59,7 +61,7 @@ export function AddKeywordsPanel({
           }}
           disabled={isPending || !keywordInput.trim()}
         >
-          {isPending && <Loader2 className="size-3 animate-spin" />}
+          {isPending && <CircleNotch className="size-3 animate-spin" />}
           Add
         </Button>
         <Button variant="ghost" size="sm" onClick={onCancel}>

@@ -1,7 +1,7 @@
 import * as React from "react";
 import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Menu } from "lucide-react";
+import { List } from "@phosphor-icons/react";
 import {
   MissingSeoSetupModal,
   MobileSidebarDrawer,
@@ -181,14 +181,14 @@ function MobileTopBar({
         aria-expanded={drawerOpen}
         onClick={onOpenDrawer}
       >
-        <Menu className="h-5 w-5" />
+        <List className="h-5 w-5" />
       </Button>
       <Link
         to="/"
         className="ml-1 flex items-center gap-1.5 font-semibold text-base-content"
       >
         <img
-          src="/transparent-logo-mark.svg"
+          src="/logo-mark.png"
           alt=""
           width={20}
           height={20}

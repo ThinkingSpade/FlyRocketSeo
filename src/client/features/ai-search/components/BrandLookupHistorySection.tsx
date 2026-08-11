@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react";
 import {
   HISTORY_ITEM_LINK_CLASS,
   SearchHistorySection,
@@ -17,7 +17,7 @@ export function BrandLookupHistorySection({ projectId, ...props }: Props) {
   return (
     <SearchHistorySection
       {...props}
-      emptyIcon={Sparkles}
+      emptyIcon={Sparkle}
       emptyMessage="Search a brand name or domain to see how AI cites it"
       noun="lookup"
       renderItemLink={(item, content) => (

@@ -1,5 +1,5 @@
-import { BadgeCheck, SearchX, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { SealCheck, MagnifyingGlassMinus, Users } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { InsightIcon, type InsightTone } from "@/client/components/InsightTile";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
 import { useKeywordGapQuery } from "./useCompetitorsQueries";
@@ -7,12 +7,12 @@ import { Loader } from "@cloudflare/kumo/components/loader";
 
 const MODE_META: Record<
   KeywordGapMode,
-  { label: string; hint: string; icon: LucideIcon; tone: InsightTone }
+  { label: string; hint: string; icon: Icon; tone: InsightTone }
 > = {
   missing: {
     label: "Missing",
     hint: "They rank, you don't — your content roadmap",
-    icon: SearchX,
+    icon: MagnifyingGlassMinus,
     tone: "warning",
   },
   shared: {
@@ -24,7 +24,7 @@ const MODE_META: Record<
   advantage: {
     label: "Your advantage",
     hint: "You rank, they don't — defend these",
-    icon: BadgeCheck,
+    icon: SealCheck,
     tone: "success",
   },
 };

@@ -6,8 +6,9 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Table } from "@cloudflare/kumo/components/table";
 
 function formatCount(value: number | null): string {
   if (value == null) return "—";
@@ -44,7 +45,7 @@ export function DomainCompetitorsCard({
           <Link
             to="/p/$projectId/competitors"
             params={{ projectId }}
-            className="btn btn-ghost btn-xs"
+            className={buttonVariants({ variant: "ghost", size: "xs" })}
           >
             Full analysis
           </Link>
@@ -71,36 +72,38 @@ export function DomainCompetitorsCard({
           />
         ) : rows.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Domain</th>
-                  <th className="text-right">Shared keywords</th>
-                  <th className="text-right">Their keywords</th>
-                  <th className="text-right">Their traffic</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Domain</Table.Head>
+                  <Table.Head className="text-right">
+                    Shared keywords
+                  </Table.Head>
+                  <Table.Head className="text-right">Their keywords</Table.Head>
+                  <Table.Head className="text-right">Their traffic</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {rows.map((row) => (
-                  <tr key={row.domain}>
-                    <td className="max-w-xs">
+                  <Table.Row key={row.domain}>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1 font-medium">
                         {row.domain}
                       </span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.intersections)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.organicKeywords)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.organicTraffic)}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         ) : (
           <p className="py-4 text-sm text-base-content/50">

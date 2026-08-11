@@ -43,15 +43,16 @@ export function AppPageShell({
   width?: keyof typeof WIDTHS;
   children: ReactNode;
 }) {
-  // Page entrance. The ref goes on the existing content wrapper rather than a
-  // new <Reveal> element on purpose: these 22 pages hang tables, charts and
-  // grids off this container, and inserting a div between it and them would
-  // reshuffle every one of those layouts. A ref adds no DOM at all.
+  // Page entrance, staggered per section. The ref goes on the existing content
+  // wrapper rather than a new element on purpose: these 22 pages hang tables,
+  // charts and grids off this container, and inserting a div between it and
+  // them would reshuffle every one of those layouts.
   //
-  // One reveal for the whole page, not a stagger per section. Staggering means
-  // wrapping each child, which is the same layout risk — worth doing later,
-  // per-page, where the sections can actually be seen.
-  const revealRef = useReveal();
+  // `stagger` moves the transition onto this container's children, so each
+  // top-level section arrives after the one above it. That used to require
+  // wrapping every section — the same layout risk — but the delay ladder is
+  // :nth-child in app.css now, so it costs no markup at all.
+  const revealRef = useReveal({ stagger: true });
 
   return (
     // `pb-24` on small screens clears the mobile bottom nav; the desktop

@@ -1,11 +1,12 @@
 import { Link } from "@tanstack/react-router";
-import { Sparkles, type LucideIcon } from "lucide-react";
+import { Sparkle, type Icon } from "@phosphor-icons/react";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = {
   feature: string;
   description: string;
-  bullets: Array<{ icon: LucideIcon; title: string; body: string }>;
+  bullets: Array<{ icon: Icon; title: string; body: string }>;
 };
 
 export function AiSearchPaidPlanGate({ feature, description, bullets }: Props) {
@@ -14,7 +15,7 @@ export function AiSearchPaidPlanGate({ feature, description, bullets }: Props) {
       <div className="flex flex-col gap-5 px-6 py-6 sm:flex-row sm:items-start sm:justify-between">
         <div className="max-w-xl space-y-2">
           <span className="inline-flex items-center gap-1.5 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-medium text-primary">
-            <Sparkles className="size-3.5" />
+            <Sparkle className="size-3.5" />
             Paid plan
           </span>
           <h2 className="text-xl font-semibold tracking-tight">
@@ -25,7 +26,7 @@ export function AiSearchPaidPlanGate({ feature, description, bullets }: Props) {
         <Link
           to={SUBSCRIBE_ROUTE}
           search={{ upgrade: true }}
-          className="btn btn-primary shrink-0"
+          className={`${buttonVariants({ variant: "primary" })} shrink-0`}
         >
           Upgrade
         </Link>

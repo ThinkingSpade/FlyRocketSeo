@@ -5,7 +5,7 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Loader2, AlertCircle, X } from "lucide-react";
+import { CircleNotch, WarningCircle, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDomainKeywordSuggestions } from "@/serverFunctions/domain";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
@@ -309,7 +309,7 @@ export function KeywordSuggestionStep({
       <>
         {sectionHeader("Finding your top keywords...")}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
-          <Loader2 className="size-8 animate-spin text-primary" />
+          <CircleNotch className="size-8 animate-spin text-primary" />
           <p className="text-xs text-base-content/50">
             This usually takes a few seconds
           </p>
@@ -324,7 +324,7 @@ export function KeywordSuggestionStep({
       <>
         {sectionHeader("Couldn't fetch keywords")}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
-          <AlertCircle className="size-8 text-error" />
+          <WarningCircle className="size-8 text-error" />
           <p className="text-xs text-base-content/50">
             You can skip this step and add keywords manually later.
           </p>
@@ -373,7 +373,7 @@ export function KeywordSuggestionStep({
 
       <AppDataTable
         table={table}
-        className="table table-xs table-pin-rows w-full"
+        className="w-full"
         wrapperClassName="overflow-y-auto max-h-[400px] border border-base-300 rounded-lg"
         stickyHeader
         getRowProps={(row) => ({
@@ -404,7 +404,7 @@ export function KeywordSuggestionStep({
             disabled={addMutation.isPending || selectedCount === 0}
           >
             {addMutation.isPending && (
-              <Loader2 className="size-3.5 animate-spin" />
+              <CircleNotch className="size-3.5 animate-spin" />
             )}
             Save Keyword{selectedCount !== 1 ? "s" : ""}
           </Button>

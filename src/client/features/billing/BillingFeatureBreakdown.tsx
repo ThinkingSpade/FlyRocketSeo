@@ -172,7 +172,7 @@ export function BillingFeatureBreakdown() {
               </div>
               <div className="h-1.5 w-full overflow-hidden rounded-full bg-base-200">
                 <div
-                  className="h-full rounded-full bg-[#7c3aed]"
+                  className="h-full rounded-full bg-primary"
                   style={{ width: `${(row.usd / total) * 100}%` }}
                 />
               </div>

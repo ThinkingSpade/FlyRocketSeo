@@ -1,9 +1,9 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronsUpDown, FolderCog } from "lucide-react";
+import { CaretUpDown, FolderSimpleUser } from "@phosphor-icons/react";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { getProjects } from "@/serverFunctions/projects";
 import { setLastProjectId } from "@/client/lib/active-project";
-import { closeDropdown } from "@/client/lib/dropdown";
 import type { ProjectSummary } from "./types";
 
 export function ProjectSwitcher({
@@ -25,7 +25,8 @@ export function ProjectSwitcher({
     projects.find((project) => project.id === activeProjectId) ?? null;
 
   const handleSelect = (project: ProjectSummary) => {
-    closeDropdown();
+    // No explicit close any more — Kumo's menu closes itself on select. The
+    // drawer callback is still ours, because that is a different overlay.
     onCloseDrawer?.();
     if (project.id === activeProjectId) return;
     setLastProjectId(project.id);
@@ -36,75 +37,66 @@ export function ProjectSwitcher({
   };
 
   return (
-    <div className="dropdown w-full">
-      <button
-        type="button"
-        tabIndex={0}
-        aria-label="Switch project"
-        className="flex w-full items-center justify-between gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-1.5 text-left transition-colors hover:border-base-content/25"
-      >
-        <span className="flex min-w-0 flex-col">
-          <span className="truncate text-sm font-medium text-base-content">
-            {activeProject?.name ?? "Select project"}
-          </span>
-          {activeProject?.domain ? (
-            <span className="truncate text-xs font-normal text-base-content/50">
-              {activeProject.domain}
-            </span>
-          ) : null}
-        </span>
-        <ChevronsUpDown className="size-3.5 shrink-0 text-base-content/40" />
-      </button>
-
-      <ul
-        tabIndex={0}
-        className="dropdown-content z-30 menu w-full rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-      >
-        {projects.map((project) => {
-          const isActive = project.id === activeProjectId;
-          return (
-            <li key={project.id}>
-              <button
-                type="button"
-                onClick={() => handleSelect(project)}
-                className={isActive ? "active" : ""}
-              >
-                <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate">{project.name}</span>
-                  {project.domain ? (
-                    <span className="truncate text-xs text-base-content/50">
-                      {project.domain}
-                    </span>
-                  ) : null}
-                </span>
-                {isActive ? (
-                  <Check className="size-4 shrink-0 text-primary" />
-                ) : null}
-              </button>
-            </li>
-          );
-        })}
-
-        {projects.length > 0 ? (
-          <li
-            aria-hidden="true"
-            className="pointer-events-none my-1 h-px bg-base-300 p-0"
-          />
-        ) : null}
-
-        <li>
-          <Link
-            to="/projects"
-            onClick={() => {
-              closeDropdown();
-              onCloseDrawer?.();
-            }}
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <button
+            type="button"
+            aria-label="Switch project"
+            className="flex w-full items-center justify-between gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-1.5 text-left transition-colors hover:border-base-content/25"
           >
-            <FolderCog className="size-4" />
-            Manage projects
-          </Link>
-        </li>
-      </ul>
-    </div>
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate text-sm font-medium text-base-content">
+                {activeProject?.name ?? "Select project"}
+              </span>
+              {activeProject?.domain ? (
+                <span className="truncate text-xs font-normal text-base-content/50">
+                  {activeProject.domain}
+                </span>
+              ) : null}
+            </span>
+            <CaretUpDown className="size-3.5 shrink-0 text-base-content/40" />
+          </button>
+        }
+      />
+
+      {/* The menu portals out of the sidebar, so `w-full` no longer means the
+          trigger's width. Base UI's positioner publishes the trigger width as
+          --anchor-width; min-width rather than width so a long project name can
+          still push the menu wider than the rail. */}
+      <DropdownMenu.Content
+        align="start"
+        sideOffset={4}
+        className="min-w-(--anchor-width)"
+      >
+        {projects.map((project) => (
+          <DropdownMenu.Item
+            key={project.id}
+            // Kumo renders its own check for `selected`, so the hand-placed
+            // one this used to carry would have doubled up.
+            selected={project.id === activeProjectId}
+            onClick={() => handleSelect(project)}
+          >
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="truncate">{project.name}</span>
+              {project.domain ? (
+                <span className="truncate text-xs text-base-content/50">
+                  {project.domain}
+                </span>
+              ) : null}
+            </span>
+          </DropdownMenu.Item>
+        ))}
+
+        {projects.length > 0 ? <DropdownMenu.Separator /> : null}
+
+        <DropdownMenu.LinkItem
+          icon={FolderSimpleUser}
+          render={<Link to="/projects" onClick={onCloseDrawer} />}
+        >
+          Manage projects
+        </DropdownMenu.LinkItem>
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }

@@ -10,8 +10,8 @@ function OpenrouterApiKeyHelpPage() {
   return (
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto max-w-3xl space-y-4">
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-3">
+        <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+          <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-3">
             <h1 className="text-2xl font-semibold">
               Set up your OpenRouter API key
             </h1>
@@ -23,14 +23,16 @@ function OpenrouterApiKeyHelpPage() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-4">
-            <h2 className="card-title text-base">Steps</h2>
+        <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+          <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-4">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-base">
+              Steps
+            </h2>
             <ol className="list-decimal pl-5 text-sm space-y-3 text-base-content/80">
               <li>
                 Create an account at{" "}
                 <a
-                  className="link link-primary"
+                  className="app-link"
                   href="https://openrouter.ai"
                   target="_blank"
                   rel="noreferrer"
@@ -42,7 +44,7 @@ function OpenrouterApiKeyHelpPage() {
               <li>
                 Go to{" "}
                 <a
-                  className="link link-primary"
+                  className="app-link"
                   href={OPENROUTER_KEYS_URL}
                   target="_blank"
                   rel="noreferrer"
@@ -69,9 +71,9 @@ function OpenrouterApiKeyHelpPage() {
           </div>
         </div>
 
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-2 text-sm text-base-content/75">
-            <h2 className="card-title text-base">
+        <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+          <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-2 text-sm text-base-content/75">
+            <h2 className="flex items-center gap-2 text-lg font-semibold text-base">
               Cloudflare Workers (Dashboard UI)
             </h2>
             <ol className="list-decimal pl-5 space-y-2 text-sm text-base-content/80">
@@ -91,7 +93,7 @@ function OpenrouterApiKeyHelpPage() {
               <li>Paste your OpenRouter API key and save.</li>
             </ol>
 
-            <div className="divider my-1" />
+            <hr className="my-3 border-base-300" />
 
             <p>Or set the same secret from your terminal with:</p>
             <pre className="p-3 rounded bg-base-200 border border-base-300 overflow-x-auto text-xs">

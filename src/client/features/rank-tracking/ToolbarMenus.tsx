@@ -1,15 +1,15 @@
 import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { useState, type ReactNode } from "react";
 import {
-  ChevronDown,
+  CaretDown,
   Copy,
   Download,
-  FileDown,
-  MoreHorizontal,
+  FileArrowDown,
+  DotsThree,
   Play,
-  RefreshCw,
-  Sheet,
-} from "lucide-react";
+  ArrowsClockwise,
+  Table,
+} from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 function ToolbarMenu({
@@ -49,7 +49,7 @@ function ToolbarMenu({
         >
           {icon}
           {label}
-          <ChevronDown className="size-3.5 opacity-60" />
+          <CaretDown className="size-3.5 opacity-60" />
         </Button>
       ) : (
         <Button
@@ -130,10 +130,7 @@ export function MoreMenu({
   hasData: boolean;
 }) {
   return (
-    <ToolbarMenu
-      icon={<MoreHorizontal className="size-4" />}
-      title="More actions"
-    >
+    <ToolbarMenu icon={<DotsThree className="size-4" />} title="More actions">
       {!checkDisabled && (
         <MenuItem
           icon={<Play className="size-3.5" />}
@@ -145,7 +142,7 @@ export function MoreMenu({
       )}
       <MenuItem
         icon={
-          <RefreshCw
+          <ArrowsClockwise
             className={`size-3.5 ${metricsRefreshing ? "animate-spin" : ""}`}
           />
         }
@@ -178,13 +175,13 @@ export function ExportMenu({
   return (
     <ToolbarMenu label="Export" icon={<Download className="size-3.5" />}>
       <MenuItem
-        icon={<Sheet className="size-3.5" />}
+        icon={<Table className="size-3.5" />}
         label="Export to Sheets"
         onClick={onExportToSheets}
         disabled={!hasData}
       />
       <MenuItem
-        icon={<FileDown className="size-3.5" />}
+        icon={<FileArrowDown className="size-3.5" />}
         label="Export CSV"
         onClick={onExport}
         disabled={!hasData}

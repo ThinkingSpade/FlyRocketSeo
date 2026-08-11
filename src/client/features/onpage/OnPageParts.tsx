@@ -1,4 +1,4 @@
-import { Check, X } from "lucide-react";
+import { Check, X } from "@phosphor-icons/react";
 import {
   ELEMENT_LABEL,
   type ElementProgress,
@@ -9,6 +9,7 @@ import {
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 /** Short element tag shown on each suggestion row. */
 const ELEMENT_TAG: Record<OnPageElement, string> = {
@@ -41,10 +42,11 @@ export function ProgressTiles({ tiles }: { tiles: ElementProgress[] }) {
                 of {tile.total} approved
               </span>
             </div>
-            <progress
-              className="progress progress-primary mt-2 h-1.5"
+            <ProgressBar
+              className="mt-2"
               value={pct}
               max={100}
+              label="On-page score"
             />
           </div>
         );

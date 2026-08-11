@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { createColumnHelper, type Table } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink, Sparkles } from "lucide-react";
+import { ArrowSquareOut, Sparkle } from "@phosphor-icons/react";
 import { AppDataTable } from "@/client/components/table/AppDataTable";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
@@ -14,6 +14,8 @@ import {
 import { formatUrlForDisplay } from "@/client/components/table/url";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 
 type TopPageRow = BrandLookupResult["topPages"][number];
 type TopQueryRow = BrandLookupResult["topQueries"][number];
@@ -108,7 +110,7 @@ function PageUrlCell({
             You
           </Badge>
         ) : null}
-        <ExternalLink className="size-3 shrink-0 text-base-content/40" />
+        <ArrowSquareOut className="size-3 shrink-0 text-base-content/40" />
       </span>
       {path ? (
         <span className="block truncate text-xs text-base-content/50">
@@ -318,20 +320,21 @@ export function buildTopQueriesColumns({
       header: () => <span className="sr-only">Actions</span>,
       meta: { cellClassName: "w-px whitespace-nowrap text-right align-top" },
       cell: ({ row }) => (
-        <span
-          className="tooltip tooltip-left opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
-          data-tip="Run this prompt in Prompt Explorer"
+        <Tooltip
+          side="left"
+          className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+          content="Run this prompt in Prompt Explorer"
         >
           <Link
             to="/p/$projectId/prompt-explorer"
             params={{ projectId }}
             search={{ q: row.original.question, hb: brand || undefined }}
-            className="btn btn-ghost btn-xs gap-1"
+            className={`${buttonVariants({ variant: "ghost", size: "xs" })} gap-1`}
             aria-label="Run this prompt in Prompt Explorer"
           >
-            <Sparkles className="size-3.5" />
+            <Sparkle className="size-3.5" />
           </Link>
-        </span>
+        </Tooltip>
       ),
     }),
   ];

@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { ArrowUpRight } from "lucide-react";
+import { ArrowUpRight } from "@phosphor-icons/react";
 import { ClaudeIcon, CodexIcon } from "@/client/features/ai-mcp/AgentIcons";
 import { AvailableTools } from "@/client/features/ai-mcp/AvailableTools";
 import {
@@ -7,6 +7,7 @@ import {
   Collapsible,
   CopyButton,
 } from "@/client/features/ai-mcp/SetupControls";
+import { useReveal } from "@/client/hooks/useReveal";
 
 const DISCORD_URL = "https://discord.gg/c9uGs3cFXr";
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
@@ -46,9 +47,14 @@ function AiPage() {
       ? "https://flyrocketseo.huy1999nguyen.workers.dev/mcp"
       : `${window.location.origin}/mcp`;
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-12 md:px-6 md:py-16 pb-24 md:pb-12">
-      <div className="mx-auto max-w-3xl">
+      <div ref={revealRef} className="mx-auto max-w-3xl">
         <h1 className="text-2xl font-semibold">AI & MCP</h1>
         <p className="mt-2 text-sm text-base-content/70 leading-relaxed">
           Connect your AI agent to FlyRocketSEO. Run keyword research, SERP
@@ -303,7 +309,7 @@ function AiPage() {
         <p className="mt-12 text-xs text-base-content/55 leading-relaxed">
           Have feedback? Reach out on{" "}
           <a
-            className="link link-primary"
+            className="app-link"
             href={DISCORD_URL}
             target="_blank"
             rel="noreferrer"
@@ -311,7 +317,7 @@ function AiPage() {
             Discord
           </a>{" "}
           or email{" "}
-          <a className="link link-primary" href={`mailto:${SUPPORT_EMAIL}`}>
+          <a className="app-link" href={`mailto:${SUPPORT_EMAIL}`}>
             {SUPPORT_EMAIL}
           </a>
           .

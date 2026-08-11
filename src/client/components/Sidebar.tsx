@@ -2,17 +2,17 @@ import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import type { LinkOptions } from "@tanstack/react-router";
 import { useEffect, useState, type ComponentType } from "react";
 import {
-  CircleHelp,
+  Question,
   CreditCard,
-  LayoutGrid,
-  LogOut,
-  MessageCircle,
-  Search,
-  Settings,
+  SquaresFour,
+  SignOut,
+  ChatCircle,
+  MagnifyingGlass,
+  Gear,
   Users,
   User,
   X,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { openCommandPalette } from "@/client/components/CommandPalette";
 import {
   connectNavGroup,
@@ -22,13 +22,14 @@ import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 import { SamSidebarPanel } from "@/client/features/sam/SamSidebarPanel";
 import { DataforseoBalanceIndicator } from "@/client/components/DataforseoBalanceIndicator";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
-import { closeDropdown } from "@/client/lib/dropdown";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { useBillingMode } from "@/client/features/billing/useBillingMode";
 import { BILLING_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
+import { Kbd } from "@/client/components/Kbd";
 
 interface SidebarProps {
   projectId: string | null;
@@ -125,7 +126,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
           className="flex items-center gap-2 text-base font-semibold text-base-content"
         >
           <img
-            src="/transparent-logo-mark.svg"
+            src="/logo-mark.png"
             alt=""
             width={24}
             height={24}
@@ -173,7 +174,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                 value: "browse",
                 label: (
                   <span className="flex items-center gap-1.5">
-                    <LayoutGrid className="size-4" />
+                    <SquaresFour className="size-4" />
                     Browse
                   </span>
                 ),
@@ -182,7 +183,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                 value: "chat",
                 label: (
                   <span className="flex items-center gap-1.5">
-                    <MessageCircle className="size-4" />
+                    <ChatCircle className="size-4" />
                     Chat
                   </span>
                 ),
@@ -198,7 +199,7 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
         <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
           {navGroups.map((group) => (
             <div key={group.label} className="mb-1">
-              <div className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-base-content/40">
+              <div className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-kumo-subtle">
                 {group.label}
               </div>
               {group.items.map((item) => {
@@ -229,11 +230,6 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
   const billingMode = useBillingMode();
   const email = session?.user?.email;
 
-  const closeMenu = () => {
-    closeDropdown();
-    onNavigate?.();
-  };
-
   return (
     <div className="shrink-0 border-t border-base-300 px-2 py-2 pb-safe">
       <button
@@ -242,9 +238,11 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
         className={`${navItemClass} w-full`}
         aria-label="Open command menu"
       >
-        <Search className="h-4 w-4 shrink-0" />
+        <MagnifyingGlass className="h-4 w-4 shrink-0" />
         <span className="truncate">Search</span>
-        <kbd className="kbd kbd-xs ml-auto text-base-content/50">⌘K</kbd>
+        <Kbd size="xs" className="ml-auto">
+          ⌘K
+        </Kbd>
       </button>
 
       {!isHostedMode ? <DataforseoBalanceIndicator /> : null}
@@ -257,67 +255,65 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
         />
       ) : null}
       <SidebarNavLink
-        icon={CircleHelp}
+        icon={Question}
         label="Help & Community"
         onNavigate={onNavigate}
         linkProps={{ to: "/support" }}
       />
 
       {email ? (
-        <div className="dropdown dropdown-top w-full">
-          <button
-            type="button"
-            tabIndex={0}
-            className={`${navItemClass} w-full`}
-            aria-label="Open account menu"
-          >
-            <User className="h-4 w-4 shrink-0" />
-            <span className="truncate" data-ph-mask>
-              {email}
-            </span>
-          </button>
-          <ul
-            tabIndex={0}
-            className="dropdown-content z-30 menu mb-1 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-          >
-            <li>
-              <Link to="/settings" onClick={closeMenu}>
-                <Settings className="h-4 w-4" />
-                Settings
-              </Link>
-            </li>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            // `render` rather than children: Trigger is itself a button, so
+            // nesting one inside it would be invalid markup.
+            render={
+              <button
+                type="button"
+                className={`${navItemClass} w-full`}
+                aria-label="Open account menu"
+              >
+                <User className="h-4 w-4 shrink-0" />
+                <span className="truncate" data-ph-mask>
+                  {email}
+                </span>
+              </button>
+            }
+          />
+          {/* side="top" is what `dropdown-top` used to do — this sits at the
+              bottom of the sidebar, so the menu has to open upward. */}
+          <DropdownMenu.Content side="top" align="start" sideOffset={4}>
+            <DropdownMenu.LinkItem
+              icon={Gear}
+              render={<Link to="/settings" onClick={onNavigate} />}
+            >
+              Settings
+            </DropdownMenu.LinkItem>
             {isHostedMode && billingMode !== "disabled" ? (
-              <li>
-                <Link to={BILLING_ROUTE} onClick={closeMenu}>
-                  <CreditCard className="h-4 w-4" />
-                  Billing
-                </Link>
-              </li>
+              <DropdownMenu.LinkItem
+                icon={CreditCard}
+                render={<Link to={BILLING_ROUTE} onClick={onNavigate} />}
+              >
+                Billing
+              </DropdownMenu.LinkItem>
             ) : null}
             <ThemePreferenceMenuItems />
             {isHostedMode ? (
               <>
-                <li
-                  aria-hidden
-                  className="pointer-events-none my-1 h-px bg-base-300 p-0"
-                />
-                <li>
-                  <button
-                    type="button"
-                    className="text-error"
-                    onClick={() => signOutAndRedirect()}
-                  >
-                    <LogOut className="h-4 w-4" />
-                    Sign out
-                  </button>
-                </li>
+                <DropdownMenu.Separator />
+                <DropdownMenu.Item
+                  variant="danger"
+                  icon={SignOut}
+                  onClick={() => signOutAndRedirect()}
+                >
+                  Sign out
+                </DropdownMenu.Item>
               </>
             ) : null}
-          </ul>
-        </div>
+          </DropdownMenu.Content>
+        </DropdownMenu>
       ) : (
         <SidebarNavLink
-          icon={Settings}
+          icon={Gear}
           label="Settings"
           onNavigate={onNavigate}
           linkProps={{ to: "/settings" }}

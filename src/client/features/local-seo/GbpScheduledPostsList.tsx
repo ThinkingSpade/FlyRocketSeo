@@ -2,13 +2,13 @@ import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
-  CheckCircle2,
+  CheckCircle,
   CircleDashed,
-  Loader2,
-  Send,
-  TriangleAlert,
+  CircleNotch,
+  PaperPlaneTilt,
+  Warning,
   XCircle,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
@@ -20,11 +20,11 @@ import type { GbpScheduledPostStatus } from "./gbpPostSchedule";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 
-const STATUS_ICON: Record<GbpScheduledPostStatus, typeof CheckCircle2> = {
+const STATUS_ICON: Record<GbpScheduledPostStatus, typeof CheckCircle> = {
   draft: CircleDashed,
   scheduled: CircleDashed,
-  publishing: Loader2,
-  published: CheckCircle2,
+  publishing: CircleNotch,
+  published: CheckCircle,
   failed: XCircle,
 };
 
@@ -121,12 +121,12 @@ export function GbpScheduledPostsList({ projectId }: { projectId: string }) {
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <InsightIcon icon={Send} tone="neutral" />
+            <InsightIcon icon={PaperPlaneTilt} tone="neutral" />
             Scheduled posts
           </h2>
           {confirmingBulk ? (
             <div className="flex items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-2.5 py-1.5 text-xs">
-              <TriangleAlert className="size-3.5 shrink-0 text-warning" />
+              <Warning className="size-3.5 shrink-0 text-warning" />
               <span>Publish {dueCount} due post(s) to Google now?</span>
               <Button
                 type="button"
@@ -154,7 +154,7 @@ export function GbpScheduledPostsList({ projectId }: { projectId: string }) {
               disabled={dueCount === 0}
               onClick={() => setConfirmingBulk(true)}
             >
-              <Send className="size-3.5" />
+              <PaperPlaneTilt className="size-3.5" />
               Publish due posts now
               {dueCount > 0 ? ` (${dueCount})` : ""}
             </Button>

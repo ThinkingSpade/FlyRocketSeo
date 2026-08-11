@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { CaretLeft, CaretRight, CircleNotch } from "@phosphor-icons/react";
 import { SAVED_KEYWORD_PAGE_SIZES } from "./savedKeywordsUtils";
 import { Button } from "@cloudflare/kumo/components/button";
 
@@ -30,7 +30,7 @@ export function SavedKeywordsPagination({
           {start.toLocaleString()}-{end.toLocaleString()} of{" "}
           {totalCount.toLocaleString()}
         </span>
-        {isLoading ? <Loader2 className="size-3.5 animate-spin" /> : null}
+        {isLoading ? <CircleNotch className="size-3.5 animate-spin" /> : null}
       </div>
       <div className="flex items-center gap-6">
         <label className="flex items-center gap-2 text-sm text-base-content/70">
@@ -63,7 +63,7 @@ export function SavedKeywordsPagination({
               onClick={() => onPageChange(page - 1)}
               aria-label="Previous page"
             >
-              <ChevronLeft className="size-4" />
+              <CaretLeft className="size-4" />
             </Button>
             <Button
               type="button"
@@ -74,7 +74,7 @@ export function SavedKeywordsPagination({
               onClick={() => onPageChange(page + 1)}
               aria-label="Next page"
             >
-              <ChevronRight className="size-4" />
+              <CaretRight className="size-4" />
             </Button>
           </div>
         </div>

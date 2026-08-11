@@ -5,7 +5,7 @@ import {
   createRankTrackingConfig,
   updateRankTrackingConfig,
 } from "@/serverFunctions/rank-tracking";
-import { Info, Loader2, X } from "lucide-react";
+import { Info, CircleNotch, X } from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -262,8 +262,8 @@ export function RankTrackingConfigModal({
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
         <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Target Domain</span>
+          <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">Target Domain</span>
           </label>
           <Input
             passwordManagerIgnore
@@ -277,8 +277,8 @@ export function RankTrackingConfigModal({
         </div>
 
         <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Location</span>
+          <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">Location</span>
           </label>
           <GeoLocationSelect
             value={area}
@@ -297,8 +297,8 @@ export function RankTrackingConfigModal({
         </div>
 
         <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Language</span>
+          <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">Language</span>
           </label>
           <select
             className="app-select w-full"
@@ -315,8 +315,8 @@ export function RankTrackingConfigModal({
         </div>
 
         <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Devices</span>
+          <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">Devices</span>
           </label>
           <select
             className="app-select w-full"
@@ -351,8 +351,8 @@ export function RankTrackingConfigModal({
         </div>
 
         <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Schedule</span>
+          <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">Schedule</span>
           </label>
           <select
             className="app-select w-full"
@@ -383,8 +383,8 @@ export function RankTrackingConfigModal({
         </div>
 
         <div className="form-control">
-          <label className="label">
-            <span className="label-text font-medium">Search Depth</span>
+          <label className="inline-flex items-center gap-1.5 whitespace-nowrap">
+            <span className="font-medium">Search Depth</span>
           </label>
           <select
             className="app-select w-full"
@@ -419,7 +419,7 @@ export function RankTrackingConfigModal({
             size="sm"
             disabled={isPending || !domain.trim()}
           >
-            {isPending && <Loader2 className="size-3.5 animate-spin" />}
+            {isPending && <CircleNotch className="size-3.5 animate-spin" />}
             {isEdit ? "Save Changes" : "Add Domain"}
           </Button>
         </div>

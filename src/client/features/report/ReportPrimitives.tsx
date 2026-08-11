@@ -4,6 +4,7 @@ import {
   formatPercent,
   formatPosition,
 } from "@/client/features/report/reportModel";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /** Small shared building blocks for the report's data sections. */
 
@@ -85,38 +86,38 @@ export function GscRowsTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-lg border border-base-300">
-      <table className="table table-sm">
-        <thead>
-          <tr>
-            <th>{keyHeader}</th>
-            <th className="text-right">Clicks</th>
-            <th className="text-right">Impressions</th>
-            <th className="text-right">CTR</th>
-            <th className="text-right">Position</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>{keyHeader}</Table.Head>
+            <Table.Head className="text-right">Clicks</Table.Head>
+            <Table.Head className="text-right">Impressions</Table.Head>
+            <Table.Head className="text-right">CTR</Table.Head>
+            <Table.Head className="text-right">Position</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {rows.map((row) => (
-            <tr key={row.key}>
-              <td className="max-w-md">
+            <Table.Row key={row.key}>
+              <Table.Cell className="max-w-md">
                 <span className="line-clamp-1">{row.key}</span>
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatCount(row.clicks)}
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatCount(row.impressions)}
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatPercent(row.ctr)}
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatPosition(row.position)}
-              </td>
-            </tr>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     </div>
   );
 }

@@ -18,6 +18,9 @@ import {
   AUTUMN_SEO_DATA_TOPUP_BALANCE_FEATURE_ID,
   autumnSeoDataCreditsToUsd,
 } from "@/shared/billing";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
+import { useReveal } from "@/client/hooks/useReveal";
 
 export const Route = createFileRoute("/_app/billing")({
   beforeLoad: () => {
@@ -83,15 +86,16 @@ function BillingPage() {
             "We couldn't load your billing details right now. Please try again.",
           )}
         </p>
-        <button
+        <Button
           type="button"
-          className="btn btn-soft btn-sm"
+          variant="secondary"
+          size="sm"
           onClick={() => {
             void customerQuery.refetch();
           }}
         >
           Try again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -120,8 +124,16 @@ function BillingPage() {
     );
   }
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
-    <div className="mx-auto w-full max-w-2xl space-y-5 p-4 py-10 md:p-6 md:py-12">
+    <div
+      ref={revealRef}
+      className="mx-auto w-full max-w-2xl space-y-5 p-4 py-10 md:p-6 md:py-12"
+    >
       <h1 className="text-2xl font-semibold">Billing</h1>
 
       <div className="grid gap-5 md:grid-cols-2">
@@ -193,8 +205,10 @@ function BillingPage() {
                   </li>
                 ))}
               </ul>
-              <button
-                className="btn btn-soft btn-sm w-full"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="w-full"
                 disabled={isPending}
                 onClick={() =>
                   void runAction(
@@ -209,11 +223,13 @@ function BillingPage() {
                 }
               >
                 Upgrade Plan
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              className="btn btn-soft btn-sm w-full"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
               disabled={isPending}
               onClick={() =>
                 void runAction(
@@ -226,7 +242,7 @@ function BillingPage() {
               }
             >
               Manage subscription
-            </button>
+            </Button>
           )}
         </div>
 
@@ -244,13 +260,14 @@ function BillingPage() {
             <div>
               <div className="flex items-center gap-2">
                 <span className="text-sm text-base-content/60">$</span>
-                <input
+                <Input
                   type="number"
                   min={10}
                   max={99}
                   step={1}
                   inputMode="numeric"
-                  className="input input-bordered input-sm w-full"
+                  size="sm"
+                  className="w-full"
                   value={topUpAmount}
                   onChange={(e) => setTopUpAmount(e.target.value)}
                 />
@@ -262,8 +279,10 @@ function BillingPage() {
               ) : null}
             </div>
 
-            <button
-              className="btn btn-soft btn-sm w-full"
+            <Button
+              variant="secondary"
+              size="sm"
+              className="w-full"
               disabled={isPending || !isValidTopUp}
               onClick={() =>
                 void runAction(
@@ -286,7 +305,7 @@ function BillingPage() {
               }
             >
               Buy credits
-            </button>
+            </Button>
           </div>
         ) : null}
       </div>

@@ -1,4 +1,9 @@
-import { CircleDot, Crosshair, ShieldHalf, TrendingUp } from "lucide-react";
+import {
+  CircleDashed,
+  Crosshair,
+  ShieldChevron,
+  TrendUp,
+} from "@phosphor-icons/react";
 import { InsightTile } from "@/client/components/InsightTile";
 import type { DomainRatings } from "@/client/features/backlinks/useAhrefsDomainRatings";
 import { computeSerpStrength, type SerpStrengthInput } from "./serpStrength";
@@ -28,21 +33,21 @@ export function SerpStrengthCards({
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <InsightTile
-        icon={ShieldHalf}
+        icon={ShieldChevron}
         label="Avg DR (top 10)"
         value={strength.averageDr ?? "—"}
         tone="primary"
         title="Average Ahrefs domain rating across the top 10"
       />
       <InsightTile
-        icon={TrendingUp}
+        icon={TrendUp}
         label="Median domain traffic"
         value={formatCount(strength.medianDomainTraffic)}
         tone="info"
         title="Median whole-domain monthly traffic across the top 10"
       />
       <InsightTile
-        icon={CircleDot}
+        icon={CircleDashed}
         label="Soft spots"
         value={strength.softSpots}
         tone={strength.softSpots > 0 ? "success" : "neutral"}

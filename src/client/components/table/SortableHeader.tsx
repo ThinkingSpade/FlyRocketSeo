@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp } from "@phosphor-icons/react";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 
 type SortableColumn = {

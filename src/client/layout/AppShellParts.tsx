@@ -1,9 +1,9 @@
 import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ExternalLink } from "lucide-react";
+import { Warning, ArrowSquareOut } from "@phosphor-icons/react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
 function SeoApiStatusBanners({
@@ -19,13 +19,13 @@ function SeoApiStatusBanners({
         <div className="shrink-0 px-4 py-2.5 md:px-6">
           <div className="mx-auto max-w-7xl">
             <Banner variant="alert">
-              <AlertTriangle className="size-4 shrink-0" />
+              <Warning className="size-4 shrink-0" />
               <span className="text-sm">
                 Setup needed: add your DataForSEO API key to use FlyRocketSEO
                 features. See the quick steps on the{" "}
                 <Link
                   {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
+                  className="app-link font-medium"
                 >
                   help page
                 </Link>
@@ -40,13 +40,13 @@ function SeoApiStatusBanners({
         <div className="shrink-0 px-4 py-2.5 md:px-6">
           <div className="mx-auto max-w-7xl">
             <Banner variant="default">
-              <AlertTriangle className="size-4 shrink-0" />
+              <Warning className="size-4 shrink-0" />
               <span className="text-sm">
                 We could not verify your DataForSEO setup. If features are not
                 working, check the setup steps on the{" "}
                 <Link
                   {...dataforseoHelpLinkOptions}
-                  className="link link-primary font-medium"
+                  className="app-link font-medium"
                 >
                   help page
                 </Link>
@@ -108,7 +108,7 @@ const MissingSeoSetupModal = React.forwardRef<
       >
         <div className="flex items-start gap-3">
           <div className="rounded-full bg-warning/20 p-2 text-warning">
-            <AlertTriangle className="size-5" />
+            <Warning className="size-5" />
           </div>
           <div className="space-y-2">
             <h2
@@ -132,11 +132,11 @@ const MissingSeoSetupModal = React.forwardRef<
           </Button>
           <Link
             {...dataforseoHelpLinkOptions}
-            className="btn btn-primary"
+            className={buttonVariants({ variant: "primary" })}
             onClick={onClose}
           >
             Open setup guide
-            <ExternalLink className="size-4" />
+            <ArrowSquareOut className="size-4" />
           </Link>
         </div>
       </div>

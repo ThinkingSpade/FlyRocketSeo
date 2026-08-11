@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Search } from "lucide-react";
+import { Check, MagnifyingGlass } from "@phosphor-icons/react";
 import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 
 type LocationOption = (typeof LOCATION_OPTIONS)[number];
@@ -124,7 +124,7 @@ export function LocationSelect({
         // which extends this component's shell and had both bugs copied in.
         <div className="absolute inset-x-0 z-30 mt-2 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
           <label className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2 focus-within:border-primary">
-            <Search className="size-4 shrink-0 text-base-content/50" />
+            <MagnifyingGlass className="size-4 shrink-0 text-base-content/50" />
             {/* The input is the real combobox: focus never leaves it, arrow
                 keys only move `activeIndex`. Without these, a screen reader
                 announced "edit" and then said nothing as the user arrowed,
