@@ -1,4 +1,8 @@
 import { useMemo, useState } from "react";
+import {
+  auditHistoryKey,
+  auditResultsKey,
+} from "@/client/features/audit/auditQueryKeys";
 import { useQuery } from "@tanstack/react-query";
 import {
   WarningCircle,
@@ -36,7 +40,7 @@ export function AuditComparison({
 }) {
   const currentAuditId = current.audit.id;
   const historyQuery = useQuery({
-    queryKey: ["audit-history", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
 
@@ -64,7 +68,7 @@ export function AuditComparison({
   const [comparisonId, setComparisonId] = useState<string>(NO_COMPARISON);
 
   const comparisonQuery = useQuery({
-    queryKey: ["audit-results", projectId, comparisonId],
+    queryKey: auditResultsKey(projectId, comparisonId),
     queryFn: () =>
       getAuditResults({ data: { projectId, auditId: comparisonId } }),
     enabled: comparisonId !== NO_COMPARISON,

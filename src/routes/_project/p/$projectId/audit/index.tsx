@@ -1,4 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  auditResultsKey,
+  auditStatusKey,
+} from "@/client/features/audit/auditQueryKeys";
 import { useCallback } from "react";
 import { WarningCircle, CircleNotch } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
@@ -81,7 +85,7 @@ function AuditDetail({
   onTabChange: (tab: "pages" | "performance") => void;
 }) {
   const statusQuery = useQuery({
-    queryKey: ["audit-status", projectId, auditId],
+    queryKey: auditStatusKey(projectId, auditId),
     queryFn: () => getAuditStatus({ data: { projectId, auditId } }),
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -94,7 +98,7 @@ function AuditDetail({
   const isRunning = statusQuery.data?.status === "running";
 
   const resultsQuery = useQuery({
-    queryKey: ["audit-results", projectId, auditId],
+    queryKey: auditResultsKey(projectId, auditId),
     queryFn: () => getAuditResults({ data: { projectId, auditId } }),
     enabled: isComplete,
   });
@@ -111,10 +115,19 @@ function AuditDetail({
     return (
       <div className="px-4 py-6 md:px-6">
         <div className="mx-auto max-w-3xl space-y-4">
-          <Banner variant="error">
-            <WarningCircle className="size-5" />
-            <span>We could not load this audit. It may have been deleted.</span>
-          </Banner>
+          {/* "It may have been deleted" was asserted for every failure -- a
+              dropped connection, a 500, an expired session -- and offered no
+              retry, so a network blip read as data loss and the only way out
+              was back to the list. The server's own message says which it was;
+              reading an audit's status is free, so the retry is safe. */}
+          <InlineQueryError
+            message={getStandardErrorMessage(
+              statusQuery.error,
+              "We could not load this audit. It may have been deleted.",
+            )}
+            onRetry={() => void statusQuery.refetch()}
+            retrying={statusQuery.isFetching}
+          />
           <Button variant="ghost" size="sm" onClick={onBack}>
             &larr; Back to audits
           </Button>

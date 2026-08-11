@@ -83,7 +83,21 @@ export function AuditHistorySection({
                     {formatDate(audit.startedAt)}
                   </Table.Cell>
                   <Table.Cell className="max-w-[220px] truncate">
-                    {audit.startUrl}
+                    {/* The URL is the way in. The only other one is the
+                        `View` button, which is `md:opacity-0` until the row
+                        is hovered -- so on desktop a past audit looked like
+                        a read-only row until you happened to sweep the
+                        pointer across it. A real Link rather than a row
+                        `onClick` so cmd+click and "open in new tab" work,
+                        and so it is reachable by keyboard. */}
+                    <Link
+                      to="/p/$projectId/audit"
+                      params={{ projectId }}
+                      search={{ auditId: audit.id, tab: "pages" }}
+                      className="app-link block truncate"
+                    >
+                      {audit.startUrl}
+                    </Link>
                   </Table.Cell>
                   <Table.Cell>
                     <StatusBadge status={audit.status} />
@@ -149,12 +163,7 @@ function HistoryActions({
           <DropdownMenu.Item
             variant="danger"
             icon={Trash}
-            onClick={(event) => {
-              // The row behind this is itself clickable, so the delete must not
-              // also navigate into the audit it just removed.
-              event.stopPropagation();
-              onDelete(auditId);
-            }}
+            onClick={() => onDelete(auditId)}
           >
             Delete audit
           </DropdownMenu.Item>

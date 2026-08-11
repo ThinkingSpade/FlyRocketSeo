@@ -125,6 +125,36 @@ describe("classifyAuditIssues", () => {
     expect(result.pathsByIssue["thin-content"]).toBeUndefined();
   });
 
+  it("does not report a broken page as thin content as well", () => {
+    const result = classifyAuditIssues([
+      page({ url: "https://example.com/gone", statusCode: 404, wordCount: 12 }),
+    ]);
+
+    expect(result.pathsByIssue["broken-page"]).toEqual(["/gone"]);
+    expect(result.pathsByIssue["thin-content"]).toBeUndefined();
+  });
+
+  it("still flags thin content on a page that responded 200", () => {
+    const result = classifyAuditIssues([
+      page({ url: "https://example.com/stub", statusCode: 200, wordCount: 12 }),
+    ]);
+
+    expect(result.pathsByIssue["thin-content"]).toEqual(["/stub"]);
+  });
+
+  it("counts a broken thin page once, not twice, across the issue list", () => {
+    const result = classifyAuditIssues([
+      page({ url: "https://example.com/gone", statusCode: 500, wordCount: 8 }),
+      page({ url: "https://example.com/stub", statusCode: 200, wordCount: 8 }),
+    ]);
+
+    const counts = Object.fromEntries(
+      result.issues.map((issue) => [issue.key, issue.pageCount]),
+    );
+    expect(counts["broken-page"]).toBe(1);
+    expect(counts["thin-content"]).toBe(1);
+  });
+
   it("flags images missing alt text", () => {
     const result = classifyAuditIssues([
       page({ url: "https://example.com/images", imagesMissingAlt: 3 }),
@@ -179,14 +209,13 @@ describe("classifyAuditIssues", () => {
         h1Count: 0,
         wordCount: 50,
         imagesMissingAlt: 2,
-        statusCode: 500,
+        statusCode: 200,
       }),
     ]);
 
     const keys = result.issues.map((issue) => issue.key).toSorted();
     expect(keys).toEqual(
       [
-        "broken-page",
         "missing-alt-text",
         "missing-h1",
         "missing-meta-description",

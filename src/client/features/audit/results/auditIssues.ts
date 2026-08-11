@@ -30,6 +30,12 @@ function isBlank(value: string | null): boolean {
   return !value || value.trim() === "";
 }
 
+/** A page the server would not serve. Its body is an error page, so measuring
+ *  it as content says nothing about the site. */
+function isBroken(page: AuditIssuePage): boolean {
+  return page.statusCode != null && page.statusCode >= 400;
+}
+
 /** Matches audit/shared.tsx's extractPathname exactly, duplicated locally
  *  rather than imported so this module stays a self-contained pure function
  *  with no React or icon library in its module graph (that file exports
@@ -57,7 +63,7 @@ const ISSUE_DEFS: IssueDef[] = [
     key: "broken-page",
     label: "Broken page (4xx/5xx status)",
     severity: "high",
-    matches: (page) => page.statusCode != null && page.statusCode >= 400,
+    matches: isBroken,
   },
   {
     key: "missing-title",
@@ -81,8 +87,15 @@ const ISSUE_DEFS: IssueDef[] = [
     key: "thin-content",
     label: `Thin content (under ${THIN_CONTENT_WORDS} words)`,
     severity: "medium",
+    // A 404 body is short by definition, so without the status guard every
+    // broken page was reported twice -- once as broken and again as thin --
+    // inflating the issue list and, worse, the verdict's traffic intersection,
+    // which sums the clicks on each issue's paths. The fix for a 404 is not
+    // "write more words"; it is already covered by `broken-page`.
     matches: (page) =>
-      page.wordCount != null && page.wordCount < THIN_CONTENT_WORDS,
+      !isBroken(page) &&
+      page.wordCount != null &&
+      page.wordCount < THIN_CONTENT_WORDS,
   },
   {
     key: "missing-alt-text",

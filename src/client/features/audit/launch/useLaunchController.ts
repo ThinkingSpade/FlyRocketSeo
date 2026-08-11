@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useForm, useStore } from "@tanstack/react-form";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
   deleteAudit,
@@ -25,6 +25,7 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { buildProjectStartUrl } from "@/client/features/audit/launch/projectStartUrl";
+import { auditCacheKeysForProject } from "@/client/features/audit/auditQueryKeys";
 
 function getLaunchValidationErrors(
   value: LaunchFormValues,
@@ -184,6 +185,7 @@ function useLaunchMutations({
   projectId: string;
   historyRefetch: () => Promise<unknown>;
 }) {
+  const queryClient = useQueryClient();
   const startMutation = useMutation({
     mutationFn: (data: {
       projectId: string;
@@ -191,6 +193,14 @@ function useLaunchMutations({
       maxPages: number;
       lighthouseStrategy: "auto" | "none";
     }) => startAudit({ data }),
+    // A newly started audit is new history everywhere too: without this the
+    // dashboard's Site Audit card and Getting Started keep reporting the
+    // previous crawl (or none at all) while this one runs.
+    onSuccess: () => {
+      for (const queryKey of auditCacheKeysForProject(projectId)) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
+    },
   });
 
   const deleteMutation = useMutation({
@@ -198,6 +208,14 @@ function useLaunchMutations({
       deleteAudit({ data: { projectId, auditId } }),
     onSuccess: () => {
       void historyRefetch();
+      // The same server function is cached under three different names for
+      // history and three more for results; refetching this tab's own name
+      // left the deleted audit on the dashboard card, Getting Started,
+      // Opportunities, On-Page Fixes and the client report -- five surfaces
+      // still reporting a crawl the user had just removed.
+      for (const queryKey of auditCacheKeysForProject(projectId)) {
+        void queryClient.invalidateQueries({ queryKey });
+      }
       toast.success("Audit deleted");
     },
   });

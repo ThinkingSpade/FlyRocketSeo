@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { auditHistoryKey } from "@/client/features/audit/auditQueryKeys";
 import { Link, type LinkOptions } from "@tanstack/react-router";
 import { CheckCircle, Circle, Rocket } from "@phosphor-icons/react";
 import { getProjects } from "@/serverFunctions/projects";
@@ -46,7 +47,7 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
     queryFn: () => getGscConnection({ data: { projectId } }),
   });
   const auditQuery = useQuery({
-    queryKey: ["auditHistory", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
 

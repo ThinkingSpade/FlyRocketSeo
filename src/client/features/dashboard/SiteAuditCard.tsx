@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { auditHistoryKey } from "@/client/features/audit/auditQueryKeys";
 import { Link } from "@tanstack/react-router";
 import { ClipboardText } from "@phosphor-icons/react";
 import { getAuditHistory } from "@/serverFunctions/audit";
@@ -27,7 +28,7 @@ export function SiteAuditCard({ projectId }: { projectId: string }) {
   // getAuditHistory is first-party/cheap — the summary row is enough, so we
   // never fetch per-page results here.
   const historyQuery = useQuery({
-    queryKey: ["auditHistory", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
   // History is returned newest-first.

@@ -155,7 +155,18 @@ export function PagesTable({ pages }: { pages: AuditResultsData["pages"] }) {
       ) : null}
       <AppDataTable
         table={table}
-        empty={<EmptyTableMessage label="No pages match these filters." />}
+        empty={
+          // A crawl that returned nothing is not a filter problem, and
+          // blaming filters nobody set sends the user to reset a bar they
+          // never opened instead of to why the crawler came back empty.
+          <EmptyTableMessage
+            label={
+              pages.length === 0
+                ? "This audit stored no pages. The crawler reached nothing it could read — usually bot protection or a start URL that redirects off-site."
+                : "No pages match these filters."
+            }
+          />
+        }
       />
     </div>
   );
@@ -232,7 +243,13 @@ export function PerformanceTable({
       <AppDataTable
         table={table}
         empty={
-          <EmptyTableMessage label="No performance results match these filters." />
+          <EmptyTableMessage
+            label={
+              rows.length === 0
+                ? "This audit ran no Lighthouse checks, so there is nothing to compare."
+                : "No performance results match these filters."
+            }
+          />
         }
       />
     </div>
