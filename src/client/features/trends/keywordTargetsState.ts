@@ -14,6 +14,7 @@ import type { RestoreOutcomeName } from "./shouldAutoRunDiscovery";
 export type PaidState =
   | "ok"
   | "none"
+  | "unknown"
   | "failed"
   | "restore-failed"
   | "expired"
@@ -44,6 +45,14 @@ export type PaidState =
  * GSC-only rows, and nothing on the page could ever get it out of that
  * state. It sits AFTER the `active` checks: a live run that succeeded this
  * mount is real data worth showing even if the history read is broken.
+ *
+ * `"unknown"` and `"none"` are then split apart for the same reason, using
+ * the same convention `shouldAutoRunDiscovery` already relies on: a null
+ * `outcome` means the restore has not ANSWERED yet, not that no run exists.
+ * Collapsing the two would flash "Ranking data hasn't been loaded for this
+ * project yet", with a button offering to spend, on every cold mount of a
+ * project that has in fact already run -- for as long as the restore takes.
+ * "unknown" renders nothing, exactly like the transient "no-domain".
  */
 export function resolvePaidState(input: {
   domain: string | null;
@@ -65,6 +74,7 @@ export function resolvePaidState(input: {
   if (input.outcome === "expired" || input.outcome === "unreadable") {
     return "expired";
   }
+  if (input.outcome === null) return "unknown";
   if (!input.hasCredits) return "no-credits";
   return "none";
 }

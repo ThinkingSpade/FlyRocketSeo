@@ -139,7 +139,10 @@ export function KeywordTargetsCard({
           // never fired (or was blocked) showed Search Console rows with no
           // hint that the paid half exists. Hidden while a run is in flight:
           // the click would be a no-op (see useKeywordTargets' `start`) and
-          // the in-flight line below already says what is happening.
+          // the in-flight line below already says what is happening. It is
+          // NOT shown while the restore is still resolving either -- that is
+          // paidState "unknown", deliberately kept distinct from "none" so
+          // this never flashes at a project that has already run.
           <Banner variant="default" className="text-sm">
             Ranking data hasn’t been loaded for this project yet.
             <Button

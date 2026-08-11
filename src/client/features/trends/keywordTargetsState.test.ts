@@ -171,6 +171,36 @@ describe("resolvePaidState", () => {
     ).toBe("expired");
   });
 
+  it("reports unknown, not none, while the restore has yet to answer", () => {
+    // A null outcome means "we have not been told yet", the same convention
+    // shouldAutoRunDiscovery reads it by. Collapsing it into "none" would
+    // flash "Ranking data hasn't been loaded yet" -- with a button offering
+    // to spend -- on every cold mount of a project that HAS already run.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: null,
+        hasCredits: true,
+      }),
+    ).toBe("unknown");
+  });
+
+  it("stays unknown rather than no-credits until the restore answers", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: null,
+        hasCredits: false,
+      }),
+    ).toBe("unknown");
+  });
+
   it("reports no-credits when nothing else explains the empty state", () => {
     expect(
       resolvePaidState({
