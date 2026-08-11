@@ -33,7 +33,17 @@ export function CompetitorsRestoreNotice({
     const when = age ? ` (${age})` : "";
     return (
       <Banner variant="alert" className="text-sm">
-        {`Your last run for ${expired.label}${when} has expired — saved results are kept for 7 days. Run it again to see current data.`}
+        {/*
+          Deliberately states no retention period. The old copy promised "kept
+          for 7 days" and users hit this on runs only hours old, because a run's
+          durable copy was often never written at all (see CompetitorsService's
+          awaited setCached) -- so the sentence contradicted what people were
+          looking at. Two different prefixes with two different lifecycle rules
+          govern the real answer, neither of which this code can observe, so
+          asserting a number here would just be a second guess dressed as a
+          fact. Say what is true and actionable instead.
+        */}
+        {`Your last run for ${expired.label}${when} is no longer available to restore. Run it again to see current data.`}
       </Banner>
     );
   }

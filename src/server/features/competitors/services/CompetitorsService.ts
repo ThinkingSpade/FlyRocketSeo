@@ -313,7 +313,14 @@ async function getCompetitors(
     };
 
     if (stored.rows.length > 0) {
-      void setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
+      // AWAITED, not fire-and-forget: `recordRun` below makes the run's durable
+      // copy by READING THIS OBJECT BACK (AnalysisRunService.record ->
+      // getCachedRawIgnoringTtl -> putRunPayload). An un-awaited write races
+      // that read, and when the read loses there is no durable payload at all,
+      // so the run survives only as long as the 7-day `dataforseo-cache/`
+      // lifecycle -- which is exactly the "expired" state users hit on runs far
+      // younger than the retention they were promised.
+      await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
         (error) => {
           console.error("competitors.list.cache-write failed:", error);
         },
@@ -358,7 +365,9 @@ async function getCompetitors(
   };
 
   if (stored.rows.length > 0) {
-    void setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch((error) => {
+    // Awaited for the same reason as the serp branch above: `recordRun` reads
+    // this object back to make the run's durable copy.
+    await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch((error) => {
       console.error("competitors.list.cache-write failed:", error);
     });
     await recordRun();
