@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { storedMetricGeoSchema, STORED_GEO_BUNDLE_VERSION } from "./geo";
+import { errorCodeSchema } from "@/shared/error-codes";
 
 /**
  * One run of the Keyword Trends tab's paid keyword discovery.
@@ -42,6 +43,26 @@ export const keywordDiscoveryResultSchema = z.discriminatedUnion("status", [
     status: z.literal("failed"),
     /** Short machine-ish tag, not a raw provider message: this is rendered. */
     reason: z.string(),
+    /**
+     * A server-diagnostic-only companion to `reason`: the `AppError.code`
+     * behind this failure, or the fixed literal "unknown" for an error that
+     * wasn't a recognised `AppError` at all. NEVER `error.message`, NEVER raw
+     * provider text -- `reason` exists specifically because the raw
+     * DataForSEO `status_message` can carry account identifiers (see
+     * `describeFailure` in keywordDiscovery.ts), and that constraint applies
+     * here just as much. The difference from `reason` is audience: `reason`
+     * is the three-value tag the CLIENT renders; `diagnostic` is for a human
+     * inspecting a stored run (e.g. via a D1/R2 admin query) who needs more
+     * than "provider_error" to tell an out-of-funds account apart from a
+     * malformed request or a vendor outage, without reaching for
+     * `wrangler tail` output that may already have scrolled away.
+     *
+     * OPTIONAL so a `failed` row persisted before this field existed keeps
+     * parsing -- this schema round-trips through R2/D1, so making it
+     * required would break every already-stored failure the next time it's
+     * read back.
+     */
+    diagnostic: z.union([errorCodeSchema, z.literal("unknown")]).optional(),
     attemptedAt: z.string(),
   }),
 ]);

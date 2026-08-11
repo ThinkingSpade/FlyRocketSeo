@@ -80,6 +80,56 @@ export function resolvePaidState(input: {
 }
 
 /**
+ * Which `reason` tag actually explains a `paidState === "failed"` card.
+ *
+ * NOT simply `active`'s own `reason` -- that is the bug this function fixes.
+ * `active` (`fresh ?? restored`, see useKeywordTargets.ts) is exactly right
+ * for deciding what ROWS to show, and wrong for this: `fresh` is a `useState`
+ * set ONLY inside the mutation's `onSuccess`, so it only ever holds an "ok"
+ * result, and it is STICKY -- a later failed attempt never clears it, because
+ * a throw never reaches `onSuccess`. Concretely: a first run succeeds
+ * (`fresh` = ok, card shows "Refresh"), the user clicks it, and that second
+ * attempt fails. `isError` goes true, but `active` still reads `fresh`'s old
+ * "ok" result -- `active?.status === "failed"` is false, so reading the
+ * reason off `active` silently produced `null` (the generic message, WITH a
+ * retry button) for what could be a fresh `insufficient_credits` failure,
+ * where "Try again" is not just useless but can bill again.
+ *
+ * The restore's OWN result -- independent of `fresh` -- is what actually
+ * carries that new failure. It is safe to read here specifically BECAUSE
+ * `isError` is true: the mutation's `onSettled` invalidation is awaited
+ * before `isError` flips (see useKeywordTargets.ts's own `onSettled`
+ * comment), so by the time this runs, the refetch it triggered has already
+ * landed the row the server just recorded for that same attempt. Gating the
+ * fallback on `isError` (rather than reading `restoredResult` unconditionally)
+ * is what keeps a STALE restored failure from ever outranking a genuinely
+ * current success -- this only ever activates for a failure THIS mount knows
+ * is real.
+ *
+ * The `active`-first check is kept, not dropped, because it still covers two
+ * cases correctly on its own: a purely restored failure with no live call
+ * this mount (`fresh` is null, so `active` IS `restoredResult`), and the
+ * ordinary first-run-ever failure (`fresh` stays null the whole time, for the
+ * same reason).
+ */
+export function resolveFailureReason(input: {
+  /** `fresh ?? restored` -- the result whose rows are on screen right now. */
+  active: KeywordDiscoveryResult | null;
+  /** THIS mount's own mutation attempt. Not `restoreFailed` -- that is the
+   *  RESTORE query's own error state, a different failure entirely. */
+  isError: boolean;
+  /** The restore's OWN result, read independent of `fresh`. Only consulted
+   *  when `isError` is true; see this function's own comment above. */
+  restoredResult: KeywordDiscoveryResult | null;
+}): string | null {
+  if (input.active?.status === "failed") return input.active.reason;
+  if (input.isError && input.restoredResult?.status === "failed") {
+    return input.restoredResult.reason;
+  }
+  return null;
+}
+
+/**
  * What a failed paid run actually says, and whether retrying it is honest.
  *
  * The server already classifies every failure into one of three tags
