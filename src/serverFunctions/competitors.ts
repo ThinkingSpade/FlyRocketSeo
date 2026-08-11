@@ -4,8 +4,12 @@ import {
   competitorsListRequestSchema,
   keywordGapRequestSchema,
   linkGapRequestSchema,
+  projectCompetitorListRequestSchema,
+  projectCompetitorSetRequestSchema,
+  projectCompetitorRemoveRequestSchema,
 } from "@/types/schemas/competitors";
 import { CompetitorsService } from "@/server/features/competitors/services/CompetitorsService";
+import { ProjectCompetitorRepository } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
 
 export const getCompetitorsList = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
@@ -44,4 +48,35 @@ export const getLinkGapPage = createServerFn({ method: "POST" })
       },
       context,
     );
+  });
+
+export const listProjectCompetitors = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(projectCompetitorListRequestSchema)
+  .handler(async ({ context }) => {
+    return ProjectCompetitorRepository.listByProject(context.projectId);
+  });
+
+export const setProjectCompetitor = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(projectCompetitorSetRequestSchema)
+  .handler(async ({ data, context }) => {
+    await ProjectCompetitorRepository.upsert({
+      projectId: context.projectId,
+      domain: data.domain,
+      status: data.status,
+      note: data.note,
+    });
+    return ProjectCompetitorRepository.listByProject(context.projectId);
+  });
+
+export const removeProjectCompetitor = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(projectCompetitorRemoveRequestSchema)
+  .handler(async ({ data, context }) => {
+    await ProjectCompetitorRepository.remove({
+      projectId: context.projectId,
+      domain: data.domain,
+    });
+    return ProjectCompetitorRepository.listByProject(context.projectId);
   });

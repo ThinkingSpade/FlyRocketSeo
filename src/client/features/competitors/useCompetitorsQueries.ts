@@ -1,20 +1,39 @@
 import { useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { toast } from "sonner";
 import {
   getCompetitorsList,
   getKeywordGapPage,
   getLinkGapPage,
+  listProjectCompetitors,
+  removeProjectCompetitor,
+  setProjectCompetitor,
 } from "@/serverFunctions/competitors";
-import type { KeywordGapMode } from "@/types/schemas/competitors";
+import {
+  competitorsPageSchema,
+  type KeywordGapMode,
+} from "@/types/schemas/competitors";
 import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
 import { useHandoff } from "@/client/features/insights/handoffStore";
 import {
   useProjectMarket,
   type ProjectMarket,
 } from "@/client/hooks/useProjectDomain";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import {
+  applyProjectCompetitorMutationSuccess,
+  applyRemoveProjectCompetitorPatch,
+  applySetProjectCompetitorPatch,
+  competitorsListQueryKeyPrefix,
+  projectCompetitorsQueryKey,
+} from "./competitorsCacheUpdaters";
+import { reapplyRestoredOverrides } from "./reapplyRestoredOverrides";
 
 type CompetitorsRun = {
   authorized: boolean;
@@ -129,8 +148,7 @@ export function useCompetitorsQuery(input: {
     runNonce: input.runNonce,
     enabled: input.enabled && target !== "",
     queryKey: [
-      "competitors-list",
-      input.projectId,
+      ...competitorsListQueryKeyPrefix(input.projectId),
       target,
       input.page,
       input.pageSize,
@@ -231,5 +249,116 @@ export function useLinkGapQuery(input: {
           pageSize: input.pageSize,
         },
       }),
+  });
+}
+
+/**
+ * This project's standing pin/exclude overrides. Free (one D1 read, no
+ * DataForSEO call), so it needs no `authorized` gate. Mounted both on demand
+ * by the hidden-domains manager, and unconditionally by
+ * `useRestoredCompetitorsRun` below -- TanStack Query dedupes by query key,
+ * so the second mount is a cache hit whenever the first already ran, not a
+ * second request.
+ */
+export function useProjectCompetitorsQuery(projectId: string) {
+  return useQuery({
+    queryKey: projectCompetitorsQueryKey(projectId),
+    queryFn: () => listProjectCompetitors({ data: { projectId } }),
+  });
+}
+
+/**
+ * The restored run for a tab, with this project's CURRENT pin/exclude
+ * overrides re-applied -- a thin wrapper around `useAutoRestoredRun` so
+ * `CompetitorsPage` doesn't have to. `useAutoRestoredRun`'s own result is a
+ * byte-for-byte snapshot taken when the run was recorded, and nothing ever
+ * rewrites it; the overrides read here is what makes a standing exclusion or
+ * pin survive a reload instead of only lasting the rest of the session (see
+ * `reapplyRestoredOverrides`'s own doc comment for the full reasoning).
+ */
+export function useRestoredCompetitorsRun(input: {
+  projectId: string;
+  enabled: boolean;
+  runId: string | null;
+}) {
+  const { restored, outcome, expired } = useAutoRestoredRun({
+    projectId: input.projectId,
+    feature: RUN_FEATURES.competitors,
+    schema: competitorsPageSchema,
+    enabled: input.enabled,
+    runId: input.runId,
+  });
+  const overrides = useProjectCompetitorsQuery(input.projectId);
+  return {
+    restored: reapplyRestoredOverrides(restored, overrides.data ?? []),
+    outcome,
+    expired,
+  };
+}
+
+function reportProjectCompetitorError(error: unknown): void {
+  toast.error(
+    getStandardErrorMessage(error, "Couldn't update this competitor"),
+  );
+}
+
+/**
+ * Pins a competitor, or excludes (hides) it -- both free D1 writes. See
+ * `applyProjectCompetitorMutationSuccess`'s own doc comment
+ * (`competitorsCacheUpdaters.ts`) for what it writes into the cache, and why
+ * a restored run gets no patch of its own.
+ */
+export function useSetProjectCompetitorMutation(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { domain: string; status: "pinned" | "excluded" }) =>
+      setProjectCompetitor({
+        data: { projectId, domain: input.domain, status: input.status },
+      }),
+    onSuccess: (overrides, variables) => {
+      applyProjectCompetitorMutationSuccess(
+        queryClient,
+        projectId,
+        overrides,
+        (page) => applySetProjectCompetitorPatch(page, variables),
+      );
+      toast.success(
+        variables.status === "pinned"
+          ? `Pinned ${variables.domain}`
+          : `Excluded ${variables.domain}`,
+      );
+    },
+    onError: reportProjectCompetitorError,
+  });
+}
+
+/**
+ * Clears a standing override -- unpinning a visible row, or unhiding an
+ * excluded one from the hidden-domains manager. Both go through the same
+ * `removeProjectCompetitor` call (it just deletes the override row), but the
+ * two need different LIVE-cache patches, so the caller says which this is
+ * rather than the mutation guessing from what's in cache. See
+ * `applyProjectCompetitorMutationSuccess`'s own doc comment for what it
+ * writes into the cache.
+ */
+export function useRemoveProjectCompetitorMutation(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { domain: string; reason: "unpin" | "unhide" }) =>
+      removeProjectCompetitor({ data: { projectId, domain: input.domain } }),
+    onSuccess: (overrides, variables) => {
+      applyProjectCompetitorMutationSuccess(
+        queryClient,
+        projectId,
+        overrides,
+        (page) => applyRemoveProjectCompetitorPatch(page, variables),
+      );
+      toast.success(
+        variables.reason === "unpin"
+          ? `Unpinned ${variables.domain}`
+          : `${variables.domain} is no longer hidden`,
+      );
+    },
+    onError: reportProjectCompetitorError,
   });
 }

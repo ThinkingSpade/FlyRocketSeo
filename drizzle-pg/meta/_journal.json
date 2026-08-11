@@ -106,6 +106,13 @@
       "when": 1785301874068,
       "tag": "0014_cool_skrulls",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1786382230468,
+      "tag": "0015_handy_speed",
+      "breakpoints": true
     }
   ]
 }

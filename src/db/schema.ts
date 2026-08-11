@@ -72,6 +72,7 @@ export const {
   geoLocations,
   projectTargetAreas,
   projectProfiles,
+  projectCompetitors,
   keywordFitVerdicts,
   gbpConnections,
   gbpScheduledPosts,

@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
   getConfigById: vi.fn(),
   getConfigsForProject: vi.fn(),
   getLatestResults: vi.fn(),
+  getCompetitors: vi.fn(),
 }));
 
 vi.mock("cloudflare:workers", () => ({ env: {} }));
@@ -54,6 +55,9 @@ vi.mock(
 );
 vi.mock("@/server/features/rank-tracking/services/rankTrackingResults", () => ({
   getLatestResults: mocks.getLatestResults,
+}));
+vi.mock("@/server/features/competitors/services/CompetitorsService", () => ({
+  CompetitorsService: { getCompetitors: mocks.getCompetitors },
 }));
 
 const authContext = {
@@ -323,5 +327,87 @@ describe("MCP tool text output (service-backed tools)", () => {
     expect(out).toContain(
       "1 | example.com | Best SEO Tools | https://example.com/best",
     );
+  });
+
+  it("find_competitors renders the domain-mode columns when discoveryMode is domain", async () => {
+    mocks.getCompetitors.mockResolvedValue({
+      rows: [
+        {
+          domain: "rival.com",
+          avgPosition: 4.2,
+          intersections: 30,
+          organicKeywords: 400,
+          organicTraffic: 1500,
+          coverage: null,
+          beatsYouCount: null,
+          positionDelta: null,
+          source: "domain",
+          pinned: false,
+        },
+      ],
+      totalCount: 1,
+      fetchedAt: "2026-08-10T00:00:00.000Z",
+      seedSize: 0,
+      hiddenCount: 0,
+      discoveryMode: "domain",
+      seedTruncated: false,
+    });
+    const { findCompetitorsTool } = await import("./competitor-research-tools");
+
+    const result = await findCompetitorsTool.handler(
+      { projectId: "project_1", target: "example.com" },
+      toolExtra,
+    );
+
+    const out = text(result);
+    expect(out).toContain(
+      "domain | shared_keywords | avg_position | organic_keywords | organic_traffic",
+    );
+    expect(out).toContain("rival.com | 30 | 4.20 | 400 | 1500");
+  });
+
+  it("find_competitors renders serp-mode columns -- never a null shared_keywords or a site-wide-labeled organic_keywords -- when discoveryMode is serp", async () => {
+    mocks.getCompetitors.mockResolvedValue({
+      rows: [
+        {
+          domain: "rival.com",
+          avgPosition: 5.5,
+          // Every real serp row has these null (rankSerpCompetitors.ts sets
+          // intersections explicitly; the domain-overlap-only mapper is the
+          // only source of organicKeywords, which serp mode never calls).
+          intersections: null,
+          organicKeywords: null,
+          organicTraffic: 900,
+          coverage: 0.634,
+          beatsYouCount: 12,
+          positionDelta: -2.5,
+          source: "serp",
+          pinned: false,
+        },
+      ],
+      totalCount: 1,
+      fetchedAt: "2026-08-10T00:00:00.000Z",
+      seedSize: 20,
+      hiddenCount: 0,
+      discoveryMode: "serp",
+      seedTruncated: false,
+    });
+    const { findCompetitorsTool } = await import("./competitor-research-tools");
+
+    const result = await findCompetitorsTool.handler(
+      { projectId: "project_1", target: "example.com" },
+      toolExtra,
+    );
+
+    const out = text(result);
+    expect(out).toContain(
+      "domain | beats_you_on | coverage_pct | position_delta | avg_position | est_traffic",
+    );
+    expect(out).toContain("rival.com | 12 | 63% | -2.50 | 5.50 | 900");
+    // The exact bug: a shared_keywords column reading null on every row.
+    expect(out).not.toContain("shared_keywords");
+    // organic_keywords silently changing meaning (site-wide -> seed-scoped)
+    // under the SAME header would be just as misleading as showing it null.
+    expect(out).not.toContain("organic_keywords");
   });
 });

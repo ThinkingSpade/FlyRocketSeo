@@ -795,6 +795,29 @@ export const projectProfiles = pgTable(
   (table) => [uniqueIndex("project_profiles_project_idx").on(table.projectId)],
 );
 
+// Postgres sibling of `projectCompetitors` in ../app.schema.ts -- see that
+// table's own header for why it exists.
+export const projectCompetitors = pgTable(
+  "project_competitors",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    domain: text("domain").notNull(),
+    status: text("status", { enum: ["pinned", "excluded"] }).notNull(),
+    note: text("note").notNull().default(""),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+    updatedAt: timestampColumn("updated_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("project_competitors_project_domain_idx").on(
+      table.projectId,
+      table.domain,
+    ),
+  ],
+);
+
 // Postgres sibling of `keywordFitVerdicts` in ../app.schema.ts.
 export const keywordFitVerdicts = pgTable(
   "keyword_fit_verdicts",
