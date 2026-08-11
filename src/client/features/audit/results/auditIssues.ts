@@ -87,15 +87,10 @@ const ISSUE_DEFS: IssueDef[] = [
     key: "thin-content",
     label: `Thin content (under ${THIN_CONTENT_WORDS} words)`,
     severity: "medium",
-    // A 404 body is short by definition, so without the status guard every
-    // broken page was reported twice -- once as broken and again as thin --
-    // inflating the issue list and, worse, the verdict's traffic intersection,
-    // which sums the clicks on each issue's paths. The fix for a 404 is not
-    // "write more words"; it is already covered by `broken-page`.
+    // The broken-page exclusion is applied to every def in
+    // `classifyAuditIssues`, so this only has to answer "is it thin".
     matches: (page) =>
-      !isBroken(page) &&
-      page.wordCount != null &&
-      page.wordCount < THIN_CONTENT_WORDS,
+      page.wordCount != null && page.wordCount < THIN_CONTENT_WORDS,
   },
   {
     key: "missing-alt-text",
@@ -112,7 +107,17 @@ export function classifyAuditIssues(pages: AuditIssuePage[]): {
   const pathsByIssue: Record<string, string[]> = {};
 
   for (const def of ISSUE_DEFS) {
-    const paths = pages.filter(def.matches).map((page) => pathnameOf(page.url));
+    const paths = pages
+      // A broken page is reported once, as broken. It also has no title, no
+      // meta, no H1 and no images, so without this it was counted again under
+      // every one of those -- up to five rows for one dead URL, each inflating
+      // the verdict's traffic intersection, which sums the clicks on each
+      // issue's paths. Worse, those four keys drive On-Page Fixes, so a 404
+      // earned an AI-written title rewrite. The fix for a 404 is a redirect,
+      // which `broken-page` already says.
+      .filter((page) => def.key === "broken-page" || !isBroken(page))
+      .filter(def.matches)
+      .map((page) => pathnameOf(page.url));
     if (paths.length > 0) pathsByIssue[def.key] = paths;
   }
 

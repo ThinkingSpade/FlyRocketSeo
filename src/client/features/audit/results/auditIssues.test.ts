@@ -225,3 +225,49 @@ describe("classifyAuditIssues", () => {
     );
   });
 });
+
+describe("a broken page is one issue, not five", () => {
+  it("does not also report it as missing title, meta, h1 or alt text", () => {
+    // A 404 body has none of those, so every broken page used to appear under
+    // all five keys. That inflated the issue list, inflated the verdict's
+    // traffic intersection (which sums the clicks on each issue's paths), and
+    // fed four of those keys into On-Page Fixes -- earning a dead URL an
+    // AI-written title rewrite. The fix for a 404 is a redirect.
+    const { issues, pathsByIssue } = classifyAuditIssues([
+      {
+        url: "https://example.com/gone",
+        statusCode: 404,
+        title: null,
+        metaDescription: null,
+        h1Count: 0,
+        wordCount: 3,
+        imagesMissingAlt: 2,
+      },
+    ]);
+
+    expect(issues.map((issue) => issue.key)).toEqual(["broken-page"]);
+    expect(pathsByIssue["missing-title"]).toBeUndefined();
+    expect(pathsByIssue["thin-content"]).toBeUndefined();
+    expect(pathsByIssue["missing-alt-text"]).toBeUndefined();
+  });
+
+  it("still reports those defects on a page that loads", () => {
+    const { pathsByIssue } = classifyAuditIssues([
+      {
+        url: "https://example.com/live",
+        statusCode: 200,
+        title: null,
+        metaDescription: null,
+        h1Count: 0,
+        wordCount: 3,
+        imagesMissingAlt: 2,
+      },
+    ]);
+
+    expect(pathsByIssue["missing-title"]).toEqual(["/live"]);
+    expect(pathsByIssue["missing-h1"]).toEqual(["/live"]);
+    expect(pathsByIssue["thin-content"]).toEqual(["/live"]);
+    expect(pathsByIssue["missing-alt-text"]).toEqual(["/live"]);
+    expect(pathsByIssue["broken-page"]).toBeUndefined();
+  });
+});
