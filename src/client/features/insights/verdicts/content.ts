@@ -307,6 +307,10 @@ export function buildClustersVerdict(input: ClustersVerdictInput): Verdict {
         {
           label: `Build a hub page around "${lead.name}", starting with its easier keywords`,
           evidence: `Average difficulty ${lead.averageDifficulty} across ${formatCount(lead.keywordCount)} keywords`,
+          to: {
+            to: "/p/$projectId/content" as const,
+            search: { q: lead.name },
+          },
           weight: 70,
         },
       ],
@@ -323,6 +327,11 @@ export function buildClustersVerdict(input: ClustersVerdictInput): Verdict {
       {
         label: `Build a hub page around "${lead.name}"`,
         evidence: `${formatCount(lead.keywordCount)} keywords, ${formatCount(lead.totalVolume)} searches/mo${lead.averageDifficulty != null ? `, average difficulty ${lead.averageDifficulty}` : ""}`,
+        // Content Optimizer builds the brief for the hub this names.
+        to: {
+          to: "/p/$projectId/content" as const,
+          search: { q: lead.name },
+        },
         weight: 100,
       },
     ],

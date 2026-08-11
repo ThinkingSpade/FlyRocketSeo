@@ -142,6 +142,7 @@ describe("buildKeywordsVerdict", () => {
         label: 'Prioritize "kw2"',
         evidence: "Volume 900, difficulty 30 vs your DR 40",
         weight: 100,
+        to: { to: "/p/$projectId/serp", search: { q: "kw2" } },
       },
     ]);
   });
@@ -189,6 +190,7 @@ describe("buildKeywordsVerdict", () => {
         evidence:
           "Its difficulty score of 55 is the closest of this batch to your DR 40",
         weight: 100,
+        to: { to: "/p/$projectId/serp", search: { q: "kw1" } },
       },
     ]);
   });
@@ -400,6 +402,10 @@ describe("buildTrendsVerdict", () => {
         label: 'Publish or refresh "coffee subscription" content by October',
         evidence: "coffee subscription's search interest peaks in December",
         weight: 100,
+        to: {
+          to: "/p/$projectId/content",
+          search: { q: "coffee subscription" },
+        },
       },
     ]);
   });

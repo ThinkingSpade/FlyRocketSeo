@@ -24,6 +24,21 @@ type AuditVerdictInput = {
   pathsByIssue: Record<string, string[]>;
 };
 
+/**
+ * The issue keys On-Page Fixes can actually resolve. Its generator produces
+ * exactly one element per row -- `"title" | "meta" | "h1" | "alt"`
+ * (`onpage/onPageModel.ts`) -- so these four map onto it and the rest
+ * (broken pages, thin content) do not: those are edits to the page itself,
+ * not to a tag this app rewrites. An action only links where the destination
+ * can genuinely finish the job.
+ */
+const ON_PAGE_FIXABLE = new Set([
+  "missing-title",
+  "missing-meta-description",
+  "missing-h1",
+  "missing-alt-text",
+]);
+
 /** Higher severities must outrank lower ones regardless of how many pages an
  *  issue touches -- one broken page on a top performer matters more than ten
  *  missing-alt-text hits on pages nobody reads past. Also used as the base of
@@ -126,6 +141,9 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
   const top = ranked.slice(0, MAX_AUDIT_ACTIONS);
   const actions = top.map((entry) => ({
     label: `Fix "${entry.issue.label}" on ${pluralize(entry.hitCount, "high-traffic page")}`,
+    to: ON_PAGE_FIXABLE.has(entry.issue.key)
+      ? ({ to: "/p/$projectId/on-page" } as const)
+      : undefined,
     // "N of your top-clicked pages" selects N members from a fixed group, so
     // "pages" stays plural regardless of N (unlike "N high-traffic page(s)"
     // above, which conjugates with N) -- written out rather than pluralize()

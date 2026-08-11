@@ -83,6 +83,13 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
       actions.push({
         label: `Redirect or restore the ${formatCount(brokenCount)} broken backlink target${brokenCount === 1 ? "" : "s"}`,
         evidence: broken.evidence,
+        // The Top Pages tab is where the broken targets are listed, so the
+        // action lands on the rows it is talking about rather than the tab
+        // the user is already looking at.
+        to: {
+          to: "/p/$projectId/backlinks",
+          search: { tab: "pages" as const },
+        },
         // Highest weight: these links are already earned, so reclaiming them
         // costs nothing but a redirect -- the cheapest link building there is.
         weight: 100,
@@ -101,6 +108,12 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
         label:
           "Review the referring domains behind this backlink profile for spam",
         evidence: `Backlink spam score ${spam.formatted}/100 · ${spam.label}`,
+        // Referring Domains carries the per-domain spam scores this review
+        // needs; the overview tab shows only the profile-wide figure.
+        to: {
+          to: "/p/$projectId/backlinks",
+          search: { tab: "domains" as const },
+        },
         // Below the broken-link action: a spam review is a caution, not a
         // guaranteed recovery the way redirecting a dead link is.
         weight: 70,

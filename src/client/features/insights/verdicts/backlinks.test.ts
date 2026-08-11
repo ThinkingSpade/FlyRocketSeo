@@ -68,6 +68,7 @@ describe("buildBacklinksVerdict", () => {
         label: "Redirect or restore the 142 broken backlink targets",
         evidence: "142 of 1,200 backlinks (12%) point at dead pages",
         weight: 100,
+        to: { to: "/p/$projectId/backlinks", search: { tab: "pages" } },
       },
     ]);
   });
@@ -90,12 +91,14 @@ describe("buildBacklinksVerdict", () => {
       label: "Redirect or restore the 142 broken backlink targets",
       evidence: "142 of 1,200 backlinks (12%) point at dead pages",
       weight: 100,
+      to: { to: "/p/$projectId/backlinks", search: { tab: "pages" } },
     });
     expect(verdict.actions[1]).toEqual({
       label:
         "Review the referring domains behind this backlink profile for spam",
       evidence: "Backlink spam score 42/100 · Worth reviewing",
       weight: 70,
+      to: { to: "/p/$projectId/backlinks", search: { tab: "domains" } },
     });
     // Broken-link recovery is free (links already earned); it must always
     // outrank a spam review, which only makes something worse look better.
@@ -161,6 +164,7 @@ describe("buildBacklinksVerdict", () => {
         label: "Redirect or restore the 8 broken backlink targets",
         evidence: "8 backlinks point at dead pages",
         weight: 100,
+        to: { to: "/p/$projectId/backlinks", search: { tab: "pages" } },
       },
     ]);
   });

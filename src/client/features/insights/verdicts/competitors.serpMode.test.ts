@@ -72,6 +72,10 @@ describe("buildCompetitorsVerdict (serp mode)", () => {
         label: "Compare keywords with rival-a.com in the Keyword Gap tab",
         evidence: "Outranks you on 21 of your 40 tracked keywords, 53%",
         weight: 100,
+        to: {
+          to: "/p/$projectId/competitors",
+          search: { tab: "gap", competitor: "rival-a.com" },
+        },
       },
     ]);
   });
@@ -125,6 +129,10 @@ describe("buildCompetitorsVerdict (serp mode)", () => {
         label: "Compare keywords with rival-c.com in the Keyword Gap tab",
         evidence: "Outranks you on 6 of your tracked keywords",
         weight: 80,
+        to: {
+          to: "/p/$projectId/competitors",
+          search: { tab: "gap", competitor: "rival-c.com" },
+        },
       },
     ]);
   });

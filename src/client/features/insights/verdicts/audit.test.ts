@@ -156,6 +156,7 @@ describe("buildAuditVerdict", () => {
         label: 'Fix "Missing meta description" on 1 high-traffic page',
         evidence:
           "Affects 1 of the 2 top-clicked pages (6 affected across the crawl)",
+        to: { to: "/p/$projectId/on-page" },
         weight: 61,
       },
     ]);
@@ -205,12 +206,14 @@ describe("buildAuditVerdict", () => {
         label: 'Fix "Missing title tag" on 1 high-traffic page',
         evidence:
           "Affects 1 of the 3 top-clicked pages (4 affected across the crawl)",
+        to: { to: "/p/$projectId/on-page" },
         weight: 101,
       },
       {
         label: 'Fix "Missing H1 heading" on 2 high-traffic pages',
         evidence:
           "Affects 2 of the 3 top-clicked pages (10 affected across the crawl)",
+        to: { to: "/p/$projectId/on-page" },
         weight: 62,
       },
     ]);

@@ -67,6 +67,10 @@ describe("buildCompetitorsVerdict", () => {
         label: "Compare keywords with rival-a.com in the Keyword Gap tab",
         evidence: "300 shared keywords, 75% of rival-a.com's own 400",
         weight: 100,
+        to: {
+          to: "/p/$projectId/competitors",
+          search: { tab: "gap", competitor: "rival-a.com" },
+        },
       },
     ]);
   });
@@ -123,6 +127,10 @@ describe("buildCompetitorsVerdict", () => {
         label: "Compare keywords with rival-c.com in the Keyword Gap tab",
         evidence: "50 shared keywords",
         weight: 80,
+        to: {
+          to: "/p/$projectId/competitors",
+          search: { tab: "gap", competitor: "rival-c.com" },
+        },
       },
     ]);
   });

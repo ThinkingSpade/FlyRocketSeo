@@ -146,6 +146,12 @@ function buildDomainModeVerdict(
         actions: [
           {
             label: `Compare keywords with ${domain} in the Keyword Gap tab`,
+            to: {
+              to: "/p/$projectId/competitors",
+              // The gap tab this label names, already pointed at this rival --
+              // `competitor` and `tab` are both in `competitorsSearchSchema`.
+              search: { tab: "gap" as const, competitor: domain },
+            },
             evidence: `${formatCount(intersections)} shared keywords, ${pct}% of ${domain}'s own ${formatCount(organicKeywords)}`,
             weight: 100,
           },
@@ -165,6 +171,12 @@ function buildDomainModeVerdict(
       actions: [
         {
           label: `Compare keywords with ${domain} in the Keyword Gap tab`,
+          to: {
+            to: "/p/$projectId/competitors",
+            // The gap tab this label names, already pointed at this rival --
+            // `competitor` and `tab` are both in `competitorsSearchSchema`.
+            search: { tab: "gap" as const, competitor: domain },
+          },
           evidence: `${formatCount(intersections)} shared keywords`,
           weight: 80,
         },
@@ -216,6 +228,12 @@ function buildSerpModeVerdict(
         actions: [
           {
             label: `Compare keywords with ${domain} in the Keyword Gap tab`,
+            to: {
+              to: "/p/$projectId/competitors",
+              // The gap tab this label names, already pointed at this rival --
+              // `competitor` and `tab` are both in `competitorsSearchSchema`.
+              search: { tab: "gap" as const, competitor: domain },
+            },
             evidence: `Outranks you on ${formatCount(beatsYouCount)} of your ${formatCount(seedSize)} tracked keywords, ${pct}%`,
             weight: 100,
           },
@@ -235,6 +253,12 @@ function buildSerpModeVerdict(
       actions: [
         {
           label: `Compare keywords with ${domain} in the Keyword Gap tab`,
+          to: {
+            to: "/p/$projectId/competitors",
+            // The gap tab this label names, already pointed at this rival --
+            // `competitor` and `tab` are both in `competitorsSearchSchema`.
+            search: { tab: "gap" as const, competitor: domain },
+          },
           evidence: `Outranks you on ${formatCount(beatsYouCount)} of your tracked keywords`,
           weight: 80,
         },
