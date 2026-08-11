@@ -20,6 +20,7 @@ export function ProfileSummary({
   isFilled,
   areaLabel,
   isDrafting,
+  draftFailed,
   onOpen,
 }: {
   profile: ProjectProfile;
@@ -28,6 +29,8 @@ export function ProfileSummary({
   areaLabel: string | null;
   /** The unattended first-open draft is reading the client's site now. */
   isDrafting: boolean;
+  /** The unattended first-open draft ran and failed. */
+  draftFailed: boolean;
   onOpen: () => void;
 }) {
   // Says what is happening rather than asking for work that is already being
@@ -57,11 +60,18 @@ export function ProfileSummary({
         <div className="flex items-start gap-2">
           <Briefcase className="mt-0.5 size-4 shrink-0 text-base-content/50" />
           <p className="text-sm text-base-content/80">
-            Keyword results don&apos;t know what this client does yet, so a
-            machine reseller&apos;s keywords look the same as an
-            operator&apos;s.{" "}
+            {/* An unattended draft that failed must say so. Falling back to
+                the generic prompt would repeat the exact defect this branch
+                exists to fix -- a failure that looks identical to never
+                having tried -- only worse, because the user never pressed
+                anything and has no reason to suspect an attempt was made. */}
+            {draftFailed
+              ? "We couldn't read their site well enough to fill this in."
+              : "Keyword results don't know what this client does yet, so a machine reseller's keywords look the same as an operator's."}{" "}
             <span className="text-base-content/60">
-              Takes a minute, costs nothing.
+              {draftFailed
+                ? "Fill it in yourself — everything downstream still works."
+                : "Takes a minute, costs nothing."}
             </span>
           </p>
         </div>

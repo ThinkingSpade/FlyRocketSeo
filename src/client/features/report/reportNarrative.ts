@@ -82,6 +82,22 @@ type NarrativeInput = {
 };
 
 /**
+ * Longest client description this report will read back in its opening
+ * sentence.
+ *
+ * The field behind it accepts 2,000 characters, and someone pasting their
+ * whole About page is an ordinary thing to do. That is survivable in a form
+ * and not in a printed deliverable: "This report covers search performance
+ * for …" followed by four paragraphs is the first thing the client reads.
+ * Generous enough for any real one-or-two-sentence description (the drafted
+ * one for a live domain measured ~210 characters), and the opener is dropped
+ * rather than truncated past it — cutting someone's description of their own
+ * business mid-word in a document they hand to a client is worse than the
+ * report simply opening on its numbers, which is what it did before.
+ */
+const MAX_OPENER_OFFER_CHARS = 400;
+
+/**
  * Drops one trailing full stop so an offer written as a sentence can be
  * embedded mid-sentence without doubling up. Only one, and only at the end:
  * the offer is the client's own prose and nothing else about it is rewritten.
@@ -115,7 +131,7 @@ export function buildSummaryNarrative(input: NarrativeInput): string[] {
   // dashboard export; one that opens on who the client is reads as being
   // about them. Omitted entirely rather than hedged when we don't know.
   const offer = input.clientOffer?.trim();
-  if (offer) {
+  if (offer && offer.length <= MAX_OPENER_OFFER_CHARS) {
     paragraphs.push(
       `This report covers search performance for ${trimTrailingPeriod(offer)}.`,
     );

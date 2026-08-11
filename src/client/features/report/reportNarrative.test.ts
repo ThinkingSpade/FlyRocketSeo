@@ -81,6 +81,32 @@ describe("buildSummaryNarrative — who the client is", () => {
     expect(paragraphs.join(" ")).not.toContain("This report covers");
   });
 
+  it("drops the opener rather than printing a pasted essay to a client", () => {
+    // The offer field accepts 2,000 characters and pasting an About page is
+    // an ordinary thing to do. Survivable in a form, not in a PDF whose
+    // first line the client reads.
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: "We do many things. ".repeat(40),
+    });
+    expect(paragraphs[0]).toContain("33,616 impressions");
+    expect(paragraphs.join(" ")).not.toContain("This report covers");
+  });
+
+  it("still uses a long-but-realistic description", () => {
+    // ~210 chars is what drafting a real domain actually produced, so the
+    // cap must not be tight enough to reject genuine descriptions.
+    const realistic =
+      "Fully managed DFW break room programs including free-installed vending machines, micro markets, office pantries, coffee and water stations, smart coolers and fresh food, with no upfront cost and zero contracts";
+    const paragraphs = buildSummaryNarrative({
+      totals,
+      prevTotals,
+      clientOffer: realistic,
+    });
+    expect(paragraphs[0]).toContain(realistic);
+  });
+
   it("ignores a profile that is present but blank", () => {
     const paragraphs = buildSummaryNarrative({
       totals,

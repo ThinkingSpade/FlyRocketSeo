@@ -49,9 +49,11 @@ describe("deriveBrandTerms", () => {
     expect(deriveBrandTerms({ projectName: "Acme", domain: "acme.com" })).toBe(
       "Acme",
     );
-    expect(
-      deriveBrandTerms({ projectName: "Delio TX", domain: "deliotx.com" }),
-    ).not.toContain("Delio TX\nDelio TX");
+    // Case is what is ignored, not the whole comparison: a name differing
+    // only in case collapses, and one differing in spacing does not.
+    expect(deriveBrandTerms({ projectName: "ACME", domain: "acme.com" })).toBe(
+      "ACME",
+    );
   });
 
   it("drops the auto-created project name, which is not a brand", () => {

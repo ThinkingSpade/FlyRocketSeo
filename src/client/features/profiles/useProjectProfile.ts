@@ -139,15 +139,21 @@ export function useDraftProjectProfile(projectId: string) {
  * from the server. `autoDraftProjectProfile` claims the row before doing any
  * work; a caller that loses the claim gets `skipped` back and pays nothing.
  *
- * The profile query is invalidated on success so the card, and every other
- * surface reading the profile, picks up the drafted row without a reload.
+ * The profile query is invalidated on EITHER outcome, which matters most for
+ * the one that looks like it needs nothing. "Skipped" means a row already
+ * exists — and the commonest way to reach it is navigating away mid-draft:
+ * drafting takes ~16s, React Query drops a mutation's callbacks when its
+ * component unmounts, but the request is already in flight and the server
+ * still writes the row. The next mount then reads `getProjectProfile` from a
+ * cache entry that is fresh for five minutes and says the profile is empty,
+ * so a drafted profile stays invisible until that expires or the page is
+ * reloaded. One free D1 read on a skipped call closes that.
  */
 export function useAutoDraftProjectProfile(projectId: string) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => autoDraftProjectProfile({ data: { projectId } }),
-    onSuccess: (result) => {
-      if (result.status !== "drafted") return;
+    onSuccess: () => {
       void queryClient.invalidateQueries({
         queryKey: projectProfileQueryKey(projectId),
       });
