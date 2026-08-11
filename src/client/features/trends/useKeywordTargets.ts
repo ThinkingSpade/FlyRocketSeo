@@ -427,6 +427,14 @@ export function useKeywordTargets(
     if (
       !shouldAutoRunDiscovery({
         outcome,
+        // The SAME signal `resolvePaidState` reads to render
+        // "restore-failed", and both have to see it. Without it here, a
+        // failed settle-time refetch leaves the pre-call "none" in
+        // `query.data` (query-core keeps `state.data` on an errored
+        // refetch), so this effect would fire a SECOND paid call on the next
+        // mount while the card renders "Nothing was charged." See
+        // `shouldAutoRunDiscovery`'s own comment on this input.
+        restoreFailed: restored.isError,
         hasDomain: domain != null,
         hasCredits,
         alreadyAttempted: attemptedRef.current,
@@ -440,6 +448,7 @@ export function useKeywordTargets(
     hasCredits,
     outcome,
     paidCallInFlight,
+    restored.isError,
     start,
     targetAreaScope.ready,
   ]);

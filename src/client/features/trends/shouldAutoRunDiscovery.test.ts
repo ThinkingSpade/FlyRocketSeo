@@ -3,6 +3,7 @@ import { shouldAutoRunDiscovery } from "./shouldAutoRunDiscovery";
 
 const base = {
   outcome: "none" as const,
+  restoreFailed: false,
   hasDomain: true,
   hasCredits: true,
   alreadyAttempted: false,
@@ -15,6 +16,18 @@ describe("shouldAutoRunDiscovery", () => {
 
   it("does not run while the restore is still resolving", () => {
     expect(shouldAutoRunDiscovery({ ...base, outcome: null })).toBe(false);
+  });
+
+  it("does not run on a STALE 'none' left behind by a failed restore refetch", () => {
+    // The exact re-billing path this input exists for. query-core keeps
+    // `state.data` when a refetch errors, and `outcome` is derived from
+    // `query.data` alone -- so after the paid call's own settle-time refetch
+    // fails, the next mount still reads the pre-call "none". Without this
+    // check that is a second paid Labs call for a project just billed, under
+    // a banner that says "Nothing was charged."
+    expect(shouldAutoRunDiscovery({ ...base, restoreFailed: true })).toBe(
+      false,
+    );
   });
 
   it("does not run when a run was already restored", () => {

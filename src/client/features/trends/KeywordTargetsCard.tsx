@@ -133,7 +133,9 @@ export function KeywordTargetsCard({
           </Banner>
         ) : null}
 
-        {targets.paidState === "none" && !targets.isRunningPaid ? (
+        {targets.paidState === "none" &&
+        !targets.isRunningPaid &&
+        targetAreaScope.ready ? (
           // The spec's own States table requires this prompt, and until now
           // nothing rendered for "none" at all -- a project whose auto-run
           // never fired (or was blocked) showed Search Console rows with no
@@ -143,6 +145,25 @@ export function KeywordTargetsCard({
           // NOT shown while the restore is still resolving either -- that is
           // paidState "unknown", deliberately kept distinct from "none" so
           // this never flashes at a project that has already run.
+          //
+          // `targetAreaScope.ready` is the third condition, and it is the one
+          // that actually matters. Enumerate `resolvePaidState` with credits
+          // present and a domain present, and an unready scope is the ONLY
+          // durable way to sit in "none" -- every other route is a sub-frame
+          // flash before the auto-run effect commits. So without this gate
+          // the button would be reachable ESSENTIALLY ONLY in the window
+          // where spending is forbidden. `start()` deliberately does not
+          // check `ready` (a user clicking a rendered scope control is
+          // choosing what they can see), and before `ready` the area is the
+          // plain country fallback -- so a click here would send Labs a
+          // NATIONAL location_code instead of the project's confirmed metro.
+          // That is the permanent mis-targeting the `ready` gate exists to
+          // prevent, and the auto-run fires a moment later anyway, so the
+          // button buys nothing in that window. Not a double-spend: `fresh`
+          // is set in `onSuccess` before `onSettled`, and the restore's
+          // setData and the mutation's success dispatch land in the same
+          // notifyManager flush, so no intermediate render exists right
+          // after a successful run.
           <Banner variant="default" className="text-sm">
             Ranking data hasn’t been loaded for this project yet.
             <Button
