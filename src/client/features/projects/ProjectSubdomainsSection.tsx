@@ -1,6 +1,19 @@
 import * as React from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Globe, Loader2, RefreshCw, Search, Trash2 } from "lucide-react";
+import {
+  ArrowsClockwise,
+  CircleNotch,
+  Globe,
+  MagnifyingGlass,
+  Trash,
+} from "@phosphor-icons/react";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
+import { Input } from "@cloudflare/kumo/components/input";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Switch } from "@cloudflare/kumo/components/switch";
+import { Table } from "@cloudflare/kumo/components/table";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
@@ -161,12 +174,12 @@ export function ProjectSubdomainsSection({ projectId }: { projectId: string }) {
 
       {subdomainsQuery.isPending ? (
         <div className="flex justify-center py-6">
-          <span className="loading loading-spinner loading-sm" />
+          <Loader size="sm" />
         </div>
       ) : !apex ? (
-        <div className="alert alert-info">
-          <span>Set the project domain above to add subdomains.</span>
-        </div>
+        <Banner variant="default">
+          Set the project domain above to add subdomains.
+        </Banner>
       ) : (
         <div className="space-y-4">
           <div className="rounded-xl border border-base-300 bg-base-100 p-4 space-y-3">
@@ -182,27 +195,29 @@ export function ProjectSubdomainsSection({ projectId }: { projectId: string }) {
               </p>
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <button
+              <Button
                 type="button"
-                className="btn btn-primary btn-sm"
+                variant="primary"
+                size="sm"
                 disabled={isBusy}
                 onClick={() => discoverMutation.mutate(["gsc", "dataforseo"])}
               >
                 {isDiscovering ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <CircleNotch className="size-4 animate-spin" />
                 ) : (
-                  <RefreshCw className="size-4" />
+                  <ArrowsClockwise className="size-4" />
                 )}
                 Find subdomains
-              </button>
-              <button
+              </Button>
+              <Button
                 type="button"
-                className="btn btn-ghost btn-sm"
+                variant="ghost"
+                size="sm"
                 disabled={isBusy}
                 onClick={() => discoverMutation.mutate(["gsc"])}
               >
                 Search Console only (free)
-              </button>
+              </Button>
             </div>
           </div>
 
@@ -214,43 +229,49 @@ export function ProjectSubdomainsSection({ projectId }: { projectId: string }) {
               addMutation.mutate();
             }}
           >
-            <label className="input input-bordered input-sm flex flex-1 items-center gap-2 min-w-56">
-              <Globe className="size-4 text-base-content/60" />
-              <input
-                className="grow min-w-0"
+            <div className="relative flex min-w-56 flex-1 items-center">
+              <Globe className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+              <Input
+                size="sm"
+                aria-label="Subdomain host"
+                className="w-full min-w-0 pl-9"
                 placeholder={`blog.${apex}`}
                 value={host}
                 onChange={(event) => setHost(event.target.value)}
               />
-            </label>
-            <button
+            </div>
+            <Button
               type="submit"
-              className="btn btn-outline btn-sm"
+              variant="outline"
+              size="sm"
               disabled={!host.trim() || addMutation.isPending}
             >
               Add
-            </button>
+            </Button>
           </form>
 
           {subdomains.length > FILTER_THRESHOLD ? (
-            <label className="input input-bordered input-sm flex items-center gap-2">
-              <Search className="size-4 text-base-content/60" />
-              <input
-                className="grow min-w-0"
+            <div className="relative flex items-center">
+              <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+              <Input
+                size="sm"
+                aria-label="Filter subdomains"
+                className="w-full pl-9"
                 placeholder="Filter subdomains"
                 value={filter}
                 onChange={(event) => setFilter(event.target.value)}
               />
-            </label>
+            </div>
           ) : null}
 
           {selectedIds.length > 0 ? (
             <div className="flex flex-wrap items-center gap-2 rounded-lg bg-base-200 px-3 py-2">
               <span className="text-sm">{selectedIds.length} selected</span>
               <div className="ml-auto flex flex-wrap gap-2">
-                <button
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs"
+                  variant="ghost"
+                  size="xs"
                   disabled={isBusy}
                   onClick={() =>
                     activeMutation.mutate({
@@ -260,10 +281,11 @@ export function ProjectSubdomainsSection({ projectId }: { projectId: string }) {
                   }
                 >
                   Include
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs"
+                  variant="ghost"
+                  size="xs"
                   disabled={isBusy}
                   onClick={() =>
                     activeMutation.mutate({
@@ -273,16 +295,18 @@ export function ProjectSubdomainsSection({ projectId }: { projectId: string }) {
                   }
                 >
                   Exclude
-                </button>
-                <button
+                </Button>
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs text-error"
+                  variant="ghost"
+                  size="xs"
+                  className="text-error"
                   disabled={isBusy}
                   onClick={() => removeMutation.mutate(selectedIds)}
                 >
-                  <Trash2 className="size-3.5" />
+                  <Trash className="size-3.5" />
                   Remove
-                </button>
+                </Button>
               </div>
             </div>
           ) : null}
@@ -336,83 +360,78 @@ function SubdomainTable({
 }) {
   return (
     <div className="overflow-x-auto rounded-xl border border-base-300">
-      <table className="table table-sm">
-        <thead>
-          <tr>
-            <th className="w-10">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
+      <Table>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head className="w-10">
+              <Checkbox
                 aria-label="Select all shown subdomains"
                 checked={allVisibleSelected}
-                onChange={onToggleAll}
+                onCheckedChange={onToggleAll}
               />
-            </th>
-            <th>Subdomain</th>
-            <th className="text-right">Traffic</th>
-            <th className="text-right">Keywords</th>
-            <th className="text-right">Clicks</th>
-            <th className="w-24 text-center">Included</th>
-            <th className="w-10" />
-          </tr>
-        </thead>
-        <tbody>
+            </Table.Head>
+            <Table.Head>Subdomain</Table.Head>
+            <Table.Head className="text-right">Traffic</Table.Head>
+            <Table.Head className="text-right">Keywords</Table.Head>
+            <Table.Head className="text-right">Clicks</Table.Head>
+            <Table.Head className="w-24 text-center">Included</Table.Head>
+            <Table.Head className="w-10" />
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {subdomains.map((subdomain) => (
-            <tr
+            <Table.Row
               key={subdomain.id}
               className={subdomain.isActive ? "" : "opacity-50"}
             >
-              <td>
-                <input
-                  type="checkbox"
-                  className="checkbox checkbox-sm"
+              <Table.Cell>
+                <Checkbox
                   aria-label={`Select ${subdomain.host}`}
                   checked={selected.has(subdomain.id)}
-                  onChange={() => onToggleOne(subdomain.id)}
+                  onCheckedChange={() => onToggleOne(subdomain.id)}
                 />
-              </td>
-              <td>
+              </Table.Cell>
+              <Table.Cell>
                 <div className="font-medium">{subdomain.host}</div>
                 <div className="text-xs text-base-content/50">
                   {SUBDOMAIN_SOURCE_LABELS[subdomain.source]}
                 </div>
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatMetric(subdomain.organicTraffic)}
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatMetric(subdomain.organicKeywords)}
-              </td>
-              <td className="text-right tabular-nums">
+              </Table.Cell>
+              <Table.Cell className="text-right tabular-nums">
                 {formatMetric(subdomain.clicks)}
-              </td>
-              <td className="text-center">
-                <input
-                  type="checkbox"
-                  className="toggle toggle-sm"
+              </Table.Cell>
+              <Table.Cell className="text-center">
+                <Switch
                   aria-label={`Include ${subdomain.host}`}
                   checked={subdomain.isActive}
                   disabled={disabled}
-                  onChange={() =>
+                  onCheckedChange={() =>
                     onSetActive(subdomain.id, !subdomain.isActive)
                   }
                 />
-              </td>
-              <td>
-                <button
+              </Table.Cell>
+              <Table.Cell>
+                <Button
                   type="button"
-                  className="btn btn-ghost btn-xs btn-square"
+                  variant="ghost"
+                  size="xs"
                   aria-label={`Remove ${subdomain.host}`}
                   disabled={disabled}
                   onClick={() => onRemove(subdomain.id)}
                 >
-                  <Trash2 className="size-3.5" />
-                </button>
-              </td>
-            </tr>
+                  <Trash className="size-3.5" />
+                </Button>
+              </Table.Cell>
+            </Table.Row>
           ))}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     </div>
   );
 }
