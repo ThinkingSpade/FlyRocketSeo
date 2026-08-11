@@ -1,5 +1,5 @@
+import { FitMarker } from "@/client/features/profiles/FitMarker";
 import type { ColumnDef } from "@tanstack/react-table";
-import { UserMinus } from "@phosphor-icons/react";
 import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import { SortableHeader } from "./RankTrackingColumns";
 
@@ -14,17 +14,6 @@ export type SuggestedKeyword = {
 /** Same mark, same reasoning as Keyword Research's table: only
  *  `wrong-customer` earns a glyph, so the marks stay signal. Here it also
  *  explains why a high-traffic row arrived unticked. */
-function FitMarker({ fit }: { fit: FitResult | undefined }) {
-  if (fit?.verdict !== "wrong-customer") return null;
-  return (
-    <UserMinus
-      className="size-3.5 shrink-0 text-base-content/40"
-      aria-label={fit.reason}
-    >
-      <title>{fit.reason}</title>
-    </UserMinus>
-  );
-}
 
 /** Built per-render from the verdict map rather than declared once at module
  *  scope, because the keyword cell has to read it. */

@@ -1,3 +1,4 @@
+import { FitMarker } from "@/client/features/profiles/FitMarker";
 import { useMemo } from "react";
 import {
   createColumnHelper,
@@ -21,9 +22,7 @@ import { TrendSparkline } from "@/client/components/TrendSparkline";
 import { formatNumber } from "@/client/features/keywords/utils";
 import { keywordRowNote } from "@/client/features/insights/verdicts/keywords";
 import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
-import { UserMinus } from "@phosphor-icons/react";
 import type { FitMap } from "@/client/features/keywords/hooks/useKeywordFiltering";
-import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import type { ResolvedGeo } from "@/shared/geo/types";
 import type { KeywordResearchRow } from "@/types/keywords";
 
@@ -39,17 +38,6 @@ import type { KeywordResearchRow } from "@/types/keywords";
  * carries difficulty and intent badges, and a third competing colour would
  * make the row harder to read rather than more informative.
  */
-function FitMarker({ fit }: { fit: FitResult | undefined }) {
-  if (fit?.verdict !== "wrong-customer") return null;
-  return (
-    <UserMinus
-      className="size-3.5 shrink-0 text-base-content/40"
-      aria-label={fit.reason}
-    >
-      <title>{fit.reason}</title>
-    </UserMinus>
-  );
-}
 import { EmptyFilterResults } from "./keywordResearchDesktopFilters";
 
 type Props = {

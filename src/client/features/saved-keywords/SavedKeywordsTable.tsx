@@ -1,3 +1,4 @@
+import { FitMarker } from "@/client/features/profiles/FitMarker";
 import {
   createColumnHelper,
   type ColumnDef,
@@ -5,7 +6,7 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { MagnifyingGlass, UserMinus } from "@phosphor-icons/react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
@@ -34,17 +35,6 @@ const columnHelper = createColumnHelper<SavedKeywordRow>();
  * put an icon on nearly every row. A bare muted glyph rather than a coloured
  * badge -- this table already carries difficulty, intent and tag colours.
  */
-function FitMarker({ fit }: { fit: FitResult | undefined }) {
-  if (fit?.verdict !== "wrong-customer") return null;
-  return (
-    <UserMinus
-      className="size-3.5 shrink-0 text-base-content/40"
-      aria-label={fit.reason}
-    >
-      <title>{fit.reason}</title>
-    </UserMinus>
-  );
-}
 
 export function SavedKeywordsTable({
   rows,
