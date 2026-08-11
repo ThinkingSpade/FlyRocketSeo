@@ -18,6 +18,10 @@ type Props = {
   onSubmit: (event: FormEvent) => void;
   isLoading: boolean;
   validationError: { field: "query" | "competitors"; message: string } | null;
+  /** The market this lookup will ask about. Null only while the project is
+   *  still loading — the form has no country control, so without this line
+   *  there is nothing on screen to say which country's AI answers were read. */
+  marketLabel: string | null;
 };
 
 // Hosted customers are billed the marked-up USD; self-hosted users pay
@@ -38,6 +42,7 @@ export function BrandLookupSearchCard({
   onSubmit,
   isLoading,
   validationError,
+  marketLabel,
 }: Props) {
   const hasCompetitors = competitors.trim().length > 0;
   const queryError = validationError?.field === "query";
@@ -125,6 +130,14 @@ export function BrandLookupSearchCard({
               </span>
             ) : null}
           </p>
+          {marketLabel ? (
+            <p>
+              AI answers for{" "}
+              <span className="font-medium text-base-content/80">
+                {marketLabel}
+              </span>
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

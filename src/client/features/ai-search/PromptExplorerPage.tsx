@@ -27,10 +27,13 @@ import {
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
 import {
-  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import {
+  isRunOnScreen,
+  promptExplorerRunKey,
+} from "@/client/features/ai-search/activeRun";
 import { useProject } from "@/client/hooks/useProjectDomain";
 import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
@@ -73,20 +76,6 @@ const PROMPT_EXPLORER_BULLETS = [
   },
 ];
 
-function promptRunKey(
-  projectId: string,
-  values: PromptExplorerFormValues,
-): string {
-  return createMeteredRunKey(
-    projectId,
-    values.prompt.trim(),
-    values.models.toSorted(),
-    values.webSearch,
-    values.webSearchCountryCode,
-    values.highlightBrand.trim(),
-  );
-}
-
 export function PromptExplorerPage(props: Props) {
   return (
     <HostedPlanGate>
@@ -118,7 +107,7 @@ function PromptExplorerPageInner({
       ? project.name.trim()
       : (domainStem(project?.domain) ?? ""));
   const brandWasEdited = useRef(Boolean(urlState.highlightBrand));
-  const run = useAuthorizedRun(promptRunKey(projectId, form));
+  const run = useAuthorizedRun(promptExplorerRunKey(projectId, form));
   const gscQuery = useQuery({
     queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
     queryFn: () =>
@@ -241,15 +230,28 @@ function PromptExplorerPageInner({
       highlightBrand: form.highlightBrand.trim(),
     };
     setAuthorizedInput(next);
-    run.authorize(promptRunKey(projectId, next));
+    run.authorize(promptExplorerRunKey(projectId, next));
     onSubmit(next);
   };
 
-  const errorMessage = exploreQuery.isError
-    ? getStandardErrorMessage(exploreQuery.error)
-    : null;
+  // What is on screen belongs to the URL, not to the click that produced it.
+  // `authorizedInput` is never reset and the answers sit in a
+  // `staleTime: Infinity` cache, so "Recent searches" used to clear the URL
+  // and the form and leave four model answers underneath it — and clicking a
+  // different history row showed the previous prompt's answers under the new
+  // prompt. Same key the run was authorized against, so the two cannot drift.
+  const showsAuthorizedRun = isRunOnScreen(
+    authorizedInput ? promptExplorerRunKey(projectId, authorizedInput) : null,
+    promptExplorerRunKey(projectId, urlState),
+  );
+  const errorMessage =
+    showsAuthorizedRun && exploreQuery.isError
+      ? getStandardErrorMessage(exploreQuery.error)
+      : null;
+  // Still keyed on the authorization: a request in flight has already been
+  // paid for, and the router writes the new params a render later.
   const isLoading = hasActivePrompt && exploreQuery.isPending;
-  const resultData = authorizedInput ? exploreQuery.data : undefined;
+  const resultData = showsAuthorizedRun ? exploreQuery.data : undefined;
 
   const updateForm = <K extends keyof PromptExplorerFormValues>(
     key: K,
@@ -324,14 +326,17 @@ function PromptExplorerPageInner({
               </div>
               <PromptExplorerResults result={resultData} />
             </>
-          ) : !errorMessage ? (
+          ) : (
+            // Rendered under the error banner too: one failed prompt says
+            // nothing about the prompts already stored, and hiding them left
+            // a failed run with no way back to the previous ones.
             <PromptExplorerHistorySection
               projectId={projectId}
               history={history}
               historyLoaded={historyLoaded}
               onRemoveHistoryItem={removeHistoryItem}
             />
-          ) : null}
+          )}
         </>
       )}
     </AppPageShell>
