@@ -45,7 +45,15 @@ const TOP_PAGES_BY_CLICKS_LIMIT = 20;
  * device/country filter, so a warm cache from that tab means this one issues
  * no request at all.
  */
-function useTopPagePathsByClicks(projectId: string): string[] {
+function useTopPagePathsByClicks(projectId: string): {
+  paths: string[];
+  /** True until this read has actually answered. The verdict asserts "no
+   *  Search Console click data is available" from an empty list, so an
+   *  in-flight or failed read must not be handed one -- that sentence claims
+   *  a fact about the project rather than about this request, and on failure
+   *  it never corrects itself. */
+  unresolved: boolean;
+} {
   const query = useQuery({
     queryKey: [
       "contentPerformance",
@@ -60,7 +68,7 @@ function useTopPagePathsByClicks(projectId: string): string[] {
       }),
   });
 
-  return useMemo(() => {
+  const paths = useMemo(() => {
     const report = query.data;
     if (!report || !report.connected) return [];
     return report.current
@@ -68,6 +76,8 @@ function useTopPagePathsByClicks(projectId: string): string[] {
       .slice(0, TOP_PAGES_BY_CLICKS_LIMIT)
       .map((row) => extractPathname(row.page));
   }, [query.data]);
+
+  return { paths, unresolved: query.isPending || query.isError };
 }
 
 export function ResultsView({
@@ -89,7 +99,8 @@ export function ResultsView({
     () => classifyAuditIssues(pages),
     [pages],
   );
-  const topPagePaths = useTopPagePathsByClicks(projectId);
+  const { paths: topPagePaths, unresolved: topPagesUnresolved } =
+    useTopPagePathsByClicks(projectId);
   const verdict = useMemo(
     () =>
       buildAuditVerdict({
@@ -100,8 +111,9 @@ export function ResultsView({
         issues,
         topPagePaths,
         pathsByIssue,
+        topPagesUnresolved,
       }),
-    [pages.length, issues, topPagePaths, pathsByIssue],
+    [pages.length, issues, topPagePaths, pathsByIssue, topPagesUnresolved],
   );
 
   return (

@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { useQuery } from "@tanstack/react-query";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { getRankConfigTrend } from "@/serverFunctions/rank-tracking";
@@ -35,13 +37,14 @@ export function RankTrackingOverview({
 }) {
   const [sinceDays, setSinceDays] = useState(730);
 
-  const { data: trend, isLoading: trendLoading } = useQuery({
+  const trendQuery = useQuery({
     queryKey: ["rankConfigTrend", projectId, configId, device, sinceDays],
     queryFn: () =>
       getRankConfigTrend({
         data: { projectId, configId, device, sinceDays },
       }),
   });
+  const { data: trend, isLoading: trendLoading } = trendQuery;
 
   const chartData = useMemo(
     () =>
@@ -160,6 +163,18 @@ export function RankTrackingOverview({
           <ChartSkeleton
             height={CHART_HEIGHT}
             label="Loading position distribution"
+          />
+        ) : trendQuery.isError ? (
+          // Not "no history yet": that sentence asserts an absence this read
+          // never established, and it invites a metered check to fix a problem
+          // the user does not have.
+          <InlineQueryError
+            message={getStandardErrorMessage(
+              trendQuery.error,
+              "The position history could not be loaded.",
+            )}
+            onRetry={() => void trendQuery.refetch()}
+            retrying={trendQuery.isFetching}
           />
         ) : chartData.length <= 1 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-8 text-center text-xs text-base-content/60">

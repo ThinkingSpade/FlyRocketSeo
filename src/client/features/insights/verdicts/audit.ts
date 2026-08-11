@@ -22,6 +22,12 @@ type AuditVerdictInput = {
   topPagePaths: string[];
   /** Paths each issue touches, keyed by issue key. */
   pathsByIssue: Record<string, string[]>;
+  /** True while the traffic read has not answered (in flight, or failed).
+   *  Without it an empty `topPagePaths` is indistinguishable from a resolved
+   *  "Search Console is connected and reported nothing", and the verdict
+   *  below states the latter as fact. Optional so existing callers that do
+   *  resolve their read first are unaffected. */
+  topPagesUnresolved?: boolean;
 };
 
 /**
@@ -107,7 +113,9 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
   if (input.topPagePaths.length === 0) {
     const affected = countDistinctAffectedPaths(input.pathsByIssue);
     return unknownVerdict(
-      `This audit found issues on ${affected} of ${input.pagesCrawled} pages crawled, but no Search Console click data is available to tell which of them affect pages that actually earn traffic.`,
+      input.topPagesUnresolved
+        ? `This audit found issues on ${affected} of ${input.pagesCrawled} pages crawled. Search Console click data has not loaded, so which of them earn traffic is not known yet.`
+        : `This audit found issues on ${affected} of ${input.pagesCrawled} pages crawled, but no Search Console click data is available to tell which of them affect pages that actually earn traffic.`,
     );
   }
 

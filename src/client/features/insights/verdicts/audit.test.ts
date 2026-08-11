@@ -280,3 +280,43 @@ describe("auditRowNote", () => {
     expect(auditRowNote("some-future-issue-type")).toBeNull();
   });
 });
+
+describe("buildAuditVerdict traffic-read resolution", () => {
+  const issues: AuditIssueSummary[] = [
+    {
+      key: "missing-title",
+      label: "Missing title tag",
+      pageCount: 2,
+      severity: "high",
+    },
+  ];
+  const pathsByIssue = { "missing-title": ["/a", "/b"] };
+
+  it("says the traffic read has not loaded rather than asserting there is none", () => {
+    const verdict = buildAuditVerdict({
+      pagesCrawled: 10,
+      issues,
+      topPagePaths: [],
+      pathsByIssue,
+      topPagesUnresolved: true,
+    });
+
+    expect(verdict.tone).toBe("unknown");
+    expect(verdict.read).toContain("has not loaded");
+    // The claim this guards against: an in-flight or failed read must never
+    // produce the resolved "no click data is available" sentence, which
+    // states a fact about the project instead of about the request.
+    expect(verdict.read).not.toContain("no Search Console click data");
+  });
+
+  it("still reports a genuine absence when the read resolved empty", () => {
+    const verdict = buildAuditVerdict({
+      pagesCrawled: 10,
+      issues,
+      topPagePaths: [],
+      pathsByIssue,
+    });
+
+    expect(verdict.read).toContain("no Search Console click data");
+  });
+});
