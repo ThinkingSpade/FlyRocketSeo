@@ -46,6 +46,42 @@ describe("buildKeywordsVerdict", () => {
     );
   });
 
+  it("treats a domain rating of 0 as a real baseline, not as unknown", () => {
+    // The regression this pins. americavending.com genuinely rates DR 0, and
+    // `serverFunctions/ahrefs.ts` used to flatten that to null (`dr > 0 ? dr
+    // : null`), so this banner announced "the domain rating is unknown" and
+    // took the whole winnable/stretch/not-yet verdict down with it — for a
+    // client whose authority was known, and known to be nil. Fixed server-side
+    // in 85594f1; this is the guard that keeps the CLIENT half honest, because
+    // a falsy check here (`!ownDomainRating`) would silently reintroduce the
+    // exact same symptom while the server was doing the right thing.
+    const verdict = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(5, () => 20),
+      ownDomainRating: 0,
+    });
+
+    expect(verdict.tone).not.toBe("unknown");
+    expect(verdict.read).not.toContain("domain rating is unknown");
+    // With DR 0, nothing at difficulty 20 is within reach — and saying so is
+    // the useful answer, not a shrug.
+    expect(verdict.read).toContain("DR 0");
+  });
+
+  it("counts a zero-difficulty keyword as reachable for a DR 0 site", () => {
+    // The other half of the same boundary: `keywordDifficulty <= ownDomainRating`
+    // must stay inclusive, or a brand-new site would be told it can rank for
+    // nothing at all even where the SERP is genuinely open.
+    const verdict = buildKeywordsVerdict({
+      seed: "office coffee",
+      rows: buildRows(5, () => 0),
+      ownDomainRating: 0,
+    });
+
+    expect(verdict.tone).not.toBe("unknown");
+    expect(verdict.read).not.toContain("domain rating is unknown");
+  });
+
   it("declines to call it when no row has a known difficulty score", () => {
     const verdict = buildKeywordsVerdict({
       seed: "office coffee",
