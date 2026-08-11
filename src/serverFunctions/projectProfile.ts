@@ -130,8 +130,8 @@ export const draftProjectProfile = createServerFn({ method: "POST" })
     const domain = context.project.domain;
     if (!domain) {
       throw new AppError(
-        "INTERNAL_ERROR",
-        "This project has no domain set, so there's no site to read. Add one in project settings, or fill the fields in yourself.",
+        "PROJECT_DOMAIN_MISSING",
+        "This project has no domain set, so there's no site to read.",
       );
     }
     const ProfileDraftService = await loadProfileDraftService();

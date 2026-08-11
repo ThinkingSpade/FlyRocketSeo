@@ -113,6 +113,7 @@ export function ProjectProfileCard({ projectId }: Props) {
         areaLabel={areaLabel}
         isDrafting={autoDraft.isPending}
         draftFailed={autoDraft.isError}
+        draftError={autoDraft.error}
         onOpen={() => {
           setDraft(seed);
           setOpen(true);
