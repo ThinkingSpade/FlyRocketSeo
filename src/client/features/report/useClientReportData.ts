@@ -1,3 +1,4 @@
+import type { GscAccessFailureReason } from "@/shared/gsc";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/serverFunctions/projects";
 import {
@@ -204,6 +205,24 @@ function confirmedOffer(profile: ProjectProfile): string | null {
   return profile.confirmedAt !== null ? profile.offer : null;
 }
 
+/**
+ * Why Google search data is unavailable, not just that it is.
+ *
+ * The server distinguishes not_connected / requires_reconnect /
+ * permission_denied / api_not_configured, and the report collapsed all four
+ * into "not connected" -- so an expired OAuth grant on a live property printed,
+ * in a PDF sent to the client, as though Search Console had never been set up.
+ *
+ * A pending read has no reason yet, which the caller renders as the generic
+ * sentence rather than a specific accusation.
+ */
+function readGscFailureReason(
+  report: { connected: boolean; reason?: GscAccessFailureReason } | undefined,
+): GscAccessFailureReason | null {
+  if (!report || report.connected) return null;
+  return report.reason ?? null;
+}
+
 export function useClientReportData(projectId: string) {
   const projectsQuery = useQuery({
     queryKey: ["projects"],
@@ -320,6 +339,7 @@ export function useClientReportData(projectId: string) {
     domain,
     clientOffer: confirmedOffer(profile),
     gsc: gscQuery.data?.connected ? gscQuery.data : null,
+    gscFailureReason: readGscFailureReason(gscQuery.data),
     gscPending: gscQuery.isLoading,
     insights: insightsQuery.data?.connected ? insightsQuery.data : null,
     // Exposed so the report can tell "still loading" from "settled and

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { GscAccessFailureReason } from "@/shared/gsc";
 import { toPath } from "@/client/features/report/reportModel";
 import {
   buildClickNarrative,
@@ -66,6 +67,29 @@ export type ChapterInput = {
 
 export const NO_GSC =
   "Search Console is not connected for this project, so Google search data is unavailable.";
+
+/**
+ * Why Google search data is missing, in the coverage list a client reads.
+ *
+ * The server already distinguishes four causes and the Search Performance tab
+ * surfaces all four (`getGscAccessNotice`). The report collapsed them into the
+ * sentence above, so an expired grant or a revoked property permission on a
+ * live, correctly-configured connection printed as "not connected" -- telling
+ * the client the agency never set it up. `not_connected` keeps the original
+ * wording, and a null reason (nothing settled yet) does too.
+ */
+function describeMissingGsc(reason: GscAccessFailureReason | null): string {
+  switch (reason) {
+    case "requires_reconnect":
+      return "The Search Console connection expired, so Google search data could not be read for this period.";
+    case "permission_denied":
+      return "Google denied access to the connected Search Console property, so its data could not be read for this period.";
+    case "api_not_configured":
+      return "The Search Console API is not enabled for the connected Google Cloud project, so its data could not be read.";
+    default:
+      return NO_GSC;
+  }
+}
 export const CHAPTER_BODY = "#2f3a49"; // matches ReportChrome's paragraph ink
 
 export function buildReportChapters(input: ChapterInput): {
@@ -107,11 +131,20 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
               paragraphs={buildPerformanceNarrative(narrativeInput)}
             />
           ) : null}
-          <ReportCallout>
-            FlyRocketSEO read this period&apos;s Search Console data and
-            compared it against the previous period to build every figure on
-            this page.
-          </ReportCallout>
+          {/* Only claim the Search Console provenance when this chapter was
+              actually admitted on GSC data. A domain-overview or backlink
+              snapshot admits it too, and in that case this callout printed
+              "we read your Search Console data" directly above the summary
+              section's own "Search Console isn't connected for this project"
+              -- two contradictory sentences on one sheet handed to a
+              client. */}
+          {gsc ? (
+            <ReportCallout>
+              FlyRocketSEO read this period&apos;s Search Console data and
+              compared it against the previous period to build every figure on
+              this page.
+            </ReportCallout>
+          ) : null}
           {sections(["summary"])}
         </>
       ),
@@ -141,7 +174,7 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
       ),
     });
   } else if (!loading) {
-    out.drop("Click performance", NO_GSC);
+    out.drop("Click performance", describeMissingGsc(data.gscFailureReason));
   }
 
   if (topPages.length > 0) {
@@ -168,7 +201,9 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
   } else if (!loading) {
     out.drop(
       "Top performing pages",
-      gsc ? "No page rows for this period." : NO_GSC,
+      gsc
+        ? "No page rows for this period."
+        : describeMissingGsc(data.gscFailureReason),
     );
   }
 
@@ -197,7 +232,9 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
   } else if (!loading) {
     out.drop(
       "Keyword rankings",
-      gsc ? "No query rows for this period." : NO_GSC,
+      gsc
+        ? "No query rows for this period."
+        : describeMissingGsc(data.gscFailureReason),
     );
   }
 
@@ -212,6 +249,15 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
       body: <ContentMovers rows={input.movers} />,
     });
   } else if (!loading) {
-    out.drop("Pages gaining ground", NO_GSC);
+    // Not NO_GSC unconditionally: these rows come from the content query, not
+    // the GSC report, so Search Console can be connected and healthy while
+    // this chapter has nothing -- and the client was told their Search Console
+    // was not connected. Same shape the chapters above already use.
+    out.drop(
+      "Pages gaining ground",
+      gsc
+        ? "No page-level movement was recorded for this period."
+        : describeMissingGsc(data.gscFailureReason),
+    );
   }
 }
