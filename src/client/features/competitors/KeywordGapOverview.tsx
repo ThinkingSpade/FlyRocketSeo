@@ -40,6 +40,7 @@ export function KeywordGapOverview({
   projectId,
   target,
   competitor,
+  page,
   pageSize,
   activeMode,
   locationCode,
@@ -51,6 +52,13 @@ export function KeywordGapOverview({
   projectId: string;
   target: string;
   competitor: string;
+  /** The page the table below is showing.
+   *
+   *  Hardcoding 1 here made the active mode's card and the table ask for
+   *  different pages of the same metered endpoint, so any page > 1 issued two
+   *  billed calls instead of one -- React Query dedupes them only while the
+   *  keys match. */
+  page: number;
   pageSize: number;
   activeMode: KeywordGapMode;
   locationCode: number;
@@ -65,7 +73,7 @@ export function KeywordGapOverview({
       target,
       competitor,
       mode: "missing",
-      page: 1,
+      page,
       pageSize,
       locationCode,
       languageCode,
@@ -78,7 +86,7 @@ export function KeywordGapOverview({
       target,
       competitor,
       mode: "shared",
-      page: 1,
+      page,
       pageSize,
       locationCode,
       languageCode,
@@ -91,7 +99,7 @@ export function KeywordGapOverview({
       target,
       competitor,
       mode: "advantage",
-      page: 1,
+      page,
       pageSize,
       locationCode,
       languageCode,

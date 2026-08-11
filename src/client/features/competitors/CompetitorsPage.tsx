@@ -31,6 +31,7 @@ import {
   useRestoredCompetitorsRun,
 } from "./useCompetitorsQueries";
 import { buildCompetitorsAuthorizationKey } from "./competitorsAuthorization";
+import { useAutoPagedRun } from "./useAutoPagedRun";
 import { pickAdoptedRestore } from "./pickAdoptedRestore";
 import { resolveRestoreNotice } from "./resolveRestoreNotice";
 import { pickDiscoveryDisclosure } from "./pickDiscoveryDisclosure";
@@ -65,6 +66,10 @@ type CompetitorsNavigate = (args: {
   replace: boolean;
 }) => void;
 
+/* eslint-disable-next-line max-lines-per-function -- three tabs' worth of
+   paid-query state, their authorization and their restore handling stay
+   colocated; splitting them would separate a spend decision from the state it
+   depends on. Same reasoning as LocalRankGridPage.tsx. */
 export function CompetitorsPage({
   projectId,
   navigate,
@@ -85,6 +90,14 @@ export function CompetitorsPage({
     buildCompetitorsAuthorizationKey(projectId, searchState),
   );
   const { authorized, market } = run;
+
+  // Paging and gap-mode switches re-authorize themselves; see the hook.
+  useAutoPagedRun({
+    identity: `${projectId}|${target.trim()}|${competitor.trim()}|${tab}`,
+    authorized,
+    position: `${page}|${mode}`,
+    authorize: run.authorize,
+  });
   // Keep inputs in sync when the URL changes (e.g. via a table row action).
   useEffect(() => setTargetInput(target), [target]);
   useEffect(() => setCompetitorInput(competitor), [competitor]);
@@ -350,6 +363,7 @@ export function CompetitorsPage({
           projectId={projectId}
           target={target}
           competitor={competitor}
+          page={tab === "gap" ? page : 1}
           pageSize={DEFAULT_KEYWORD_GAP_PAGE_SIZE}
           activeMode={mode}
           locationCode={market.locationCode}
