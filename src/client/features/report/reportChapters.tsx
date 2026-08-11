@@ -16,6 +16,7 @@ import {
   type OnPageOptimizations,
 } from "@/client/features/report/ReportImprovements";
 import { buildSiteChapters } from "@/client/features/report/reportChaptersSite";
+import { describeFailedReads } from "@/client/features/report/reportReads";
 import type { ReportSectionKey } from "@/client/features/report/ReportSections";
 import type { useClientReportData } from "@/client/features/report/useClientReportData";
 
@@ -65,7 +66,9 @@ export type ChapterInput = {
   recommendations: string[];
 };
 
-export const NO_GSC =
+// Reached only through `describeGscGap` now, so a thrown request can never
+// arrive at this sentence by a route that skipped the failure check.
+const NO_GSC =
   "Search Console is not connected for this project, so Google search data is unavailable.";
 
 /**
@@ -90,11 +93,55 @@ function describeMissingGsc(reason: GscAccessFailureReason | null): string {
       return NO_GSC;
   }
 }
+
+/**
+ * The Search Console gap sentence, with a thrown request outranking every
+ * connection verdict.
+ *
+ * A failed query leaves `gsc` null and `gscFailureReason` null, which fell
+ * through `describeMissingGsc` to "Search Console is not connected for this
+ * project" — a claim about the agency's setup, printed because a request
+ * timed out. Both chapter builders route through here so neither can drift.
+ */
+export function describeGscGap(data: ChapterInput["data"]): string {
+  return (
+    describeFailedReads(data.readFailures, ["gsc"]) ??
+    describeMissingGsc(data.gscFailureReason)
+  );
+}
+
 export const CHAPTER_BODY = "#2f3a49"; // matches ReportChrome's paragraph ink
+
+/**
+ * Features this report has no chapter for, at all, for any project.
+ *
+ * They are listed rather than left out because silence here is indistinguishable
+ * from a finding: an agency that ran rank tracking every week for a month handed
+ * over a report with no trace of it, and nothing on the sheet said whether that
+ * meant "nothing happened" or "we never look at this". Naming them costs one
+ * line and answers it.
+ *
+ * Hand-maintained on purpose — there is no registry of tabs to derive it from,
+ * and a wrong entry here is a sentence in a client's PDF, so it should take a
+ * deliberate edit. Building actual chapters for these is the real fix; until
+ * then this is the honest placeholder.
+ */
+const NOT_COVERED: readonly string[] = [
+  "Rank Tracking",
+  "Local SEO",
+  "Local Rank Grid",
+  "Competitors",
+  "Topic Clusters",
+  "Saved Keywords",
+  "Trends",
+  "SERP",
+  "Citations",
+];
 
 export function buildReportChapters(input: ChapterInput): {
   pages: ReportPageSpec[];
   omissions: ReportOmission[];
+  notCovered: readonly string[];
 } {
   const pages: ReportPageSpec[] = [];
   const omissions: ReportOmission[] = [];
@@ -103,20 +150,27 @@ export function buildReportChapters(input: ChapterInput): {
     drop: (title, reason) => omissions.push({ title, reason }),
   };
 
+  // Listed first because it explains the others: without the project row there
+  // is no domain, so every snapshot and metered read below was skipped rather
+  // than run and found empty.
+  const projectGap = describeFailedReads(input.data.readFailures, ["projects"]);
+  if (projectGap) out.drop("Project details", projectGap);
+
   buildSearchChapters(input, out);
   buildSiteChapters(input, out);
 
-  return { pages, omissions };
+  return { pages, omissions, notCovered: NOT_COVERED };
 }
 
 /** Chapters 01–02: everything derived from Search Console. */
 function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
   const { data, sections, narrativeInput, positionMove } = input;
-  const { gsc, topQueries, topPages } = data;
+  const { gsc, topQueries, topPages, readFailures } = data;
   // A request still in flight is neither present nor absent. Keeping those
   // chapters in is what stops the report claiming, in a PDF that outlives the
   // load, that data is missing when it was merely still arriving.
   const loading = data.gscPending || data.insightsPending;
+  const gscGap = describeGscGap(data);
 
   if (gsc || data.domainOverview || data.backlinks || loading) {
     out.add({
@@ -150,9 +204,15 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
       ),
     });
   } else {
+    // Three possible sources, so the reason names whichever one actually broke
+    // before falling back to "none of them exist" — an expired snapshot and a
+    // project that never ran the analysis both landed on that last sentence.
     out.drop(
       "Overall performance",
-      "No Search Console connection, domain overview snapshot or backlink snapshot is available for this project.",
+      describeFailedReads(readFailures, ["gsc"]) ??
+        data.domainSnapshotGap ??
+        data.backlinksSnapshotGap ??
+        "No Search Console connection, domain overview snapshot or backlink snapshot is available for this project.",
     );
   }
 
@@ -174,7 +234,7 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
       ),
     });
   } else if (!loading) {
-    out.drop("Click performance", describeMissingGsc(data.gscFailureReason));
+    out.drop("Click performance", gscGap);
   }
 
   if (topPages.length > 0) {
@@ -199,11 +259,13 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
       ),
     });
   } else if (!loading) {
+    // The page table is its own request: it can throw while the summary report
+    // is healthy and connected, in which case "no page rows for this period" is
+    // a finding we never made.
     out.drop(
       "Top performing pages",
-      gsc
-        ? "No page rows for this period."
-        : describeMissingGsc(data.gscFailureReason),
+      describeFailedReads(readFailures, ["topPages"]) ??
+        (gsc ? "No page rows for this period." : gscGap),
     );
   }
 
@@ -232,9 +294,8 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
   } else if (!loading) {
     out.drop(
       "Keyword rankings",
-      gsc
-        ? "No query rows for this period."
-        : describeMissingGsc(data.gscFailureReason),
+      describeFailedReads(readFailures, ["topQueries"]) ??
+        (gsc ? "No query rows for this period." : gscGap),
     );
   }
 
@@ -255,9 +316,8 @@ function buildSearchChapters(input: ChapterInput, out: ChapterCollector): void {
     // was not connected. Same shape the chapters above already use.
     out.drop(
       "Pages gaining ground",
-      gsc
-        ? "No page-level movement was recorded for this period."
-        : describeMissingGsc(data.gscFailureReason),
+      describeFailedReads(readFailures, ["content"]) ??
+        (gsc ? "No page-level movement was recorded for this period." : gscGap),
     );
   }
 }

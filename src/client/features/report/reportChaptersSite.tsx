@@ -14,10 +14,11 @@ import { ReportAiVisibility } from "@/client/features/report/ReportAiVisibility"
 import { describeOnPageStatus } from "@/client/features/report/onPageStatus";
 import {
   CHAPTER_BODY,
-  NO_GSC,
+  describeGscGap,
   type ChapterCollector,
   type ChapterInput,
 } from "@/client/features/report/reportChapters";
+import { describeFailedReads } from "@/client/features/report/reportReads";
 
 /**
  * Chapters 03–06: the crawl, the link profile, AI visibility and next steps.
@@ -35,6 +36,7 @@ const NO_LINK_DETAIL =
   "The metered backlink detail request has not been run for this domain.";
 const NO_KEYWORD_DETAIL =
   "The metered keyword detail request has not been run for this domain.";
+const NO_BACKLINKS = "No backlink analysis has been saved for this domain.";
 
 export function buildSiteChapters(
   input: ChapterInput,
@@ -68,8 +70,13 @@ function buildImprovementChapters(
   { data, sections, technicalIssues }: ChapterInput,
   out: ChapterCollector,
 ): void {
-  const { latestAudit, auditPages, approvedFixes } = data;
+  const { latestAudit, auditPages, approvedFixes, readFailures } = data;
   const pagesCrawled = latestAudit?.pagesCrawled ?? null;
+  // `latestAudit` is a `.find()` over `auditsQuery.data ?? []`, so a history
+  // read that threw is byte-for-byte "no audit has ever completed". This is
+  // the only place that difference still exists, and both chapters below
+  // otherwise print the second sentence for the first cause.
+  const auditGap = describeFailedReads(readFailures, ["audits"]);
   const status = describeOnPageStatus({
     pagesCrawled,
     pagesAnalyzed: auditPages.length,
@@ -105,11 +112,16 @@ function buildImprovementChapters(
       ),
     });
   } else {
+    // Ordered by which fact actually explains the gap. "No audit ran" outranks
+    // the detail reads, because when there is no audit those never fired --
+    // naming them would send the client chasing a request that was skipped.
     out.drop(
       "On-page optimizations",
-      status === "no-audit"
-        ? NO_AUDIT
-        : "The last audit's page details could not be loaded, so on-page issues could not be checked.",
+      auditGap ??
+        (status === "no-audit"
+          ? NO_AUDIT
+          : (describeFailedReads(readFailures, ["auditResults", "onPage"]) ??
+            "The last audit's page details could not be loaded, so on-page issues could not be checked.")),
     );
   }
 
@@ -122,7 +134,7 @@ function buildImprovementChapters(
       body: sections(["siteHealth"]),
     });
   } else {
-    out.drop("Site health", NO_AUDIT);
+    out.drop("Site health", auditGap ?? NO_AUDIT);
   }
 }
 
@@ -131,7 +143,7 @@ function buildOpportunityChapters(
   { data, sections }: ChapterInput,
   out: ChapterCollector,
 ): void {
-  const { gsc, insights, backlinks } = data;
+  const { gsc, insights, backlinks, readFailures } = data;
 
   if (backlinks) {
     const summary = backlinks.summary;
@@ -192,10 +204,10 @@ function buildOpportunityChapters(
       ),
     });
   } else {
-    out.drop(
-      "Backlink profile",
-      "No backlink analysis has been saved for this domain.",
-    );
+    // The restore knows whether the run expired, no longer parses, failed
+    // outright or simply covers another domain; the report used to keep only
+    // `restored` and print the same never-run sentence for all five.
+    out.drop("Backlink profile", data.backlinksSnapshotGap ?? NO_BACKLINKS);
   }
 
   // The link and keyword deep dives get their own sheets rather than riding
@@ -215,7 +227,11 @@ function buildOpportunityChapters(
       body: sections(["linkDeep"]),
     });
   } else if (backlinks) {
-    out.drop("Where the links come from", NO_LINK_DETAIL);
+    out.drop(
+      "Where the links come from",
+      describeFailedReads(readFailures, ["backlinkDetails", "insights"]) ??
+        NO_LINK_DETAIL,
+    );
   }
 
   const hasQuickWins =
@@ -230,11 +246,15 @@ function buildOpportunityChapters(
       body: sections(["strikingDistance", "conflicts"]),
     });
   } else if (!data.gscPending && !data.insightsPending) {
+    // Two sources feed this one, and only one of them is Search Console —
+    // a thrown link-insights read used to print as "Search Console is not
+    // connected", which is a claim about a system that may be perfectly fine.
     out.drop(
       "Quick wins & keyword conflicts",
-      gsc
-        ? "No striking-distance keywords or keyword conflicts were found this period."
-        : NO_GSC,
+      describeFailedReads(readFailures, ["insights"]) ??
+        (gsc
+          ? "No striking-distance keywords or keyword conflicts were found this period."
+          : describeGscGap(data)),
     );
   }
 
@@ -247,7 +267,14 @@ function buildOpportunityChapters(
       body: sections(["keywordDeep"]),
     });
   } else {
-    out.drop("Keyword detail", NO_KEYWORD_DETAIL);
+    // The paid request's own error text stays on screen; the sheet gets the
+    // neutral sentence, but it must still say "failed" rather than "not run" —
+    // the agency pressed the button and was billed for it.
+    out.drop(
+      "Keyword detail",
+      describeFailedReads(readFailures, ["keywordDetails"]) ??
+        NO_KEYWORD_DETAIL,
+    );
   }
 
   if (data.brandVisibility?.latestResult?.hasData) {
@@ -261,7 +288,8 @@ function buildOpportunityChapters(
   } else {
     out.drop(
       "AI search visibility",
-      "No AI brand analysis has been run for this project.",
+      describeFailedReads(readFailures, ["brandVisibility"]) ??
+        "No AI brand analysis has been run for this project.",
     );
   }
 }

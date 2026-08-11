@@ -11,7 +11,10 @@ import {
   ReportPage,
 } from "@/client/features/report/ReportChrome";
 import { ReportCoverage } from "@/client/features/report/ReportCoverage";
-import { buildReportChapters } from "@/client/features/report/reportChapters";
+import {
+  buildReportChapters,
+  describeGscGap,
+} from "@/client/features/report/reportChapters";
 import {
   ReportBody,
   type ReportSectionKey,
@@ -125,7 +128,7 @@ export function ReportPages({
     />
   );
 
-  const { pages, omissions } = buildReportChapters({
+  const { pages, omissions, notCovered } = buildReportChapters({
     data,
     sections,
     narrativeInput,
@@ -148,9 +151,13 @@ export function ReportPages({
           <ReportNarrative paragraphs={buildSummaryNarrative(narrativeInput)} />
         ) : (
           <p className="text-[15px] leading-relaxed" style={{ color: MUTED }}>
+            {/* The summary page's headline claim, so it gets the same treatment
+                as the chapters: a request that threw must not print as "Search
+                Console isn't connected", which blames the agency's setup for a
+                read that failed. */}
             {data.gscPending
               ? "Loading search data…"
-              : "Search Console isn't connected for this project, so the narrative summary is omitted."}
+              : `${describeGscGap(data)} The narrative summary is omitted.`}
           </p>
         )}
         <p className="text-xs" style={{ color: MUTED }}>
@@ -160,7 +167,11 @@ export function ReportPages({
             : "unavailable"}{" "}
           · Generated {generatedAt}
         </p>
-        <ReportCoverage included={pages.length} omissions={omissions} />
+        <ReportCoverage
+          included={pages.length}
+          omissions={omissions}
+          notCovered={notCovered}
+        />
       </ReportPage>
 
       {pages.map((spec) => (

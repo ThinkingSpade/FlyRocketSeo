@@ -13,6 +13,12 @@ import type { ReportOmission } from "@/client/features/report/reportChapters";
  * Reasons are grouped, because the common case is one cause producing several
  * absences — an unconnected Search Console silences five chapters at once, and
  * printing that sentence five times reads as five separate problems.
+ *
+ * `notCovered` is a separate block rather than more omissions, because the two
+ * are different promises. An omission is a gap this report would fill if the
+ * analysis had run; a not-covered feature is one the report has no chapter for
+ * however much work went into it, so the "run it and it appears next time" line
+ * above the omissions would be untrue of it.
  */
 
 // Ink desaturated toward white, matching ReportChrome. Hard-coded rather than
@@ -25,12 +31,15 @@ const HAIRLINE = "#dfe4ec";
 export function ReportCoverage({
   included,
   omissions,
+  notCovered,
 }: {
   /** Chapter pages that follow this one. */
   included: number;
   omissions: ReportOmission[];
+  /** Features this report has no chapter for, whatever the project has run. */
+  notCovered: readonly string[];
 }) {
-  if (omissions.length === 0) return null;
+  if (omissions.length === 0 && notCovered.length === 0) return null;
 
   const grouped = new Map<string, string[]>();
   for (const omission of omissions) {
@@ -52,13 +61,7 @@ export function ReportCoverage({
           className="mt-1.5 text-[15px] leading-relaxed"
           style={{ color: BODY }}
         >
-          {included === 0
-            ? "None of the analyses this report draws on have produced data yet."
-            : `${included} ${included === 1 ? "chapter follows" : "chapters follow"}. ${
-                omissions.length === 1
-                  ? "One section is not included yet"
-                  : `${omissions.length} sections are not included yet`
-              }, for the reasons below — running the analysis named in each adds it to the next report.`}
+          {summarize(included, omissions.length)}
         </p>
       </div>
 
@@ -77,6 +80,44 @@ export function ReportCoverage({
           </div>
         ))}
       </dl>
+
+      {notCovered.length > 0 ? (
+        <dl className="flex flex-col gap-0.5">
+          <dt className="text-[13px] font-semibold" style={{ color: BODY }}>
+            {notCovered.join(" · ")}
+          </dt>
+          <dd className="text-[13px] leading-relaxed" style={{ color: MUTED }}>
+            Not covered by this report. These analyses run in FlyRocketSEO and
+            may well have work behind them this period, but the report has no
+            chapter for them yet — their absence above is not a finding about
+            your site.
+          </dd>
+        </dl>
+      ) : null}
     </div>
   );
+}
+
+/**
+ * The lead sentence, which must stay true of the omissions ALONE.
+ *
+ * The not-covered block below carries its own explanation precisely because
+ * counting those features here would make "running the analysis named in each
+ * adds it to the next report" a promise the report cannot keep.
+ */
+function summarize(included: number, omitted: number): string {
+  const follows = `${included} ${included === 1 ? "chapter follows" : "chapters follow"}.`;
+  if (omitted === 0) {
+    return included === 0
+      ? "None of the analyses this report draws on have produced data yet."
+      : `${follows} Every analysis this report covers produced data.`;
+  }
+  const gaps =
+    omitted === 1
+      ? "One section is not included yet"
+      : `${omitted} sections are not included yet`;
+  const tail = `${gaps}, for the reasons below — running the analysis named in each adds it to the next report.`;
+  return included === 0
+    ? `None of the analyses this report draws on have produced data yet. ${tail}`
+    : `${follows} ${tail}`;
 }
