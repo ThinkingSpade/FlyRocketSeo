@@ -32,20 +32,6 @@
     // step's tool, applied per page once the pages can be seen -- same
     // situation as GeoLocationSelect above, no importer by design.
     "src/client/components/Reveal.tsx",
-    // Keyword discovery schema: result shape + geo bundle, exported for
-    // Tasks 2-10 (merge function, auto-run guard, server service/function,
-    // hook, components, page wiring). No importer yet by design, same
-    // reasoning as GeoLocationSelect.
-    "src/types/schemas/keyword-discovery.ts",
-    // The Keyword Trends tab's composed hook. Task 6. Still needed as its own
-    // entry even though Task 8's KeywordTargetsCard (now wired into
-    // TrendsPage.tsx by Task 9, so it needs no entry of its own anymore)
-    // imports `useKeywordTargets` itself: this file also exports the
-    // `PaidState`/`KeywordTargetsState` TYPES, which nothing imports by name
-    // (the card only reads `targets.paidState` as a value, which doesn't
-    // count) -- dropping this entry turned those into knip's "unused
-    // exported types" the moment it was tried.
-    "src/client/features/trends/useKeywordTargets.ts",
   ],
   "project": [
     "**/*.{js,mjs,ts,tsx}",

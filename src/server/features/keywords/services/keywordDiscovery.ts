@@ -32,7 +32,7 @@ import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
  *  this asks the shared service for nothing it does not already serve. */
 const DISCOVERY_PAGE_SIZE = 100;
 
-export type KeywordDiscoveryInput = {
+type KeywordDiscoveryInput = {
   projectId: string;
   domain: string;
   locationCode: number;

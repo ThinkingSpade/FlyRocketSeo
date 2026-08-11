@@ -15,7 +15,7 @@ import { storedMetricGeoSchema, STORED_GEO_BUNDLE_VERSION } from "./geo";
  * tab already makes.
  */
 
-export const keywordDiscoveryKeywordSchema = z.object({
+const keywordDiscoveryKeywordSchema = z.object({
   keyword: z.string(),
   /** Labs `rank_absolute`: a point-in-time SERP position for `url`. NEVER
    *  merge this with Search Console's property-level average position. */

@@ -1,10 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireProjectContext } from "@/serverFunctions/middleware";
-import {
-  runKeywordDiscovery,
-  type KeywordDiscoveryInput,
-} from "@/server/features/keywords/services/keywordDiscovery";
+import { runKeywordDiscovery } from "@/server/features/keywords/services/keywordDiscovery";
 import { storedMetricGeoSchema } from "@/types/schemas/geo";
 import type { KeywordDiscoveryResult } from "@/types/schemas/keyword-discovery";
 
@@ -32,12 +29,14 @@ export const getKeywordDiscovery = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(inputSchema)
   .handler(async ({ data, context }): Promise<KeywordDiscoveryResult> => {
-    const input: KeywordDiscoveryInput = {
-      projectId: context.projectId,
-      domain: data.domain,
-      locationCode: data.locationCode,
-      languageCode: data.languageCode,
-      geo: data.geo,
-    };
-    return runKeywordDiscovery(input, context);
+    return runKeywordDiscovery(
+      {
+        projectId: context.projectId,
+        domain: data.domain,
+        locationCode: data.locationCode,
+        languageCode: data.languageCode,
+        geo: data.geo,
+      },
+      context,
+    );
   });

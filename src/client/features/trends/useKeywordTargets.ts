@@ -36,8 +36,6 @@ import {
   type PaidState,
 } from "./keywordTargetsState";
 
-export type { PaidState };
-
 /**
  * The Keyword Trends tab's keyword table: a free GSC half plus a once-only
  * paid Labs half (`getKeywordDiscovery`), merged into one list.
@@ -113,7 +111,7 @@ function keywordDiscoveryMutationKey(projectId: string) {
   return ["keywordDiscovery", projectId];
 }
 
-export type KeywordTargetsState = {
+type KeywordTargetsState = {
   rows: KeywordTargetRow[];
   geo: ResolvedGeo | null;
   fetchedAt: string | null;
@@ -386,13 +384,17 @@ export function useKeywordTargets(
     }
     // Applies to every UI call site that invokes `runAgain` (header
     // Refresh, the failed banner's "Try again", the expired banner's
-    // "Refresh it"), not just the automatic effect below -- guarding HERE,
-    // once, is what keeps every call site safe without having to repeat
-    // the check at each one. Silent no-op rather than surfacing an error:
-    // the card already renders an in-flight indicator (`isRunningPaid`)
-    // and swaps each button's own label while this is true, so a click
-    // that lands here was never going to tell the user anything they
-    // can't already see.
+    // "Refresh it", the empty state's "Get ranking data"), not just the
+    // automatic effect below -- guarding HERE, once, is what keeps every
+    // call site safe without having to repeat the check at each one.
+    // Silent no-op rather than surfacing an error: while this is true the
+    // card renders its in-flight line ("Loading ranking data for …"), and
+    // the two buttons that survive an in-flight render swap their own
+    // labels to "Refreshing…" as well. ("Try again" does not -- clicking it
+    // clears `isError` synchronously and unmounts its own banner; "Get
+    // ranking data" does not either -- it is hidden outright while a call
+    // is in flight.) A click that lands here was never going to tell the
+    // user anything the page is not already saying.
     const geo = resolveRunGeo(
       "keyword-volume",
       targetAreaScope.area,
