@@ -4,6 +4,7 @@ import { CaretUpDown, FolderSimpleUser } from "@phosphor-icons/react";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { getProjects } from "@/serverFunctions/projects";
 import { setLastProjectId } from "@/client/lib/active-project";
+import { ProjectFavicon } from "./ProjectFavicon";
 import type { ProjectSummary } from "./types";
 
 export function ProjectSwitcher({
@@ -45,15 +46,21 @@ export function ProjectSwitcher({
             aria-label="Switch project"
             className="flex w-full items-center justify-between gap-2 rounded-lg border border-base-300 bg-base-100 px-3 py-1.5 text-left transition-colors hover:border-base-content/25"
           >
-            <span className="flex min-w-0 flex-col">
-              <span className="truncate text-sm font-medium text-base-content">
-                {activeProject?.name ?? "Select project"}
-              </span>
-              {activeProject?.domain ? (
-                <span className="truncate text-xs font-normal text-base-content/50">
-                  {activeProject.domain}
+            <span className="flex min-w-0 items-center gap-2">
+              <ProjectFavicon
+                domain={activeProject?.domain ?? null}
+                className="size-6"
+              />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate text-sm font-medium text-base-content">
+                  {activeProject?.name ?? "Select project"}
                 </span>
-              ) : null}
+                {activeProject?.domain ? (
+                  <span className="truncate text-xs font-normal text-base-content/50">
+                    {activeProject.domain}
+                  </span>
+                ) : null}
+              </span>
             </span>
             <CaretUpDown className="size-3.5 shrink-0 text-base-content/40" />
           </button>
@@ -77,13 +84,16 @@ export function ProjectSwitcher({
             selected={project.id === activeProjectId}
             onClick={() => handleSelect(project)}
           >
-            <span className="flex min-w-0 flex-1 flex-col">
-              <span className="truncate">{project.name}</span>
-              {project.domain ? (
-                <span className="truncate text-xs text-base-content/50">
-                  {project.domain}
-                </span>
-              ) : null}
+            <span className="flex min-w-0 flex-1 items-center gap-2">
+              <ProjectFavicon domain={project.domain} className="size-5" />
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate">{project.name}</span>
+                {project.domain ? (
+                  <span className="truncate text-xs text-base-content/50">
+                    {project.domain}
+                  </span>
+                ) : null}
+              </span>
             </span>
           </DropdownMenu.Item>
         ))}
