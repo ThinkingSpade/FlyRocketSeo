@@ -16,6 +16,7 @@ const row = (
   positionDelta: null,
   source: "domain",
   pinned: false,
+  category: null,
   ...overrides,
 });
 

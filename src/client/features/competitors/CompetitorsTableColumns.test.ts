@@ -199,6 +199,7 @@ describe("column cells", () => {
     positionDelta: -7.7,
     source: "serp",
     pinned: false,
+    category: null,
   };
 
   // The case decision 4 exists for: discovery never returned this domain,
@@ -215,6 +216,7 @@ describe("column cells", () => {
     positionDelta: null,
     source: "serp",
     pinned: true,
+    category: null,
   };
 
   const serpColumns = buildCompetitorColumns({

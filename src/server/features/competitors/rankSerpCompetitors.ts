@@ -1,5 +1,6 @@
 import type { CompetitorRow } from "@/types/schemas/competitors";
 import { normalizeDiscoveredDomain } from "@/server/lib/domainUtils";
+import { classifyCompetitorDomain } from "./classifyCompetitorDomain";
 import type { SeedQuery } from "./competitorSeed";
 
 /**
@@ -97,6 +98,12 @@ export function rankSerpCompetitors(
             : null,
         source: "serp",
         pinned: false,
+        // Advisory only -- does not affect this function's own sort below
+        // (decision 3: classification is presentation data, never a
+        // server-side filter). See classifyCompetitorDomain's own doc
+        // comment for why a domain it doesn't recognise stays null/"real
+        // competitor" rather than "unknown".
+        category: classifyCompetitorDomain(domain),
       },
     ];
   });

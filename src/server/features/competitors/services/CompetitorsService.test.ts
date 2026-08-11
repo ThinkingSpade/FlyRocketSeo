@@ -213,6 +213,28 @@ describe("CompetitorsService.getCompetitors", () => {
     expect(mocks.serpCompetitors).not.toHaveBeenCalled();
   });
 
+  it("classifies a domain-mode row too, not only serp-mode ones", async () => {
+    mocks.getConnection.mockResolvedValue({ id: "conn_1" });
+    mocks.getAnalyticsPerformance.mockRejectedValue(new Error("revoked grant"));
+    mocks.domainCompetitors.mockResolvedValue({
+      items: [domainItem("youtube.com"), domainItem("rival.com")],
+      totalCount: 2,
+    });
+    const { CompetitorsService } = await import("./CompetitorsService");
+
+    const result = await CompetitorsService.getCompetitors(
+      input,
+      billingCustomer,
+    );
+
+    expect(result.rows.find((r) => r.domain === "youtube.com")?.category).toBe(
+      "video",
+    );
+    expect(result.rows.find((r) => r.domain === "rival.com")?.category).toBe(
+      null,
+    );
+  });
+
   it("calls serpCompetitors, not domainCompetitors, once the seed clears the floor", async () => {
     mocks.getConnection.mockResolvedValue({ id: "conn_1" });
     mocks.getAnalyticsPerformance.mockResolvedValue(

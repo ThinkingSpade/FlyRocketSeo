@@ -24,6 +24,7 @@ const row = (domain: string, pinned = false): CompetitorRow => ({
   positionDelta: -1.2,
   source: "serp",
   pinned,
+  category: null,
 });
 
 const page = (

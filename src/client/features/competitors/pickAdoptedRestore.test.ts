@@ -13,6 +13,7 @@ const row = (domain: string): CompetitorRow => ({
   positionDelta: -1.2,
   source: "serp",
   pinned: false,
+  category: null,
 });
 
 const restored = (label: string, rows: CompetitorRow[]) => ({

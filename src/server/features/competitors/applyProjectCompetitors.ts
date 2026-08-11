@@ -2,6 +2,7 @@ import type {
   CompetitorRow,
   CompetitorsPage,
 } from "@/types/schemas/competitors";
+import { classifyCompetitorDomain } from "./classifyCompetitorDomain";
 import type { ProjectCompetitorRow } from "./repositories/ProjectCompetitorRepository";
 
 /**
@@ -52,6 +53,13 @@ export function applyProjectCompetitors(
       positionDelta: null,
       source: "serp",
       pinned: true,
+      // Unlike the metrics above, classification needs no vendor
+      // measurement -- it is a pure function of the domain string, so a
+      // synthesized row can carry a real answer instead of null. The pin
+      // still wins at the presentation layer (isCompetitorRow) regardless of
+      // what this says, per decision 4: pinning is the operator overriding
+      // the classifier, not the classifier agreeing with them.
+      category: classifyCompetitorDomain(domain),
     });
   }
 

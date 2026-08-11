@@ -19,6 +19,7 @@ const row = (domain: string, beatsYouCount: number): CompetitorRow => ({
   positionDelta: null,
   source: "serp",
   pinned: false,
+  category: null,
 });
 
 const override = (domain: string, status: "pinned" | "excluded") => ({
@@ -64,6 +65,21 @@ describe("applyProjectCompetitors", () => {
     // Never fabricate numbers for a domain the vendor did not return.
     expect(added?.beatsYouCount).toBeNull();
     expect(added?.coverage).toBeNull();
+  });
+
+  it("still classifies a synthesized pinned row -- the domain is known even though its metrics are not", () => {
+    const result = applyProjectCompetitors(
+      [row("bigrival.com", 30)],
+      [override("youtube.com", "pinned")],
+    );
+
+    const added = result.rows.find((r) => r.domain === "youtube.com");
+    // Classification is a pure function of the domain string, so it does not
+    // require a vendor measurement the way beatsYouCount/coverage do.
+    expect(added?.category).toBe("video");
+    // A pin still wins at the presentation layer (isCompetitorRow) despite
+    // this -- applyProjectCompetitors itself just records the honest fact.
+    expect(added?.pinned).toBe(true);
   });
 
   it("lets exclusion win when a domain is somehow both", () => {
