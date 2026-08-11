@@ -97,10 +97,20 @@ async function fetchHtml(url: string): Promise<string | null> {
   }
 }
 
-function toPage(url: string, html: string): CrawledPage {
-  const $ = cheerio.load(html);
+/**
+ * Builds a page from an ALREADY-PARSED document.
+ *
+ * Destructive: `extractVisibleText` strips nav/footer/header out of the tree,
+ * so anything that needs the original markup — link discovery in particular —
+ * has to run before this does.
+ */
+function toPageFromDocument($: cheerio.CheerioAPI, url: string): CrawledPage {
   const title = $("title").first().text().trim();
   return { url, title, text: extractVisibleText($) };
+}
+
+function toPage(url: string, html: string): CrawledPage {
+  return toPageFromDocument(cheerio.load(html), url);
 }
 
 /**
@@ -122,12 +132,25 @@ export async function crawlSiteText(domain: string): Promise<CrawledPage[]> {
   const homeHtml = await fetchHtml(base.origin);
   if (!homeHtml) return [];
 
+  // Parsed ONCE and used twice, in that order.
+  //
+  // This used to `cheerio.load` the homepage here and then load the identical
+  // string again inside `toPage` -- the single most expensive document in the
+  // crawl, parsed twice for nothing. Measured at ~29 ms of CPU per load on a
+  // real 166 KB client homepage, against a free-plan budget of 10 ms per
+  // invocation, so it was not a rounding error on the one limit this file
+  // exists to respect (see the header).
+  //
+  // Link discovery has to come first: `toPageFromDocument` strips nav, footer
+  // and header out of the tree, and those are exactly where a site keeps the
+  // links this crawl navigates by.
   const $home = cheerio.load(homeHtml);
-  const pages: CrawledPage[] = [toPage(base.origin, homeHtml)];
+  const links = pickInternalLinks($home, base.origin);
+  const pages: CrawledPage[] = [toPageFromDocument($home, base.origin)];
 
   // Sequential, not parallel: five concurrent fetches plus five cheerio
   // parses is exactly the burst that trips the free-plan CPU limit.
-  for (const link of pickInternalLinks($home, base.origin)) {
+  for (const link of links) {
     const html = await fetchHtml(link);
     if (html) pages.push(toPage(link, html));
   }
