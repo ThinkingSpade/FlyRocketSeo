@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
+import { useVisibleKeys } from "./useVisibleKeys";
 import { Check, ArrowSquareOut, Graph } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { checkLinkPresence } from "@/serverFunctions/link-insights";
@@ -57,12 +58,19 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
 
   // Live-check each suggested source page (one fetch per serverFn call,
   // cached server-side for a day).
+  //
+  // Gated on the row having been scrolled to. Every check is a real fetch of
+  // the client's own site, and building them all on mount fired up to fifteen
+  // opportunities x five sources against that site the moment the tab opened
+  // -- before anyone had read the first row.
+  const { visible, observe } = useVisibleKeys();
   const checks = opportunities.flatMap((opportunity) =>
     opportunity.sources.map((source) => ({
       key: `${source.page}→${opportunity.target.page}`,
       sourceUrl: source.page,
       targetUrl: opportunity.target.page,
       phrase: opportunity.query,
+      owner: opportunity.query,
     })),
   );
   const presenceQueries = useQueries({
@@ -79,6 +87,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
         }),
       staleTime: 60 * 60_000,
       retry: 1,
+      enabled: visible.has(check.owner),
     })),
   });
   const presenceByKey = new Map<string, PresenceResult>();
@@ -169,6 +178,7 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
       {opportunities.map((opportunity) => (
         <div
           key={opportunity.query}
+          ref={observe(opportunity.query)}
           className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
         >
           <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
