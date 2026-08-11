@@ -6,11 +6,14 @@ import type { KeywordResearchControllerState } from "./types";
 type Props = {
   controller: KeywordResearchControllerState;
   rowCount: number;
-  /** Drops the confirmed area, puts the country half back to the project's
-   *  own country, and re-runs. Owned by the page, which holds both halves
-   *  `resolveRunGeo` reconciles — the controller can see the area but cannot
-   *  clear it. */
-  onSearchCountry: () => void;
+  /** Drops the confirmed area and re-runs THIS result's keyword against the
+   *  named country. Both arguments are passed explicitly rather than left for
+   *  the page to re-derive: the page would otherwise submit the live form
+   *  draft against the project's country, neither of which is necessarily
+   *  what this card is describing. Owned by the page because it holds both
+   *  halves `resolveRunGeo` reconciles — the controller can see the area but
+   *  cannot clear it. */
+  onSearchCountry: (keyword: string, countryCode: number) => void;
 };
 
 /**
@@ -46,6 +49,12 @@ export function KeywordResearchNoMetricsState({
   const countryLabel =
     (researchGeo && countryLabelForCode(researchGeo.difficulty.locationCode)) ||
     "the whole country";
+  // Whether going national actually BUYS difficulty and intent. It usually
+  // does, but not for a country DataForSEO Labs doesn't cover at all (an
+  // Icelandic city's national fallback is still Google Ads), and promising
+  // metrics that provider can never return would send the user to pay for a
+  // second query expecting something it cannot produce.
+  const nationalHasLabs = researchGeo?.difficulty.provider === "labs";
 
   return (
     <div className="pt-1">
@@ -67,8 +76,10 @@ export function KeywordResearchNoMetricsState({
                 </span>
                 , but no search volume, CPC or trend for any of them. Google
                 reports figures for far fewer phrases at {areaLabel} scale than
-                it does nationally, and it never reports difficulty or intent
-                below country level at all.
+                it does nationally
+                {nationalHasLabs
+                  ? ", and it never reports difficulty or intent below country level at all."
+                  : "."}
               </>
             ) : (
               <>
@@ -84,12 +95,20 @@ export function KeywordResearchNoMetricsState({
             )}
           </p>
         </div>
-        {wentLocal ? (
+        {wentLocal && researchGeo ? (
           <Button
             type="button"
             variant="primary"
             size="sm"
-            onClick={onSearchCountry}
+            onClick={() =>
+              onSearchCountry(
+                // This card's own keyword and its own country — the two the
+                // copy above names. Anything the page re-derived instead
+                // (the live form draft, the project's country) could differ.
+                searchedKeyword,
+                researchGeo.difficulty.locationCode,
+              )
+            }
           >
             Search {countryLabel} instead
           </Button>
