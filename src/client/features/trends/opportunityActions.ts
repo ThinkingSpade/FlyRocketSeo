@@ -217,8 +217,3 @@ export function buildTrendingOpportunities(input: {
       b.score - a.score || b.momentum.impressions - a.momentum.impressions,
   );
 }
-
-/** Rows we are actually recommending work on. */
-export function isActionable(opportunity: TrendingOpportunity): boolean {
-  return opportunity.action !== "watch";
-}

@@ -1,0 +1,353 @@
+import { describe, expect, it } from "vitest";
+import {
+  describePaidFailure,
+  pickDisplayGeo,
+  resolvePaidState,
+} from "./keywordTargetsState";
+import type { KeywordDiscoveryResult } from "@/types/schemas/keyword-discovery";
+import type { ResolvedGeo } from "@/shared/geo/types";
+
+const okResult: KeywordDiscoveryResult = {
+  status: "ok",
+  domain: "example.com",
+  fetchedAt: "2026-08-10T00:00:00.000Z",
+  keywords: [],
+};
+
+const failedResult: KeywordDiscoveryResult = {
+  status: "failed",
+  reason: "provider_error",
+  attemptedAt: "2026-08-10T00:00:00.000Z",
+};
+
+const dfw: ResolvedGeo = {
+  locationCode: 200623,
+  languageCode: "en",
+  provider: "google_ads",
+  scope: "local",
+  label: "Dallas-Fort Worth TX",
+};
+
+const unitedStates: ResolvedGeo = {
+  locationCode: 2840,
+  languageCode: "en",
+  provider: "google_ads",
+  scope: "national",
+  label: "United States",
+};
+
+describe("resolvePaidState", () => {
+  it("reports no-domain regardless of every other input", () => {
+    expect(
+      resolvePaidState({
+        domain: null,
+        active: okResult,
+        isError: true,
+        restoreFailed: true,
+        outcome: "expired",
+        hasCredits: false,
+      }),
+    ).toBe("no-domain");
+  });
+
+  it("surfaces a failed re-run even though the last successful result is still active (finding 4)", () => {
+    // Exact regression scenario: a prior run succeeded (active is "ok"),
+    // then the user clicked "Run again" and THAT attempt threw. Before the
+    // fix, `ok` was checked first and the failure never surfaced -- money
+    // could move with nothing changing on screen.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: okResult,
+        isError: true,
+        restoreFailed: false,
+        outcome: "ready",
+        hasCredits: true,
+      }),
+    ).toBe("failed");
+  });
+
+  it("reports ok once the failing attempt clears and the last result is still success", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: okResult,
+        isError: false,
+        restoreFailed: false,
+        outcome: "ready",
+        hasCredits: true,
+      }),
+    ).toBe("ok");
+  });
+
+  it("reports failed for a restored run that was itself recorded as a failure", () => {
+    // No live call happened this mount (isError: false) -- the failure is
+    // read back from a restored analysis_runs row instead.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: failedResult,
+        isError: false,
+        restoreFailed: false,
+        outcome: "ready",
+        hasCredits: true,
+      }),
+    ).toBe("failed");
+  });
+
+  it("reports restore-failed rather than none when the history read itself errored", () => {
+    // The dead end this state exists for: `restoreLatestRun` threw, so
+    // `outcome` is null (no query.data at all) and `active` is null. Before
+    // this branch existed that fell through to "none", which the card
+    // rendered as NOTHING -- no banner, no button, no error -- while the
+    // auto-run guard correctly refused to spend on a null outcome. Nothing
+    // on the page could recover from it.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: true,
+        outcome: null,
+        hasCredits: true,
+      }),
+    ).toBe("restore-failed");
+  });
+
+  it("still shows this mount's successful run when only the history read is broken", () => {
+    // `active` here is the live `fresh` result. A broken history read must
+    // not hide data we already have and already paid for.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: okResult,
+        isError: false,
+        restoreFailed: true,
+        outcome: null,
+        hasCredits: true,
+      }),
+    ).toBe("ok");
+  });
+
+  it("prefers a live paid failure over a broken history read", () => {
+    // Both are true at once when a paid call fails AND its own settle-time
+    // invalidation refetch fails. The paid failure is the one that may have
+    // cost money, so it is the one worth saying.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: true,
+        restoreFailed: true,
+        outcome: null,
+        hasCredits: true,
+      }),
+    ).toBe("failed");
+  });
+
+  it("reports expired ahead of no-credits when the restore outcome says so", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: "expired",
+        hasCredits: false,
+      }),
+    ).toBe("expired");
+  });
+
+  it("treats an unreadable restore the same as an expired one", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: "unreadable",
+        hasCredits: true,
+      }),
+    ).toBe("expired");
+  });
+
+  it("reports unknown, not none, while the restore has yet to answer", () => {
+    // A null outcome means "we have not been told yet", the same convention
+    // shouldAutoRunDiscovery reads it by. Collapsing it into "none" would
+    // flash "Ranking data hasn't been loaded yet" -- with a button offering
+    // to spend -- on every cold mount of a project that HAS already run.
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: null,
+        hasCredits: true,
+      }),
+    ).toBe("unknown");
+  });
+
+  it("stays unknown rather than no-credits until the restore answers", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: null,
+        hasCredits: false,
+      }),
+    ).toBe("unknown");
+  });
+
+  it("reports no-credits when nothing else explains the empty state", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: "none",
+        hasCredits: false,
+      }),
+    ).toBe("no-credits");
+  });
+
+  it("reports none when a run simply hasn't happened yet and nothing blocks it", () => {
+    expect(
+      resolvePaidState({
+        domain: "example.com",
+        active: null,
+        isError: false,
+        restoreFailed: false,
+        outcome: "none",
+        hasCredits: true,
+      }),
+    ).toBe("none");
+  });
+});
+
+describe("describePaidFailure", () => {
+  it("names credits as the cause and offers no retry that cannot succeed", () => {
+    const failure = describePaidFailure({
+      reason: "insufficient_credits",
+      domain: "example.com",
+    });
+    expect(failure.canRetry).toBe(false);
+    expect(failure.message).toContain("credits");
+    expect(failure.message).toContain("example.com");
+  });
+
+  it("tells a rate-limited user to wait, and keeps the retry", () => {
+    const failure = describePaidFailure({
+      reason: "rate_limited",
+      domain: "example.com",
+    });
+    expect(failure.canRetry).toBe(true);
+    expect(failure.message).toContain("rate-limited");
+  });
+
+  it("falls back to the generic message, with a retry, for provider errors", () => {
+    expect(
+      describePaidFailure({ reason: "provider_error", domain: "example.com" }),
+    ).toEqual({
+      message: "Couldn’t load ranking data for example.com.",
+      canRetry: true,
+    });
+  });
+
+  it("keeps the retry for a tag it does not recognise", () => {
+    // `reason` is a persisted storage format the server can extend. An
+    // unknown tag must degrade to what we said before this function existed,
+    // never to silence or to a suppressed way out.
+    expect(
+      describePaidFailure({ reason: "quota_exhausted", domain: "example.com" })
+        .canRetry,
+    ).toBe(true);
+  });
+
+  it("keeps the retry when no failure row could be read at all", () => {
+    expect(describePaidFailure({ reason: null, domain: "your site" })).toEqual({
+      message: "Couldn’t load ranking data for your site.",
+      canRetry: true,
+    });
+  });
+});
+
+describe("pickDisplayGeo", () => {
+  it("shows the restored geo before any live run has completed this mount", () => {
+    expect(
+      pickDisplayGeo({
+        active: okResult,
+        fresh: null,
+        freshGeo: null,
+        restoredGeo: unitedStates,
+      }),
+    ).toBe(unitedStates);
+  });
+
+  it("shows the fresh geo once a live run has succeeded", () => {
+    expect(
+      pickDisplayGeo({
+        active: okResult,
+        fresh: okResult,
+        freshGeo: dfw,
+        restoredGeo: unitedStates,
+      }),
+    ).toBe(dfw);
+  });
+
+  it("never surfaces a freshGeo that isn't backed by a successful fresh result (finding 5)", () => {
+    // Simulates the exact bug: freshGeo desynced from fresh, e.g. a failed
+    // re-run's newly-captured geo leaking in ahead of a result that never
+    // arrived. Even with a stale/rogue freshGeo present, a null fresh must
+    // still fall back to restoredGeo, never the rogue value.
+    expect(
+      pickDisplayGeo({
+        active: okResult,
+        fresh: null,
+        freshGeo: dfw,
+        restoredGeo: unitedStates,
+      }),
+    ).toBe(unitedStates);
+  });
+
+  it("labels nothing when the restored run was itself a failure", () => {
+    // A `{status:"failed"}` run still parses and still carries its own
+    // persisted geo bundle, so `restoredGeo` resolves fine. Rendering it put
+    // "Rankings in Dallas-Fort Worth TX" over a table of Search-Console-only
+    // rows, immediately above the banner saying ranking data could not be
+    // loaded. The scope line has to describe the rows on screen.
+    expect(
+      pickDisplayGeo({
+        active: failedResult,
+        fresh: null,
+        freshGeo: null,
+        restoredGeo: dfw,
+      }),
+    ).toBeNull();
+  });
+
+  it("labels nothing before any run has produced rows", () => {
+    expect(
+      pickDisplayGeo({
+        active: null,
+        fresh: null,
+        freshGeo: null,
+        restoredGeo: dfw,
+      }),
+    ).toBeNull();
+  });
+
+  it("shows nothing when there is neither a fresh nor a restored geo", () => {
+    expect(
+      pickDisplayGeo({
+        active: okResult,
+        fresh: null,
+        freshGeo: null,
+        restoredGeo: null,
+      }),
+    ).toBeNull();
+  });
+});

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+  autoDraftProjectProfile,
   draftProjectProfile,
   generateSeedKeywords,
   getProjectProfile,
@@ -94,9 +95,17 @@ export function useKeywordFit(
   // contain newlines, which is what makes the split below lossless.
   const offer = profile.offer;
   const exclusions = profile.exclusions;
+  // An AI draft nobody has accepted is a PROPOSAL, per project_profiles' own
+  // contract. Classifying against it would let a hallucinated exclusion line
+  // silently demote real keywords before anyone agreed the line is true --
+  // and the auto-draft on first open means an unreviewed profile is now the
+  // ordinary state of a new project, not a rare one. Pressing Save is what
+  // turns this on.
+  const isConfirmed = profile.confirmedAt !== null;
   const keywordKey = keywords.join("\n");
 
   return useMemo(() => {
+    if (!isConfirmed) return new Map<string, FitResult>();
     const fitProfile = { offer, exclusions };
     if (!hasUsableProfile(fitProfile)) return new Map<string, FitResult>();
 
@@ -105,7 +114,7 @@ export function useKeywordFit(
       map.set(keyword, classifyKeyword(keyword, fitProfile));
     }
     return map;
-  }, [offer, exclusions, keywordKey]);
+  }, [isConfirmed, offer, exclusions, keywordKey]);
 }
 
 /**
@@ -118,6 +127,37 @@ export function useKeywordFit(
 export function useDraftProjectProfile(projectId: string) {
   return useMutation({
     mutationFn: () => draftProjectProfile({ data: { projectId } }),
+  });
+}
+
+/**
+ * Drafts the profile on first open, unattended.
+ *
+ * A mutation rather than a query for the same reason as the manual draft
+ * above — it costs a model call and a crawl — but this one is triggered by
+ * mounting rather than by a click, so the exactly-once guarantee has to come
+ * from the server. `autoDraftProjectProfile` claims the row before doing any
+ * work; a caller that loses the claim gets `skipped` back and pays nothing.
+ *
+ * The profile query is invalidated on EITHER outcome, which matters most for
+ * the one that looks like it needs nothing. "Skipped" means a row already
+ * exists — and the commonest way to reach it is navigating away mid-draft:
+ * drafting takes ~16s, React Query drops a mutation's callbacks when its
+ * component unmounts, but the request is already in flight and the server
+ * still writes the row. The next mount then reads `getProjectProfile` from a
+ * cache entry that is fresh for five minutes and says the profile is empty,
+ * so a drafted profile stays invisible until that expires or the page is
+ * reloaded. One free D1 read on a skipped call closes that.
+ */
+export function useAutoDraftProjectProfile(projectId: string) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => autoDraftProjectProfile({ data: { projectId } }),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: projectProfileQueryKey(projectId),
+      });
+    },
   });
 }
 

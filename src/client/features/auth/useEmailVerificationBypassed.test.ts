@@ -15,7 +15,11 @@ vi.mock("cloudflare:workers", () => ({ env: {} }));
 // 6.8s, so the first test timed out while the rest passed in 0ms off the
 // module cache. At module scope the cost lands in collection instead, which
 // is not subject to testTimeout.
-import { resolveGbpCapabilityState } from "./useEmailVerificationBypassed";
+import {
+  resolveCapabilityResolved,
+  resolveGbpCapabilityState,
+  resolveVerificationResolved,
+} from "./useEmailVerificationBypassed";
 
 /**
  * Final wave item 3 (an A6 residual): GbpConnectionCard used to collapse
@@ -46,5 +50,46 @@ describe("resolveGbpCapabilityState (final wave item 3)", () => {
 
   it("is 'available' once resolved and the live config confirms it", () => {
     expect(resolveGbpCapabilityState(true, true)).toBe("available");
+  });
+});
+
+/**
+ * The two resolution tests, split apart.
+ *
+ * They used to be one expression serving both purposes, which is what made
+ * the AI capability flags unusable outside hosted auth: the shared query was
+ * declared `enabled: isHostedMode`, so under `local_noauth` it never ran, its
+ * all-`false` `initialData` was the only value the flags ever saw, and
+ * `!isHostedMode` reported that placeholder as RESOLVED. Every AI-gated
+ * affordance -- the profile draft button, the semantic fit pass, GBP writing
+ * -- was therefore invisible in local development no matter which keys were
+ * set, which is how a working feature became a broken one with no developer
+ * in a position to notice.
+ *
+ * Email verification genuinely wants the old formula: outside hosted auth
+ * there is no verification to bypass, so "resolved" is immediate and correct.
+ * A capability flag wants the opposite -- it describes the live Worker
+ * environment, and a placeholder is never that, in any auth mode.
+ */
+describe("resolveVerificationResolved", () => {
+  it("resolves immediately outside hosted auth, before any fetch", () => {
+    expect(resolveVerificationResolved(false, "prerender")).toBe(true);
+  });
+
+  it("waits for the live value under hosted auth", () => {
+    expect(resolveVerificationResolved(true, "prerender")).toBe(false);
+    expect(resolveVerificationResolved(true, "runtime")).toBe(true);
+  });
+});
+
+describe("resolveCapabilityResolved", () => {
+  it("never treats the placeholder as an answer, in either auth mode", () => {
+    expect(resolveCapabilityResolved("prerender")).toBe(false);
+  });
+
+  it("resolves once the live Worker has answered, in either auth mode", () => {
+    // The regression this pins: under local_noauth this had to become true,
+    // or OPENROUTER_API_KEY could be set and the draft button still absent.
+    expect(resolveCapabilityResolved("runtime")).toBe(true);
   });
 });

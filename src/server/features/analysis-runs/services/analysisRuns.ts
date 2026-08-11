@@ -29,39 +29,67 @@ type RecordRunInput = {
  * Record a run. Best effort by design: history is secondary to the analysis
  * itself, so a write failure is logged and swallowed rather than failing a
  * request the user already paid for.
+ *
+ * NOT for a caller whose spend guard is the row itself — see
+ * `recordOrThrow` below, and use that instead. This wrapper is what made the
+ * Keyword Trends auto-run's "one attempt, never a loop" promise unverifiable:
+ * that promise is asserted in one file and silently discarded here.
  */
 async function record(input: RecordRunInput): Promise<void> {
   try {
-    // Take the run's OWN copy of the result before recording the row.
-    //
-    // The row used to point straight at the shared DataForSEO cache object,
-    // which the bucket's `dataforseo-cache-expiry` lifecycle rule hard-deletes
-    // after 7 days. D1 rows never expire, so every run older than a week became
-    // a dead link and the tab silently rendered its "never run this" empty
-    // state (measured in production 2026-07-31). Copying here is what makes the
-    // history outlive the cache — see RUN_PAYLOAD_PREFIX in r2-cache.ts.
-    //
-    // Reading through `getCachedRawIgnoringTtl` is deliberate: the caller has
-    // just written this key, and reading the stored text avoids re-serializing
-    // a payload whose exact bytes the restore path will parse. A miss here is
-    // survivable — the row is still recorded, and restore falls back to the
-    // cache object for as long as it lives.
+    await recordOrThrow(input);
+  } catch (error) {
+    console.error("analysis-runs.record failed:", error);
+  }
+}
+
+/**
+ * Record a run and REPORT a failure to do so.
+ *
+ * Identical work to `record` — deliberately the same implementation rather
+ * than a parallel one — but the D1 write's failure reaches the caller. Any
+ * caller that treats the recorded row as a guard against re-billing needs
+ * this one: for them a lost row is not a cosmetic history gap, it is the
+ * guard silently not existing.
+ *
+ * The R2 payload copy below keeps its OWN best-effort catch, so a bucket
+ * hiccup can no longer take the D1 row down with it. That also makes the
+ * comment inside true for the first time: it always claimed "the row is still
+ * recorded, and restore falls back to the cache object", but with one
+ * try/catch around the whole body a THROWN copy skipped the row entirely.
+ */
+async function recordOrThrow(input: RecordRunInput): Promise<void> {
+  // Take the run's OWN copy of the result before recording the row.
+  //
+  // The row used to point straight at the shared DataForSEO cache object,
+  // which the bucket's `dataforseo-cache-expiry` lifecycle rule hard-deletes
+  // after 7 days. D1 rows never expire, so every run older than a week became
+  // a dead link and the tab silently rendered its "never run this" empty
+  // state (measured in production 2026-07-31). Copying here is what makes the
+  // history outlive the cache — see RUN_PAYLOAD_PREFIX in r2-cache.ts.
+  //
+  // Reading through `getCachedRawIgnoringTtl` is deliberate: the caller has
+  // just written this key, and reading the stored text avoids re-serializing
+  // a payload whose exact bytes the restore path will parse. A miss here is
+  // survivable — the row is still recorded, and restore falls back to the
+  // cache object for as long as it lives.
+  try {
     const raw = await getCachedRawIgnoringTtl(input.cacheKey);
     if (raw != null) {
       await putRunPayload(input.cacheKey, raw);
     }
-
-    await AnalysisRunRepository.record({
-      projectId: input.projectId,
-      feature: input.feature,
-      paramsJson: JSON.stringify(input.params),
-      cacheKey: input.cacheKey,
-      label: input.label,
-      ranBy: input.ranBy ?? null,
-    });
   } catch (error) {
-    console.error("analysis-runs.record failed:", error);
+    console.error("analysis-runs.payload-copy failed:", error);
   }
+
+  await AnalysisRunRepository.record({
+    projectId: input.projectId,
+    feature: input.feature,
+    paramsJson: JSON.stringify(input.params),
+    cacheKey: input.cacheKey,
+    label: input.label,
+    ranBy: input.ranBy ?? null,
+  });
 }
 
 /**
@@ -180,6 +208,7 @@ async function listRecent(
 
 export const AnalysisRunService = {
   record,
+  recordOrThrow,
   restoreLatest,
   restoreRun,
   listRecent,

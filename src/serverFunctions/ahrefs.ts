@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { env } from "cloudflare:workers";
 import { chunk } from "remeda";
 import { z } from "zod";
+import { ahrefsRatingFromValue } from "@/shared/ahrefsRating";
 import { normalizeDomainInput } from "@/server/lib/domainUtils";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 
@@ -13,7 +14,11 @@ import { requireProjectContext } from "@/serverFunctions/middleware";
  */
 const AHREFS_DR_ENDPOINT =
   "https://api.ahrefs.com/v3/public/domain-rating-free";
-const CACHE_PREFIX = "ahrefs-dr:";
+// v2: entries written before the 0-vs-null fix below stored `null` for a
+// domain Ahrefs actually rated 0, and those live for 24h. Reading them back
+// would keep the old meaning alive for a day after deploy, so the key space
+// moves instead. The stale `ahrefs-dr:` keys expire on their own TTL.
+const CACHE_PREFIX = "ahrefs-dr:v2:";
 const CACHE_TTL_SECONDS = 86_400; // 24 hours
 const FETCH_TIMEOUT_MS = 5_000;
 const FETCH_BATCH_SIZE = 20;
@@ -102,17 +107,17 @@ async function fetchDomainRating(domain: string): Promise<number | null> {
     throw new Error("Ahrefs DR lookup returned an unexpected response");
   }
 
-  // Ahrefs returns 200 with DR 0 for domains it has no rating for (new or
-  // unknown), so treat 0 as "no rating" — the table renders it as "—".
-  const dr = parsed.data.domain_rating.domain_rating;
-  return dr > 0 ? dr : null;
+  // Kept verbatim, INCLUDING 0 -- see ahrefsRating.ts for why that one line
+  // mattered and what null is now allowed to mean. A failed request throws
+  // above and is caught by the caller, which is the only path to an unknown.
+  return ahrefsRatingFromValue(parsed.data.domain_rating.domain_rating);
 }
 
 function parseCachedRating(raw: string): number | null {
   try {
-    const value: unknown = JSON.parse(raw);
-    // Mirror fetchDomainRating: a DR of 0 means "no rating", so render it as "—".
-    return typeof value === "number" && value > 0 ? value : null;
+    // Same rule as a fresh fetch, so a cache hit and a cache miss can never
+    // disagree about what 0 means.
+    return ahrefsRatingFromValue(JSON.parse(raw));
   } catch {
     return null;
   }

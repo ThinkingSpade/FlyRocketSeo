@@ -22,6 +22,31 @@ export type TargetAreaScope = {
    *  target area entirely -- see `useClearTargetArea`'s own doc comment for
    *  why this is the only way back to "nothing confirmed". */
   onClear: () => void;
+  /**
+   * Whether `area` reflects the project's REAL confirmed target area (or a
+   * definitive "nothing confirmed, country default applies") rather than
+   * merely today's provisional default while `useTargetArea`'s own query is
+   * still resolving.
+   *
+   * True immediately once the user has touched the picker in this tab
+   * (`area` is already authoritative then, set directly by `onChange`/
+   * `onClear`). Otherwise true only from the render AFTER the sync effect
+   * below has actually applied a settled query's value to `area` -- ONE
+   * RENDER LATER than simply checking `!targetAreaQuery.isPending` would
+   * give you: on the render where the query first settles, `area`'s own
+   * `useState` hasn't caught up yet (the effect that calls `setArea` for
+   * the new value hasn't run yet), so a consumer checking raw query-pending
+   * state alone would see "ready" one render before `area` is actually
+   * trustworthy.
+   *
+   * A caller that only ever reads `area` for display doesn't need this --
+   * showing the provisional default for one extra render is invisible.
+   * A caller that CAPTURES `area` into a one-shot metered request (Task 6's
+   * `resolveRunGeo` -- see that module's own header) does: an area captured
+   * one render too early can permanently mislabel -- or mis-target -- that
+   * one-shot run, with no way to re-fetch it for free afterward.
+   */
+  ready: boolean;
 };
 
 /**
@@ -66,6 +91,11 @@ export function useTargetAreaScope(
     resolveActiveScopeArea(confirmedArea, countryLocationCode),
   );
   const [touched, setTouched] = useState(false);
+  // See `ready`'s own doc comment above: this flips true in the SAME state
+  // update as the `setArea` call below applies a settled query's value, so
+  // "synced is true" and "area reflects that settled value" land on the
+  // exact same render -- never one render apart.
+  const [synced, setSynced] = useState(false);
 
   // Same deferred-arrival problem the country <select> on every one of
   // these tabs already solves: on a cold load neither `["target-area",
@@ -78,8 +108,14 @@ export function useTargetAreaScope(
   useEffect(() => {
     if (touched) return;
     setArea(resolveActiveScopeArea(confirmedArea, countryLocationCode));
+    if (!targetAreaQuery.isPending) setSynced(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [touched, confirmedAreaCode, countryLocationCode]);
+  }, [
+    touched,
+    confirmedAreaCode,
+    countryLocationCode,
+    targetAreaQuery.isPending,
+  ]);
 
   const onChange = (next: TargetArea) => {
     setTouched(true);
@@ -107,5 +143,6 @@ export function useTargetAreaScope(
     // `confirmedArea` only updates on that later render.
     hasConfirmedArea: confirmedArea !== null || touched,
     onClear,
+    ready: touched || synced,
   };
 }

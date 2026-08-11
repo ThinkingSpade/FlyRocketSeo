@@ -138,6 +138,35 @@ export const draftProjectProfile = createServerFn({ method: "POST" })
     return ProfileDraftService.draftFromSite({ domain, topQueries: [] });
   });
 
+/**
+ * Drafts the profile on first open, without being asked, exactly once.
+ *
+ * Unlike `draftProjectProfile` above, this one WRITES — an unconfirmed
+ * `source: "ai"` row, claimed before any crawl starts. That write is the only
+ * durable record that drafting already happened for this project, and it is
+ * what keeps an unattended trigger from re-crawling on every page load. The
+ * row stays a proposal until a human presses Save, exactly as before.
+ *
+ * Safe to call from every mount of the profile card: a project that already
+ * has a row loses the claim and returns `skipped` after a single insert
+ * attempt, without reaching the crawl or the model.
+ */
+const loadProfileAutoDraftService = () =>
+  import("@/server/features/profiles/services/ProfileAutoDraftService").then(
+    (m) => m.ProfileAutoDraftService,
+  );
+
+export const autoDraftProjectProfile = createServerFn({ method: "POST" })
+  .middleware(requireProjectContext)
+  .validator(projectScopedSchema)
+  .handler(async ({ context }) => {
+    const ProfileAutoDraftService = await loadProfileAutoDraftService();
+    return ProfileAutoDraftService.run({
+      projectId: context.projectId,
+      domain: context.project.domain ?? null,
+    });
+  });
+
 const generateSeedsSchema = z.object({
   projectId: z.string().min(1),
   offer: z.string().max(2000),
