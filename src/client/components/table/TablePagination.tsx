@@ -50,20 +50,27 @@ export function TablePagination({
       </div>
 
       <div className="flex items-center gap-6">
-        <label className="flex items-center gap-2 text-sm text-base-content/70">
-          <span className="whitespace-nowrap">Rows per page</span>
-          <select
-            className="app-select app-select-sm w-20"
-            value={pageSize}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
-          >
-            {pageSizes.map((size) => (
-              <option key={size} value={size}>
-                {size}
-              </option>
-            ))}
-          </select>
-        </label>
+        {/* A single option is not a choice. The Competitors tab passes
+            `pageSizes={[pageSize]}` with a no-op handler because its page size
+            is fixed by the provider, which rendered a dropdown that looked
+            interactive, opened to one entry, and did nothing. Callers with a
+            real choice are unaffected. */}
+        {pageSizes.length > 1 ? (
+          <label className="flex items-center gap-2 text-sm text-base-content/70">
+            <span className="whitespace-nowrap">Rows per page</span>
+            <select
+              className="app-select app-select-sm w-20"
+              value={pageSize}
+              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            >
+              {pageSizes.map((size) => (
+                <option key={size} value={size}>
+                  {size}
+                </option>
+              ))}
+            </select>
+          </label>
+        ) : null}
 
         <div className="flex items-center gap-2">
           <span className="whitespace-nowrap text-sm tabular-nums text-base-content/70">
