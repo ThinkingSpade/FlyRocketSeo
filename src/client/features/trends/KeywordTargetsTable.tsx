@@ -10,6 +10,7 @@ import { DifficultyBadge } from "@/client/features/domain/components/DifficultyB
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import { formatNumber } from "@/client/features/domain/utils";
 import { momentumLabel } from "./queryMomentum";
+import { KEYWORD_TARGET_SORT_SPECS } from "./keywordTargetsSorting";
 import { opportunityActionLabel } from "./opportunityActions";
 import type { KeywordTargetRow } from "./mergeKeywordRows";
 
@@ -137,24 +138,26 @@ function KeywordTargetsTableComponent({
       }),
       // SORTING MUST NOT BLEND THE TWO RANK SOURCES, so this column sorts on
       // `serpRank` ALONE and pins every row without one to the bottom, in
-      // both directions.
+      // both directions. A GSC property average and a Labs SERP position are
+      // different measurements, and any ordering that interleaves them is
+      // the blended rank this feature exists to avoid.
       //
-      // `sortUndefined: "last"` is what makes "both directions" true:
-      // getSortedRowModel applies it BEFORE the desc inversion and returns
-      // early, so those rows never flip to the top on a second click (see
-      // table-core getSortedRowModel.js). That is the whole point -- a GSC
-      // average and a Labs SERP position are different measurements, and any
-      // ordering that interleaves them is the blended rank this feature
-      // exists to avoid. Rows pinned at the bottom keep `mergeKeywordRows`'
-      // own volume-descending order, because table-core's final tiebreak is
-      // the original row index.
+      // The accessor and `sortUndefined` for this and the next three columns
+      // live in keywordTargetsSorting.ts, which exists so a headless
+      // table-core test can pin them -- see that file for the two silent
+      // regressions it guards (`?? null` instead of `?? undefined`, and a
+      // dropped `sortUndefined`).
       //
-      // `?? undefined` is not cosmetic: the check is `value === undefined`,
-      // so returning `null` here would silently fall through to the default
-      // comparator and interleave after all.
-      columnHelper.accessor((row) => row.serpRank ?? undefined, {
+      // Rows pinned at the bottom keep `mergeKeywordRows`' own
+      // volume-descending order among themselves -- but NOT via table-core's
+      // `rowA.index - rowB.index` tiebreak, which two undefined values never
+      // reach: the `sortUndefined` branch returns a constant 1 for that pair
+      // and exits first. They stay in order because a constant-1 comparator
+      // reads to TimSort as a single already-ascending run, so nothing
+      // moves. Correct behaviour, different mechanism.
+      columnHelper.accessor(KEYWORD_TARGET_SORT_SPECS.rank.accessorFn, {
         id: "rank",
-        sortUndefined: "last",
+        sortUndefined: KEYWORD_TARGET_SORT_SPECS.rank.sortUndefined,
         header: ({ column }) => (
           <SortableHeader
             column={column}
@@ -164,9 +167,9 @@ function KeywordTargetsTableComponent({
         ),
         cell: ({ row }) => <RankCell row={row.original} />,
       }),
-      columnHelper.accessor((row) => row.searchVolume ?? undefined, {
+      columnHelper.accessor(KEYWORD_TARGET_SORT_SPECS.searchVolume.accessorFn, {
         id: "searchVolume",
-        sortUndefined: "last",
+        sortUndefined: KEYWORD_TARGET_SORT_SPECS.searchVolume.sortUndefined,
         header: ({ column }) => (
           <SortableHeader column={column} label="Volume" />
         ),
@@ -175,26 +178,32 @@ function KeywordTargetsTableComponent({
           return value == null ? <EmptyCell /> : formatNumber(value);
         },
       }),
-      columnHelper.accessor((row) => row.keywordDifficulty ?? undefined, {
-        id: "keywordDifficulty",
-        sortUndefined: "last",
-        header: ({ column }) => (
-          <SortableHeader
-            column={column}
-            label="KD"
-            helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10. Only keywords covered by ranking data have one."
-          />
-        ),
-        cell: ({ getValue }) => <DifficultyBadge value={getValue() ?? null} />,
-      }),
+      columnHelper.accessor(
+        KEYWORD_TARGET_SORT_SPECS.keywordDifficulty.accessorFn,
+        {
+          id: "keywordDifficulty",
+          sortUndefined:
+            KEYWORD_TARGET_SORT_SPECS.keywordDifficulty.sortUndefined,
+          header: ({ column }) => (
+            <SortableHeader
+              column={column}
+              label="KD"
+              helpText="Organic ranking difficulty (0-100): higher means harder to reach Google's top 10. Only keywords covered by ranking data have one."
+            />
+          ),
+          cell: ({ getValue }) => (
+            <DifficultyBadge value={getValue() ?? null} />
+          ),
+        },
+      ),
       // Sorts on the percentage swing, so the biggest movers group at either
       // end. A row with no readable swing sorts last in both directions
       // rather than being treated as 0%: `percent` is null both for a
       // Labs-only keyword (Search Console has nothing to say about it) and
       // for a row under MIN_IMPRESSIONS_FOR_VERDICT, and neither is "flat".
-      columnHelper.accessor((row) => row.momentum?.percent ?? undefined, {
+      columnHelper.accessor(KEYWORD_TARGET_SORT_SPECS.trend.accessorFn, {
         id: "trend",
-        sortUndefined: "last",
+        sortUndefined: KEYWORD_TARGET_SORT_SPECS.trend.sortUndefined,
         header: ({ column }) => (
           <SortableHeader
             column={column}
