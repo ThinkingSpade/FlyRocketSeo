@@ -1,12 +1,17 @@
+import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import {
+  applyProjectCompetitorMutationSuccess,
   applyRemoveProjectCompetitorPatch,
   applySetProjectCompetitorPatch,
 } from "./competitorsCacheUpdaters";
-import type {
-  CompetitorRow,
-  CompetitorsPage,
+import { reapplyRestoredOverrides } from "./reapplyRestoredOverrides";
+import {
+  competitorsPageSchema,
+  type CompetitorRow,
+  type CompetitorsPage,
 } from "@/types/schemas/competitors";
+import type { ProjectCompetitorRow } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
 
 const row = (domain: string, pinned = false): CompetitorRow => ({
   domain,
@@ -44,6 +49,42 @@ function expectUnrelatedFieldsPreserved(
   expect(result.fetchedAt).toBe(input.fetchedAt);
   expect(result.seedSize).toBe(input.seedSize);
   expect(result.discoveryMode).toBe(input.discoveryMode);
+}
+
+const override = (
+  domain: string,
+  status: "pinned" | "excluded",
+): ProjectCompetitorRow => ({
+  id: `id-${domain}`,
+  projectId: "project_1",
+  domain,
+  status,
+  note: "",
+  createdAt: "2026-08-10T00:00:00.000Z",
+  updatedAt: "2026-08-10T00:00:00.000Z",
+});
+
+/** The query key `useAutoRestoredRun` builds for this project's restored
+ *  competitors run when no specific past run is selected -- reproduced here
+ *  (not imported; that hook exports no key-builder) so the test seeds the
+ *  EXACT entry `useRestoredCompetitorsRun` reads. */
+function restoredRunKey(projectId: string) {
+  return ["analysisRun", "latest", projectId, "competitors"] as const;
+}
+
+/** Shape of that entry, matching `RestoreOutcome`'s "ready" case
+ *  (`analysisRuns.ts`). */
+function restoredRunEntry(competitorsPage: CompetitorsPage) {
+  return {
+    status: "ready" as const,
+    run: {
+      label: "example.com",
+      paramsJson: "{}",
+      resultJson: JSON.stringify(competitorsPage),
+      lastRanAt: "2026-08-10T00:00:00.000Z",
+      runCount: 1,
+    },
+  };
 }
 
 describe("applySetProjectCompetitorPatch", () => {
@@ -185,5 +226,96 @@ describe("applyRemoveProjectCompetitorPatch", () => {
 
       expectUnrelatedFieldsPreserved(result, input);
     });
+  });
+});
+
+describe("applyProjectCompetitorMutationSuccess", () => {
+  it("does not touch the restored-run cache entry -- only the overrides list and the live competitors-list pages", () => {
+    // Regression test for the collision a whole-branch review caught:
+    // reapplyRestoredOverrides requires restored.result to stay PRISTINE
+    // (see that function's own doc comment), so nothing here may write to
+    // the entry useRestoredCompetitorsRun reads it from.
+    const queryClient = new QueryClient();
+    const projectId = "project_1";
+    const restoredEntry = restoredRunEntry(
+      page([row("webstaurantstore.com"), row("kept.com")], { hiddenCount: 0 }),
+    );
+    queryClient.setQueryData(restoredRunKey(projectId), restoredEntry);
+
+    applyProjectCompetitorMutationSuccess(
+      queryClient,
+      projectId,
+      [override("webstaurantstore.com", "excluded")],
+      (p) =>
+        applySetProjectCompetitorPatch(p, {
+          domain: "webstaurantstore.com",
+          status: "excluded",
+        }),
+    );
+
+    // Same reference, not just an equal value: proves nothing wrote to this
+    // key at all, not merely that it wrote back the same content.
+    expect(queryClient.getQueryData(restoredRunKey(projectId))).toBe(
+      restoredEntry,
+    );
+  });
+
+  it("restore -> exclude -> re-render: the domain is gone from rows AND hiddenCount reads 1, not 0", () => {
+    const queryClient = new QueryClient();
+    const projectId = "project_1";
+    const pristinePage = page([row("webstaurantstore.com"), row("kept.com")], {
+      hiddenCount: 0,
+    });
+    queryClient.setQueryData(
+      restoredRunKey(projectId),
+      restoredRunEntry(pristinePage),
+    );
+    queryClient.setQueryData(["project-competitors", projectId], []);
+
+    // The mutation succeeds -- exactly what useSetProjectCompetitorMutation's
+    // onSuccess does.
+    applyProjectCompetitorMutationSuccess(
+      queryClient,
+      projectId,
+      [override("webstaurantstore.com", "excluded")],
+      (p) =>
+        applySetProjectCompetitorPatch(p, {
+          domain: "webstaurantstore.com",
+          status: "excluded",
+        }),
+    );
+
+    // What useRestoredCompetitorsRun computes on the very next render:
+    // `restored` read straight off the restored-run entry, `overrides` read
+    // off the project-competitors entry -- the exact two reads that hook
+    // makes, composed the same way reapplyRestoredOverrides is. Parsed
+    // through the schema, not a raw cast, matching what useAutoRestoredRun
+    // itself does to a stored payload.
+    const entry = queryClient.getQueryData<ReturnType<typeof restoredRunEntry>>(
+      restoredRunKey(projectId),
+    );
+    const restoredResult = competitorsPageSchema.parse(
+      JSON.parse(entry?.run.resultJson ?? "null"),
+    );
+    const currentOverrides =
+      queryClient.getQueryData<ProjectCompetitorRow[]>([
+        "project-competitors",
+        projectId,
+      ]) ?? [];
+    const result = reapplyRestoredOverrides(
+      {
+        result: restoredResult,
+        label: entry?.run.label ?? "",
+        lastRanAt: entry?.run.lastRanAt ?? "",
+        runCount: entry?.run.runCount ?? 0,
+        params: null,
+      },
+      currentOverrides,
+    );
+
+    const domains = result?.result.rows.map((r) => r.domain);
+    expect(domains).not.toContain("webstaurantstore.com");
+    expect(domains).toContain("kept.com");
+    expect(result?.result.hiddenCount).toBe(1);
   });
 });
