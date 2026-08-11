@@ -4,6 +4,7 @@ import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { useKeywordTargets } from "./useKeywordTargets";
+import { describePaidFailure } from "./keywordTargetsState";
 import { KeywordTargetsTable } from "./KeywordTargetsTable";
 
 /**
@@ -23,6 +24,10 @@ export function KeywordTargetsCard({
 }) {
   const domain = useProjectDomain(projectId);
   const targets = useKeywordTargets(projectId, hasCredits);
+  const failure = describePaidFailure({
+    reason: targets.failureReason,
+    domain: domain ?? "your site",
+  });
 
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
@@ -70,7 +75,65 @@ export function KeywordTargetsCard({
 
         {targets.paidState === "failed" ? (
           <Banner variant="error" className="text-sm">
-            Couldn’t load ranking data for {domain ?? "your site"}.
+            {failure.message}
+            {failure.canRetry ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="ml-2"
+                onClick={targets.runAgain}
+              >
+                {/* No in-flight label swap here (unlike "Refresh" and
+                    "Refresh it"): clicking flips `discovery.isError` false
+                    synchronously, which drops `paidState` out of "failed" and
+                    unmounts this whole banner before a re-render could ever
+                    show a "Retrying…" state -- reachable only in the narrow
+                    case of a RESTORED failed run being retried before its own
+                    invalidation lands, not the common "this attempt just
+                    failed" path. Not worth a conditional for a label that
+                    would rarely be visible. */}
+                Try again
+              </Button>
+            ) : null}
+          </Banner>
+        ) : null}
+
+        {targets.paidState === "restore-failed" ? (
+          // Distinct from "failed" on purpose: nothing was spent and nothing
+          // is known. The read of this project's own analysis history broke,
+          // so we cannot tell whether a paid run already exists -- and the
+          // auto-run guard rightly refuses to spend to find out. Before this
+          // banner existed that combination rendered NOTHING at all: no
+          // error, no button, and no way back, permanently.
+          <Banner variant="error" className="text-sm">
+            Couldn’t check whether ranking data has already been loaded for{" "}
+            {domain ?? "your site"}, so it isn’t shown below. Nothing was
+            charged.
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="ml-2"
+              onClick={targets.retryRestore}
+            >
+              {/* `retryRestore`, never `runAgain`. Re-reading the stored run
+                  is free; starting a paid run here would spend precisely
+                  because we failed to find out whether we already had. */}
+              Try again
+            </Button>
+          </Banner>
+        ) : null}
+
+        {targets.paidState === "none" && !targets.isRunningPaid ? (
+          // The spec's own States table requires this prompt, and until now
+          // nothing rendered for "none" at all -- a project whose auto-run
+          // never fired (or was blocked) showed Search Console rows with no
+          // hint that the paid half exists. Hidden while a run is in flight:
+          // the click would be a no-op (see useKeywordTargets' `start`) and
+          // the in-flight line below already says what is happening.
+          <Banner variant="default" className="text-sm">
+            Ranking data hasn’t been loaded for this project yet.
             <Button
               type="button"
               variant="ghost"
@@ -78,16 +141,7 @@ export function KeywordTargetsCard({
               className="ml-2"
               onClick={targets.runAgain}
             >
-              {/* No in-flight label swap here (unlike "Refresh" and
-                  "Refresh it"): clicking flips `discovery.isError` false
-                  synchronously, which drops `paidState` out of "failed" and
-                  unmounts this whole banner before a re-render could ever
-                  show a "Retrying…" state -- reachable only in the narrow
-                  case of a RESTORED failed run being retried before its own
-                  invalidation lands, not the common "this attempt just
-                  failed" path. Not worth a conditional for a label that
-                  would rarely be visible. */}
-              Try again
+              Get ranking data for {domain ?? "your site"}
             </Button>
           </Banner>
         ) : null}
@@ -125,7 +179,21 @@ export function KeywordTargetsCard({
             <Loader />
           </div>
         ) : (
-          <KeywordTargetsTable rows={targets.rows} domain={domain ?? ""} />
+          <KeywordTargetsTable
+            rows={targets.rows}
+            domain={domain ?? ""}
+            // "No keywords yet." asserts an absence, and with Search Console
+            // unavailable we have not established one -- the free half of
+            // this table never arrived, so an empty table is a MISSING
+            // SOURCE, not an empty result. The card this table replaced
+            // rendered nothing at all in that case, which at least never
+            // claimed otherwise.
+            emptyMessage={
+              targets.gscUnavailable
+                ? "Search Console isn’t connected for this project, so the free half of this table is missing. This isn’t “no keywords” — it’s no data source."
+                : "No keywords yet."
+            }
+          />
         )}
 
         {targets.isRunningPaid ? (

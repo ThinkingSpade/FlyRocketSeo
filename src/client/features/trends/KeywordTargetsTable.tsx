@@ -54,9 +54,13 @@ function RankCell({ row }: { row: KeywordTargetRow }) {
 function KeywordTargetsTableComponent({
   rows,
   domain,
+  emptyMessage,
 }: {
   rows: KeywordTargetRow[];
   domain: string;
+  /** What an empty table means HERE -- the card decides, because only it
+   *  knows whether Search Console was actually readable. */
+  emptyMessage: string;
 }) {
   const columns = useMemo<ColumnDef<KeywordTargetRow>[]>(
     () => [
@@ -135,7 +139,7 @@ function KeywordTargetsTableComponent({
         wrapperClassName=""
         empty={
           <div className="py-6 text-center text-base-content/60">
-            No keywords yet.
+            {emptyMessage}
           </div>
         }
       />

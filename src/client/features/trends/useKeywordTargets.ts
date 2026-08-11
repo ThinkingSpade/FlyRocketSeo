@@ -120,8 +120,26 @@ export type KeywordTargetsState = {
   isLoadingFree: boolean;
   isRunningPaid: boolean;
   paidState: PaidState;
+  /**
+   * The recorded `reason` tag off a failed run (`insufficient_credits` |
+   * `rate_limited` | `provider_error`; see keywordDiscovery.ts's
+   * `describeFailure`), or null when we have no recorded failure to read one
+   * from. Available for a LIVE failure too, not just a restored one: the
+   * mutation awaits its own `onSettled` invalidation before flipping
+   * `isError` true, so by the time `paidState` reads "failed" the refetched
+   * restore already holds the row the server just recorded for that same
+   * attempt. Null therefore means the recording itself did not land -- fall
+   * back to the generic message rather than guessing a cause.
+   */
+  failureReason: string | null;
   gscUnavailable: boolean;
   runAgain: () => void;
+  /** Re-reads the free analysis_runs history after `restoreLatestRun` itself
+   *  errored (`paidState === "restore-failed"`). Free -- a stored row plus an
+   *  R2 object the run already paid for -- and deliberately NOT `runAgain`:
+   *  until this succeeds we do not know whether a paid run already exists,
+   *  and spending to find out is the one thing this tab must never do. */
+  retryRestore: () => void;
 };
 
 export function useKeywordTargets(
@@ -445,13 +463,14 @@ export function useKeywordTargets(
     domain,
     active,
     isError: discovery.isError,
+    restoreFailed: restored.isError,
     outcome,
     hasCredits,
   });
 
   return {
     rows,
-    geo: pickDisplayGeo(fresh, freshGeo, restoredGeo),
+    geo: pickDisplayGeo({ active, fresh, freshGeo, restoredGeo }),
     fetchedAt: active?.status === "ok" ? active.fetchedAt : null,
     isLoadingFree: free.isLoading,
     // Reads the same MutationCache-backed signal the auto-run guard does
@@ -460,7 +479,9 @@ export function useKeywordTargets(
     // this same hook started earlier is still genuinely running.
     isRunningPaid: paidCallInFlight,
     paidState,
+    failureReason: active?.status === "failed" ? active.reason : null,
     gscUnavailable: free.unavailable,
     runAgain: start,
+    retryRestore: restored.retry,
   };
 }
