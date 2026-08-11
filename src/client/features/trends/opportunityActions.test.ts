@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import {
   buildTrendingOpportunities,
-  isActionable,
   opportunityActionLabel,
   type OpportunityCandidate,
 } from "./opportunityActions";
@@ -201,14 +200,6 @@ describe("fit filtering", () => {
 
   it("filters nothing when there is no profile", () => {
     expect(build([rising(5)])).toHaveLength(1);
-  });
-});
-
-describe("isActionable", () => {
-  it("excludes only the non-recommendation", () => {
-    expect(isActionable(build([candidate("k", 5, 4, 2)])[0])).toBe(false);
-    expect(isActionable(build([candidate("k", 5, 100, 400)])[0])).toBe(true);
-    expect(isActionable(build([rising(5)])[0])).toBe(true);
   });
 });
 

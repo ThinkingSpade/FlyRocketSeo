@@ -13,6 +13,7 @@ export const RUN_FEATURES = {
   pageExplorer: "page_explorer",
   keywordResearch: "keyword_research",
   keywordTrends: "keyword_trends",
+  keywordDiscovery: "keyword_discovery",
   serpOverview: "serp_overview",
   contentBrief: "content_brief",
   topicClusters: "topic_clusters",
