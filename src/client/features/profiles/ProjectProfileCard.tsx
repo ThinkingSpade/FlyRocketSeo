@@ -83,7 +83,16 @@ export function ProjectProfileCard({ projectId }: Props) {
       // profile collapsed behind a summary line. The row is unconfirmed until
       // the user presses Save, so this is the review, not a notification.
       onSuccess: (result) => {
-        if (result.status === "drafted") setOpen(true);
+        if (result.status !== "drafted") return;
+        // Seed from the mutation's OWN return value, and do it before
+        // opening. Opening first was a data-loss bug: `setOpen(true)` makes
+        // the re-seed effect above bail (it is gated on `!open`), while the
+        // query invalidation that would deliver the drafted row has not
+        // resolved yet -- so the editor rendered the still-empty draft
+        // alongside a "Drafted from their site" banner, and pressing Save
+        // wrote those blanks over the profile that had just been generated.
+        setDraft((current) => ({ ...current, ...result.profile }));
+        setOpen(true);
       },
     });
   }, [isLoading, aiAvailable, domain, profile, autoDraft]);
