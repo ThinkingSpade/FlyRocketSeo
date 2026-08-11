@@ -580,7 +580,13 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 
 [data-reveal="shown"] {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  /* `none`, NOT `translate3d(0, 0, 0)`. An identity transform is still a
+     transform, and ANY transform other than `none` makes the element the
+     containing block for its `position: fixed` descendants — so a landed
+     reveal would re-anchor any fixed-with-insets overlay inside it to the
+     content column instead of the viewport. Modal also portals to <body> so
+     this can never be load-bearing again; see Modal.tsx. */
+  transform: none;
   /* Release the compositor layer once the element has landed — a permanent
      will-change on many elements costs memory and can blur text on some GPUs. */
   will-change: auto;
@@ -617,7 +623,11 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 
 [data-reveal-stagger="shown"] > * {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  /* `none`, for the reason spelled out on `[data-reveal="shown"]` above. This
+     selector makes it worse, not better: AppPageShell staggers every page's
+     sections, so a landed identity transform would sit on EVERY direct child
+     of EVERY page's content wrapper. */
+  transform: none;
   will-change: auto;
 }
 
