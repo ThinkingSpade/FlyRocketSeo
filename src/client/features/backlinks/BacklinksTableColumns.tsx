@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import { backlinksRowNote } from "@/client/features/insights/verdicts/backlinks";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { BacklinksSourceLink } from "./BacklinksPageLinks";
 import type { BacklinksRow } from "./backlinksPageTypes";
 import type { BacklinksRowsSortField } from "@/types/schemas/backlinks";
@@ -236,8 +237,8 @@ function buildBaseColumns(
       header: ({ column }) => (
         <SortableHeader
           column={column}
-          label="DA"
-          helpText="Authority of the linking domain"
+          label="Domain authority"
+          helpText="Domain authority of the linking domain (DataForSEO Domain Rank, 0–100)."
           align="right"
         />
       ),
@@ -266,10 +267,12 @@ function buildBaseColumns(
       minSize: 50,
       sortDescFirst: true,
       cell: linkCell((row) => {
-        const value = row.spamScore;
+        const spam = describeSpamScore(row.spamScore);
         return (
-          <div className="text-right tabular-nums text-sm">
-            {value != null && value > 0 ? Math.round(value) : null}
+          <div
+            className={`text-right tabular-nums text-sm ${spam.reviewRecommended ? "font-medium " : ""}${spam.className}`}
+          >
+            {spam.formatted}
           </div>
         );
       }),

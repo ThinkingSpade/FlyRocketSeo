@@ -68,7 +68,7 @@ const columns = [
     header: ({ column }) => (
       <SortableHeader
         column={column}
-        label="Rank"
+        label="Page authority"
         helpText="Authority score for this target page."
       />
     ),

@@ -142,13 +142,13 @@ describe("DomainQualityCard", () => {
     },
   ]);
 
-  it("renders the DR buckets and the strong-domain count", () => {
+  it("renders the authority buckets and the strong-domain count", () => {
     const markup = renderToStaticMarkup(
       createElement(DomainQualityCard, { referringDomains }),
     );
     expect(markup).toContain("Referring domain quality");
-    expect(markup).toContain("DR 51-60");
-    expect(markup).toContain("median DR");
+    expect(markup).toContain("Domain authority 51-60");
+    expect(markup).toContain("median domain authority");
   });
 
   it("renders nothing when no row carries a rank", () => {

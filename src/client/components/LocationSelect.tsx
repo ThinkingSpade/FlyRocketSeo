@@ -116,12 +116,32 @@ export function LocationSelect({
       </button>
 
       {open ? (
-        <div className="fixed z-30 mt-2 w-full max-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+        // `absolute`, not `fixed` — a fixed element's containing block is the
+        // viewport, so `w-full` resolved against the VIEWPORT and only looked
+        // trigger-width because `max-w-56` clamped it to 224px. `rounded-xl`
+        // rather than `rounded-box` so the radius survives a build without
+        // DaisyUI's component layer. Kept in step with GeoLocationSelect.tsx,
+        // which extends this component's shell and had both bugs copied in.
+        <div className="absolute inset-x-0 z-30 mt-2 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
           <label className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2 focus-within:border-primary">
             <Search className="size-4 shrink-0 text-base-content/50" />
+            {/* The input is the real combobox: focus never leaves it, arrow
+                keys only move `activeIndex`. Without these, a screen reader
+                announced "edit" and then said nothing as the user arrowed,
+                so there was no way to know what Enter would pick. */}
             <input
               ref={inputRef}
               type="text"
+              role="combobox"
+              aria-expanded="true"
+              aria-controls="location-select-listbox"
+              aria-activedescendant={
+                filtered[activeIndex]
+                  ? `location-option-${filtered[activeIndex].code}`
+                  : undefined
+              }
+              aria-autocomplete="list"
+              aria-label="Search countries"
               className="grow min-w-0 bg-transparent text-sm outline-none placeholder:text-base-content/40"
               placeholder="Search countries"
               value={query}
@@ -133,10 +153,17 @@ export function LocationSelect({
             />
           </label>
 
+          {/* `overflow-x-hidden`: setting only `overflow-y` makes the computed
+              `overflow-x` become `auto`, letting the active-row scroll slice
+              labels off at their left edge. No `menu` class — rows below carry
+              their own padding and hover state, so this renders the same with
+              or without DaisyUI's component layer. */}
           <ul
             ref={listRef}
             role="listbox"
-            className="menu mt-2 max-h-64 w-full flex-nowrap overflow-y-auto p-0"
+            id="location-select-listbox"
+            aria-label="Countries"
+            className="mt-2 flex max-h-64 w-full flex-col overflow-y-auto overflow-x-hidden p-0"
           >
             {filtered.length === 0 ? (
               <li className="w-full break-all px-3 py-2 text-sm text-base-content/50">
@@ -148,16 +175,33 @@ export function LocationSelect({
                 return (
                   <li
                     key={option.code}
+                    id={`location-option-${option.code}`}
                     role="option"
                     aria-selected={isSelected}
                   >
                     <button
                       type="button"
-                      className={`w-full ${index === activeIndex ? "menu-focus" : ""}`}
+                      // Options own their label; the inner button is a click
+                      // target only. Leaving it in the tab order made every
+                      // country a separate Tab stop, and left the accessible
+                      // name coming from a control that is not the option.
+                      tabIndex={-1}
+                      aria-hidden="true"
+                      // Real contrast, not a tint: arrow keys leave focus in
+                      // the search input, so this is the only cue for what
+                      // Enter selects, and `bg-base-200` on `bg-base-100` is
+                      // ~1.07:1. Kept in step with GeoLocationSelect.tsx.
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors ${
+                        index === activeIndex
+                          ? "bg-primary/15 ring-1 ring-inset ring-primary/50 font-medium"
+                          : "hover:bg-base-200"
+                      }`}
                       onClick={() => select(option)}
                       onMouseEnter={() => setActiveIndex(index)}
                     >
-                      <span className="flex-1 truncate">{option.label}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {option.label}
+                      </span>
                       {isSelected ? (
                         <Check className="size-4 shrink-0 text-primary" />
                       ) : null}

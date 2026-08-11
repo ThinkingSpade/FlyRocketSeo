@@ -1,3 +1,4 @@
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { unknownVerdict, type Verdict } from "../types";
 
 /**
@@ -23,11 +24,6 @@ type BacklinksVerdictInput = {
    *  differently-scoped spam scores, and "spamScore" alone doesn't say which. */
   backlinksSpamScore: number | null;
 };
-
-/** DataForSEO documents scores at or above this level as a real spam risk;
- *  the client report (reportNarrative.ts) already treats 30 as the point
- *  where a spam score is "worth a review" -- kept in step with it here. */
-const HIGH_SPAM_SCORE = 30;
 
 function formatCount(value: number): string {
   return value.toLocaleString();
@@ -61,23 +57,6 @@ function describeBrokenLinks(
   };
 }
 
-function describeSpamRisk(backlinksSpamScore: number): {
-  sentence: string;
-  risky: boolean;
-} {
-  const rounded = Math.round(backlinksSpamScore);
-  if (backlinksSpamScore >= HIGH_SPAM_SCORE) {
-    return {
-      sentence: `The backlink spam score is ${rounded}, high enough to be worth a review of the referring domains.`,
-      risky: true,
-    };
-  }
-  return {
-    sentence: `The backlink spam score is ${rounded}, a healthy level.`,
-    risky: false,
-  };
-}
-
 export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
   if (input.backlinks == null && input.referringDomains == null) {
     return unknownVerdict(
@@ -94,7 +73,7 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
   const sentences: string[] = [];
   const actions: Verdict["actions"] = [];
   let brokenCount = 0;
-  let spamRisky = false;
+  let spamTone: "neutral" | "warning" | "error" = "neutral";
 
   if (input.brokenBacklinks != null) {
     brokenCount = input.brokenBacklinks;
@@ -112,14 +91,16 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
   }
 
   if (input.backlinksSpamScore != null) {
-    const spam = describeSpamRisk(input.backlinksSpamScore);
-    sentences.push(spam.sentence);
-    spamRisky = spam.risky;
-    if (spamRisky) {
+    const spam = describeSpamScore(input.backlinksSpamScore);
+    sentences.push(
+      `The backlink spam score is ${spam.formatted}/100 · ${spam.label}.`,
+    );
+    spamTone = spam.tone;
+    if (spam.reviewRecommended) {
       actions.push({
         label:
           "Review the referring domains behind this backlink profile for spam",
-        evidence: `Backlink spam score ${Math.round(input.backlinksSpamScore)} (${HIGH_SPAM_SCORE}+ is high risk)`,
+        evidence: `Backlink spam score ${spam.formatted}/100 · ${spam.label}`,
         // Below the broken-link action: a spam review is a caution, not a
         // guaranteed recovery the way redirecting a dead link is.
         weight: 70,
@@ -127,11 +108,12 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
     }
   }
 
-  const tone: Verdict["tone"] = spamRisky
-    ? "bad"
-    : brokenCount > 0
-      ? "mixed"
-      : "good";
+  const tone: Verdict["tone"] =
+    spamTone === "error"
+      ? "bad"
+      : spamTone === "warning" || brokenCount > 0
+        ? "mixed"
+        : "good";
 
   return { read: sentences.join(" "), tone, actions };
 }

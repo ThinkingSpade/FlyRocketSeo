@@ -11,30 +11,26 @@ import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoResto
 import { RestoredRunBanner } from "@/client/features/analysis-runs/RestoredRunBanner";
 import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
-import { writeHandoff } from "@/client/features/insights/handoffStore";
 import { BacklinksSearchCard } from "./BacklinksSearchCard";
 import { BacklinksBody } from "./BacklinksPageContent";
 import type { BacklinksPageProps } from "./backlinksPageTypes";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
-import { buildBacklinksAuthorizationKey } from "./backlinksAuthorizationKey";
 import {
-  navigateToBacklinksSearch,
   useBacklinksPageData,
   useBacklinksTargetPrefill,
 } from "./useBacklinksPageData";
 import { useBacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
+import { useBacklinksRowsTransaction } from "./useBacklinksRowsTransaction";
+import { toBacklinksFiltersPayload } from "./backlinksFilterTypes";
 import { useBacklinksRunAuthorization } from "./useBacklinksRunAuthorization";
 import { useBacklinksSearchHistory } from "@/client/hooks/useBacklinksSearchHistory";
-import type {
-  BacklinksSearchTabInput,
-  SearchTabInput,
-} from "@/client/features/search-tabs/types";
-import { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchTabNavigation";
 import {
   BACKLINKS_DEFAULT_SORT,
   DEFAULT_BACKLINKS_PAGE_SIZE,
 } from "@/types/schemas/backlinks";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { hasBacklinksTarget } from "./backlinksRestoredState";
+import { useBacklinksSearchFlow } from "./useBacklinksSearchFlow";
 
 const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
@@ -64,6 +60,7 @@ export function BacklinksPage({
   searchState,
   navigate,
 }: BacklinksPageProps) {
+  const hasTarget = hasBacklinksTarget(searchState.target);
   const handlePageChange = useCallback(
     (nextPage: number) => {
       navigate({
@@ -136,9 +133,28 @@ export function BacklinksPage({
     [navigate],
   );
 
+  // Declared before the data hook because it gates those queries: a drill-down
+  // moves several pieces of state, and every half-applied combination in
+  // between is a distinct -- and billable -- query key.
+  const {
+    rowsReleased,
+    selectCategory,
+    clearCategory,
+    origin: categoryOrigin,
+    returnToBreakdown,
+  } = useBacklinksRowsTransaction({
+    searchState,
+    hasTarget,
+    appliedFilters: filters.backlinks.values,
+    applyFilters: filters.backlinks.apply,
+    navigate,
+  });
+
   const domainExpansion = useBacklinksDomainExpansion({
     projectId,
     searchState,
+    authorized: searchAuthorized,
+    filters: toBacklinksFiltersPayload(filters.backlinks.values),
   });
 
   const {
@@ -154,6 +170,8 @@ export function BacklinksPage({
   } = useBacklinksPageData({
     projectId,
     searchState,
+    hasTarget,
+    rowsReleased,
     filters,
     authorized: searchAuthorized,
     runNonce: run.runNonce,
@@ -172,12 +190,9 @@ export function BacklinksPage({
     projectId,
     feature: RUN_FEATURES.backlinks,
     schema: backlinksOverviewCacheSchema,
-    enabled: searchState.target.trim() === "",
+    enabled: !hasTarget,
     runId: selectedRunId,
   });
-
-  const overviewData = overviewQuery.data ?? restored?.result.overview;
-  const restoredRun = overviewQuery.data == null ? restored : null;
 
   const {
     history,
@@ -185,30 +200,6 @@ export function BacklinksPage({
     addSearch,
     removeHistoryItem,
   } = useBacklinksSearchHistory(projectId);
-  const urlTabInput = useMemo<SearchTabInput | null>(() => {
-    if (searchState.target.trim() === "") return null;
-    return {
-      type: "backlinks",
-      target: searchState.target,
-      scope: searchState.scope,
-    };
-  }, [searchState.scope, searchState.target]);
-  const navigateToTab = useCallback(
-    (input: SearchTabInput | null) => {
-      if (input?.type !== "backlinks") {
-        navigate({
-          search: () => ({}),
-          replace: true,
-        });
-        return;
-      }
-      navigateToBacklinksSearch(navigate, {
-        target: input.target,
-        scope: input.scope,
-      });
-    },
-    [navigate],
-  );
   const handleResultTabChange = useCallback(
     (tab: BacklinksSearchState["tab"]) => {
       navigate({
@@ -224,75 +215,48 @@ export function BacklinksPage({
     },
     [navigate],
   );
-  const searchTabs = useSearchTabNavigation({
-    storageKey: `backlinks:${projectId}`,
-    urlInput: urlTabInput,
-    getLabel: useCallback(
-      (input) => (input.type === "backlinks" ? input.target : ""),
-      [],
-    ),
-    navigateToInput: navigateToTab,
-  });
-  const toBacklinksTabInput = useCallback(
-    (
-      values: Pick<BacklinksSearchState, "target" | "scope">,
-    ): BacklinksSearchTabInput => ({
-      type: "backlinks",
-      target: values.target,
-      scope: values.scope,
-    }),
-    [],
-  );
   const projectDomain = useProjectDomain(projectId);
   const targetPrefill = useBacklinksTargetPrefill(
     projectId,
     searchState.target,
     projectDomain,
   );
-  // Shared by the search form, "Run again", and the "analyze my domain"
-  // prompt so all three open a tab, navigate, and record history identically.
-  const runBacklinksSearch = useCallback(
-    (values: Pick<BacklinksSearchState, "target" | "scope">) => {
-      // Every trigger below is "a backlinks run just happened for this
-      // target" -- a fresh search, a repeat via "Run again", or the analyze
-      // prompt -- which is exactly what the next tab opened should inherit.
-      writeHandoff(projectId, {
-        kind: "domain",
-        value: values.target,
-        source: "Backlinks",
-        at: Date.now(),
-      });
-      if (
-        values.target === searchState.target &&
-        values.scope === searchState.scope
-      ) {
-        run.authorize();
-        return;
-      }
-      const nextSearchState: BacklinksSearchState = {
-        ...searchState,
-        target: values.target,
-        scope: values.scope,
-        tab: "backlinks",
-        page: 1,
-        sort: undefined,
-        order: undefined,
-      };
-      run.authorize(buildBacklinksAuthorizationKey(projectId, nextSearchState));
-      searchTabs.openTab(toBacklinksTabInput(values));
-      navigateToBacklinksSearch(navigate, values);
-      addSearch({ target: values.target, scope: values.scope });
-    },
-    [
-      addSearch,
-      navigate,
-      projectId,
-      run,
-      searchState,
-      searchTabs,
-      toBacklinksTabInput,
-    ],
-  );
+  const initialRestoredRun =
+    !hasTarget && overviewQuery.data == null ? restored : null;
+  const {
+    canOpenSearch,
+    refreshRestoredLinks,
+    restoredRefresh,
+    restoredResults,
+    runBacklinksSearch,
+    searchTabs,
+  } = useBacklinksSearchFlow({
+    projectId,
+    searchState,
+    hasTarget,
+    navigate,
+    run,
+    rowsQuery,
+    restoredRun: initialRestoredRun,
+    addSearch,
+  });
+  const savedOverview =
+    restoredRefresh?.overview ?? initialRestoredRun?.result.overview;
+  const useSavedOverview =
+    savedOverview != null &&
+    (initialRestoredRun != null ||
+      restoredRefresh?.phase !== "succeeded" ||
+      overviewQuery.data == null);
+  const overviewData = useSavedOverview ? savedOverview : overviewQuery.data;
+  const displayedRestoredRun = useSavedOverview
+    ? (restoredRefresh ?? initialRestoredRun)
+    : null;
+  const restoredOverviewNotice =
+    restoredRefresh?.phase === "succeeded" &&
+    overviewQuery.data == null &&
+    overviewErrorMessage
+      ? "The fresh overview couldn't be loaded. The saved summary is still available, and individual links are loaded."
+      : null;
   return (
     <AppPageShell>
       <div>
@@ -304,17 +268,16 @@ export function BacklinksPage({
       </div>
 
       <BacklinksSearchCard
-        errorMessage={overviewErrorMessage}
+        compact={overviewData != null}
+        errorMessage={restoredOverviewNotice ? null : overviewErrorMessage}
         initialValues={searchCardInitialValues}
-        canOpenSearch={(values) =>
-          searchTabs.canOpenTab(toBacklinksTabInput(values))
-        }
+        canOpenSearch={canOpenSearch}
         tabLimit={searchTabs.limit}
         onSubmit={runBacklinksSearch}
         prefillTarget={targetPrefill}
       />
 
-      {searchState.target.trim() === "" ? (
+      {!hasTarget ? (
         <RecentRunsList
           projectId={projectId}
           feature={RUN_FEATURES.backlinks}
@@ -323,23 +286,15 @@ export function BacklinksPage({
         />
       ) : null}
 
-      {restoredRun ? (
+      {displayedRestoredRun ? (
         <RestoredRunBanner
-          label={restoredRun.label}
-          lastRanAt={restoredRun.lastRanAt}
-          runCount={restoredRun.runCount}
-          onRunAgain={() => {
-            runBacklinksSearch({
-              // From the restored result rather than its label, so "run
-              // again" repeats the same scope it was originally run at.
-              target: restoredRun.result.overview.target,
-              scope: restoredRun.result.overview.scope,
-            });
-          }}
+          label={displayedRestoredRun.label}
+          lastRanAt={displayedRestoredRun.lastRanAt}
+          runCount={displayedRestoredRun.runCount}
         />
       ) : null}
 
-      {searchState.target.trim() === "" && !restoredRun ? (
+      {!hasTarget && !initialRestoredRun ? (
         <AnalyzeDomainPrompt
           domain={projectDomain}
           title="Check your own link profile"
@@ -355,13 +310,16 @@ export function BacklinksPage({
 
       <BacklinksBody
         projectId={projectId}
+        hasTarget={hasTarget}
         meteredAuthorized={searchAuthorized}
         meteredRunNonce={run.runNonce}
         history={history}
         historyLoaded={historyLoaded}
         overviewData={overviewData}
         overviewError={overviewErrorMessage}
-        overviewLoading={searchAuthorized && overviewQuery.isLoading}
+        overviewLoading={
+          searchAuthorized && overviewQuery.isLoading && !useSavedOverview
+        }
         backlinksRowsPage={rowsQuery.data}
         referringDomainsPage={referringDomainsQuery.data}
         topPagesPage={topPagesQuery.data}
@@ -373,15 +331,22 @@ export function BacklinksPage({
         tabErrorMessage={activeTabErrorMessage}
         tabLoading={searchAuthorized && activeTabQuery.isLoading}
         tabFetching={activeTabQuery.isFetching}
+        restoredResults={restoredResults}
+        restoredOverviewNotice={restoredOverviewNotice}
         onPageChange={handlePageChange}
         onPageSizeChange={handlePageSizeChange}
         onRemoveHistoryItem={removeHistoryItem}
         onRetryOverview={() => run.authorize()}
+        onRefreshRestored={refreshRestoredLinks}
+        onSelectCategory={selectCategory}
+        onClearCategory={clearCategory}
+        categoryOrigin={categoryOrigin}
+        onReturnToBreakdown={returnToBreakdown}
         onSortingChange={handleSortingChange}
         onTabChange={handleResultTabChange}
         onViewChange={handleViewChange}
         searchTabs={
-          searchState.target
+          hasTarget || restoredResults != null
             ? {
                 activeTabId: searchTabs.activeTabId,
                 tabs: searchTabs.tabs,

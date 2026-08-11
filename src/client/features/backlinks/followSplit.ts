@@ -25,6 +25,10 @@ type NofollowExposure = {
   note: string;
 };
 
+type NofollowSharePresentation =
+  | { kind: "distribution" }
+  | { kind: "message"; headline: string; detail: string | null };
+
 /**
  * Past this share, enough of the profile is touched by nofollow that the
  * headline referring-domain count oversells it. Below the clean threshold, the
@@ -53,6 +57,31 @@ export function computeNofollowExposure(
     cleanDofollow: total - clampedNofollow,
     ...describeExposure(nofollowShare),
   };
+}
+
+/**
+ * A split bar only communicates a distribution when both sides are present.
+ * At either endpoint, plain language is more accurate than a full or empty
+ * track.
+ */
+export function getNofollowSharePresentation(
+  nofollowShare: number,
+): NofollowSharePresentation {
+  if (nofollowShare <= 0) {
+    return {
+      kind: "message",
+      headline: "No nofollow links reported",
+      detail: null,
+    };
+  }
+  if (nofollowShare >= 1) {
+    return {
+      kind: "message",
+      headline: "Every referring domain has at least one nofollow link",
+      detail: "This does not mean every link is nofollow.",
+    };
+  }
+  return { kind: "distribution" };
 }
 
 function describeExposure(nofollowShare: number): {

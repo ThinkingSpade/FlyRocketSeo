@@ -10,10 +10,11 @@ import { useBacklinksCompare } from "./useBacklinksCompare";
  * The competitive block of the Backlinks tab: comparison, link gap, competing
  * domains and network concentration.
  *
- * Every query inside is metered and starts disabled. The parent renders this
- * only for a live run — a restored run is meant to cost nothing, and these
- * cards would otherwise offer buttons that spend against a target the user did
- * not just ask for.
+ * Every query inside is metered and starts disabled: each one is gated on its
+ * own `useAuthorizedRun`, which is false until that card's button is clicked.
+ * That per-card authorization is why this renders for a restored run too —
+ * showing the launchers costs nothing, and hiding them would have left a
+ * restored run with no way to reach the competitive tools at all.
  */
 export function BacklinksCompareSection({
   projectId,

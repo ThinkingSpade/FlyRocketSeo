@@ -22,7 +22,7 @@ export function BacklinksHistorySection({
 
   if (history.length === 0) {
     return (
-      <section className="rounded-2xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/55 space-y-2">
+      <section className="rounded-xl border border-dashed border-base-300 bg-base-100/70 p-6 text-center text-base-content/55 space-y-2">
         <Link2 className="size-9 mx-auto opacity-35" />
         <p className="text-base font-medium text-base-content/80">
           Enter a domain or URL to get started
@@ -32,7 +32,7 @@ export function BacklinksHistorySection({
   }
 
   return (
-    <section className="rounded-2xl border border-base-300 bg-base-100 p-5 md:p-6">
+    <section className="rounded-xl border border-base-300 bg-base-100 p-4 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
           <History className="size-4 text-base-content/45" />

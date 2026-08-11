@@ -214,7 +214,7 @@ export function LinkDeepSections({
                   <th>From</th>
                   <th>Anchor</th>
                   <th>To</th>
-                  <th className="text-right">Rank</th>
+                  <th className="text-right">Link authority</th>
                   <th className="text-right">Follow</th>
                 </tr>
               </thead>
@@ -261,7 +261,7 @@ export function LinkDeepSections({
                 <tr>
                   <th>Domain</th>
                   <th className="text-right">Backlinks</th>
-                  <th className="text-right">Rank</th>
+                  <th className="text-right">Domain authority</th>
                 </tr>
               </thead>
               <tbody>

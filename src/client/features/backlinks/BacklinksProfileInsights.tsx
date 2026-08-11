@@ -1,10 +1,17 @@
 import { Download, Gauge, ShieldAlert, Tag, Waypoints } from "lucide-react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { downloadTextFile } from "@/client/lib/csv";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeAnchorHealth } from "./anchorHealth";
-import { computeDomainQuality } from "./domainQuality";
-import { computeNofollowExposure } from "./followSplit";
+import {
+  computeDomainQuality,
+  filterPositiveQualityBuckets,
+} from "./domainQuality";
+import {
+  computeNofollowExposure,
+  getNofollowSharePresentation,
+} from "./followSplit";
 import {
   auditToxicDomains,
   buildDisavowFile,
@@ -100,6 +107,8 @@ export function FollowSplitCard({
   );
   if (!exposure) return null;
 
+  const presentation = getNofollowSharePresentation(exposure.nofollowShare);
+
   const tone =
     exposure.verdict === "nofollow-heavy"
       ? "text-warning"
@@ -109,31 +118,48 @@ export function FollowSplitCard({
 
   return (
     <InsightCard title="Nofollow exposure" icon={Waypoints}>
-      <p className={`text-lg font-semibold ${tone}`}>
-        <span className="tabular-nums">{formatNumber(exposure.nofollow)}</span>{" "}
-        <span className="text-sm font-normal text-base-content/60">
-          of {formatNumber(exposure.total)} referring domains send a nofollow
-          link
-        </span>
-      </p>
-      <div
-        className="flex h-2 w-full overflow-hidden rounded-full bg-base-200"
-        role="img"
-        aria-label={`${formatPercent(exposure.nofollowShare)} of referring domains send at least one nofollow link`}
-      >
-        <div
-          className="h-full bg-primary/70"
-          style={{ width: `${(1 - exposure.nofollowShare) * 100}%` }}
-        />
-      </div>
-      <div className="flex justify-between text-xs text-base-content/60">
-        <span>
-          No nofollow at all {formatNumber(exposure.cleanDofollow)} (
-          {formatPercent(1 - exposure.nofollowShare)})
-        </span>
-        <span>Some nofollow {formatPercent(exposure.nofollowShare)}</span>
-      </div>
-      <p className="text-xs text-base-content/60">{exposure.note}</p>
+      {presentation.kind === "message" ? (
+        <>
+          <p className={`text-sm font-medium ${tone}`}>
+            {presentation.headline}
+          </p>
+          {presentation.detail ? (
+            <p className="text-xs text-base-content/60">
+              {presentation.detail}
+            </p>
+          ) : null}
+        </>
+      ) : (
+        <>
+          <p className={`text-lg font-semibold ${tone}`}>
+            <span className="tabular-nums">
+              {formatNumber(exposure.nofollow)}
+            </span>{" "}
+            <span className="text-sm font-normal text-base-content/60">
+              of {formatNumber(exposure.total)} referring domains send a
+              nofollow link
+            </span>
+          </p>
+          <div
+            className="flex h-2 w-full overflow-hidden rounded-full bg-base-200"
+            role="img"
+            aria-label={`${formatPercent(exposure.nofollowShare)} of referring domains send at least one nofollow link`}
+          >
+            <div
+              className="h-full bg-primary/70"
+              style={{ width: `${(1 - exposure.nofollowShare) * 100}%` }}
+            />
+          </div>
+          <div className="flex justify-between text-xs text-base-content/60">
+            <span>
+              No nofollow at all {formatNumber(exposure.cleanDofollow)} (
+              {formatPercent(1 - exposure.nofollowShare)})
+            </span>
+            <span>Some nofollow {formatPercent(exposure.nofollowShare)}</span>
+          </div>
+          <p className="text-xs text-base-content/60">{exposure.note}</p>
+        </>
+      )}
     </InsightCard>
   );
 }
@@ -154,7 +180,9 @@ export function AnchorHealthCard({
       ? "text-error"
       : health.verdict === "watch"
         ? "text-warning"
-        : "text-success";
+        : health.verdict === "healthy"
+          ? "text-success"
+          : "text-base-content/70";
 
   return (
     <InsightCard title="Anchor text health" icon={Tag}>
@@ -163,7 +191,9 @@ export function AnchorHealthCard({
           ? "Over-optimized"
           : health.verdict === "watch"
             ? "Worth watching"
-            : "Natural spread"}
+            : health.verdict === "healthy"
+              ? "Natural spread"
+              : "Not enough data"}
       </p>
       <ul className="space-y-1.5">
         {health.categories.map((row) => (
@@ -194,7 +224,8 @@ export function DomainQualityCard({
   const quality = computeDomainQuality(referringDomains?.rows ?? []);
   if (!quality) return null;
 
-  const max = Math.max(...quality.buckets.map((bucket) => bucket.domains));
+  const buckets = filterPositiveQualityBuckets(quality.buckets);
+  const max = Math.max(0, ...buckets.map((bucket) => bucket.domains));
 
   return (
     <InsightCard title="Referring domain quality" icon={Gauge}>
@@ -203,15 +234,15 @@ export function DomainQualityCard({
           {formatNumber(quality.strongDomains)}
         </span>{" "}
         <span className="text-sm font-normal text-base-content/60">
-          at DR 30+ · median DR{" "}
+          with domain authority of 30+ · median domain authority{" "}
           <span className="tabular-nums">{quality.medianRank}</span>
         </span>
       </p>
       <ul className="space-y-1.5">
-        {quality.buckets.map((bucket) => (
+        {buckets.map((bucket) => (
           <ShareBar
             key={bucket.label}
-            label={`DR ${bucket.label}`}
+            label={`Domain authority ${bucket.label}`}
             value={bucket.domains}
             share={bucket.share}
             max={max}
@@ -260,8 +291,8 @@ export function ToxicLinksCard({
         <span className="font-medium text-base-content/80">
           {formatNumber(audit.candidates.length)}
         </span>{" "}
-        {audit.candidates.length === 1 ? "domain" : "domains"} scored{" "}
-        {audit.threshold} or higher for spam, carrying{" "}
+        {audit.candidates.length === 1 ? "domain" : "domains"} scored in the
+        High-risk signal tier, carrying{" "}
         <span className="font-medium text-base-content/80">
           {formatNumber(audit.affectedBacklinks)}
         </span>{" "}
@@ -276,27 +307,32 @@ export function ToxicLinksCard({
             <tr>
               <th>Domain</th>
               <th className="text-right">Spam score</th>
-              <th className="text-right">DR</th>
+              <th className="text-right">Domain authority</th>
               <th className="text-right">Backlinks</th>
             </tr>
           </thead>
           <tbody>
-            {preview.map((candidate) => (
-              <tr key={candidate.domain}>
-                <td className="max-w-md truncate" title={candidate.domain}>
-                  {candidate.domain}
-                </td>
-                <td className="text-right tabular-nums font-medium text-error">
-                  {candidate.spamScore}
-                </td>
-                <td className="text-right tabular-nums text-base-content/60">
-                  {candidate.rank ?? "—"}
-                </td>
-                <td className="text-right tabular-nums text-base-content/60">
-                  {formatNumber(candidate.backlinks)}
-                </td>
-              </tr>
-            ))}
+            {preview.map((candidate) => {
+              const spam = describeSpamScore(candidate.spamScore);
+              return (
+                <tr key={candidate.domain}>
+                  <td className="max-w-md truncate" title={candidate.domain}>
+                    {candidate.domain}
+                  </td>
+                  <td
+                    className={`text-right tabular-nums font-medium ${spam.className}`}
+                  >
+                    {spam.formatted}
+                  </td>
+                  <td className="text-right tabular-nums text-base-content/60">
+                    {candidate.rank ?? "—"}
+                  </td>
+                  <td className="text-right tabular-nums text-base-content/60">
+                    {formatNumber(candidate.backlinks)}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>

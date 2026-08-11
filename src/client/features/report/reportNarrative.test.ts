@@ -149,7 +149,7 @@ describe("buildBacklinkNarrative", () => {
     }).join(" ");
     expect(text).toContain("6,286 backlinks");
     expect(text).toContain("439 referring domains");
-    expect(text).toContain("domain rank of 44");
+    expect(text).toContain("domain authority of 44/100");
     expect(text).toContain("46 backlinks currently point");
   });
 
@@ -165,7 +165,7 @@ describe("buildBacklinkNarrative", () => {
     ).toEqual([]);
   });
 
-  it("only raises spam score when it is actually high", () => {
+  it("only raises spam score when it is worth reviewing", () => {
     const clean = buildBacklinkNarrative({
       rank: 44,
       backlinks: 100,
@@ -182,6 +182,8 @@ describe("buildBacklinkNarrative", () => {
       spamScore: 42,
       brokenBacklinks: 0,
     }).join(" ");
-    expect(dirty).toContain("spam score of 42%");
+    expect(dirty).toContain(
+      "spam score of 42/100 · Worth reviewing · Review referring domains before taking action.",
+    );
   });
 });
