@@ -32,6 +32,8 @@ import {
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
 import { useProject } from "@/client/hooks/useProjectDomain";
+import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import {
   buildPromptStarters,
   domainStem,
@@ -104,10 +106,17 @@ function PromptExplorerPageInner({
   const [authorizedInput, setAuthorizedInput] =
     useState<PromptExplorerFormValues | null>(null);
   const project = useProject(projectId);
+  const { profile } = useProjectProfile(projectId);
+  // The profile's curated brand names first: this string is what every model's
+  // answer is scored against, so a client trading under a name that is neither
+  // their project label nor their domain stem was marked "no mention" even
+  // when the answer named them -- a false negative on this tab's whole
+  // promise. Falls back to the project name, then the stem, exactly as before.
   const defaultBrand =
-    project?.name.trim() && project.name.toLowerCase() !== "default"
+    resolveBrandTerms(profile, project?.domain ?? null)[0] ??
+    (project?.name.trim() && project.name.toLowerCase() !== "default"
       ? project.name.trim()
-      : (domainStem(project?.domain) ?? "");
+      : (domainStem(project?.domain) ?? ""));
   const brandWasEdited = useRef(Boolean(urlState.highlightBrand));
   const run = useAuthorizedRun(promptRunKey(projectId, form));
   const gscQuery = useQuery({

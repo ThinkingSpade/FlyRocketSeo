@@ -107,8 +107,26 @@ const MIN_MENTIONS_FOR_VERDICT = 10;
 export function computeAnchorHealth(
   rows: AnchorHealthRow[],
   target: string,
+  /**
+   * The project's curated brand names, when the caller has them. Unioned with
+   * the tokens derived from `target`, never replacing them.
+   *
+   * Anchors that don't match a brand token fall through to "descriptive",
+   * which feeds `topCommercial` and the "Over-optimized" verdict -- so a
+   * client whose brand is not their domain had their own brand anchors
+   * counted as commercial over-optimization, under copy telling them this is
+   * the pattern manual reviews look for.
+   */
+  profileBrandTerms: readonly string[] = [],
 ): AnchorHealth | null {
-  const brandTokens = extractBrandTokens(target);
+  const brandTokens = [
+    ...new Set([
+      ...extractBrandTokens(target),
+      ...profileBrandTerms
+        .map((term) => term.toLowerCase().trim())
+        .filter((term) => term.length >= 3),
+    ]),
+  ];
   const counts = new Map<AnchorCategory, number>();
   let totalMentions = 0;
   let topCommercial: AnchorConcentration | null = null;

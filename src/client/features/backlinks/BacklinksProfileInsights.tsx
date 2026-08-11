@@ -174,11 +174,17 @@ export function FollowSplitCard({
 export function AnchorHealthCard({
   anchors,
   target,
+  brandTerms = [],
 }: {
   anchors: BacklinksAnchorsData | undefined;
   target: string;
+  /** The project's curated brand names. Passed in rather than read from a
+   *  hook here so this card stays renderable without a query client, which
+   *  is how its tests drive it. Defaults to none, which is the domain-stem-
+   *  only behaviour it had before. */
+  brandTerms?: readonly string[];
 }) {
-  const health = computeAnchorHealth(anchors?.rows ?? [], target);
+  const health = computeAnchorHealth(anchors?.rows ?? [], target, brandTerms);
   if (!health) return null;
 
   const max = Math.max(...health.categories.map((row) => row.mentions));

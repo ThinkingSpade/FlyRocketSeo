@@ -244,6 +244,7 @@ export function BacklinksBody({
             tabInsights={
               <BacklinksTabInsights
                 activeTab={searchState.tab}
+                projectId={projectId}
                 target={overviewData.displayTarget || searchState.target}
                 referringDomains={referringDomainsPage}
                 anchors={anchorsPage}

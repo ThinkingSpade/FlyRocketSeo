@@ -5,10 +5,11 @@ import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import { getProjects } from "@/serverFunctions/projects";
 import {
   computeBrandedSplit,
-  defaultBrandTerms,
   parseBrandTerms,
   type QueryTotals,
 } from "./brandedSplit";
+import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { Input } from "@cloudflare/kumo/components/input";
 
 function formatCount(value: number): string {
@@ -36,14 +37,24 @@ export function BrandedSplitCard({
     projectsQuery.data?.find((project) => project.id === projectId)?.domain ??
     "";
 
+  const { profile } = useProjectProfile(projectId);
+  const prefillTerms = useMemo(
+    () => resolveBrandTerms(profile, domain || null),
+    [profile, domain],
+  );
+
   const [termsInput, setTermsInput] = useState("");
   const [touched, setTouched] = useState(false);
   useEffect(() => {
-    // Prefill once from the domain stem; never clobber user edits.
-    if (!touched && domain) {
-      setTermsInput(defaultBrandTerms(domain).join(", "));
+    // Prefill once from the profile's brand names unioned with the domain
+    // stem; never clobber user edits. The stem alone got this wrong for any
+    // client whose brand is not their domain -- and the profile has a
+    // "Brand names" field the user may already have filled in, which this
+    // card was ignoring while asking them to retype the same thing.
+    if (!touched && prefillTerms.length > 0) {
+      setTermsInput(prefillTerms.join(", "));
     }
-  }, [domain, touched]);
+  }, [prefillTerms, touched]);
 
   const split = useMemo(
     () => computeBrandedSplit(queryTotals, parseBrandTerms(termsInput)),
