@@ -161,16 +161,17 @@ export function BacklinksSearchCard({
             />
           </Toolbar.InputGroup>
         ) : (
-          <label
-            className={`input input-bordered flex flex-1 items-center gap-2 ${targetError ? "input-error" : ""}`}
-          >
-            <MagnifyingGlass className="size-4 text-base-content/60" />
-            <input
+          <div className="relative flex flex-1 items-center">
+            <MagnifyingGlass className="pointer-events-none absolute left-3 size-4 text-base-content/60" />
+            <Input
+              aria-label="Domain or URL"
               placeholder="Enter a domain or URL"
               value={field.state.value}
+              variant={targetError ? "error" : "default"}
+              className="w-full pl-9"
               onChange={(event) => handleTargetChange(event.target.value)}
             />
-          </label>
+          </div>
         );
       }}
     </form.Field>

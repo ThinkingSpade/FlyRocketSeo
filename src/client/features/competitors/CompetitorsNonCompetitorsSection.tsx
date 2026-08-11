@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { ColumnDef } from "@tanstack/react-table";
-import { ChevronRight } from "lucide-react";
+import { CaretRight } from "@phosphor-icons/react";
 import {
   AppDataTable,
   useAppTable,
@@ -41,7 +41,7 @@ export function CompetitorsNonCompetitorsSection({
         aria-expanded={expanded}
         className="flex w-full items-center gap-1.5 px-4 py-2.5 text-left text-sm text-base-content/60 hover:bg-base-200/50"
       >
-        <ChevronRight
+        <CaretRight
           aria-hidden="true"
           className={`size-3.5 shrink-0 transition-transform ${expanded ? "rotate-90" : ""}`}
         />

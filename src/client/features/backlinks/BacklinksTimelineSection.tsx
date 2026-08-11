@@ -83,7 +83,9 @@ export function BacklinksTimelineSection({
     [points],
   );
 
-  const gainedInformation = classifyNumericSeries(rows.map((row) => row.gained));
+  const gainedInformation = classifyNumericSeries(
+    rows.map((row) => row.gained),
+  );
   const lostInformation = classifyNumericSeries(rows.map((row) => row.lost));
   const totalInformation = classifyNumericSeries(
     rows.map((row) => row.referringDomains),

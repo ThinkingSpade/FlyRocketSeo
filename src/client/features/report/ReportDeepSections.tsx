@@ -266,7 +266,9 @@ export function LinkDeepSections({
                 <Table.Row>
                   <Table.Head>Domain</Table.Head>
                   <Table.Head className="text-right">Backlinks</Table.Head>
-                  <Table.Head className="text-right">Domain authority</Table.Head>
+                  <Table.Head className="text-right">
+                    Domain authority
+                  </Table.Head>
                 </Table.Row>
               </Table.Header>
               <Table.Body>

@@ -42,7 +42,6 @@ import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
 import type { KeywordResearchControllerState } from "./types";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
-import { Dialog } from "@cloudflare/kumo/components/dialog";
 
 type Props = Omit<KeywordResearchControllerInput, "onFormSubmit">;
 type KeywordSearchTab = SearchTab & { input: KeywordSearchTabInput };

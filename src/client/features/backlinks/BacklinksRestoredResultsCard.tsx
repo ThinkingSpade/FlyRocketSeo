@@ -1,4 +1,4 @@
-import { Link2Off } from "lucide-react";
+import { LinkBreak } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Empty } from "@cloudflare/kumo/components/empty";
@@ -19,7 +19,7 @@ export function BacklinksRestoredResultsCard({
       <Empty
         size="sm"
         className="rounded-none border-0 bg-base-100"
-        icon={<Link2Off className="size-8 text-base-content/35" />}
+        icon={<LinkBreak className="size-8 text-base-content/35" />}
         title={presentation.title}
         description={presentation.description}
         contents={

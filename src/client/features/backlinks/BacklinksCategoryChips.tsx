@@ -1,4 +1,4 @@
-import { ArrowUpLeft, X } from "lucide-react";
+import { ArrowUpLeft, X } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import {
   activeCategoryFilters,

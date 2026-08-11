@@ -143,7 +143,9 @@ export function LinkIntersectCard({
                 <Table.Row>
                   <Table.Head>Referring domain</Table.Head>
                   <Table.Head className="text-right">Links to</Table.Head>
-                  <Table.Head className="text-right">Domain authority</Table.Head>
+                  <Table.Head className="text-right">
+                    Domain authority
+                  </Table.Head>
                   <Table.Head className="text-right">Backlinks</Table.Head>
                   <Table.Head className="text-right">Spam</Table.Head>
                 </Table.Row>

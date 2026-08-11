@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MapPin } from "lucide-react";
+import { MapPin } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { GeoLocationSelect } from "@/client/features/geo/GeoLocationSelect";
 import {

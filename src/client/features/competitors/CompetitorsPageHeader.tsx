@@ -1,4 +1,4 @@
-import { Users } from "lucide-react";
+import { Users } from "@phosphor-icons/react";
 import { DataFreshness } from "@/client/components/DataFreshness";
 
 /**

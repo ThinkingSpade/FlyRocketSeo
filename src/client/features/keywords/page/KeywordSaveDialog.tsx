@@ -29,7 +29,9 @@ export function KeywordSaveDialog({
           These keywords will be saved to your current project.
         </Dialog.Description>
         <div className="mt-6 flex justify-end gap-2">
-          <Dialog.Close render={(props) => <Button {...props}>Cancel</Button>} />
+          <Dialog.Close
+            render={(props) => <Button {...props}>Cancel</Button>}
+          />
           <Button variant="primary" onClick={controller.confirmSave}>
             Save
           </Button>
