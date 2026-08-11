@@ -8,6 +8,7 @@ import {
   MAX_KEYWORDS_PER_SUBMIT,
   RESULT_LIMITS,
 } from "@/client/features/keywords/keywordResearchTypes";
+import { countryLabelForCode } from "@/shared/geo/resolveGeo";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { SeedSuggestionButton } from "@/client/features/profiles/SeedSuggestionButton";
@@ -254,17 +255,65 @@ export function KeywordResearchSearchBar({
             // otherwise a metro-scoped US project reads exactly like a
             // Google-Ads-only country such as Iceland, with no hint that
             // picking a different area would restore difficulty and intent.
+            // A national Google-Ads country (e.g. Iceland) has no better
+            // option to offer — Labs simply doesn't cover it, so this stays a
+            // neutral note. A LOCAL scope is different: it is a choice the
+            // user can undo, and one that costs them more than the old copy
+            // admitted. That copy said volume, CPC and trends "are available",
+            // which is true of the PROVIDER and routinely false of the RESULT:
+            // Google's Keyword Planner has no data for most long-tail phrases
+            // at state/metro granularity, so a local run frequently returns
+            // the seed alone with every metric null. Warn, and make going
+            // back to the country one click.
+            if (notice.kind === "google-ads-national") {
+              return (
+                <div
+                  className="flex items-start gap-2 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-sm text-base-content/80"
+                  role="status"
+                >
+                  <Info className="mt-0.5 size-4 shrink-0 text-info" />
+                  <span>
+                    Keyword data for this country comes from Google Ads — search
+                    volume, CPC, and trends are available, but difficulty and
+                    intent are not.
+                  </span>
+                </div>
+              );
+            }
+
+            const countryLabel =
+              countryLabelForCode(locationField.state.value) ||
+              "the whole country";
+
             return (
               <div
-                className="flex items-start gap-2 rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-sm text-base-content/80"
+                className="flex flex-col gap-2 rounded-lg border border-warning/40 bg-warning/15 px-3 py-2 text-sm text-base-content/80 sm:flex-row sm:items-start"
                 role="status"
               >
-                <Info className="mt-0.5 size-4 shrink-0 text-info" />
-                <span>
-                  {notice.kind === "google-ads-local"
-                    ? `This search is scoped to ${notice.areaLabel}, which Google Ads covers instead of DataForSEO Labs — search volume, CPC, and trends are available, but difficulty and intent are not.`
-                    : "Keyword data for this country comes from Google Ads — search volume, CPC, and trends are available, but difficulty and intent are not."}
+                <Info className="mt-0.5 size-4 shrink-0 text-warning" />
+                <span className="flex-1">
+                  Narrowing to {notice.areaLabel} switches this search to Google
+                  Ads, which has no keyword difficulty or search intent — and
+                  often no volume at all for longer phrases at this scale.
+                  Searching {countryLabel} usually returns far more keywords,
+                  with difficulty and intent included.
                 </span>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="secondary"
+                  className="shrink-0 self-start"
+                  onClick={() => {
+                    // Same pair the picker's own Clear does: drop the
+                    // confirmed area and put the country half back to the
+                    // project's own country, so one click fully reverts the
+                    // narrowing rather than leaving half of it applied.
+                    locationField.handleChange(projectCountryCode);
+                    scope.onClear();
+                  }}
+                >
+                  Search {countryLabel} instead
+                </Button>
               </div>
             );
           }}

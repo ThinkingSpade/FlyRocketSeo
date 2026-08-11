@@ -16,7 +16,10 @@ import type {
 } from "@/client/features/search-tabs/types";
 import { SearchTabStrip } from "@/client/features/search-tabs/SearchTabStrip";
 import { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchTabNavigation";
+import { resolveKeywordResultUsability } from "@/client/features/keywords/keywordResultUsability";
 import { KeywordResearchEmptyState } from "./KeywordResearchEmptyState";
+import { KeywordResearchNoMetricsState } from "./KeywordResearchNoMetricsState";
+import { KeywordSaveDialog } from "./KeywordSaveDialog";
 import { KeywordResearchLoadingState } from "./KeywordResearchLoadingState";
 import { KeywordResearchResults } from "./KeywordResearchResults";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
@@ -358,6 +361,17 @@ export function KeywordResearchPage(input: Props) {
         controller={controller}
         projectId={input.projectId}
         ownDomainRating={ownDomainRating}
+        onSearchCountry={() => {
+          // Both halves at once, exactly as the picker's own Clear does:
+          // dropping the area alone would leave the country control still
+          // pointing at whatever the area implied (see resolveRunGeo.ts).
+          targetAreaScope.onClear();
+          controller.controlsForm.setFieldValue(
+            "locationCode",
+            market.locationCode,
+          );
+          void controller.controlsForm.handleSubmit();
+        }}
       />
       <KeywordSaveDialog controller={controller} />
     </AppPageShell>
@@ -368,10 +382,12 @@ function KeywordResearchContent({
   controller,
   projectId,
   ownDomainRating,
+  onSearchCountry,
 }: {
   controller: KeywordResearchControllerState;
   projectId: string;
   ownDomainRating: number | null;
+  onSearchCountry: () => void;
 }) {
   if (controller.isLoading) {
     return <KeywordResearchLoadingState />;
@@ -411,46 +427,25 @@ function KeywordResearchContent({
     );
   }
 
+  // Rows came back carrying no figures at all — the seed echoed by Google Ads
+  // with everything null, which used to render as a table of dashes. Say what
+  // happened instead, and offer the geography that would actually answer it.
+  const usability = resolveKeywordResultUsability(controller.rows);
+  if (usability.kind === "no-metrics") {
+    return (
+      <KeywordResearchNoMetricsState
+        controller={controller}
+        rowCount={usability.rowCount}
+        onSearchCountry={onSearchCountry}
+      />
+    );
+  }
+
   return (
     <KeywordResearchResults
       projectId={projectId}
       controller={controller}
       ownDomainRating={ownDomainRating}
     />
-  );
-}
-
-function KeywordSaveDialog({
-  controller,
-}: {
-  controller: KeywordResearchControllerState;
-}) {
-  if (!controller.showSaveDialog) return null;
-
-  return (
-    <div className="modal modal-open">
-      <div className="modal-box">
-        <h3 className="font-bold text-lg">
-          Save {controller.selectedRows.size} Keywords
-        </h3>
-        <div className="py-4">
-          <p className="text-base-content/70 text-sm">
-            These keywords will be saved to your current project.
-          </p>
-        </div>
-        <div className="modal-action">
-          <Button onClick={() => controller.setShowSaveDialog(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={controller.confirmSave}>
-            Save
-          </Button>
-        </div>
-      </div>
-      <div
-        className="modal-backdrop"
-        onClick={() => controller.setShowSaveDialog(false)}
-      />
-    </div>
   );
 }

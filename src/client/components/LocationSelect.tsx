@@ -116,7 +116,13 @@ export function LocationSelect({
       </button>
 
       {open ? (
-        <div className="fixed z-30 mt-2 w-full max-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg">
+        // `absolute`, not `fixed` — a fixed element's containing block is the
+        // viewport, so `w-full` resolved against the VIEWPORT and only looked
+        // trigger-width because `max-w-56` clamped it to 224px. `rounded-xl`
+        // rather than `rounded-box` so the radius survives a build without
+        // DaisyUI's component layer. Kept in step with GeoLocationSelect.tsx,
+        // which extends this component's shell and had both bugs copied in.
+        <div className="absolute inset-x-0 z-30 mt-2 rounded-xl border border-base-300 bg-base-100 p-2 shadow-lg">
           <label className="flex items-center gap-2 rounded-lg border border-base-300 px-3 py-2 focus-within:border-primary">
             <Search className="size-4 shrink-0 text-base-content/50" />
             <input
@@ -133,10 +139,15 @@ export function LocationSelect({
             />
           </label>
 
+          {/* `overflow-x-hidden`: setting only `overflow-y` makes the computed
+              `overflow-x` become `auto`, letting the active-row scroll slice
+              labels off at their left edge. No `menu` class — rows below carry
+              their own padding and hover state, so this renders the same with
+              or without DaisyUI's component layer. */}
           <ul
             ref={listRef}
             role="listbox"
-            className="menu mt-2 max-h-64 w-full flex-nowrap overflow-y-auto p-0"
+            className="mt-2 flex max-h-64 w-full flex-col overflow-y-auto overflow-x-hidden p-0"
           >
             {filtered.length === 0 ? (
               <li className="w-full break-all px-3 py-2 text-sm text-base-content/50">
@@ -153,11 +164,17 @@ export function LocationSelect({
                   >
                     <button
                       type="button"
-                      className={`w-full ${index === activeIndex ? "menu-focus" : ""}`}
+                      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left transition-colors ${
+                        index === activeIndex
+                          ? "bg-base-200"
+                          : "hover:bg-base-200/60"
+                      }`}
                       onClick={() => select(option)}
                       onMouseEnter={() => setActiveIndex(index)}
                     >
-                      <span className="flex-1 truncate">{option.label}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {option.label}
+                      </span>
                       {isSelected ? (
                         <Check className="size-4 shrink-0 text-primary" />
                       ) : null}

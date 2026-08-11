@@ -73,8 +73,15 @@ function nationalOnlyProvider(countryCode: number): "labs" | "none" {
  * The `?? ""` here is the one place an empty label is correct rather than a
  * bug: if the code isn't in LOCATION_OPTIONS, there is no truthful name to
  * show, and every caller below already has nothing better to fall back to.
+ *
+ * Exported for the two "search the country instead" affordances on Keyword
+ * Research, which name the country in their own copy. They must not reach for
+ * the `LOCATIONS` map instead: that one holds short codes ("US"), which reads
+ * as "Searching US usually returns far more keywords" — this is the lookup
+ * that yields "United States", and it is already the one every geo label on
+ * the page resolves through.
  */
-function countryLabelForCode(locationCode: number): string {
+export function countryLabelForCode(locationCode: number): string {
   return (
     LOCATION_OPTIONS.find((option) => option.code === locationCode)?.label ?? ""
   );
