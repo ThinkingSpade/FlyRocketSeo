@@ -1,4 +1,8 @@
 import { useMemo } from "react";
+import {
+  auditHistoryKey,
+  auditResultsKey,
+} from "@/client/features/audit/auditQueryKeys";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowUpRight, Lightbulb, Wrench } from "@phosphor-icons/react";
@@ -13,10 +17,15 @@ import { toPath } from "@/client/features/link-insights/useLinkInsights";
 import {
   buildOpportunities,
   buildTechnicalIssues,
+  excludeWrongCustomer,
   isSourceUnavailable,
 } from "./opportunityModel";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
+import {
+  useKeywordFit,
+  useProjectProfile,
+} from "@/client/features/profiles/useProjectProfile";
 import { OpportunityTiles } from "./OpportunityTiles";
 import { OpportunityRow } from "./OpportunityRow";
 import { Badge } from "@cloudflare/kumo/components/badge";
@@ -45,7 +54,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
   // Technical issues come from the most recent completed audit's stored
   // pages — nothing is re-crawled to show them.
   const historyQuery = useQuery({
-    queryKey: ["auditHistory", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
   const latestAuditId = historyQuery.data?.find(
@@ -53,7 +62,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
   )?.id;
   const auditQuery = useQuery({
     enabled: latestAuditId != null,
-    queryKey: ["auditResults", projectId, latestAuditId],
+    queryKey: auditResultsKey(projectId, latestAuditId),
     queryFn: () =>
       getAuditResults({ data: { projectId, auditId: latestAuditId ?? "" } }),
   });
@@ -75,6 +84,20 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     });
   }, [report, linkInsights]);
 
+  // The profile editor is mounted directly below this list, and until now the
+  // ranking never asked it anything. Both halves are free: one D1 read for the
+  // profile, then pure string work over queries already in memory (keywordFit.ts).
+  const { profile } = useProjectProfile(projectId);
+  const queries = useMemo(
+    () => opportunities.map((row) => row.query),
+    [opportunities],
+  );
+  const fit = useKeywordFit(profile, queries);
+  const { kept: ranked, excluded: wrongCustomer } = useMemo(
+    () => excludeWrongCustomer(opportunities, fit),
+    [opportunities, fit],
+  );
+
   const technicalIssues = useMemo(
     () => buildTechnicalIssues(auditQuery.data?.pages ?? []),
     [auditQuery.data],
@@ -86,7 +109,10 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     (report?.connected ? report.sampling.queryPages.truncated : false) ||
     (linkInsights?.connected ? linkInsights.truncated : false);
 
-  const totalClicksAtStake = opportunities.reduce(
+  // Over `ranked`, never `opportunities`: the headline promises the traffic a
+  // full sweep of this list would earn, and rows nobody should act on are not
+  // part of that sweep.
+  const totalClicksAtStake = ranked.reduce(
     (sum, item) => sum + item.clicksAtStake,
     0,
   );
@@ -116,7 +142,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
       <ProjectProfileCard projectId={projectId} />
 
       <OpportunityTiles
-        opportunities={opportunities}
+        opportunities={ranked}
         sourcesUnavailable={sourcesUnavailable}
         sampled={sampled}
         technicalSourcesFailed={technicalSourcesFailed}
@@ -136,6 +162,14 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
               earn, so the highest-value work sits at the top.
               {sampled
                 ? " Search Console caps how many rows it returns, ordered by clicks, so this ranks what we could read rather than everything you rank for."
+                : ""}
+              {/* Named rather than silently applied. The verdict comes from the
+                  exclusions the user typed above, so a row missing in error is
+                  legible as a wrong exclusion line rather than a vanished
+                  opportunity. Suppressed once the list is empty, where the
+                  card below says the same thing with the whole story. */}
+              {wrongCustomer > 0 && ranked.length > 0
+                ? ` ${wrongCustomer} ${wrongCustomer === 1 ? "query is" : "queries are"} left out as somebody else's customer, going by your profile above.`
                 : ""}
             </>
           }
@@ -177,11 +211,16 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
               Connect Search Console
             </Link>
           </div>
-        ) : opportunities.length === 0 ? (
+        ) : ranked.length === 0 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-6 text-center text-sm text-base-content/60">
-            {sampled
-              ? "No keyword opportunities in the rows Search Console returned. It sends them ordered by clicks and caps the pull, so something off page one with real demand could be outside it."
-              : "No keyword opportunities right now — nothing is sitting just off page one with meaningful demand."}
+            {/* An emptied list is not an empty one. Saying "nothing is sitting
+                just off page one" after the fit pass removed everything would
+                report an absence we created. */}
+            {wrongCustomer > 0
+              ? `Every keyword opportunity we found is for somebody else's customer, going by your profile above (${wrongCustomer} left out). Loosen an exclusion line if that looks wrong.`
+              : sampled
+                ? "No keyword opportunities in the rows Search Console returned. It sends them ordered by clicks and caps the pull, so something off page one with real demand could be outside it."
+                : "No keyword opportunities right now — nothing is sitting just off page one with meaningful demand."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -199,7 +238,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
                 </Table.Row>
               </Table.Header>
               <Table.Body>
-                {opportunities.slice(0, OPPORTUNITY_LIMIT).map((row) => (
+                {ranked.slice(0, OPPORTUNITY_LIMIT).map((row) => (
                   <OpportunityRow
                     key={`${row.kind}-${row.query}-${row.page}`}
                     row={row}
@@ -208,10 +247,10 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
                 ))}
               </Table.Body>
             </Table>
-            {opportunities.length > OPPORTUNITY_LIMIT ? (
+            {ranked.length > OPPORTUNITY_LIMIT ? (
               <p className="px-1 pt-2 text-xs text-base-content/50">
                 Showing the top {OPPORTUNITY_LIMIT} of{" "}
-                {opportunities.length.toLocaleString()} — work down the list and
+                {ranked.length.toLocaleString()} — work down the list and
                 refresh.
               </p>
             ) : null}

@@ -1,13 +1,26 @@
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQueries } from "@tanstack/react-query";
 import { useVisibleKeys } from "./useVisibleKeys";
-import { Check, ArrowSquareOut, Graph } from "@phosphor-icons/react";
+import {
+  Check,
+  ArrowSquareOut,
+  FileMagnifyingGlass,
+  Graph,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { checkLinkPresence } from "@/serverFunctions/link-insights";
 import {
   toPath,
   useLinkInsights,
 } from "@/client/features/link-insights/useLinkInsights";
+// The fit decision lives with SEO Opportunities because that tab makes it
+// first, and it is the same decision about the same GSC queries.
+import { excludeWrongCustomer } from "@/client/features/opportunities/opportunityModel";
+import {
+  useKeywordFit,
+  useProjectProfile,
+} from "@/client/features/profiles/useProjectProfile";
 import { QueryStateBoundary } from "@/client/components/state/QueryStateBoundary";
 import { resolveQueryState } from "@/client/components/state/queryState";
 import { AppPageShell } from "@/client/components/AppPageShell";
@@ -51,10 +64,47 @@ function PresenceBadge({ presence }: { presence: PresenceResult | undefined }) {
   return <Badge variant="warning">add link</Badge>;
 }
 
-export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
+export function LinkOpportunitiesPage({
+  projectId,
+  focusQuery = null,
+}: {
+  projectId: string;
+  /** The query an inbound link asked about; sorted first and marked, so the
+   *  user lands on the card they clicked rather than hunting for it. */
+  focusQuery?: string | null;
+}) {
   const insightsQuery = useLinkInsights(projectId);
   const data = insightsQuery.data;
-  const opportunities = data?.connected ? data.opportunities : [];
+  const allOpportunities = useMemo(
+    () => (data?.connected ? data.opportunities : []),
+    [data],
+  );
+
+  // An internal link is a vote for which page should own a query, and casting
+  // it for somebody else's customer entrenches the wrong page — a costlier
+  // mistake than merely listing that query, because it changes the site. Free:
+  // one D1 read for the profile, then pure string work over queries already
+  // here. With no confirmed profile nothing is dropped.
+  const { profile } = useProjectProfile(projectId);
+  const queries = useMemo(
+    () => allOpportunities.map((row) => row.query),
+    [allOpportunities],
+  );
+  const fit = useKeywordFit(profile, queries);
+  const focus = focusQuery?.trim().toLowerCase() ?? null;
+  const { opportunities, wrongCustomer } = useMemo(() => {
+    const { kept, excluded } = excludeWrongCustomer(allOpportunities, fit);
+    // Sorted, not filtered, for the reason Cannibalization gives: one card is
+    // read against the others, and the rest are the context.
+    const ordered = focus
+      ? kept.toSorted(
+          (a, b) =>
+            (a.query.toLowerCase() === focus ? 0 : 1) -
+            (b.query.toLowerCase() === focus ? 0 : 1),
+        )
+      : kept;
+    return { opportunities: ordered, wrongCustomer: excluded };
+  }, [allOpportunities, fit, focus]);
 
   // Live-check each suggested source page (one fetch per serverFn call,
   // cached server-side for a day).
@@ -109,6 +159,28 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
           Internal links you should add: for each keyword you almost rank for,
           these are your own pages Google already associates with it — link from
           them to the target page using the keyword as the anchor.
+          {/* Named rather than silently applied: the verdict comes from the
+              exclusion lines the user wrote on the profile, so a card missing
+              in error has to be legible as a wrong line — and the profile is
+              edited on another tab, so saying so without a way there would be
+              the same dead end this tab already had. Suppressed once the list
+              is empty, where the card below tells the whole story. */}
+          {wrongCustomer > 0 && opportunities.length > 0 ? (
+            <>
+              {" "}
+              {wrongCustomer}{" "}
+              {wrongCustomer === 1 ? "keyword is" : "keywords are"} left out as
+              somebody else&rsquo;s customer, going by your{" "}
+              <Link
+                to="/p/$projectId/opportunities"
+                params={{ projectId }}
+                className="app-link-subtle"
+              >
+                project profile
+              </Link>
+              .
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -156,6 +228,11 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
                 isError: false,
                 connected: true,
                 rowCount: opportunities.length,
+                // An emptied list is not an empty one. Saying nothing ranks
+                // 4–20 with two of your pages, after the fit pass removed
+                // every card that did, reports an absence we created — which
+                // is the same distinction `filtered` already exists to make.
+                filtered: wrongCustomer > 0,
                 sampling: [
                   {
                     label: "The Search Console query-and-page pull",
@@ -168,6 +245,8 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
               errorMessage="Link opportunities could not be loaded."
               emptyTitle="No opportunities right now"
               emptyBody="This fills in once queries rank in positions 4–20 with more than one of your pages appearing for them."
+              filteredTitle="Nothing left after the profile check"
+              filteredBody={`All ${wrongCustomer} link ${wrongCustomer === 1 ? "opportunity is" : "opportunities are"} for somebody else's customer, going by your project profile. Loosen an exclusion line if that looks wrong.`}
             >
               {null}
             </QueryStateBoundary>
@@ -179,7 +258,11 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
         <div
           key={opportunity.query}
           ref={observe(opportunity.query)}
-          className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
+          className={`relative flex flex-col rounded-xl border bg-base-100 ${
+            focus && opportunity.query.toLowerCase() === focus
+              ? "border-primary"
+              : "border-base-300"
+          }`}
         >
           <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
             <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -196,7 +279,20 @@ export function LinkOpportunitiesPage({ projectId }: { projectId: string }) {
                   </a>{" "}
                   — currently #{Math.round(opportunity.target.position)} for
                 </span>{" "}
-                <Badge variant="outline">{opportunity.query}</Badge>
+                <Badge variant="outline">{opportunity.query}</Badge>{" "}
+                {/* The card names a page to improve and, until now, offered no
+                    way into any tab that works on one. Page Explorer takes `u`
+                    and only prefills its field — nothing runs, and nothing is
+                    billed, until the user presses Analyze there. */}
+                <Link
+                  to="/p/$projectId/page"
+                  params={{ projectId }}
+                  search={{ u: opportunity.target.page }}
+                  className={buttonVariants({ variant: "ghost", size: "xs" })}
+                >
+                  <FileMagnifyingGlass className="size-3" />
+                  Open this page
+                </Link>
               </div>
               <span className="text-xs text-base-content/50 tabular-nums">
                 {opportunity.target.impressions.toLocaleString()} impressions ·

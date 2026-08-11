@@ -1,6 +1,8 @@
 // Pure scoring for the SEO Opportunities tab (no I/O), split out so the
 // prioritization is unit-testable.
 
+import type { FitResult } from "@/shared/keyword-fit/keywordFit";
+
 export type OpportunityKind = "quick-win" | "ctr" | "consolidate";
 
 export type Opportunity = {
@@ -183,6 +185,39 @@ export function buildOpportunities(input: {
       (a, b) =>
         b.clicksAtStake - a.clicksAtStake || b.impressions - a.impressions,
     );
+}
+
+/**
+ * Drops rows whose query belongs to a customer this client does not have.
+ *
+ * Dropped, not demoted, for the reason the Keyword Trends action list gives
+ * (opportunityActions.ts): every row here is an instruction to go do work, and
+ * no version of "improve this page" is correct for somebody else's customer.
+ * The Keyword Research table demotes instead, because there the user is
+ * browsing rather than being told what to do. It also keeps the "Clicks at
+ * stake" headline honest -- summing traffic the client does not want is worse
+ * than merely listing it.
+ *
+ * The count comes back so the caller can say what it left out. A list that
+ * silently shortens itself is indistinguishable from one with nothing in it,
+ * and the verdicts come from rules the user wrote and can be wrong.
+ *
+ * The guarantee is only as good as the profile: with none confirmed the fit map
+ * is empty and nothing is dropped. That is the honest failure mode -- an
+ * unfiltered list rather than a falsely confident one.
+ *
+ * Generic over `{ query }` rather than `Opportunity` because Link
+ * Opportunities makes the same call about the same GSC queries: an internal
+ * link built toward an off-offer query entrenches the wrong page.
+ */
+export function excludeWrongCustomer<T extends { query: string }>(
+  rows: readonly T[],
+  fit: ReadonlyMap<string, FitResult>,
+): { kept: T[]; excluded: number } {
+  const kept = rows.filter(
+    (row) => fit.get(row.query)?.verdict !== "wrong-customer",
+  );
+  return { kept, excluded: rows.length - kept.length };
 }
 
 /** Lowercase the first character so a merged detail reads as one sentence. */

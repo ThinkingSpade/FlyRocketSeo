@@ -41,7 +41,6 @@ import {
 } from "@/types/schemas/search-performance";
 import { saveKeywords } from "@/serverFunctions/keywords";
 
-export type Tab = "striking" | "ctr" | "content" | "queries" | "pages";
 export type ExportTarget = "csv" | "sheets";
 
 type ExportTable = { filename: string; headers: string[]; rows: CsvValue[][] };
@@ -203,12 +202,19 @@ function TotalCard({
 
 export function DimensionTable({
   rows,
-  keyLabel,
+  dimension,
 }: {
   rows: SearchPerformanceTableRow[];
-  keyLabel: string;
+  /** Which dimension the key column holds. Taken instead of a bare label
+   *  because it also decides whether that key is a URL worth linking: a page
+   *  row names a live page, a query row names a phrase. */
+  dimension: SearchPerformanceTableDimension;
 }) {
-  const columns = useMemo(() => buildDimensionColumns(keyLabel), [keyLabel]);
+  const isPage = dimension === "page";
+  const columns = useMemo(
+    () => buildDimensionColumns(isPage ? "Page" : "Query", isPage),
+    [isPage],
+  );
   const table = useAppTable({
     data: rows,
     columns,

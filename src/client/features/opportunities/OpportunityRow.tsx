@@ -22,28 +22,36 @@ const KIND_META: Record<
   consolidate: { label: "Consolidate", icon: ArrowsSplit, variant: "error" },
 };
 
-/** Where each opportunity kind sends you to act on it. A lookup rather than a
- *  ternary chain, because all three branches rendered the same Link with only
- *  the destination differing. */
+/** Where each opportunity kind sends you to act on it, and what it takes with
+ *  it. A lookup rather than a ternary chain, because all three branches
+ *  rendered the same Link with only the destination differing.
+ *
+ *  Every destination now names the row it was sent about. `search` is a
+ *  builder rather than a `withQuery` flag because they do not all carry the
+ *  same thing: GSC Insights needs the tab as well, or the query lands on
+ *  whichever panel that tab happens to open with. */
 const ACTION: Record<
   OpportunityKind,
-  { label: string; to: string; withQuery?: boolean }
+  { label: string; to: string; search: (query: string) => SearchParams }
 > = {
-  // `withQuery` now too: the destination accepts `q` and sorts that row to
-  // the top, so "Review" lands on the split it is talking about instead of an
-  // unfiltered list of up to fifty cards.
   consolidate: {
     label: "Review",
     to: "/p/$projectId/cannibalization",
-    withQuery: true,
+    search: (q) => ({ q }),
   },
-  ctr: { label: "Review", to: "/p/$projectId/search-performance" },
+  ctr: {
+    label: "Review",
+    to: "/p/$projectId/search-performance",
+    search: (q) => ({ q, tab: "ctr" }),
+  },
   "quick-win": {
     label: "Build brief",
     to: "/p/$projectId/content",
-    withQuery: true,
+    search: (q) => ({ q }),
   },
 };
+
+type SearchParams = Record<string, string>;
 
 export function OpportunityRow({
   row,
@@ -91,7 +99,7 @@ export function OpportunityRow({
         <Link
           to={action.to}
           params={{ projectId }}
-          search={action.withQuery ? { q: row.query } : undefined}
+          search={action.search(row.query)}
           className={buttonVariants({ variant: "ghost", size: "xs" })}
         >
           {action.label}
