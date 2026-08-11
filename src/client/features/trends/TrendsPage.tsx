@@ -391,14 +391,26 @@ export function TrendsPage({
         real gate, and because a failed attempt is persisted (see
         keywordDiscovery.ts's "RECORD THE FAILURE" path), a short-credits
         project's auto-run fires once, fails, and never retries itself.
+
         `key={projectId}` forces a remount on project switch so this card's
-        own `useKeywordTargets`/`useTargetAreaScope` state (the auto-run
-        latch and the geo-ready flag) can't carry over from the PREVIOUS
-        project -- neither resets on a prop change alone, and this route
-        does not key on `projectId` either, so without this the auto-run
-        guard would evaluate the new project's credits/domain against a
-        stale latch and an unready scope. */}
-      <KeywordTargetsCard key={projectId} projectId={projectId} hasCredits />
+        own `useKeywordTargets` state (the auto-run latch) can't carry over
+        from the PREVIOUS project -- it does not reset on a prop change
+        alone. The geo-ready flag now lives in the PAGE's single
+        `targetAreaScope` and so is outside this key's reach, which is why
+        `TrendsRoute` now keys this whole page on `projectId` as well (see
+        routes/_project/p/$projectId/trends.tsx): an in-place project switch
+        must not leave project A's confirmed area reading `ready` while
+        project B's one-shot paid run captures it.
+
+        `targetAreaScope` is that one page-level instance -- the same object
+        the header ScopeControl above is bound to. See `useKeywordTargets`'
+        own `KeywordTargetsScope` comment for what a second instance cost. */}
+      <KeywordTargetsCard
+        key={projectId}
+        projectId={projectId}
+        hasCredits
+        targetAreaScope={targetAreaScope}
+      />
 
       {errorMessage ? (
         <Banner variant="error" className="text-sm">

@@ -16,7 +16,7 @@ import {
   useProjectDomain,
   useProjectMarket,
 } from "@/client/hooks/useProjectDomain";
-import { useTargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
+import type { TargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import {
   parseStoredGeo,
   resolveRunGeo,
@@ -142,14 +142,30 @@ export type KeywordTargetsState = {
   retryRestore: () => void;
 };
 
+/**
+ * The scope this hook captures a paid run under.
+ *
+ * Passed IN rather than resolved here (`useTargetAreaScope` used to be called
+ * a second time, inside this hook). Two instances meant two independent
+ * `area`/`ready` states over one shared query: the header `ScopeControl`
+ * binds to the page's instance, so a scope change reached THIS one only after
+ * `useSetTargetArea`'s mutation AND its invalidation refetch had both landed
+ * -- two serverFn round trips, each on this app's 2.6-4.5s cold path (see
+ * MEMORY's coldstart entry). "Change the scope, then click Refresh" is the
+ * INTENDED flow for this tab, and it spent, and labeled, under the PREVIOUS
+ * scope for the whole of that window. One instance, owned by the page, is
+ * the only way that race cannot exist.
+ */
+type KeywordTargetsScope = Pick<TargetAreaScope, "area" | "ready">;
+
 export function useKeywordTargets(
   projectId: string,
   hasCredits: boolean,
+  targetAreaScope: KeywordTargetsScope,
 ): KeywordTargetsState {
   const free = useTrendingOpportunities(projectId);
   const domain = useProjectDomain(projectId);
   const market = useProjectMarket(projectId);
-  const targetAreaScope = useTargetAreaScope(projectId, market.locationCode);
   const queryClient = useQueryClient();
 
   const restored = useAutoRestoredRun({

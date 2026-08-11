@@ -3,6 +3,7 @@ import { Banner } from "@cloudflare/kumo/components/banner";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import type { TargetAreaScope } from "@/client/features/geo/useTargetAreaScope";
 import { useKeywordTargets } from "./useKeywordTargets";
 import { describePaidFailure } from "./keywordTargetsState";
 import { KeywordTargetsTable } from "./KeywordTargetsTable";
@@ -18,12 +19,19 @@ import { KeywordTargetsTable } from "./KeywordTargetsTable";
 export function KeywordTargetsCard({
   projectId,
   hasCredits,
+  targetAreaScope,
 }: {
   projectId: string;
   hasCredits: boolean;
+  /** The PAGE's one `useTargetAreaScope` instance -- the same object the
+   *  header `ScopeControl` is bound to. Threaded through rather than
+   *  re-derived here; see `useKeywordTargets`' own comment on
+   *  `KeywordTargetsScope` for the two-round-trip race a second instance
+   *  opened between changing the scope and spending under it. */
+  targetAreaScope: Pick<TargetAreaScope, "area" | "ready">;
 }) {
   const domain = useProjectDomain(projectId);
-  const targets = useKeywordTargets(projectId, hasCredits);
+  const targets = useKeywordTargets(projectId, hasCredits, targetAreaScope);
   const failure = describePaidFailure({
     reason: targets.failureReason,
     domain: domain ?? "your site",
