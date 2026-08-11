@@ -13,6 +13,10 @@ import {
   useTopicPlanCoverage,
 } from "@/client/features/topic-clusters/TopicCoverageOverlay";
 import { ClusterPlanBody } from "@/client/features/topic-clusters/ClusterPlanBody";
+import {
+  useKeywordFit,
+  useProjectProfile,
+} from "@/client/features/profiles/useProjectProfile";
 import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildClustersVerdict } from "@/client/features/insights/verdicts/content";
 import { resolveStoredGeo } from "@/client/features/geo/resolveRunGeo";
@@ -79,6 +83,16 @@ export function ClusterPlan({
       }),
     [plan.topic, clusters, confirmedAreaLabel],
   );
+  // Free: one cached D1 read for the profile, then pure string work over
+  // keywords already on screen. Returns an empty map for a profile that is
+  // missing, unusable, or an unconfirmed AI draft.
+  const { profile } = useProjectProfile(projectId);
+  const planKeywords = useMemo(
+    () => clusters.flatMap((cluster) => cluster.keywords.map((k) => k.keyword)),
+    [clusters],
+  );
+  const fit = useKeywordFit(profile, planKeywords);
+
   const coverageState = useTopicPlanCoverage({
     projectId,
     hubTerms: [plan.topic, ...plan.hub.map((keyword) => keyword.keyword)],
@@ -151,6 +165,7 @@ export function ClusterPlan({
         clusters={clusters}
         projectId={projectId}
         coverage={coverageState.coverage}
+        fit={fit}
         geoSuffix={geoSuffix}
       />
     </>

@@ -1,15 +1,18 @@
-import { useEffect, useState } from "react";
-import { Briefcase, Check, Wand2, X } from "lucide-react";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { useEffect, useRef, useState } from "react";
+import { AlertCircle, Briefcase, Check, Wand2, X } from "lucide-react";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
-import {
-  SERVICE_AREA_KINDS,
-  SERVICE_AREA_LABELS,
-  isServiceAreaKind,
-  type ProjectProfile,
-} from "@/shared/keyword-fit/profileTypes";
+import { useProjectDomain } from "@/client/hooks/useProjectDomain";
+import { resolveDraftStatus, type DraftStatus } from "./draftStatus";
+import { applyPrefill, hasNeverBeenDrafted } from "./profilePrefill";
+import { useProfilePrefill } from "./useProfilePrefill";
+import { type ProjectProfile } from "@/shared/keyword-fit/profileTypes";
+import { ProfileSummary } from "./ProfileSummary";
+import { ServiceAreaField } from "./ServiceAreaField";
+import { summariseServiceArea } from "./serviceAreaSummary";
+import { useTargetArea } from "@/client/features/geo/useTargetArea";
 import { parseExclusions } from "@/shared/keyword-fit/keywordFit";
 import {
+  useAutoDraftProjectProfile,
   useDraftProjectProfile,
   useProjectProfile,
   useSaveProjectProfile,
@@ -42,14 +45,57 @@ export function ProjectProfileCard({ projectId }: Props) {
   // is the whole reason the manual form is the foundation.
   const aiAvailable = useAiExplainAvailable();
   const drafter = useDraftProjectProfile(projectId);
+  const prefill = useProfilePrefill(projectId);
+  // Same cached query ServiceAreaField reads; the collapsed summary needs the
+  // place name too, and it renders when that field does not exist.
+  const areaLabel = summariseServiceArea(useTargetArea(projectId).data).label;
+  const domain = useProjectDomain(projectId);
+  const autoDraft = useAutoDraftProjectProfile(projectId);
+  const autoDraftRequested = useRef(false);
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<ProjectProfile>(profile);
 
-  // The profile arrives after first paint. Seed the form once it lands, but
-  // never over an edit in progress -- reopening is what resets the draft.
+  // What the form should start from: the stored profile with the free
+  // pre-fill laid over whichever fields nobody has answered yet.
+  const seed = applyPrefill(profile, prefill);
+
+  // The profile arrives after first paint, and so does the target area the
+  // pre-fill reads. Re-seed the form as each lands, but never over an edit in
+  // progress -- reopening is what resets the draft.
   useEffect(() => {
-    if (!open) setDraft(profile);
-  }, [open, profile]);
+    if (!open) setDraft(applyPrefill(profile, prefill));
+  }, [open, profile, prefill]);
+
+  // Draft from the client's own site on first open, once per project ever.
+  //
+  // The ref only stops this component from firing twice within one mount; the
+  // real exactly-once guarantee is the server's claim, which is what makes it
+  // safe for the card to be mounted on several tabs at the same time. Every
+  // condition here is an optimisation to avoid a pointless round trip, not a
+  // correctness check -- `hasNeverBeenDrafted` says so itself.
+  useEffect(() => {
+    if (autoDraftRequested.current) return;
+    if (isLoading || !aiAvailable || !domain) return;
+    if (!hasNeverBeenDrafted(profile)) return;
+    autoDraftRequested.current = true;
+    autoDraft.mutate(undefined, {
+      // Opens the editor on what it wrote, rather than leaving a filled-in
+      // profile collapsed behind a summary line. The row is unconfirmed until
+      // the user presses Save, so this is the review, not a notification.
+      onSuccess: (result) => {
+        if (result.status !== "drafted") return;
+        // Seed from the mutation's OWN return value, and do it before
+        // opening. Opening first was a data-loss bug: `setOpen(true)` makes
+        // the re-seed effect above bail (it is gated on `!open`), while the
+        // query invalidation that would deliver the drafted row has not
+        // resolved yet -- so the editor rendered the still-empty draft
+        // alongside a "Drafted from their site" banner, and pressing Save
+        // wrote those blanks over the profile that had just been generated.
+        setDraft((current) => ({ ...current, ...result.profile }));
+        setOpen(true);
+      },
+    });
+  }, [isLoading, aiAvailable, domain, profile, autoDraft]);
 
   const isFilled = profile.offer.trim() !== "";
   if (isLoading) return null;
@@ -57,10 +103,18 @@ export function ProjectProfileCard({ projectId }: Props) {
   if (!open) {
     return (
       <ProfileSummary
-        profile={profile}
+        // The seed, not the stored row: `seed.offer` is always the stored
+        // offer (the pre-fill never touches it, so `isFilled` is unaffected),
+        // but the service area it shows must match what opening the editor
+        // will show, or the collapsed card claims "Nationwide" for a project
+        // the editor is about to call local.
+        profile={seed}
         isFilled={isFilled}
+        areaLabel={areaLabel}
+        isDrafting={autoDraft.isPending}
+        draftFailed={autoDraft.isError}
         onOpen={() => {
-          setDraft(profile);
+          setDraft(seed);
           setOpen(true);
         }}
       />
@@ -71,6 +125,20 @@ export function ProjectProfileCard({ projectId }: Props) {
     key: K,
     value: ProjectProfile[K],
   ) => setDraft((current) => ({ ...current, [key]: value }));
+
+  // An AI draft nobody has accepted yet. `confirmedAt` is the whole contract
+  // `project_profiles` was built on: null means proposal, and this is the one
+  // place that is allowed to show a proposal as if it were the profile.
+  const isUnreviewedDraft =
+    profile.source === "ai" &&
+    profile.confirmedAt === null &&
+    profile.offer.trim() !== "";
+
+  const draftStatus = resolveDraftStatus({
+    isPending: drafter.isPending,
+    isError: drafter.isError,
+    error: drafter.error,
+  });
 
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
@@ -100,6 +168,22 @@ export function ProjectProfileCard({ projectId }: Props) {
           </Button>
         </div>
 
+        {isUnreviewedDraft ? (
+          <p
+            className="rounded-lg border border-info/30 bg-info/10 px-3 py-2 text-sm"
+            role="status"
+          >
+            <span className="font-medium">
+              Drafted from {domain ?? "their site"}.
+            </span>{" "}
+            <span className="text-base-content/70">
+              Nothing uses this until you save it — correct anything that&apos;s
+              wrong first. The &ldquo;what they do NOT do&rdquo; lines are the
+              ones worth checking closely.
+            </span>
+          </p>
+        ) : null}
+
         {aiAvailable ? (
           <div className="flex flex-wrap items-center gap-2">
             <Button
@@ -120,14 +204,7 @@ export function ProjectProfileCard({ projectId }: Props) {
                 ? "Reading the site…"
                 : "Draft this from their site"}
             </Button>
-            <span className="text-sm text-base-content/60">
-              {drafter.isError
-                ? getStandardErrorMessage(
-                    drafter.error,
-                    "Couldn't draft from the site.",
-                  )
-                : "Reads a few pages of their site. You review it before it saves."}
-            </span>
+            <DraftStatusLine status={draftStatus} />
           </div>
         ) : null}
 
@@ -166,26 +243,11 @@ export function ProjectProfileCard({ projectId }: Props) {
           rows={2}
         />
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Where do they sell?</span>
-          <select
-            className="app-select w-full max-w-sm"
-            value={draft.serviceAreaKind}
-            onChange={(event) => {
-              const next = event.target.value;
-              if (isServiceAreaKind(next)) set("serviceAreaKind", next);
-            }}
-          >
-            {SERVICE_AREA_KINDS.map((kind) => (
-              <option key={kind} value={kind}>
-                {SERVICE_AREA_LABELS[kind].label}
-              </option>
-            ))}
-          </select>
-          <span className="text-sm text-base-content/60">
-            {SERVICE_AREA_LABELS[draft.serviceAreaKind].hint}
-          </span>
-        </label>
+        <ServiceAreaField
+          projectId={projectId}
+          value={draft.serviceAreaKind}
+          onChange={(kind) => set("serviceAreaKind", kind)}
+        />
 
         <div className="flex items-center gap-2">
           <Button
@@ -216,6 +278,30 @@ export function ProjectProfileCard({ projectId }: Props) {
       </div>
     </div>
   );
+}
+
+/**
+ * The line beside the draft button.
+ *
+ * An error gets the error colour and an icon; nothing else does. Before this,
+ * the failure message shared the hint's muted grey and its exact position, so
+ * a failed draft looked identical to one that had not been started -- which
+ * is how a correctly wired button gets reported as doing nothing at all.
+ */
+function DraftStatusLine({ status }: { status: DraftStatus }) {
+  if (status.tone === "error") {
+    return (
+      <span
+        className="flex items-center gap-1.5 text-sm text-error"
+        role="alert"
+      >
+        <AlertCircle className="size-3.5 shrink-0" />
+        {status.message}
+      </span>
+    );
+  }
+
+  return <span className="text-sm text-base-content/60">{status.message}</span>;
 }
 
 /**
@@ -278,59 +364,5 @@ function ProfileField({
       <span className="text-sm text-base-content/60">{hint}</span>
       {footer}
     </label>
-  );
-}
-
-function ProfileSummary({
-  profile,
-  isFilled,
-  onOpen,
-}: {
-  profile: ProjectProfile;
-  isFilled: boolean;
-  onOpen: () => void;
-}) {
-  if (!isFilled) {
-    return (
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-3">
-        <div className="flex items-start gap-2">
-          <Briefcase className="mt-0.5 size-4 shrink-0 text-base-content/50" />
-          <p className="text-sm text-base-content/80">
-            Keyword results don&apos;t know what this client does yet, so a
-            machine reseller&apos;s keywords look the same as an
-            operator&apos;s.{" "}
-            <span className="text-base-content/60">
-              Takes a minute, costs nothing.
-            </span>
-          </p>
-        </div>
-        <Button type="button" size="sm" onClick={onOpen}>
-          Describe this client
-        </Button>
-      </div>
-    );
-  }
-
-  const areaHint = SERVICE_AREA_LABELS[profile.serviceAreaKind].label;
-  const ruleCount = parseExclusions(profile.exclusions).length;
-
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-base-300 bg-base-100 px-4 py-3">
-      <div className="flex min-w-0 items-start gap-2">
-        <Briefcase className="mt-0.5 size-4 shrink-0 text-base-content/50" />
-        <p className="min-w-0 text-sm text-base-content/80">
-          <span className="line-clamp-1">{profile.offer}</span>
-          <span className="text-base-content/60">
-            {areaHint}
-            {ruleCount > 0
-              ? ` · ${ruleCount === 1 ? "1 fit rule" : `${ruleCount} fit rules`}`
-              : " · no fit rules yet"}
-          </span>
-        </p>
-      </div>
-      <Button type="button" variant="ghost" size="sm" onClick={onOpen}>
-        Edit
-      </Button>
-    </div>
   );
 }

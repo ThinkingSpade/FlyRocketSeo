@@ -1,15 +1,7 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ArrowUpRight,
-  ClipboardCheck,
-  Lightbulb,
-  PenLine,
-  Split,
-  Wrench,
-} from "lucide-react";
-import { InsightTile } from "@/client/components/InsightTile";
+import { ArrowUpRight, Lightbulb, PenLine, Split, Wrench } from "lucide-react";
 import { AppCard } from "@/client/components/AppCard";
 import { SectionHeader } from "@/client/components/SectionHeader";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
@@ -22,11 +14,12 @@ import {
   buildOpportunities,
   buildTechnicalIssues,
   isSourceUnavailable,
-  quickWinHint,
   type Opportunity,
   type OpportunityKind,
 } from "./opportunityModel";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
+import { OpportunityTiles } from "./OpportunityTiles";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
@@ -135,40 +128,17 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
         </p>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <InsightTile
-          icon={Lightbulb}
-          label="Opportunities"
-          value={sourcesUnavailable ? "—" : opportunities.length}
-          // Hint goes too: "3 quick wins" beside a "—" would state a figure the
-          // run never established.
-          hint={sourcesUnavailable ? undefined : quickWinHint(opportunities)}
-          tone="primary"
-        />
-        <InsightTile
-          icon={ArrowUpRight}
-          label="Clicks at stake"
-          value={sourcesUnavailable ? "—" : totalClicksAtStake.toLocaleString()}
-          hint={
-            sampled
-              ? "Estimated monthly, if everything listed here is fixed"
-              : "Estimated monthly, if all are fixed"
-          }
-          tone="success"
-        />
-        <InsightTile
-          icon={Wrench}
-          label="Technical issues"
-          value={technicalSourcesFailed ? "—" : technicalIssues.length}
-          tone={technicalIssues.length > 0 ? "warning" : "neutral"}
-        />
-        <InsightTile
-          icon={ClipboardCheck}
-          label="Pages affected"
-          value={technicalSourcesFailed ? "—" : affectedPages.toLocaleString()}
-          hint="Across the last audit"
-        />
-      </div>
+      <ProjectProfileCard projectId={projectId} />
+
+      <OpportunityTiles
+        opportunities={opportunities}
+        sourcesUnavailable={sourcesUnavailable}
+        sampled={sampled}
+        technicalSourcesFailed={technicalSourcesFailed}
+        technicalIssueCount={technicalIssues.length}
+        affectedPages={affectedPages}
+        totalClicksAtStake={totalClicksAtStake}
+      />
 
       <AppCard>
         <SectionHeader

@@ -11,6 +11,8 @@ import {
 } from "@/client/features/topic-clusters/TopicCoverageOverlay";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import type { FitResult } from "@/shared/keyword-fit/keywordFit";
+import { summariseClusterFit } from "./clusterFit";
 
 const PRIORITY_BADGES: Record<
   ClusterPriority,
@@ -31,12 +33,21 @@ export function ClusterPlanBody({
   clusters,
   projectId,
   coverage,
+  fit,
   geoSuffix,
 }: {
   plan: NonNullable<Awaited<ReturnType<typeof getTopicClusters>>>;
   clusters: ReturnType<typeof prioritizeClusters>;
   projectId: string;
   coverage: PlanCoverage | null;
+  /**
+   * Fit verdicts for every keyword in this plan, keyed by keyword.
+   *
+   * Empty whenever the project's profile is missing, unusable or still an
+   * unconfirmed AI draft — which the rendering below must treat as "not
+   * checked", never as "checked and all fine".
+   */
+  fit: ReadonlyMap<string, FitResult>;
   /** Defect 2 fix: the muted "US" (no "·") qualifier for this plan's
    *  volume/KD figures -- see ClusterPlan.tsx's own `geoSuffix` for why
    *  it's safe to derive directly from `plan.locationCode` here. Empty
@@ -87,6 +98,10 @@ export function ClusterPlanBody({
         {clusters.map((cluster) => {
           const topKeyword = cluster.keywords[0]?.keyword ?? plan.topic;
           const clusterCoverage = coverage?.clusters.get(cluster.name);
+          const clusterFit = summariseClusterFit(
+            cluster.keywords.map((keyword) => keyword.keyword),
+            fit,
+          );
           return (
             <div
               key={cluster.name}
@@ -116,21 +131,43 @@ export function ClusterPlanBody({
                     <CoverageTag coverage={clusterCoverage} />
                   </div>
                 ) : null}
+                {clusterFit.wrongCustomer > 0 ? (
+                  <p className="text-xs text-warning">
+                    {clusterFit.wrongCustomer} of {clusterFit.total} aren&apos;t
+                    this client&apos;s customer — worth cutting before you
+                    brief.
+                  </p>
+                ) : null}
                 <ul className="space-y-0.5 text-sm text-base-content/80">
-                  {cluster.keywords.map((keyword) => (
-                    <li
-                      key={keyword.keyword}
-                      className="flex items-baseline justify-between gap-2"
-                    >
-                      <span className="line-clamp-1">{keyword.keyword}</span>
-                      <span className="shrink-0 text-xs text-base-content/50 tabular-nums">
-                        {formatVolume(keyword.searchVolume)}
-                        {keyword.keywordDifficulty != null
-                          ? ` · KD ${keyword.keywordDifficulty}`
-                          : ""}
-                      </span>
-                    </li>
-                  ))}
+                  {cluster.keywords.map((keyword) => {
+                    // Dimmed, not removed. The verdict comes from rules the
+                    // user wrote and can be wrong, so this has to stay a
+                    // recommendation they can overrule by looking at it —
+                    // silently dropping rows would hide the disagreement.
+                    const isWrong =
+                      fit.get(keyword.keyword)?.verdict === "wrong-customer";
+                    return (
+                      <li
+                        key={keyword.keyword}
+                        className={`flex items-baseline justify-between gap-2${
+                          isWrong ? " text-base-content/40" : ""
+                        }`}
+                        title={
+                          isWrong
+                            ? (fit.get(keyword.keyword)?.reason ?? undefined)
+                            : undefined
+                        }
+                      >
+                        <span className="line-clamp-1">{keyword.keyword}</span>
+                        <span className="shrink-0 text-xs text-base-content/50 tabular-nums">
+                          {formatVolume(keyword.searchVolume)}
+                          {keyword.keywordDifficulty != null
+                            ? ` · KD ${keyword.keywordDifficulty}`
+                            : ""}
+                        </span>
+                      </li>
+                    );
+                  })}
                 </ul>
                 <div className="mt-1 flex gap-2">
                   <Link

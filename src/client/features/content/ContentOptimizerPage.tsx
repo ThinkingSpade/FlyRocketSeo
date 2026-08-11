@@ -26,6 +26,7 @@ import {
 import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import { ScopeControl } from "@/client/features/geo/ScopeControl";
 import { TargetAreaBanner } from "@/client/features/geo/TargetAreaBanner";
+import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
 import {
   useTargetAreaScope,
   type TargetAreaScope,
@@ -427,6 +428,7 @@ export function ContentOptimizerPage({
     <AppPageShell>
       <ContentOptimizerHeading scope={targetAreaScope} />
       <TargetAreaBanner projectId={projectId} />
+      <ProjectProfileCard projectId={projectId} />
 
       <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
         <div className="flex flex-auto flex-col gap-3 p-4 text-sm">

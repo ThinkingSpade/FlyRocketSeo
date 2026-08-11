@@ -4,7 +4,8 @@ import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance"
 import { getSavedKeywords } from "@/serverFunctions/keywords";
 import { buildSuggestions } from "./suggestionModel";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
-import { defaultBrandTerms } from "@/client/features/search-performance/brandedSplit";
+import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import type { FreeSignals, SeedSuggestion, SuggestionIntent } from "./types";
 
 /**
@@ -54,9 +55,14 @@ export function useProjectSuggestions(
 
   const report = gscQuery.data;
   const savedRows = savedQuery.data?.rows;
+  // The project's own curated brand names, unioned with the domain stem.
+  // This used to be the domain stem alone, so a client whose brand is not
+  // their domain had every branded search counted as non-branded -- and the
+  // profile field holding the real spellings was read by nothing.
+  const { profile } = useProjectProfile(projectId);
   const brandTerms = useMemo(
-    () => (domain ? defaultBrandTerms(domain) : []),
-    [domain],
+    () => resolveBrandTerms(profile, domain),
+    [profile, domain],
   );
 
   const signals = useMemo<FreeSignals>(() => {
