@@ -1,3 +1,8 @@
+import {
+  classifyKeyword,
+  hasUsableProfile,
+} from "@/shared/keyword-fit/keywordFit";
+
 /**
  * Pure view-model for the On-Page Fixes tab (no I/O), split out so the grouping
  * and progress math are unit-testable.
@@ -79,7 +84,14 @@ export type PageGroup = {
   url: string;
   path: string;
   rows: FixRow[];
-  pendingCount: number;
+  /** The ids an "approve all on this page" click submits. The card used to
+   *  recompute its own copy of this and never read the field beside it, so
+   *  the two were free to disagree; there is one now. */
+  pendingIds: string[];
+  /** Search Console clicks for this page, or null when there is no row for it
+   *  — which means either "no clicks in the window" or "not connected", and
+   *  the sort must not treat either as evidence the page is worthless. */
+  clicks: number | null;
 };
 
 /** Display a URL as its path, so the grouped list doesn't repeat the domain. */
@@ -93,12 +105,43 @@ export function toPath(url: string): string {
 }
 
 /**
- * Group fixes by page, most-actionable page first, so the user works down a
- * list that front-loads the pages with the most still to decide.
+ * Join key between a crawled page URL and a Search Console page row.
+ *
+ * Path only, lowercased, trailing slash dropped: GSC reports the canonical
+ * property URL, which can differ from the crawled one on scheme, host case or
+ * a www prefix, and none of those make it a different page here.
+ */
+export function pageTrafficKey(url: string): string {
+  const path = toPath(url).toLowerCase();
+  return path.length > 1 && path.endsWith("/") ? path.slice(0, -1) : path;
+}
+
+/** Clicks per page, summed across Search Console's query × page rows. */
+export function clicksByPage(
+  rows: readonly { page: string; clicks: number }[],
+): Map<string, number> {
+  const totals = new Map<string, number>();
+  for (const row of rows) {
+    const key = pageTrafficKey(row.page);
+    totals.set(key, (totals.get(key) ?? 0) + row.clicks);
+  }
+  return totals;
+}
+
+/**
+ * Group fixes by page, highest-traffic page first.
+ *
+ * The old order was how much work was LEFT on each page, which put the page
+ * with eleven untouched alt-text rows above the one that earns the site's
+ * clicks — a worklist sorted by the size of the chore rather than by what
+ * fixing it is worth. Remaining work is now only the tie-break, which is also
+ * what the whole list falls back to when Search Console is not connected: an
+ * empty `clicks` map reproduces the previous ordering exactly.
  */
 export function groupByPage(
   rows: FixRow[],
   filter: OnPageStatus | "all" = "all",
+  clicks: ReadonlyMap<string, number> = new Map(),
 ): PageGroup[] {
   const visible =
     filter === "all" ? rows : rows.filter((row) => row.status === filter);
@@ -117,11 +160,16 @@ export function groupByPage(
         (a, b) =>
           ELEMENT_ORDER.indexOf(a.element) - ELEMENT_ORDER.indexOf(b.element),
       ),
-      pendingCount: groupRows.filter((row) => row.status === "pending").length,
+      pendingIds: groupRows
+        .filter((row) => row.status === "pending")
+        .map((row) => row.id),
+      clicks: clicks.get(pageTrafficKey(url)) ?? null,
     }))
     .toSorted(
       (a, b) =>
-        b.pendingCount - a.pendingCount || b.rows.length - a.rows.length,
+        (b.clicks ?? 0) - (a.clicks ?? 0) ||
+        b.pendingIds.length - a.pendingIds.length ||
+        b.rows.length - a.rows.length,
     );
 }
 
@@ -139,4 +187,40 @@ export function aiRewritableIds(rows: FixRow[]): string[] {
         (row.element === "title" || row.element === "meta"),
     )
     .map((row) => row.id);
+}
+
+/** Prose about the business. Alt text describes an image, so the profile has
+ *  nothing to say about it. */
+const PROSE_ELEMENTS: OnPageElement[] = ["title", "meta", "h1"];
+
+/**
+ * Suggestions that advertise something this client says they do not do,
+ * keyed by row id.
+ *
+ * Nothing that writes these suggestions — neither the rule-based pass nor the
+ * LLM rewrite — is told what the business sells, and this is the one feature
+ * whose entire output is prose about the business. So a vending operator who
+ * only places machines gets offered "Buy Vending Machines in Dallas" as a
+ * page title, in their own words, ready to approve.
+ *
+ * Exclusion verdicts only: `adjacent` is meaningless for a page title, which
+ * is not a search. Free and client-side, over rows already on screen.
+ */
+export function offOfferSuggestions(
+  rows: FixRow[],
+  // `FitProfile` isn't exported; this is the same two fields the classifier
+  // reads, which is all this needs to accept.
+  profile: { offer: string; exclusions: string },
+): Map<string, string> {
+  const flagged = new Map<string, string>();
+  // An empty profile must produce no verdicts rather than guessed ones —
+  // same contract the keyword tables hold.
+  if (!hasUsableProfile(profile)) return flagged;
+
+  for (const row of rows) {
+    if (!PROSE_ELEMENTS.includes(row.element)) continue;
+    const result = classifyKeyword(row.suggestedValue, profile);
+    if (result.verdict === "wrong-customer") flagged.set(row.id, result.reason);
+  }
+  return flagged;
 }

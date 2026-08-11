@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { auditHistoryKey } from "@/client/features/audit/auditQueryKeys";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleNotch, ArrowsClockwise, MagicWand } from "@phosphor-icons/react";
@@ -7,13 +8,18 @@ import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   aiRewritableIds,
+  clicksByPage,
   elementProgress,
   groupByPage,
+  offOfferSuggestions,
   pendingIds,
   summarize,
   type FixRow,
   type OnPageStatus,
 } from "@/client/features/onpage/onPageModel";
+import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
+import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
   PageGroupCard,
   ProgressTiles,
@@ -32,7 +38,15 @@ import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 type StatusValue = "all" | OnPageStatus;
 
-export function OnPageFixesPage({ projectId }: { projectId: string }) {
+export function OnPageFixesPage({
+  projectId,
+  focusUrl = null,
+}: {
+  projectId: string;
+  /** A page an inbound link asked about; sorted first and outlined so the user
+   *  lands on the one they clicked rather than hunting a traffic-sorted list. */
+  focusUrl?: string | null;
+}) {
   const queryClient = useQueryClient();
   const [filter, setFilter] = useState<StatusValue>("pending");
 
@@ -50,7 +64,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
   const needsEmptyStateContext = fixesQuery.isSuccess && rows.length === 0;
   const auditHistoryQuery = useQuery({
     enabled: needsEmptyStateContext,
-    queryKey: ["auditHistory", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
   const gscConnectionQuery = useQuery({
@@ -61,6 +75,27 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
   const hasCompletedAudit = auditHistoryQuery.data?.some(
     (audit) => audit.status === "completed",
   );
+
+  // Free, first-party, and already cached under this exact key by Prompt
+  // Explorer and Search Performance — this tab pays nothing extra for it. It
+  // is what lets the worklist lead with the pages that actually earn clicks
+  // instead of the ones with the most rows left to tick off.
+  const gscQuery = useQuery({
+    queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
+    queryFn: () =>
+      getSearchPerformanceReport({
+        data: { projectId, dateRange: "last_28_days" },
+      }),
+    staleTime: 5 * 60_000,
+  });
+  const pageClicks = useMemo(
+    () =>
+      clicksByPage(
+        gscQuery.data?.connected === true ? gscQuery.data.queryPages : [],
+      ),
+    [gscQuery.data],
+  );
+  const { profile } = useProjectProfile(projectId);
 
   const invalidate = () =>
     queryClient.invalidateQueries({ queryKey: ["onPageFixes", projectId] });
@@ -104,7 +139,21 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
 
   const summary = useMemo(() => summarize(rows), [rows]);
   const tiles = useMemo(() => elementProgress(rows), [rows]);
-  const groups = useMemo(() => groupByPage(rows, filter), [rows, filter]);
+  const groups = useMemo(() => {
+    const grouped = groupByPage(rows, filter, pageClicks);
+    if (!focusUrl) return grouped;
+    // Sorted, not filtered: the other pages are the context that makes one
+    // rewrite worth doing before another.
+    return grouped.toSorted((a, b) => {
+      const aHit = a.url === focusUrl ? 0 : 1;
+      const bHit = b.url === focusUrl ? 0 : 1;
+      return aHit - bHit;
+    });
+  }, [rows, filter, pageClicks, focusUrl]);
+  const offOffer = useMemo(
+    () => offOfferSuggestions(rows, profile),
+    [rows, profile],
+  );
   const bannerElements = useMemo(
     () => tiles.map((tile) => tile.element),
     [tiles],
@@ -265,6 +314,11 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
               total={summary.total}
               elements={bannerElements}
             />
+            {/* The editor, on the tab whose entire output is prose about the
+                business. Filling it in is what turns on the contradiction
+                check below each suggestion — and it is the input the rewrite
+                itself still needs (see report). */}
+            <ProjectProfileCard projectId={projectId} />
 
             <div className="flex flex-wrap items-center justify-between gap-2">
               <StatusFilter
@@ -300,6 +354,7 @@ export function OnPageFixesPage({ projectId }: { projectId: string }) {
                   <PageGroupCard
                     key={group.url}
                     group={group}
+                    offOffer={offOffer}
                     busy={busy}
                     onApprove={(id) =>
                       statusMutation.mutate({ ids: [id], status: "approved" })
