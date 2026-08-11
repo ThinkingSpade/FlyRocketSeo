@@ -1,4 +1,8 @@
-import type { DiscoveryMode } from "@/types/schemas/competitors";
+import {
+  isCompetitorRow,
+  type CompetitorCategory,
+  type DiscoveryMode,
+} from "@/types/schemas/competitors";
 import { unknownVerdict, type Verdict } from "../types";
 
 /**
@@ -26,6 +30,15 @@ import { unknownVerdict, type Verdict } from "../types";
  * per-competitor metered Keyword Gap call), so unlike the brief's promise of
  * "the first keyword to take," this module can only point at the mechanism
  * that surfaces one -- it cannot name a keyword it was never given.
+ *
+ * Before either mode-specific reading runs, `buildCompetitorsVerdict` filters
+ * `competitors` down to real rivals via `isCompetitorRow` -- the same shared
+ * predicate the table UI groups by (decision 6: this must name the top REAL
+ * competitor, and must never assert a platform is a rival, in EITHER mode).
+ * A platform with the single highest `beatsYouCount`/`intersections` is
+ * exactly the bug this batch exists to fix: `youtube.com outranks you on
+ * more of your keywords than any other competitor found` was the sentence
+ * the real production run produced before this filter existed.
  */
 
 type CompetitorCandidate = {
@@ -44,6 +57,18 @@ type CompetitorCandidate = {
    *  mapCompetitorItem's own "domain-overlap fallback path... reports this
    *  honestly" comment). */
   beatsYouCount: number | null;
+  /**
+   * The classifier's call (classifyCompetitorDomain) -- null means "not a
+   * recognised platform, treat as a real competitor." Optional (and read via
+   * `?? null` below), so every caller/fixture that predates this batch --
+   * there was no per-row classification before it -- keeps compiling and
+   * keeps behaving exactly as it did before: omitting this field reads the
+   * same as "unclassified."
+   */
+  category?: CompetitorCategory | null;
+  /** A user pin always overrides the classifier (decision 4). Optional for
+   *  the same backward-compatibility reason as `category`. */
+  pinned?: boolean;
 };
 
 type CompetitorsVerdictInput = {
@@ -89,14 +114,17 @@ function formatCount(value: number): string {
   return value.toLocaleString();
 }
 
-function buildDomainModeVerdict(input: CompetitorsVerdictInput): Verdict {
-  const rated = input.competitors.filter(
+function buildDomainModeVerdict(
+  input: CompetitorsVerdictInput,
+  real: CompetitorCandidate[],
+): Verdict {
+  const rated = real.filter(
     (candidate): candidate is CompetitorCandidate & { intersections: number } =>
       candidate.intersections != null,
   );
   if (rated.length === 0) {
     return unknownVerdict(
-      `None of the ${input.competitors.length} competitors found for ${input.target} have a known shared-keyword count, so there is no basis to say which one to chase.`,
+      `None of the ${real.length} competitors found for ${input.target} have a known shared-keyword count, so there is no basis to say which one to chase.`,
     );
   }
 
@@ -158,14 +186,17 @@ function buildDomainModeVerdict(input: CompetitorsVerdictInput): Verdict {
   };
 }
 
-function buildSerpModeVerdict(input: CompetitorsVerdictInput): Verdict {
-  const rated = input.competitors.filter(
+function buildSerpModeVerdict(
+  input: CompetitorsVerdictInput,
+  real: CompetitorCandidate[],
+): Verdict {
+  const rated = real.filter(
     (candidate): candidate is CompetitorCandidate & { beatsYouCount: number } =>
       candidate.beatsYouCount != null,
   );
   if (rated.length === 0) {
     return unknownVerdict(
-      `None of the ${input.competitors.length} competitors found for ${input.target} show a measured position against your own keywords, so there is no basis to say which one to chase.`,
+      `None of the ${real.length} competitors found for ${input.target} show a measured position against your own keywords, so there is no basis to say which one to chase.`,
     );
   }
 
@@ -234,7 +265,23 @@ export function buildCompetitorsVerdict(
     );
   }
 
+  // Decision 6: name the top REAL competitor, never a platform. A pin always
+  // wins over the classifier (decision 4) -- isCompetitorRow is the one
+  // shared predicate the table UI's grouping reads too, so the headline and
+  // the table can never disagree about which rows count.
+  const real = input.competitors.filter((candidate) =>
+    isCompetitorRow({
+      category: candidate.category ?? null,
+      pinned: candidate.pinned ?? false,
+    }),
+  );
+  if (real.length === 0) {
+    return unknownVerdict(
+      `Every domain found for ${input.target} is a platform or aggregator -- social media, video, a marketplace, or similar -- not a genuine competitor, so there is no rival to name.`,
+    );
+  }
+
   return input.discoveryMode === "serp"
-    ? buildSerpModeVerdict(input)
-    : buildDomainModeVerdict(input);
+    ? buildSerpModeVerdict(input, real)
+    : buildDomainModeVerdict(input, real);
 }

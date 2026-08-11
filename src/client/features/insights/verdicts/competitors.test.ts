@@ -253,6 +253,31 @@ describe("buildCompetitorsVerdict", () => {
     expect(verdict.tone).toBe("good");
   });
 
+  it("names the top REAL competitor in domain mode too, not a platform with a bigger shared-keyword count", () => {
+    const verdict = buildCompetitorsVerdict({
+      target: "acme.com",
+      competitors: [
+        {
+          domain: "wikipedia.org",
+          intersections: 500,
+          organicKeywords: 900,
+          beatsYouCount: null,
+          category: "education",
+        },
+        {
+          domain: "realrival.com",
+          intersections: 80,
+          organicKeywords: 100,
+          beatsYouCount: null,
+          category: null,
+        },
+      ],
+    });
+
+    expect(verdict.read).toContain("realrival.com");
+    expect(verdict.read).not.toContain("wikipedia.org");
+  });
+
   it("defaults to domain-mode reading (intersections) when discoveryMode is omitted", () => {
     // No caller in this describe block passes discoveryMode at all -- this
     // pins down that the omission itself means "domain", not merely that
