@@ -1,5 +1,6 @@
 import { Briefcase, Loader2 } from "lucide-react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { parseExclusions } from "@/shared/keyword-fit/keywordFit";
 import {
   SERVICE_AREA_LABELS,
@@ -21,6 +22,7 @@ export function ProfileSummary({
   areaLabel,
   isDrafting,
   draftFailed,
+  draftError,
   onOpen,
 }: {
   profile: ProjectProfile;
@@ -31,6 +33,8 @@ export function ProfileSummary({
   isDrafting: boolean;
   /** The unattended first-open draft ran and failed. */
   draftFailed: boolean;
+  /** That failure, so the card can name which one it was. */
+  draftError: unknown;
   onOpen: () => void;
 }) {
   // Says what is happening rather than asking for work that is already being
@@ -66,12 +70,20 @@ export function ProfileSummary({
                 having tried -- only worse, because the user never pressed
                 anything and has no reason to suspect an attempt was made. */}
             {draftFailed
-              ? "We couldn't read their site well enough to fill this in."
+              ? // The SPECIFIC failure, not a generic one. Each drafting
+                // failure now carries its own error code, and they have
+                // different remedies -- a site that blocks bots is the user's
+                // to work around, a missing key is the operator's, an empty
+                // OpenRouter balance is a top-up. Collapsing them back into
+                // one sentence here would throw away the distinction the
+                // codes exist to carry.
+                getStandardErrorMessage(
+                  draftError,
+                  "We couldn't read their site well enough to fill this in.",
+                )
               : "Keyword results don't know what this client does yet, so a machine reseller's keywords look the same as an operator's."}{" "}
             <span className="text-base-content/60">
-              {draftFailed
-                ? "Fill it in yourself — everything downstream still works."
-                : "Takes a minute, costs nothing."}
+              {draftFailed ? "" : "Takes a minute, costs nothing."}
             </span>
           </p>
         </div>
