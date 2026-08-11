@@ -99,23 +99,53 @@ export async function runKeywordDiscovery(
     // that is out of credits or hitting a provider outage. DataForSEO can
     // charge for a task that subsequently errors (see DataforseoChargedTaskError),
     // so those repeats are not free. Recording turns an unbounded loop into one
-    // attempt plus a retry button.
+    // attempt plus a retry button -- FOR AS LONG AS THE ROW ACTUALLY LANDS,
+    // which is why `recordDiscoveryRun` no longer routes through
+    // `AnalysisRunService.record` (whose whole body is a swallowing
+    // try/catch). See its own comment for what it does instead, and for the
+    // one residual gap it cannot close.
     const result: KeywordDiscoveryResult = {
       status: "failed",
       reason: describeFailure(error),
       attemptedAt: new Date().toISOString(),
     };
+    // Rethrows the PROVIDER error, never a recording error: the provider
+    // error is the cause, and `describeFailure` has already classified it for
+    // the user. A recording failure has been logged by the time this runs.
     await recordDiscoveryRun(input, params, result, billingCustomer);
     throw error;
   }
 }
 
 /**
- * Records the attempt under its own cache key.
+ * Records the attempt under its own cache key, and verifies the row landed.
  *
- * `AnalysisRunService.record` copies whatever sits at `cacheKey` into the
- * durable `analysis-runs/` prefix, so the payload has to be written first --
- * including for a failure, which has no provider response of its own to reuse.
+ * `recordOrThrow` rather than `record`, and that choice is the whole point of
+ * this function. `AnalysisRunService.record` is best-effort by design --
+ * `try { ... } catch { console.error }` around its whole body -- so before
+ * this, a D1 write failure silently produced exactly the unbounded re-billing
+ * loop the caller above promises is prevented. The invariant was asserted in
+ * one file and discarded in another.
+ *
+ * A failed write is RETRIED once. The repository's insert is an upsert on
+ * (projectId, feature, cacheKey), so a retry after a lost response bumps
+ * `runCount` at worst -- it cannot duplicate the row, and `runCount` is
+ * display-only. A transient D1 blip is the realistic failure mode here, and
+ * one retry converts most of them into a landed guard.
+ *
+ * THE RESIDUAL GAP, stated rather than papered over: if both attempts fail on
+ * the SUCCESS path, this still returns the result. Throwing instead would not
+ * close the loop -- the row is equally absent either way, so the next mount
+ * re-fires regardless -- it would only additionally throw away data the user
+ * has already been billed for. So the honest end state is: deliver the data,
+ * and log `keyword-discovery.guard-not-recorded` loudly enough to be found,
+ * because that log line is the only evidence that the run-once guarantee is
+ * not currently holding for that project.
+ *
+ * `AnalysisRunService.recordOrThrow` copies whatever sits at `cacheKey` into
+ * the durable `analysis-runs/` prefix, so the payload has to be written first
+ * -- including for a failure, which has no provider response of its own to
+ * reuse.
  */
 async function recordDiscoveryRun(
   input: KeywordDiscoveryInput,
@@ -139,13 +169,31 @@ async function recordDiscoveryRun(
     },
   );
 
-  await AnalysisRunService.record({
+  const row = {
     projectId: input.projectId,
     feature: RUN_FEATURES.keywordDiscovery,
     params,
     cacheKey,
     label: input.domain,
-  });
+  };
+
+  try {
+    await AnalysisRunService.recordOrThrow(row);
+  } catch (first) {
+    console.error("keyword-discovery.guard-write failed, retrying:", first);
+    try {
+      await AnalysisRunService.recordOrThrow(row);
+    } catch (second) {
+      // The one log line that says the run-once guarantee is not holding for
+      // this project. Not rethrown -- see this function's own doc comment for
+      // why throwing here would cost the user their paid data without closing
+      // the loop.
+      console.error(
+        `keyword-discovery.guard-not-recorded project=${input.projectId} -- the paid run-once guard did not land and this project may be billed again:`,
+        second,
+      );
+    }
+  }
 }
 
 /** The soft TTL on the shared cache copy. The DURABLE copy lives under the

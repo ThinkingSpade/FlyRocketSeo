@@ -18,7 +18,7 @@ import type { StoredMetricGeo } from "@/types/schemas/geo";
 // just its call history) before every test.
 const mocks = vi.hoisted(() => ({
   getKeywordsPage: vi.fn(),
-  record: vi.fn(),
+  recordOrThrow: vi.fn(),
   buildCacheKey: vi.fn(),
   setCached: vi.fn(),
 }));
@@ -26,8 +26,12 @@ const mocks = vi.hoisted(() => ({
 vi.mock("@/server/features/domain/services/domainKeywordsPage", () => ({
   getKeywordsPage: mocks.getKeywordsPage,
 }));
+// `recordOrThrow` only -- the mock deliberately does NOT expose `record`, so a
+// regression that routes this service back through the swallowing variant
+// fails loudly ("record is not a function") instead of passing quietly. That
+// swallow is precisely what made the guarantee above unverifiable.
 vi.mock("@/server/features/analysis-runs/services/analysisRuns", () => ({
-  AnalysisRunService: { record: mocks.record },
+  AnalysisRunService: { recordOrThrow: mocks.recordOrThrow },
 }));
 vi.mock("@/server/lib/r2-cache", () => ({
   buildCacheKey: mocks.buildCacheKey,
@@ -81,30 +85,34 @@ beforeEach(() => {
       `${prefix}:${JSON.stringify(params)}`,
   );
   mocks.setCached.mockResolvedValue(undefined);
-  mocks.record.mockResolvedValue(undefined);
+  mocks.recordOrThrow.mockResolvedValue(undefined);
 });
 
+/** One successful `getKeywordsPage` response, shared by the tests that only
+ *  care about what happens AFTER the provider call succeeds. */
+const okPage = {
+  domain: "example.com",
+  page: 1,
+  pageSize: 100,
+  totalCount: 1,
+  hasMore: false,
+  keywords: [
+    {
+      keyword: "flying lessons",
+      position: 3,
+      searchVolume: 500,
+      traffic: 40,
+      cpc: 2.1,
+      url: "https://example.com/flying",
+      relativeUrl: "/flying",
+      keywordDifficulty: 22,
+    },
+  ],
+  fetchedAt: "2026-08-10T00:00:00.000Z",
+};
+
 it("records status: 'ok' and returns the mapped keywords on success", async () => {
-  mocks.getKeywordsPage.mockResolvedValue({
-    domain: "example.com",
-    page: 1,
-    pageSize: 100,
-    totalCount: 1,
-    hasMore: false,
-    keywords: [
-      {
-        keyword: "flying lessons",
-        position: 3,
-        searchVolume: 500,
-        traffic: 40,
-        cpc: 2.1,
-        url: "https://example.com/flying",
-        relativeUrl: "/flying",
-        keywordDifficulty: 22,
-      },
-    ],
-    fetchedAt: "2026-08-10T00:00:00.000Z",
-  });
+  mocks.getKeywordsPage.mockResolvedValue(okPage);
 
   const result = await runKeywordDiscovery(input, billingCustomer);
 
@@ -131,8 +139,8 @@ it("records status: 'ok' and returns the mapped keywords on success", async () =
   expect(mocks.setCached).toHaveBeenCalledTimes(1);
   expect(lastRecordedResult()).toEqual(result);
 
-  expect(mocks.record).toHaveBeenCalledTimes(1);
-  expect(mocks.record).toHaveBeenCalledWith(
+  expect(mocks.recordOrThrow).toHaveBeenCalledTimes(1);
+  expect(mocks.recordOrThrow).toHaveBeenCalledWith(
     expect.objectContaining({
       projectId: "project_123",
       feature: "keyword_discovery",
@@ -161,13 +169,70 @@ it("records status: 'failed' and rethrows the ORIGINAL error, unmodified", async
     expect(typeof recordedPayload.attemptedAt).toBe("string");
   }
 
-  expect(mocks.record).toHaveBeenCalledTimes(1);
-  expect(mocks.record).toHaveBeenCalledWith(
+  expect(mocks.recordOrThrow).toHaveBeenCalledTimes(1);
+  expect(mocks.recordOrThrow).toHaveBeenCalledWith(
     expect.objectContaining({
       projectId: "project_123",
       feature: "keyword_discovery",
       label: "example.com",
     }),
+  );
+});
+
+it("retries the guard row when the first write fails, and still returns the run", async () => {
+  // The row IS the no-repeat-billing guard, so a transient D1 blip losing it
+  // is a money bug, not a cosmetic history gap. The repository write is an
+  // upsert on (projectId, feature, cacheKey), so retrying cannot duplicate.
+  mocks.getKeywordsPage.mockResolvedValue(okPage);
+  mocks.recordOrThrow
+    .mockRejectedValueOnce(new Error("D1_ERROR: network"))
+    .mockResolvedValueOnce(undefined);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  const result = await runKeywordDiscovery(input, billingCustomer);
+
+  expect(result.status).toBe("ok");
+  expect(mocks.recordOrThrow).toHaveBeenCalledTimes(2);
+  // Byte-identical input on the retry -- a retry that wrote a different
+  // cacheKey would record a second, unrelated row and guard nothing.
+  expect(mocks.recordOrThrow.mock.calls[0][0]).toEqual(
+    mocks.recordOrThrow.mock.calls[1][0],
+  );
+});
+
+it("does not throw away a paid result when the guard row cannot be written at all", async () => {
+  // Deliberate, and documented in recordDiscoveryRun: throwing here would
+  // NOT close the re-billing loop (the row is equally absent either way), it
+  // would only additionally discard data the user has already been billed
+  // for. The log line is the evidence that the guarantee is not holding.
+  mocks.getKeywordsPage.mockResolvedValue(okPage);
+  mocks.recordOrThrow.mockRejectedValue(new Error("D1_ERROR: network"));
+  const consoleError = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
+
+  const result = await runKeywordDiscovery(input, billingCustomer);
+
+  expect(result.status).toBe("ok");
+  expect(mocks.recordOrThrow).toHaveBeenCalledTimes(2);
+  expect(
+    consoleError.mock.calls.some((call) =>
+      String(call[0]).includes("keyword-discovery.guard-not-recorded"),
+    ),
+  ).toBe(true);
+});
+
+it("never lets a guard-write failure mask the provider error", async () => {
+  // The user needs the CAUSE. A recording failure replacing an
+  // INSUFFICIENT_CREDITS error would send them to retry a call that cannot
+  // succeed -- and a DataForSEO task can be billed even when it errors.
+  const providerError = new AppError("INSUFFICIENT_CREDITS");
+  mocks.getKeywordsPage.mockRejectedValue(providerError);
+  mocks.recordOrThrow.mockRejectedValue(new Error("D1_ERROR: network"));
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  await expect(runKeywordDiscovery(input, billingCustomer)).rejects.toBe(
+    providerError,
   );
 });
 
