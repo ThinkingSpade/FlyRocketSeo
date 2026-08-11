@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Medal,
   FileMagnifyingGlass,
@@ -19,11 +19,11 @@ import {
   AnalyzeDomainPrompt,
   type AnalyzePreviewItem,
 } from "@/client/components/AnalyzeDomainPrompt";
-import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import {
-  DEFAULT_LOCATION_CODE,
-  LOCATION_OPTIONS,
-} from "@/shared/keyword-locations";
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
+import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import {
   createMeteredRunKey,
   useAuthorizedRun,
@@ -80,13 +80,32 @@ export function PageExplorerPage({
   url: string;
   locationCode: number | undefined;
 }) {
-  const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
+  const market = useProjectMarket(projectId);
+  // The URL's own `loc` param always wins; the project's configured market
+  // only fills in for a tab opened with no location in the URL. Every other
+  // metered tab (content, serp, clusters, trends) already reads the market
+  // here -- this one defaulted straight to the US, so a non-US project billed
+  // every Page Explorer run against the wrong country with no error and no
+  // visual cue.
+  const activeLocation = locationCode ?? market.locationCode;
   const [input, setInput] = useState(url);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
+  const [locationTouched, setLocationTouched] = useState(false);
   const [runInput, setRunInput] = useState<{
     url: string;
     locationCode: number;
   } | null>(null);
+  // On a cold load the `["projects"]` query behind `useProjectMarket` has not
+  // resolved on first render, so `locationInput` locks onto the US fallback via
+  // its useState initializer and would silently keep showing it. Precedence:
+  // URL param > user selection > project market. Depends on the primitive, not
+  // the `market` object, which has caused a render loop in this codebase.
+  useEffect(() => {
+    if (locationCode != null) return;
+    if (locationTouched) return;
+    setLocationInput(String(activeLocation));
+  }, [locationCode, locationTouched, activeLocation]);
+
   const run = useAuthorizedRun(
     createMeteredRunKey(
       projectId,
@@ -195,7 +214,10 @@ export function PageExplorerPage({
               <select
                 className="app-select app-select-sm w-full"
                 value={locationInput}
-                onChange={(event) => setLocationInput(event.target.value)}
+                onChange={(event) => {
+                  setLocationTouched(true);
+                  setLocationInput(event.target.value);
+                }}
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option.code} value={option.code}>
@@ -270,16 +292,21 @@ export function PageExplorerPage({
             onAnalyze={() => {
               if (!projectDomain) return;
               const homepage = `https://${projectDomain.replace(/^https?:\/\//, "")}/`;
+              // `locationInput`, not `activeLocation`: the Location select sits
+              // on screen beside this prompt, so pinning the run to the project
+              // default billed a metered analysis against a country the user
+              // had just changed away from, with no error and no visual cue.
+              const chosenLocation = Number(locationInput);
               setInput(homepage);
-              setRunInput({ url: homepage, locationCode: activeLocation });
+              setRunInput({ url: homepage, locationCode: chosenLocation });
               run.authorize(
-                createMeteredRunKey(projectId, homepage, activeLocation),
+                createMeteredRunKey(projectId, homepage, chosenLocation),
               );
               navigate({
                 search: (prev) => ({
                   ...prev,
                   u: homepage,
-                  loc: activeLocation,
+                  loc: chosenLocation,
                 }),
                 replace: false,
               });

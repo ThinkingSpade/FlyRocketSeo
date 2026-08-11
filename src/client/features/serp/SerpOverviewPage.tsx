@@ -130,7 +130,7 @@ function buildPageSerpVerdict(
   ratings: DomainRatings | null,
   ownDomainRating: number | null,
   projectDomain: string | null,
-  geo: SerpRunGeo,
+  geo: SerpRunGeo | null,
 ) {
   const competitorResults = result.results.filter(
     (item) => !(item.domain && item.domain === projectDomain),
@@ -145,8 +145,10 @@ function buildPageSerpVerdict(
     resultCount: competitorResults.length,
     paaQuestions: result.paaQuestions,
     // Only a genuinely LOCAL SERP names its area -- a national result stays
-    // unqualified, exactly as this verdict read before Task 6.
-    areaLabel: geo.serp.scope === "local" ? geo.serp.label : null,
+    // unqualified, exactly as this verdict read before Task 6. A run stored
+    // without a geo bundle likewise cannot claim to be local, so it takes the
+    // same unqualified shape rather than suppressing the verdict.
+    areaLabel: geo?.serp.scope === "local" ? geo.serp.label : null,
   });
 }
 
@@ -311,7 +313,10 @@ function SerpKeywordStatsTiles({
 }: {
   projectId: string;
   result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
-  geo: SerpRunGeo;
+  /** Null for a run stored without a geo bundle -- see the call site. Labels
+   *  drop their suffix and the geo-derived affordances stay hidden; every
+   *  number on these tiles comes from `result` and renders either way. */
+  geo: SerpRunGeo | null;
 }) {
   const difficultyOverview = useKeywordDifficultyOverview(projectId);
   const loadedDifficulty = difficultyOverview.byKeyword.get(
@@ -329,11 +334,10 @@ function SerpKeywordStatsTiles({
   // no data for this term -- a second identical Labs call would just waste
   // a click, so the affordance only appears when it can plausibly help.
   const canBackfillDifficulty =
-    geo.volume.provider === "google_ads" && geo.difficulty.provider === "labs";
-  const difficultyUnavailableMessage = describeGeoUnavailable(
-    "Keyword difficulty",
-    geo.difficulty,
-  );
+    geo?.volume.provider === "google_ads" && geo.difficulty.provider === "labs";
+  const difficultyUnavailableMessage = geo
+    ? describeGeoUnavailable("Keyword difficulty", geo.difficulty)
+    : null;
   const showDifficultyAffordance =
     difficultyValue == null &&
     (canBackfillDifficulty || difficultyUnavailableMessage != null);
@@ -342,31 +346,37 @@ function SerpKeywordStatsTiles({
   // distinct from a tile simply reading "—" because there was nothing to
   // show. Named messages, not a boolean render, so the user learns WHAT
   // failed and for WHICH geography rather than guessing from a blank tile.
-  const keywordStatsFailureMessage = result.keywordStatsUnavailable
-    ? describeGeoFetchFailure("Keyword volume and CPC", geo.volume)
-    : null;
-  const domainTrafficFailureMessage = result.domainTrafficUnavailable
-    ? describeGeoFetchFailure("Domain traffic", geo.domainAnalytics)
-    : null;
+  const keywordStatsFailureMessage =
+    result.keywordStatsUnavailable && geo
+      ? describeGeoFetchFailure("Keyword volume and CPC", geo.volume)
+      : null;
+  const domainTrafficFailureMessage =
+    result.domainTrafficUnavailable && geo
+      ? describeGeoFetchFailure("Domain traffic", geo.domainAnalytics)
+      : null;
 
   return (
     <div className="flex flex-col gap-2">
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <InsightTile
           icon={ChartBar}
-          label={formatGeoMetricLabel("Volume", geo.volume)}
+          label={geo ? formatGeoMetricLabel("Volume", geo.volume) : "Volume"}
           value={formatCount(result.keywordStats?.searchVolume)}
           tone="primary"
         />
         <InsightTile
           icon={Gauge}
-          label={formatGeoMetricLabel("Difficulty", geo.difficulty)}
+          label={
+            geo
+              ? formatGeoMetricLabel("Difficulty", geo.difficulty)
+              : "Difficulty"
+          }
           value={difficultyValue ?? "—"}
           tone={difficultyTone(difficultyValue)}
         />
         <InsightTile
           icon={CurrencyCircleDollar}
-          label={formatGeoMetricLabel("CPC", geo.volume)}
+          label={geo ? formatGeoMetricLabel("CPC", geo.volume) : "CPC"}
           value={
             result.keywordStats?.cpc != null
               ? `$${result.keywordStats.cpc.toFixed(2)}`
@@ -376,7 +386,11 @@ function SerpKeywordStatsTiles({
         />
         <InsightTile
           icon={ListNumbers}
-          label={formatGeoMetricLabel("Organic results", geo.serp)}
+          label={
+            geo
+              ? formatGeoMetricLabel("Organic results", geo.serp)
+              : "Organic results"
+          }
           value={result.totalOrganic}
           // Only the top MAX_RESULTS are fetched (serpOverviewMapping.ts) --
           // when that's fewer than the total, the table below isn't the whole
@@ -389,7 +403,11 @@ function SerpKeywordStatsTiles({
           }
         />
       </div>
-      {showDifficultyAffordance ? (
+      {/* `showDifficultyAffordance` can only be true when `geo` is non-null --
+          both of its disjuncts read the bundle -- but the guard is written
+          out rather than asserted so a future change to that condition
+          cannot turn this into a crash. */}
+      {showDifficultyAffordance && geo ? (
         <DifficultyOverviewControl
           count={1}
           unavailableMessage={difficultyUnavailableMessage}
@@ -732,7 +750,14 @@ export function SerpOverviewPage({
         </div>
       ) : null}
 
-      {result && effectiveGeo ? (
+      {/* Gated on `result` alone: a run persisted without a geo bundle (the
+          Overview "run everything" card omits `geo`, and the MCP tool does
+          too) yielded a null `effectiveGeo`, which hid the tiles, verdict,
+          table and PAA entirely and left only the restored-run banner --
+          whose "Run again" re-bills the same keyword. Trends and Content
+          already degrade their geo LABELS instead of gating their content;
+          this now matches them. */}
+      {result ? (
         <>
           <SerpKeywordStatsTiles
             projectId={projectId}
@@ -821,7 +846,9 @@ function SerpResultsTable({
   result: NonNullable<Awaited<ReturnType<typeof getSerpOverview>>>;
   ratings: DomainRatings | null;
   ownDomainRating: number | null;
-  geo: SerpRunGeo;
+  /** Null for a run stored without a geo bundle; column labels drop their
+   *  geography suffix and every row still renders. */
+  geo: SerpRunGeo | null;
 }) {
   // Ahrefs-style estimate: keyword volume spread over a standard
   // CTR-by-position curve. Client-side, no extra API spend.
@@ -843,7 +870,9 @@ function SerpResultsTable({
                   className="text-right"
                   title="Estimated monthly clicks for this result: search volume × a standard CTR-by-position curve"
                 >
-                  {formatGeoMetricLabel("Est. clicks", geo.volume)}
+                  {geo
+                    ? formatGeoMetricLabel("Est. clicks", geo.volume)
+                    : "Est. clicks"}
                 </Table.Head>
               ) : null}
               <Table.Head className="text-right">DR</Table.Head>
@@ -851,7 +880,9 @@ function SerpResultsTable({
                 className="text-right"
                 title="Estimated monthly organic traffic for the whole domain"
               >
-                {formatGeoMetricLabel("Domain traffic", geo.domainAnalytics)}
+                {geo
+                  ? formatGeoMetricLabel("Domain traffic", geo.domainAnalytics)
+                  : "Domain traffic"}
               </Table.Head>
             </Table.Row>
           </Table.Header>
