@@ -1,3 +1,5 @@
+import { describeSpamScore } from "@/client/lib/spamScore";
+
 /**
  * Plain-English narrative for the Client Report, generated from the numbers
  * we already fetched — no model call, so it costs nothing and never invents a
@@ -211,7 +213,7 @@ export function buildBacklinkNarrative(
   if (input.backlinks == null && input.referringDomains == null) return [];
 
   const paragraphs = [
-    `Your site has ${count(input.backlinks ?? 0)} backlinks from ${count(input.referringDomains ?? 0)} referring domains${input.rank != null ? `, at a domain rank of ${Math.round(input.rank)}` : ""}.`,
+    `Your site has ${count(input.backlinks ?? 0)} backlinks from ${count(input.referringDomains ?? 0)} referring domains${input.rank != null ? `, at a domain authority of ${Math.round(input.rank)}/100` : ""}.`,
   ];
 
   paragraphs.push(
@@ -224,10 +226,13 @@ export function buildBacklinkNarrative(
     );
   }
 
-  if (input.spamScore != null && input.spamScore >= 30) {
-    paragraphs.push(
-      `A spam score of ${Math.round(input.spamScore)}% is high enough to be worth a review of the referring domains before pursuing new links.`,
-    );
+  if (input.spamScore != null) {
+    const spam = describeSpamScore(input.spamScore);
+    if (spam.reviewRecommended && spam.guidance) {
+      paragraphs.push(
+        `A backlink spam score of ${spam.formatted}/100 · ${spam.label} · ${spam.guidance}`,
+      );
+    }
   }
 
   return paragraphs;

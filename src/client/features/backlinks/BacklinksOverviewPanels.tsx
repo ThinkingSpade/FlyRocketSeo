@@ -7,11 +7,19 @@ import {
   BacklinksTrendChart,
 } from "./BacklinksPageCharts";
 import type { BacklinksOverviewData } from "./backlinksPageTypes";
-import { formatRelativeTimestamp } from "./backlinksPageUtils";
+import {
+  formatRelativeTimestamp,
+  type SummaryStat,
+} from "./backlinksPageUtils";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
-type SummaryStat = { label: string; value: string; description: string };
+const SUMMARY_TONE_CLASS: Record<SummaryStat["tone"], string> = {
+  neutral: "text-base-content/55",
+  success: "text-success",
+  warning: "text-warning",
+  error: "text-error",
+};
 
 export function BacklinksOverviewPanels({
   projectId,
@@ -45,9 +53,11 @@ export function BacklinksOverviewPanels({
         </Link>
       </div>
       <div className="flex flex-wrap items-center gap-2 text-sm text-base-content/65">
-        <Badge variant="outline">{data.scope}</Badge>
+        <Badge variant="outline">
+          {data.scope === "page" ? "Exact page" : "Site-wide"}
+        </Badge>
         <span>Target: {data.displayTarget}</span>
-        <span>-</span>
+        <span aria-hidden="true">·</span>
         <span>Updated {formatRelativeTimestamp(data.fetchedAt)}</span>
       </div>
       <OverviewGrid data={data} summaryStats={summaryStats} />
@@ -74,29 +84,22 @@ function OverviewGrid({
   const domainScope = data.scope === "domain";
 
   return (
-    <div
-      className={`grid grid-cols-1 gap-3 ${domainScope ? "md:grid-cols-2 xl:grid-cols-3" : ""}`}
-    >
-      <SummaryStatsGrid data={data} summaryStats={summaryStats} />
+    <div className="flex flex-col gap-6">
+      <SummaryStatsGrid summaryStats={summaryStats} />
       {domainScope ? <TrendPanels data={data} /> : null}
     </div>
   );
 }
 
-function SummaryStatsGrid({
-  data,
-  summaryStats,
-}: {
-  data: BacklinksOverviewData;
-  summaryStats: SummaryStat[];
-}) {
-  const cardClassName = `card bg-base-100 border border-base-300 ${data.scope === "domain" ? "md:col-span-2 xl:col-span-1" : ""}`;
+function SummaryStatsGrid({ summaryStats }: { summaryStats: SummaryStat[] }) {
+  const primaryStats = summaryStats.slice(0, 4);
+  const diagnosticStats = summaryStats.slice(4);
 
   return (
-    <div className={cardClassName}>
-      <div className="flex flex-auto flex-col p-4 xl:h-full gap-2 text-sm">
-        <div className="grid grid-cols-2 gap-x-6 gap-y-5 xl:gap-y-6">
-          {summaryStats.map((item) => (
+    <div className="card border border-base-300 bg-base-100">
+      <div className="flex flex-auto flex-col gap-4 p-4 text-sm xl:h-full">
+        <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
+          {primaryStats.map((item) => (
             <div key={item.label}>
               <div className="text-xs uppercase tracking-wide text-base-content/55">
                 <HeaderHelpLabel
@@ -104,7 +107,32 @@ function SummaryStatsGrid({
                   helpText={item.description}
                 />
               </div>
-              <p className="text-2xl font-semibold">{item.value}</p>
+              <p className="text-2xl font-semibold tabular-nums">
+                {item.value}
+              </p>
+              {item.hint ? (
+                <p
+                  className={`mt-0.5 text-xs ${SUMMARY_TONE_CLASS[item.tone]}`}
+                >
+                  {item.hint}
+                </p>
+              ) : null}
+            </div>
+          ))}
+        </div>
+        <div className="grid grid-cols-2 gap-x-6 gap-y-4 border-t border-base-300 pt-4 md:grid-cols-4">
+          {diagnosticStats.map((item) => (
+            <div key={item.label}>
+              <div className="text-xs uppercase tracking-wide text-base-content/55">
+                <HeaderHelpLabel
+                  label={item.label}
+                  helpText={item.description}
+                />
+              </div>
+              <p className={`text-sm ${SUMMARY_TONE_CLASS[item.tone]}`}>
+                <span className="font-semibold tabular-nums">{item.value}</span>
+                {item.hint ? <span> · {item.hint}</span> : null}
+              </p>
             </div>
           ))}
         </div>
@@ -115,13 +143,15 @@ function SummaryStatsGrid({
 
 function TrendPanels({ data }: { data: BacklinksOverviewData }) {
   return (
-    <>
-      <TrendCard
-        title="Backlink growth"
-        description="Backlinks and referring domains over the last year"
-      >
-        <BacklinksTrendChart data={data.trends} />
-      </TrendCard>
+    <div className="grid gap-3 lg:grid-cols-2">
+      <div className="lg:col-span-2">
+        <TrendCard
+          title="Backlink growth"
+          description="Backlinks and referring domains over the last year"
+        >
+          <BacklinksTrendChart data={data.trends} />
+        </TrendCard>
+      </div>
       <TrendCard
         title="New vs lost"
         description="Backlink acquisition and attrition"
@@ -130,11 +160,11 @@ function TrendPanels({ data }: { data: BacklinksOverviewData }) {
       </TrendCard>
       <TrendCard
         title="Authority trend"
-        description="Domain Rank over the last year"
+        description="Domain authority over the last year"
       >
         <BacklinksAuthorityChart data={data.trends} />
       </TrendCard>
-    </>
+    </div>
   );
 }
 
@@ -148,10 +178,10 @@ function TrendCard({
   title: string;
 }) {
   return (
-    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+    <div className="relative flex h-full flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div>
-          <h2 className="text-sm font-medium">{title}</h2>
+          <h3 className="text-sm font-semibold">{title}</h3>
           <p className="text-xs text-base-content/55">{description}</p>
         </div>
         {children}

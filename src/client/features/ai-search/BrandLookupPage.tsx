@@ -109,7 +109,6 @@ function BrandLookupPageInner({
     // Client-side gate is a UX optimization only; the paywall is enforced
     // server-side (lookupBrand → assertPaidPlan) before any DataForSEO spend,
     // so a stale free-plan window here just yields a rejected request, not cost.
-    retry: false,
   });
 
   const {

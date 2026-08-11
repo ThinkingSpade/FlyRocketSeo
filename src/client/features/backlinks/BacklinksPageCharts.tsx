@@ -1,4 +1,3 @@
-import { useEffect, useRef, useState } from "react";
 import {
   CartesianGrid,
   Legend,
@@ -8,12 +7,24 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import type { BacklinksOverviewData } from "./backlinksPageTypes";
+import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
 import {
-  formatCompactDate,
-  formatMonthLabel,
-  formatTooltipValue,
-} from "./backlinksPageUtils";
+  CHART_AXIS_TICK,
+  CHART_CURSOR_LINE,
+  CHART_X_TICK_GAP,
+} from "@/client/components/chart/chartTheme";
+import type { BacklinksOverviewData } from "./backlinksPageTypes";
+import { classifyNumericSeries } from "./backlinksChartInformation";
+import {
+  ChartLegend,
+  ChartTooltip,
+  EmptyChartState,
+  formatAxisValue,
+  formatChartTick,
+  isActivitySeries,
+  isStableSeries,
+  useChartWidth,
+} from "./BacklinksChartChrome";
 
 export function BacklinksTrendChart({
   data,
@@ -21,8 +32,29 @@ export function BacklinksTrendChart({
   data: BacklinksOverviewData["trends"];
 }) {
   const { containerRef, chartWidth } = useChartWidth();
+  const backlinksInformation = classifyNumericSeries(
+    data.map((point) => point.backlinks),
+  );
+  const domainsInformation = classifyNumericSeries(
+    data.map((point) => point.referringDomains),
+  );
+  const points = data.filter(
+    (point) => point.backlinks != null || point.referringDomains != null,
+  );
 
-  if (data.length === 0) {
+  if (
+    isStableSeries(backlinksInformation) &&
+    isStableSeries(domainsInformation)
+  ) {
+    return (
+      <EmptyChartState title="Backlinks and referring domains were unchanged over this period." />
+    );
+  }
+
+  if (
+    backlinksInformation.kind !== "varying" &&
+    domainsInformation.kind !== "varying"
+  ) {
     return <EmptyChartState />;
   }
 
@@ -31,82 +63,6 @@ export function BacklinksTrendChart({
       ref={containerRef}
       className="h-56 min-w-0"
       aria-label="Backlink trend chart"
-    >
-      {chartWidth > 0 ? (
-        <LineChart
-          width={chartWidth}
-          height={224}
-          data={data}
-          margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="currentColor"
-            opacity={0.12}
-          />
-          <XAxis
-            dataKey="date"
-            tickFormatter={formatChartTick}
-            minTickGap={24}
-          />
-          <YAxis yAxisId="left" tickFormatter={formatAxisValue} width={60} />
-          <YAxis
-            yAxisId="right"
-            orientation="right"
-            tickFormatter={formatAxisValue}
-            width={60}
-          />
-          <Tooltip
-            formatter={formatTooltipValue}
-            labelFormatter={formatChartLabel}
-          />
-          <Legend />
-          <Line
-            yAxisId="left"
-            type="monotone"
-            dataKey="backlinks"
-            stroke="#2563eb"
-            strokeWidth={2}
-            dot={false}
-            name="Backlinks"
-          />
-          <Line
-            yAxisId="right"
-            type="monotone"
-            dataKey="referringDomains"
-            stroke="#14b8a6"
-            strokeWidth={2}
-            dot={false}
-            name="Referring domains"
-          />
-        </LineChart>
-      ) : null}
-    </div>
-  );
-}
-
-/**
- * Domain Rank over the same twelve months. The `rank` values already ride
- * along on the history call the overview makes, so this chart costs nothing —
- * it was simply never plotted.
- */
-export function BacklinksAuthorityChart({
-  data,
-}: {
-  data: BacklinksOverviewData["trends"];
-}) {
-  const { containerRef, chartWidth } = useChartWidth();
-  const points = data.filter((point) => point.rank != null);
-
-  if (points.length === 0) {
-    return <EmptyChartState />;
-  }
-
-  return (
-    <div
-      ref={containerRef}
-      className="h-56 min-w-0"
-      aria-label="Domain Rank trend chart"
     >
       {chartWidth > 0 ? (
         <LineChart
@@ -123,24 +79,140 @@ export function BacklinksAuthorityChart({
           <XAxis
             dataKey="date"
             tickFormatter={formatChartTick}
-            minTickGap={24}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={CHART_X_TICK_GAP}
+          />
+          <YAxis
+            yAxisId="left"
+            tickFormatter={formatAxisValue}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={60}
+          />
+          <YAxis
+            yAxisId="right"
+            orientation="right"
+            tickFormatter={formatAxisValue}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={60}
+          />
+          <Tooltip content={ChartTooltip} cursor={CHART_CURSOR_LINE} />
+          <Legend content={<ChartLegend />} />
+          <Line
+            yAxisId="left"
+            type="monotone"
+            dataKey="backlinks"
+            stroke="var(--color-primary)"
+            strokeWidth={2}
+            dot={false}
+            activeDot={<ChartActiveDot />}
+            isAnimationActive={false}
+            name="Backlinks"
+          />
+          <Line
+            yAxisId="right"
+            type="monotone"
+            dataKey="referringDomains"
+            stroke="var(--color-base-content)"
+            strokeOpacity={0.55}
+            strokeWidth={2}
+            dot={false}
+            activeDot={<ChartActiveDot />}
+            isAnimationActive={false}
+            name="Referring domains"
+          />
+        </LineChart>
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * Domain authority over the same twelve months. The `rank` values already ride
+ * along on the history call the overview makes, so this chart costs nothing —
+ * it was simply never plotted.
+ */
+export function BacklinksAuthorityChart({
+  data,
+}: {
+  data: BacklinksOverviewData["trends"];
+}) {
+  const { containerRef, chartWidth } = useChartWidth();
+  const information = classifyNumericSeries(data.map((point) => point.rank));
+  const points = data.filter(
+    (point): point is typeof point & { rank: number } => point.rank != null,
+  );
+
+  if (information.kind === "all-zero") {
+    return (
+      <EmptyChartState title="Domain authority stayed at 0 over this period" />
+    );
+  }
+
+  if (information.kind === "constant") {
+    return (
+      <EmptyChartState
+        title={`Domain authority held at ${formatAxisValue(information.value)} over this period`}
+      />
+    );
+  }
+
+  if (information.kind !== "varying") {
+    return <EmptyChartState />;
+  }
+
+  return (
+    <div
+      ref={containerRef}
+      className="h-56 min-w-0"
+      aria-label="Domain authority trend chart"
+    >
+      {chartWidth > 0 ? (
+        <LineChart
+          width={chartWidth}
+          height={224}
+          data={points}
+          margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
+        >
+          <CartesianGrid
+            strokeDasharray="3 3"
+            stroke="currentColor"
+            opacity={0.12}
+          />
+          <XAxis
+            dataKey="date"
+            tickFormatter={formatChartTick}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={CHART_X_TICK_GAP}
           />
           {/* Fixed to the one-hundred rank scale the backlinks calls request,
               so a flat profile reads as flat instead of being auto-zoomed into
               looking volatile. */}
-          <YAxis domain={[0, 100]} width={60} />
-          <Tooltip
-            formatter={formatTooltipValue}
-            labelFormatter={formatChartLabel}
+          <YAxis
+            domain={[0, 100]}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={60}
           />
-          <Legend />
+          <Tooltip content={ChartTooltip} cursor={CHART_CURSOR_LINE} />
+          <Legend content={<ChartLegend />} />
           <Line
             type="monotone"
             dataKey="rank"
-            stroke="#a855f7"
+            stroke="var(--color-primary)"
             strokeWidth={2}
             dot={false}
-            name="Domain Rank"
+            activeDot={<ChartActiveDot />}
+            isAnimationActive={false}
+            name="Domain authority"
           />
         </LineChart>
       ) : null}
@@ -154,8 +226,35 @@ export function BacklinksNewLostChart({
   data: BacklinksOverviewData["newLostTrends"];
 }) {
   const { containerRef, chartWidth } = useChartWidth();
+  const newInformation = classifyNumericSeries(
+    data.map((point) => point.newBacklinks),
+  );
+  const lostInformation = classifyNumericSeries(
+    data.map((point) => point.lostBacklinks),
+  );
+  const points = data.filter(
+    (point) => point.newBacklinks != null || point.lostBacklinks != null,
+  );
 
-  if (data.length === 0) {
+  if (
+    newInformation.kind === "all-null" &&
+    lostInformation.kind === "all-null"
+  ) {
+    return (
+      <EmptyChartState title="Historical gain/loss values weren’t reported." />
+    );
+  }
+
+  if (
+    newInformation.kind === "all-zero" &&
+    lostInformation.kind === "all-zero"
+  ) {
+    return (
+      <EmptyChartState title="No backlink gains or losses were recorded in this period." />
+    );
+  }
+
+  if (!isActivitySeries(newInformation) && !isActivitySeries(lostInformation)) {
     return <EmptyChartState />;
   }
 
@@ -169,7 +268,7 @@ export function BacklinksNewLostChart({
         <LineChart
           width={chartWidth}
           height={224}
-          data={data}
+          data={points}
           margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
         >
           <CartesianGrid
@@ -180,82 +279,42 @@ export function BacklinksNewLostChart({
           <XAxis
             dataKey="date"
             tickFormatter={formatChartTick}
-            minTickGap={24}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            minTickGap={CHART_X_TICK_GAP}
           />
-          <YAxis tickFormatter={formatAxisValue} width={60} />
-          <Tooltip
-            formatter={formatTooltipValue}
-            labelFormatter={formatChartLabel}
+          <YAxis
+            tickFormatter={formatAxisValue}
+            tick={CHART_AXIS_TICK}
+            tickLine={false}
+            axisLine={false}
+            width={60}
           />
-          <Legend />
+          <Tooltip content={ChartTooltip} cursor={CHART_CURSOR_LINE} />
+          <Legend content={<ChartLegend />} />
           <Line
             type="monotone"
             dataKey="lostBacklinks"
-            stroke="#ef4444"
+            stroke="var(--color-error)"
             strokeWidth={2}
             dot={false}
+            activeDot={<ChartActiveDot />}
+            isAnimationActive={false}
             name="Lost backlinks"
           />
           <Line
             type="monotone"
             dataKey="newBacklinks"
-            stroke="#16a34a"
+            stroke="var(--color-success)"
             strokeWidth={2}
             dot={false}
+            activeDot={<ChartActiveDot />}
+            isAnimationActive={false}
             name="New backlinks"
           />
         </LineChart>
       ) : null}
     </div>
   );
-}
-
-function useChartWidth() {
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [chartWidth, setChartWidth] = useState(0);
-
-  useEffect(() => {
-    const container = containerRef.current;
-    if (!container) {
-      return;
-    }
-
-    const updateWidth = () => {
-      setChartWidth(container.clientWidth);
-    };
-
-    updateWidth();
-
-    const observer = new ResizeObserver(updateWidth);
-    observer.observe(container);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, []);
-
-  return { containerRef, chartWidth };
-}
-
-function EmptyChartState() {
-  return (
-    <div className="flex h-56 items-center justify-center rounded-xl border border-dashed border-base-300 text-sm text-base-content/55">
-      Not enough historical data yet.
-    </div>
-  );
-}
-
-function formatAxisValue(value: unknown) {
-  if (typeof value !== "number") return "";
-  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`;
-  if (value >= 1_000) return `${(value / 1_000).toFixed(0)}K`;
-  return String(value);
-}
-
-function formatChartTick(value: unknown) {
-  return typeof value === "string" ? formatMonthLabel(value) : "";
-}
-
-function formatChartLabel(value: unknown) {
-  return typeof value === "string" ? formatCompactDate(value) : "";
 }

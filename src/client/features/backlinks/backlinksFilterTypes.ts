@@ -19,6 +19,17 @@ export type BacklinksTabFilterValues = {
   status: string;
   hideLost: string;
   hideBroken: string;
+  /**
+   * The six profile-breakdown drill-downs, each holding a raw DataForSEO value
+   * ("IN", "com", "blogs") or "" when not applied. `itemType` is the link's
+   * kind and is not `linkType` above, which is follow status.
+   */
+  sourceCountry: string;
+  sourceTld: string;
+  itemType: string;
+  linkAttribute: string;
+  sourcePlatformType: string;
+  semanticLocation: string;
 };
 
 export type ReferringDomainsFilterValues = {
@@ -69,6 +80,12 @@ export const EMPTY_BACKLINKS_FILTERS: BacklinksTabFilterValues = {
   status: "",
   hideLost: "",
   hideBroken: "",
+  sourceCountry: "",
+  sourceTld: "",
+  itemType: "",
+  linkAttribute: "",
+  sourcePlatformType: "",
+  semanticLocation: "",
 };
 
 export const EMPTY_REFERRING_DOMAINS_FILTERS: ReferringDomainsFilterValues = {
@@ -119,6 +136,12 @@ export const BACKLINKS_FILTER_FIELDS = [
   "status",
   "hideLost",
   "hideBroken",
+  "sourceCountry",
+  "sourceTld",
+  "itemType",
+  "linkAttribute",
+  "sourcePlatformType",
+  "semanticLocation",
 ] as const satisfies ReadonlyArray<keyof BacklinksTabFilterValues>;
 export const REFERRING_DOMAINS_FILTER_FIELDS = [
   "include",
@@ -203,6 +226,13 @@ export function toBacklinksFiltersPayload(
         : undefined,
     hideLost: values.hideLost === "true" ? true : undefined,
     hideBroken: values.hideBroken === "true" ? true : undefined,
+    // Raw provider values; the server picks the operator per field type.
+    sourceCountry: values.sourceCountry.trim() || undefined,
+    sourceTld: values.sourceTld.trim() || undefined,
+    itemType: values.itemType.trim() || undefined,
+    linkAttribute: values.linkAttribute.trim() || undefined,
+    sourcePlatformType: values.sourcePlatformType.trim() || undefined,
+    semanticLocation: values.semanticLocation.trim() || undefined,
   };
 }
 

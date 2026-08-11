@@ -112,7 +112,11 @@ export function BacklinksFilterPanel({
             minKey: "minBacklinks",
             maxKey: "maxBacklinks",
           },
-          { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
+          {
+            title: "Domain Authority",
+            minKey: "minRank",
+            maxKey: "maxRank",
+          },
           {
             title: "Spam Score",
             minKey: "minSpamScore",
@@ -165,7 +169,11 @@ export function BacklinksFilterPanel({
             minKey: "minReferringDomains",
             maxKey: "maxReferringDomains",
           },
-          { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
+          {
+            title: "Link Authority",
+            minKey: "minRank",
+            maxKey: "maxRank",
+          },
           {
             title: "Spam Score",
             minKey: "minSpamScore",
@@ -213,7 +221,7 @@ export function BacklinksFilterPanel({
           minKey: "minReferringDomains",
           maxKey: "maxReferringDomains",
         },
-        { title: "Rank", minKey: "minRank", maxKey: "maxRank" },
+        { title: "Page Authority", minKey: "minRank", maxKey: "maxRank" },
       ]}
       onApply={(values) => {
         state.apply(values);
@@ -238,7 +246,7 @@ function BacklinksToggleControls({
     <div className="flex flex-wrap items-center gap-4">
       <div className="space-y-1.5">
         <p className="text-[11px] font-semibold uppercase tracking-wide text-base-content/60">
-          Link Type
+          Follow status
         </p>
         {/* "All" is the empty string in the filter model, and Kumo's tabs key
             on a non-empty value, so it travels as ALL_FILTER and is mapped back

@@ -89,7 +89,7 @@ const ANALYSES: Analysis[] = [
   {
     key: "backlinks",
     label: "Backlinks",
-    detail: "Domain rank, referring domains and link profile",
+    detail: "Domain authority, referring domains and link profile",
     estimateUsd: null,
     run: (projectId, domain, _keyword, _market) =>
       getBacklinksOverview({ data: { projectId, target: domain } }),

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { computeDomainQuality } from "./domainQuality";
+import {
+  computeDomainQuality,
+  filterPositiveQualityBuckets,
+} from "./domainQuality";
 
 const ranks = (values: Array<number | null>) =>
   values.map((rank) => ({ rank }));
@@ -37,7 +40,7 @@ describe("computeDomainQuality", () => {
     expect(quality!.buckets.reduce((sum, b) => sum + b.domains, 0)).toBe(4);
   });
 
-  it("counts DR 30 itself as strong, matching the 'DR 30+' label", () => {
+  it("counts authority 30 itself as strong, matching the label", () => {
     const quality = computeDomainQuality(ranks([29, 30, 31, 80]));
     expect(quality?.strongDomains).toBe(3);
     expect(quality?.strongShare).toBeCloseTo(0.75, 5);
@@ -57,17 +60,40 @@ describe("computeDomainQuality", () => {
     expect(total).toBeCloseTo(1, 10);
   });
 
-  it("says so plainly when nothing reaches DR 30", () => {
+  it("says so plainly when nothing reaches authority 30", () => {
     expect(computeDomainQuality(ranks([5, 8, 12]))?.note).toContain("None");
   });
 
   it("reports the distribution without judging it strong or normal", () => {
     // "Unusually strong" needs a comparison set for this niche, which we do not
-    // have, and DR describes the referring domain's own profile rather than the
+    // have, and domain authority describes the referring domain's own profile rather than the
     // weight of the link pointing here. The note states the share and stops.
     const note = computeDomainQuality(ranks([60, 70, 80]))?.note ?? "";
     expect(note).toContain("100%");
     expect(note).not.toMatch(/unusually strong|little weight|normal mix/i);
-    expect(computeDomainQuality(ranks([60, 70, 80]))?.note).toContain("DR 30");
+    expect(computeDomainQuality(ranks([60, 70, 80]))?.note).toContain(
+      "domain authority 30",
+    );
+  });
+});
+
+describe("filterPositiveQualityBuckets", () => {
+  it("removes zero buckets while preserving positive buckets", () => {
+    expect(
+      filterPositiveQualityBuckets([
+        { label: "0-10", domains: 0 },
+        { label: "11-20", domains: 2 },
+        { label: "21-30", domains: 0 },
+      ]),
+    ).toEqual([{ label: "11-20", domains: 2 }]);
+  });
+
+  it("returns no rows for an all-zero breakdown", () => {
+    expect(
+      filterPositiveQualityBuckets([
+        { label: "0-10", domains: 0 },
+        { label: "11-20", domains: 0 },
+      ]),
+    ).toEqual([]);
   });
 });

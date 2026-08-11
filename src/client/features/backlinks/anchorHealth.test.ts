@@ -148,7 +148,16 @@ describe("computeAnchorHealth", () => {
       [row("best coffee machine", 3), row("deliotx", 1)],
       "deliotx.com",
     );
-    expect(health?.verdict).toBe("healthy");
+    expect(health?.verdict).toBe("insufficient");
+  });
+
+  it("starts evaluating the profile at exactly ten mentions", () => {
+    const health = computeAnchorHealth(
+      [row("best coffee machine", 3), row("deliotx", 7)],
+      "deliotx.com",
+    );
+    expect(health?.totalMentions).toBe(10);
+    expect(health?.verdict).toBe("over-optimized");
   });
 
   it("never treats brand or URL anchors as the commercial concentration", () => {

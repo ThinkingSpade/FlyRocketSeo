@@ -48,7 +48,7 @@ type AnchorHealth = {
   categories: AnchorCategoryBreakdown[];
   /** Highest-volume anchor that is neither branded, empty, nor a bare URL. */
   topCommercial: AnchorConcentration | null;
-  verdict: "healthy" | "watch" | "over-optimized";
+  verdict: "insufficient" | "healthy" | "watch" | "over-optimized";
   note: string;
 };
 
@@ -167,7 +167,14 @@ function describeAnchorProfile(
   topCommercial: AnchorConcentration | null,
   totalMentions: number,
 ): { verdict: AnchorHealth["verdict"]; note: string } {
-  if (!topCommercial || totalMentions < MIN_MENTIONS_FOR_VERDICT) {
+  if (totalMentions < MIN_MENTIONS_FOR_VERDICT) {
+    return {
+      verdict: "insufficient",
+      note: "A sample below 10 anchor mentions is not enough to assess the spread.",
+    };
+  }
+
+  if (!topCommercial) {
     return {
       verdict: "healthy",
       note: "No single phrase dominates the anchor text.",

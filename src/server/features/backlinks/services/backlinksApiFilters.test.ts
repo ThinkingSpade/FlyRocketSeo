@@ -83,6 +83,79 @@ describe("buildBacklinksRowsApiFilters", () => {
     expect(buildBacklinksRowsApiFilters({})).toEqual([]);
   });
 
+  it("filters by source country with string equality", () => {
+    expect(buildBacklinksRowsApiFilters({ sourceCountry: "IN" })).toEqual([
+      ["domain_from_country", "=", "IN"],
+    ]);
+  });
+
+  it("filters by source TLD with string equality", () => {
+    expect(buildBacklinksRowsApiFilters({ sourceTld: "com" })).toEqual([
+      ["tld_from", "=", "com"],
+    ]);
+  });
+
+  it("filters by item type with string equality", () => {
+    expect(buildBacklinksRowsApiFilters({ itemType: "anchor" })).toEqual([
+      ["item_type", "=", "anchor"],
+    ]);
+  });
+
+  it("filters by link attribute with array membership", () => {
+    expect(buildBacklinksRowsApiFilters({ linkAttribute: "nofollow" })).toEqual(
+      [["attributes", "has", "nofollow"]],
+    );
+  });
+
+  it("filters by source platform type with array membership", () => {
+    expect(
+      buildBacklinksRowsApiFilters({ sourcePlatformType: "blogs" }),
+    ).toEqual([["domain_from_platform_type", "has", "blogs"]]);
+  });
+
+  it("filters by semantic location with string equality", () => {
+    expect(
+      buildBacklinksRowsApiFilters({ semanticLocation: "article" }),
+    ).toEqual([["semantic_location", "=", "article"]]);
+  });
+
+  it("counts all six breakdown filters as six conditions", () => {
+    const expressions = buildBacklinksRowsApiFilters({
+      sourceCountry: "IN",
+      sourceTld: "com",
+      itemType: "anchor",
+      linkAttribute: "nofollow",
+      sourcePlatformType: "blogs",
+      semanticLocation: "article",
+    });
+
+    expect(
+      expressions.filter((expression) => expression !== "and"),
+    ).toHaveLength(6);
+  });
+
+  it("ignores empty and whitespace-only breakdown filter values", () => {
+    expect(
+      buildBacklinksRowsApiFilters({
+        sourceCountry: "",
+        sourceTld: " ",
+        itemType: "\t",
+        linkAttribute: "\n",
+        sourcePlatformType: "  \t  ",
+        semanticLocation: "\r\n",
+      }),
+    ).toEqual([]);
+  });
+
+  it("keeps item type separate from follow status", () => {
+    expect(
+      buildBacklinksRowsApiFilters({
+        itemType: "anchor",
+        linkType: "nofollow",
+      }),
+    ).toEqual([["dofollow", "=", false], "and", ["item_type", "=", "anchor"]]);
+  });
+
   it("throws when the condition budget is exceeded", () => {
     expect(() =>
       buildBacklinksRowsApiFilters({
