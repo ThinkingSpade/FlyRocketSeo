@@ -6,6 +6,8 @@ import {
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
 import type { DiscoveryMode } from "@/types/schemas/competitors";
 import { buildCompetitorColumns } from "./CompetitorsTableColumns";
+import { CompetitorsNonCompetitorsSection } from "./CompetitorsNonCompetitorsSection";
+import { groupCompetitorRows } from "./groupCompetitorRows";
 import {
   useRemoveProjectCompetitorMutation,
   useSetProjectCompetitorMutation,
@@ -75,16 +77,32 @@ export function CompetitorsTable({
     ],
   );
 
-  const table = useAppTable({ data: rows, columns });
+  // Splits platforms/aggregators the classifier recognised out of the main
+  // table -- a stable partition of the SAME server-ranked rows, never a
+  // re-sort (see groupCompetitorRows's own doc comment). Memoized so this
+  // only recomputes when the rows themselves change, not on every render
+  // (columns/pendingDomain etc. change far more often).
+  const { competitors, notCompetitors } = useMemo(
+    () => groupCompetitorRows(rows),
+    [rows],
+  );
+
+  const table = useAppTable({ data: competitors, columns });
 
   return (
-    <AppDataTable
-      table={table}
-      empty={
-        <div className="px-4 py-8 text-center text-sm text-base-content/60">
-          No competitors found. Try a domain with more organic visibility.
-        </div>
-      }
-    />
+    <>
+      <AppDataTable
+        table={table}
+        empty={
+          <div className="px-4 py-8 text-center text-sm text-base-content/60">
+            No competitors found. Try a domain with more organic visibility.
+          </div>
+        }
+      />
+      <CompetitorsNonCompetitorsSection
+        rows={notCompetitors}
+        columns={columns}
+      />
+    </>
   );
 }

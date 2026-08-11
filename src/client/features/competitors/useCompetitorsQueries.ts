@@ -19,6 +19,7 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { resolvePrefill } from "@/client/features/insights/resolvePrefill";
+import { safeNormalizeDomain } from "./shouldAdoptRestoredRun";
 import { useHandoff } from "@/client/features/insights/handoffStore";
 import {
   useProjectMarket,
@@ -122,13 +123,35 @@ export function useCompetitorsTargetPrefill({
     projectDefault: projectDomain,
   });
 
+  // `lastRun` outranks `projectDefault` in resolvePrefill's chain, and a run's
+  // label is the SERVER-NORMALIZED domain (lowercased, `www.` stripped) rather
+  // than the domain as the project stores it. When both name the same site
+  // that ordering is right but the value is the worse one to show: the box
+  // ends up reading "americavending.com" for a project called
+  // "AmericaVending.com". Prefer the project's own spelling in that case only
+  // -- if they name DIFFERENT sites, the last run genuinely is the better
+  // prefill and the chain's ordering stands.
+  const projectNormalized = projectDomain
+    ? safeNormalizeDomain(projectDomain)
+    : null;
+  const prefillNormalized = prefill.value
+    ? safeNormalizeDomain(prefill.value)
+    : null;
+  const resolved =
+    prefill.source === "last-run" &&
+    projectDomain &&
+    projectNormalized !== null &&
+    projectNormalized === prefillNormalized
+      ? projectDomain
+      : prefill.value;
+
   useEffect(() => {
-    if (!target && !targetInput && prefill.value) {
-      setTargetInput(prefill.value);
+    if (!target && !targetInput && resolved) {
+      setTargetInput(resolved);
     }
     // Only prefill while the field is empty; never clobber user input.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [prefill.value]);
+  }, [resolved]);
 }
 
 export function useCompetitorsQuery(input: {

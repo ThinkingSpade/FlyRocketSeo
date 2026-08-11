@@ -234,6 +234,91 @@ describe("buildCompetitorsVerdict (serp mode)", () => {
     expect(verdict.tone).toBe("good");
   });
 
+  it("names the top REAL competitor, not the platform with the highest beatsYouCount -- the exact bug this batch fixes", () => {
+    // Matches the bug report's own production shape: youtube.com beats the
+    // client on more seed keywords than any genuine rival, but is not one.
+    const verdict = buildCompetitorsVerdict({
+      target: "americavending.com",
+      competitors: [
+        {
+          domain: "youtube.com",
+          intersections: null,
+          organicKeywords: null,
+          beatsYouCount: 6,
+          category: "video",
+        },
+        {
+          domain: "vendingexchange.com",
+          intersections: null,
+          organicKeywords: null,
+          beatsYouCount: 3,
+          category: null,
+        },
+      ],
+      discoveryMode: "serp",
+      seedSize: 40,
+    });
+
+    expect(verdict.read).toContain("vendingexchange.com");
+    expect(verdict.read).not.toContain("youtube.com");
+  });
+
+  it("lets a pinned platform still be named -- a pin overrides the classifier (decision 4)", () => {
+    const verdict = buildCompetitorsVerdict({
+      target: "acme.com",
+      competitors: [
+        {
+          domain: "youtube.com",
+          intersections: null,
+          organicKeywords: null,
+          beatsYouCount: 6,
+          category: "video",
+          pinned: true,
+        },
+        {
+          domain: "realrival.com",
+          intersections: null,
+          organicKeywords: null,
+          beatsYouCount: 3,
+          category: null,
+        },
+      ],
+      discoveryMode: "serp",
+      seedSize: 40,
+    });
+
+    expect(verdict.read).toContain("youtube.com");
+  });
+
+  it("says so, without naming a platform, when every candidate found is a platform or aggregator", () => {
+    const verdict = buildCompetitorsVerdict({
+      target: "acme.com",
+      competitors: [
+        {
+          domain: "youtube.com",
+          intersections: null,
+          organicKeywords: null,
+          beatsYouCount: 6,
+          category: "video",
+        },
+        {
+          domain: "facebook.com",
+          intersections: null,
+          organicKeywords: null,
+          beatsYouCount: 5,
+          category: "social",
+        },
+      ],
+      discoveryMode: "serp",
+      seedSize: 40,
+    });
+
+    expect(verdict.tone).toBe("unknown");
+    expect(verdict.actions).toEqual([]);
+    expect(verdict.read).not.toContain("youtube.com");
+    expect(verdict.read).not.toContain("facebook.com");
+  });
+
   it("ignores intersections entirely, even when a row somehow carries one, once discoveryMode is serp", () => {
     // Every real serp row has intersections: null (rankSerpCompetitors.ts
     // always sets it), but this pins the BRANCH, not just today's data

@@ -233,4 +233,28 @@ describe("rankSerpCompetitors", () => {
     expect(row.organicKeywords).toBe(42);
     expect(row.organicTraffic).toBe(1234);
   });
+
+  it("classifies each row's domain, so a platform can be told apart from a real competitor", () => {
+    const rows = rankSerpCompetitors(
+      [
+        {
+          domain: "youtube.com",
+          keywords_positions: { "office coffee service": [2] },
+        },
+        {
+          domain: "avfusa.com",
+          keywords_positions: { "office coffee service": [3] },
+        },
+      ],
+      seed,
+      "americavending.com",
+    );
+
+    expect(rows.find((r) => r.domain === "youtube.com")?.category).toBe(
+      "video",
+    );
+    // A domain the classifier has never heard of is a real competitor, not
+    // an unknown -- category stays null, not merely falsy/undefined.
+    expect(rows.find((r) => r.domain === "avfusa.com")?.category).toBeNull();
+  });
 });

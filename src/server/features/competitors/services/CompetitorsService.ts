@@ -28,6 +28,7 @@ import { ProjectProfileRepository } from "@/server/features/profiles/repositorie
 import { ProjectCompetitorRepository } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
 import { buildCompetitorSeed } from "@/server/features/competitors/competitorSeed";
 import { rankSerpCompetitors } from "@/server/features/competitors/rankSerpCompetitors";
+import { classifyCompetitorDomain } from "@/server/features/competitors/classifyCompetitorDomain";
 import { reapplyProjectCompetitors } from "@/server/features/competitors/applyProjectCompetitors";
 import { resolveDiscoveryMode } from "@/server/features/competitors/resolveDiscoveryMode";
 
@@ -68,14 +69,16 @@ function readMetric(container: unknown, key: string): number | null {
 
 function mapCompetitorItem(item: CompetitorDomainItem): CompetitorRow | null {
   if (!item.domain) return null;
+  // Normalized the same way ProjectCompetitorRepository normalizes a saved
+  // pin/exclude override, and the same way the serp-seeded path normalizes
+  // its own rows (rankSerpCompetitors) -- see normalizeDiscoveredDomain's
+  // doc comment. Without this, a discovered "WWW.Avfusa.com" would never
+  // match a pin saved as "avfusa.com" and applyProjectCompetitors would
+  // silently no-op. Classified from this same normalized value so the
+  // category always describes the domain the row actually carries.
+  const domain = normalizeDiscoveredDomain(item.domain);
   return {
-    // Normalized the same way ProjectCompetitorRepository normalizes a saved
-    // pin/exclude override, and the same way the serp-seeded path normalizes
-    // its own rows (rankSerpCompetitors) -- see normalizeDiscoveredDomain's
-    // doc comment. Without this, a discovered "WWW.Avfusa.com" would never
-    // match a pin saved as "avfusa.com" and applyProjectCompetitors would
-    // silently no-op.
-    domain: normalizeDiscoveredDomain(item.domain),
+    domain,
     avgPosition: item.avg_position ?? null,
     intersections: item.intersections ?? null,
     organicKeywords: readMetric(item.full_domain_metrics, "count"),
@@ -87,6 +90,11 @@ function mapCompetitorItem(item: CompetitorDomainItem): CompetitorRow | null {
     positionDelta: null,
     source: "domain",
     pinned: false,
+    // Classification is mode-agnostic (a pure function of the domain
+    // string), so a platform showing up via the domain-overlap fallback --
+    // e.g. a mega-site like youtube.com sharing keywords with everyone --
+    // gets the same advisory category a serp-mode row would.
+    category: classifyCompetitorDomain(domain),
   };
 }
 
@@ -305,7 +313,14 @@ async function getCompetitors(
     };
 
     if (stored.rows.length > 0) {
-      void setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
+      // AWAITED, not fire-and-forget: `recordRun` below makes the run's durable
+      // copy by READING THIS OBJECT BACK (AnalysisRunService.record ->
+      // getCachedRawIgnoringTtl -> putRunPayload). An un-awaited write races
+      // that read, and when the read loses there is no durable payload at all,
+      // so the run survives only as long as the 7-day `dataforseo-cache/`
+      // lifecycle -- which is exactly the "expired" state users hit on runs far
+      // younger than the retention they were promised.
+      await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
         (error) => {
           console.error("competitors.list.cache-write failed:", error);
         },
@@ -350,9 +365,13 @@ async function getCompetitors(
   };
 
   if (stored.rows.length > 0) {
-    void setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch((error) => {
-      console.error("competitors.list.cache-write failed:", error);
-    });
+    // Awaited for the same reason as the serp branch above: `recordRun` reads
+    // this object back to make the run's durable copy.
+    await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
+      (error) => {
+        console.error("competitors.list.cache-write failed:", error);
+      },
+    );
     await recordRun();
   }
 

@@ -90,6 +90,27 @@ export const competitorsSearchSchema = z.object({
 });
 
 /**
+ * Non-competitor categories the static classifier recognises
+ * (`classifyCompetitorDomain.ts`). `null` on a row means "not classified as
+ * one of these -- treated as a real competitor," which is the only meaning
+ * `null` carries here: there is no separate "unknown" state, because a
+ * domain the classifier has never heard of defaults to being a candidate
+ * rival, not to being hidden.
+ */
+export const competitorCategories = [
+  "social",
+  "video",
+  "marketplace",
+  "directory",
+  "qa_forum",
+  "search_engine",
+  "news",
+  "education",
+] as const;
+
+export type CompetitorCategory = (typeof competitorCategories)[number];
+
+/**
  * One competitor row, exactly as it is cached.
  *
  * The discovery fields below are optional with defaults rather than required:
@@ -112,9 +133,37 @@ const competitorRowSchema = z.object({
   positionDelta: z.number().nullable().default(null),
   source: z.enum(["serp", "domain"]).default("domain"),
   pinned: z.boolean().default(false),
+  /**
+   * The classifier's call on this domain, advisory only -- storage and
+   * ranking never filter on it (see `classifyCompetitorDomain.ts`'s own doc
+   * comment). Optional with a `null` default so a row cached before this
+   * batch shipped still parses and reads as "treated as a real competitor,"
+   * exactly like a legacy row's `beatsYouCount`/`coverage`/`positionDelta`
+   * above.
+   */
+  category: z.enum(competitorCategories).nullable().default(null),
 });
 
 export type CompetitorRow = z.infer<typeof competitorRowSchema>;
+
+/**
+ * Whether a row belongs in the main competitors table, as opposed to the
+ * collapsed "Not competitors" group -- the one place this decision is made,
+ * shared by the table UI and the headline verdict so they can never disagree
+ * about which rows count.
+ *
+ * A user pin always wins over the classifier: pinning a domain is the
+ * operator overriding the tool's judgement with their own, so it must
+ * surface as a competitor even when `category` says otherwise. There is no
+ * corresponding override the other way -- an EXCLUDED domain is removed from
+ * `rows` entirely by `applyProjectCompetitors` before this ever runs, so
+ * exclusion never needs to be checked here.
+ */
+export function isCompetitorRow(
+  row: Pick<CompetitorRow, "category" | "pinned">,
+): boolean {
+  return row.pinned || row.category == null;
+}
 
 /**
  * A page of competitor rows, exactly as it is cached.
