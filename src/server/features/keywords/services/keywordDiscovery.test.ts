@@ -269,3 +269,106 @@ it("classifies a failure by AppError.code, not by matching error.message text", 
     expect(genericFailure.reason).toBe("provider_error");
   }
 });
+
+// The following cover the fix for a real prod failure that was undiagnosable:
+// `reason` alone (one of three fixed tags, by design -- see `describeFailure`)
+// left no way to tell an out-of-funds account apart from a malformed request
+// or a vendor outage. `diagnostic` and the raw-error log line close that gap
+// WITHOUT reopening the leak `describeFailure` exists to prevent -- these
+// tests check both halves of that: diagnosability AND non-leakage.
+
+it("persists `diagnostic` as the classified AppError code, never the raw message", async () => {
+  const providerError = new AppError(
+    "INSUFFICIENT_CREDITS",
+    "account 998877 has $0.00 remaining",
+  );
+  mocks.getKeywordsPage.mockRejectedValue(providerError);
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  await expect(runKeywordDiscovery(input, billingCustomer)).rejects.toBe(
+    providerError,
+  );
+
+  const recorded = lastRecordedResult();
+  expect(recorded.status).toBe("failed");
+  if (recorded.status === "failed") {
+    expect(recorded.reason).toBe("insufficient_credits");
+    expect(recorded.diagnostic).toBe("INSUFFICIENT_CREDITS");
+    // The whole point of `diagnostic` being a CODE, not a message: the
+    // persisted record must never carry the raw account-identifying text,
+    // on either field.
+    expect(recorded.reason).not.toContain("998877");
+    expect(recorded.diagnostic).not.toContain("998877");
+  }
+});
+
+it("falls back to diagnostic: 'unknown' for an error that isn't a recognised AppError", async () => {
+  mocks.getKeywordsPage.mockRejectedValue(new Error("ECONNRESET"));
+  vi.spyOn(console, "error").mockImplementation(() => undefined);
+
+  await expect(runKeywordDiscovery(input, billingCustomer)).rejects.toThrow(
+    "ECONNRESET",
+  );
+
+  const recorded = lastRecordedResult();
+  expect(recorded.status).toBe("failed");
+  if (recorded.status === "failed") {
+    expect(recorded.reason).toBe("provider_error");
+    expect(recorded.diagnostic).toBe("unknown");
+  }
+});
+
+it("logs the raw error server-side under a greppable keyword-discovery prefix, and keeps it out of the persisted record", async () => {
+  const providerError = new AppError(
+    "INTERNAL_ERROR",
+    "DataForSEO HTTP 500 on /v3/dataforseo_labs/google/ranked_keywords/live account=998877",
+  );
+  mocks.getKeywordsPage.mockRejectedValue(providerError);
+  const consoleError = vi
+    .spyOn(console, "error")
+    .mockImplementation(() => undefined);
+
+  await expect(runKeywordDiscovery(input, billingCustomer)).rejects.toBe(
+    providerError,
+  );
+
+  // The raw error -- the whole `AppError` instance, message included --
+  // reaches `console.error`. That is fine: server logs (`wrangler tail`)
+  // are not user-facing, so nothing here crosses the client boundary.
+  expect(
+    consoleError.mock.calls.some(
+      (call) =>
+        typeof call[0] === "string" &&
+        call[0].includes("keyword-discovery.provider-error") &&
+        call[1] === providerError,
+    ),
+  ).toBe(true);
+
+  // But the PERSISTED record -- what a restore eventually reads back and
+  // the client renders -- must never carry that raw text, on either field.
+  const recorded = lastRecordedResult();
+  expect(recorded.status).toBe("failed");
+  if (recorded.status === "failed") {
+    expect(recorded.reason).toBe("provider_error");
+    expect(recorded.diagnostic).toBe("INTERNAL_ERROR");
+    const serialized = JSON.stringify(recorded);
+    expect(serialized).not.toContain("998877");
+    expect(serialized).not.toContain("DataForSEO HTTP 500");
+  }
+});
+
+it("still parses a `failed` record persisted before `diagnostic` existed", () => {
+  // The exact shape read out of prod R2 for a real failure (project
+  // 81a448cc-688a-4a8c-9ac5-86473ad22650) -- a row written before this
+  // field existed must keep parsing, or every already-stored failure
+  // becomes unreadable (an "unreadable" restore outcome, per
+  // useAutoRestoredRun.ts) the moment this schema ships.
+  const legacyRecord = {
+    status: "failed",
+    reason: "provider_error",
+    attemptedAt: "2026-08-11T04:29:49.667Z",
+  };
+  expect(keywordDiscoveryResultSchema.parse(legacyRecord)).toEqual(
+    legacyRecord,
+  );
+});

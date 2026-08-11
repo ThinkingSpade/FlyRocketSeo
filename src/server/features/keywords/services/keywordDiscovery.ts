@@ -92,6 +92,26 @@ export async function runKeywordDiscovery(
     await recordDiscoveryRun(input, params, result, billingCustomer);
     return result;
   } catch (error) {
+    // Log the RAW error here, and ONLY here. `describeFailure` below
+    // deliberately collapses every failure to one of three fixed tags
+    // because the raw DataForSEO `status_message` can carry account
+    // identifiers -- and that classified tag is the only thing that reaches
+    // `reason`, which is PERSISTED and read back by the client. A
+    // `console.error` is not part of that path: nothing reads server logs
+    // over the wire, so there is no leak here, and this line is the only
+    // remaining way to tell an out-of-funds account apart from a malformed
+    // request or a vendor outage -- `assertOk` (dataforseo/envelope.ts)
+    // throws the exact same `AppError("INTERNAL_ERROR", task.status_message)`
+    // shape for all three. Without this line, a real prod failure is
+    // undiagnosable: the persisted record (and everything derived from it)
+    // shows nothing beyond the fixed tag "provider_error". Prefixed like
+    // this file's other log lines (`keyword-discovery.*`) so `wrangler tail`
+    // output stays greppable.
+    console.error(
+      `keyword-discovery.provider-error project=${input.projectId} domain=${input.domain}:`,
+      error,
+    );
+
     // RECORD THE FAILURE, then rethrow.
     //
     // Without this row the tab's guard sees "no run has ever happened" on the
@@ -107,6 +127,12 @@ export async function runKeywordDiscovery(
     const result: KeywordDiscoveryResult = {
       status: "failed",
       reason: describeFailure(error),
+      // Same classification `describeFailure` already computed, kept as the
+      // actual code rather than the collapsed tag -- see this field's own
+      // comment in keyword-discovery.ts for why that's still safe to store.
+      // "unknown" (not the code) when `error` wasn't a recognised `AppError`
+      // at all, which `describeFailure` also folds into "provider_error".
+      diagnostic: asAppError(error)?.code ?? "unknown",
       attemptedAt: new Date().toISOString(),
     };
     // Rethrows the PROVIDER error, never a recording error: the provider

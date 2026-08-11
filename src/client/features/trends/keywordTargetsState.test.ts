@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   describePaidFailure,
   pickDisplayGeo,
+  resolveFailureReason,
   resolvePaidState,
 } from "./keywordTargetsState";
 import type { KeywordDiscoveryResult } from "@/types/schemas/keyword-discovery";
@@ -18,6 +19,12 @@ const failedResult: KeywordDiscoveryResult = {
   status: "failed",
   reason: "provider_error",
   attemptedAt: "2026-08-10T00:00:00.000Z",
+};
+
+const insufficientCreditsResult: KeywordDiscoveryResult = {
+  status: "failed",
+  reason: "insufficient_credits",
+  attemptedAt: "2026-08-11T04:29:49.667Z",
 };
 
 const dfw: ResolvedGeo = {
@@ -225,6 +232,91 @@ describe("resolvePaidState", () => {
         hasCredits: true,
       }),
     ).toBe("none");
+  });
+});
+
+describe("resolveFailureReason", () => {
+  it("reads the restored run's reason when a live re-run failed over a stale successful `active` (finding: live isError masked by a sticky `fresh`)", () => {
+    // Exact regression scenario: a first run succeeded so `fresh` (and
+    // therefore `active`) holds that "ok" result permanently -- a throw
+    // never reaches `onSuccess`, so nothing ever clears it. The user clicks
+    // "Refresh" and THAT attempt fails with insufficient_credits. Before the
+    // fix, reading the reason off `active` produced null (generic message,
+    // WITH a retry button) for a failure that must suppress retry.
+    expect(
+      resolveFailureReason({
+        active: okResult,
+        isError: true,
+        restoredResult: insufficientCreditsResult,
+      }),
+    ).toBe("insufficient_credits");
+  });
+
+  it("still returns null for a live error when the restore has no failure row to read", () => {
+    expect(
+      resolveFailureReason({
+        active: null,
+        isError: true,
+        restoredResult: null,
+      }),
+    ).toBeNull();
+  });
+
+  it("reads a purely restored failure with no live call this mount, unchanged from before", () => {
+    // `isError: false` -- no live call happened; `active` IS the restored
+    // result here because `fresh` is null. This is the case that already
+    // worked and must keep working.
+    expect(
+      resolveFailureReason({
+        active: failedResult,
+        isError: false,
+        restoredResult: failedResult,
+      }),
+    ).toBe("provider_error");
+  });
+
+  it("does not let a stale restored failure outrank a genuinely current success", () => {
+    // isError false and active is "ok" (this mount's own live success, or a
+    // restore that has already caught up) -- must not fall through to
+    // whatever restoredResult happens to still hold underneath it.
+    expect(
+      resolveFailureReason({
+        active: okResult,
+        isError: false,
+        restoredResult: failedResult,
+      }),
+    ).toBeNull();
+  });
+});
+
+describe("a live failure resolved through to its user-facing message (defect: live isError hid a specific restored reason)", () => {
+  it("live error + restored failed-with-insufficient_credits shows the credits message and suppresses retry", () => {
+    const reason = resolveFailureReason({
+      active: okResult,
+      isError: true,
+      restoredResult: insufficientCreditsResult,
+    });
+
+    const failure = describePaidFailure({ reason, domain: "example.com" });
+
+    expect(failure.canRetry).toBe(false);
+    expect(failure.message).toContain("credits");
+    expect(failure.message).toContain("example.com");
+  });
+
+  it("live error + no reason available still shows the generic message with retry", () => {
+    const reason = resolveFailureReason({
+      active: null,
+      isError: true,
+      restoredResult: null,
+    });
+
+    const failure = describePaidFailure({ reason, domain: "example.com" });
+
+    expect(failure).toEqual({
+      message: "Couldn’t load ranking data for example.com.",
+      canRetry: true,
+    });
   });
 });
 

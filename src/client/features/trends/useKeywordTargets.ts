@@ -32,6 +32,7 @@ import {
 } from "./shouldAutoRunDiscovery";
 import {
   pickDisplayGeo,
+  resolveFailureReason,
   resolvePaidState,
   type PaidState,
 } from "./keywordTargetsState";
@@ -122,12 +123,16 @@ type KeywordTargetsState = {
    * The recorded `reason` tag off a failed run (`insufficient_credits` |
    * `rate_limited` | `provider_error`; see keywordDiscovery.ts's
    * `describeFailure`), or null when we have no recorded failure to read one
-   * from. Available for a LIVE failure too, not just a restored one: the
-   * mutation awaits its own `onSettled` invalidation before flipping
-   * `isError` true, so by the time `paidState` reads "failed" the refetched
-   * restore already holds the row the server just recorded for that same
-   * attempt. Null therefore means the recording itself did not land -- fall
-   * back to the generic message rather than guessing a cause.
+   * from. Resolved by `resolveFailureReason`, NOT read straight off `active`
+   * -- see that function's own comment in keywordTargetsState.ts for the
+   * defect that distinction fixes: `active` (`fresh ?? restored`) is sticky
+   * on an earlier success, so a failed "Refresh" re-run left `active` still
+   * reading "ok" and this field silently null. `resolveFailureReason` falls
+   * back to the restore's own result specifically for a live error, which by
+   * then has, by construction, already been refreshed by that same attempt's
+   * `onSettled` invalidation. Null means either nothing is failing, or a live
+   * failure's own recording did not land in time -- either way, fall back to
+   * the generic message rather than guessing a cause.
    */
   failureReason: string | null;
   gscUnavailable: boolean;
@@ -506,7 +511,11 @@ export function useKeywordTargets(
     // this same hook started earlier is still genuinely running.
     isRunningPaid: paidCallInFlight,
     paidState,
-    failureReason: active?.status === "failed" ? active.reason : null,
+    failureReason: resolveFailureReason({
+      active,
+      isError: discovery.isError,
+      restoredResult: restored.restored?.result ?? null,
+    }),
     gscUnavailable: free.unavailable,
     runAgain: start,
     retryRestore: restored.retry,
