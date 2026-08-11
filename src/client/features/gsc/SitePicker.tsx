@@ -145,17 +145,18 @@ export function SitePicker({
           {saving ? "Saving…" : "Save property"}
         </Button>
         {secondaryAction ? (
-          <button
+          <Button
             type="button"
-            className={[
-              "btn btn-ghost btn-sm",
-              secondaryAction.destructive ? "text-error hover:bg-error/10" : "",
-            ].join(" ")}
+            variant="ghost"
+            size="sm"
+            className={
+              secondaryAction.destructive ? "text-error hover:bg-error/10" : ""
+            }
             onClick={secondaryAction.onClick}
             disabled={secondaryAction.disabled}
           >
             {secondaryAction.label}
-          </button>
+          </Button>
         ) : null}
       </div>
     </div>

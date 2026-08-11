@@ -157,10 +157,10 @@ function AuditDetail({
         )}
 
         {showSupportCta && (
-          <div
-            className={isFailed ? "alert alert-error" : "alert alert-warning"}
+          <Banner
+            variant={isFailed ? "error" : "alert"}
+            icon={<WarningCircle className="size-5" />}
           >
-            <WarningCircle className="size-5" />
             <div className="space-y-1">
               <p className="font-medium">
                 Site audit couldn't fully crawl this website.
@@ -175,7 +175,7 @@ function AuditDetail({
                 robots.txt), then re-run the audit.
               </p>
             </div>
-          </div>
+          </Banner>
         )}
 
         {/* A completed audit whose results fail to load used to render nothing
