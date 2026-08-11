@@ -8,7 +8,7 @@ import { normalizeDomain } from "@/types/schemas/domain";
  * instead of throwing so the caller can treat "couldn't tell" as "not a
  * match" rather than crashing the page.
  */
-function safeNormalizeDomain(input: string): string | null {
+export function safeNormalizeDomain(input: string): string | null {
   try {
     return normalizeDomain(input);
   } catch {
