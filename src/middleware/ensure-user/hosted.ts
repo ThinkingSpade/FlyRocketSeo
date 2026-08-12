@@ -1,6 +1,7 @@
 import { getAuth, hasHostedAuthConfig } from "@/lib/auth";
 import { getActiveOrganizationId } from "@/lib/auth-session";
 import { getOrJoinSharedHostedOrganization } from "@/server/auth/default-hosted-organization";
+import { isDelegatedOrganizationId } from "@/server/auth/delegated-organization-id";
 import {
   getHostedAllowedEmails,
   isHostedEmailAllowed,
@@ -45,7 +46,18 @@ export async function resolveHostedContext(
 
   const activeOrganizationId = getActiveOrganizationId(session);
 
-  if (activeOrganizationId) {
+  // A delegated organization is per-user scaffolding for Cloudflare Access and
+  // local_noauth, which never reach this function -- they resolve through
+  // `resolveDelegatedContext`. So on the hosted path an active delegated
+  // organization is always wrong, and it is not hypothetical: sessions were
+  // written pointing at one while the user's projects lived elsewhere, and the
+  // app opened on an empty workspace with no way to switch. Falling through
+  // re-resolves and rewrites the session, so an affected user is fixed by their
+  // next request rather than by editing the database.
+  if (
+    activeOrganizationId &&
+    !isDelegatedOrganizationId(activeOrganizationId)
+  ) {
     return {
       userId: session.user.id,
       userEmail: session.user.email,
