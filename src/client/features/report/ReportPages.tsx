@@ -19,6 +19,7 @@ import {
   ReportBody,
   type ReportSectionKey,
 } from "@/client/features/report/ReportSections";
+import { useReportChapterData } from "@/client/features/report/chapters";
 import {
   KeywordDeepSections,
   LinkDeepSections,
@@ -38,14 +39,21 @@ const MUTED = "#5c6a7d"; // matches ReportChrome's secondary type
 
 export function ReportPages({
   data,
+  projectId,
   generatedAt,
   foot,
 }: {
   data: ReturnType<typeof useClientReportData>;
+  projectId: string;
   generatedAt: string;
   foot: string;
 }) {
   const { domain, gsc, insights, backlinks, latestAudit, auditPages } = data;
+  // The eight feature chapters read their own stored runs. Taken here, next to
+  // the only call that consumes them, rather than folded into
+  // `useClientReportData` — that hook feeds the toolbar and the cover too, and
+  // none of this belongs to either.
+  const chapters = useReportChapterData(projectId);
 
   const technicalIssues = useMemo(
     () => buildTechnicalIssues(auditPages),
@@ -130,6 +138,7 @@ export function ReportPages({
 
   const { pages, omissions, notCovered } = buildReportChapters({
     data,
+    chapters,
     sections,
     narrativeInput,
     positionMove: gsc ? gsc.prevTotals.position - gsc.totals.position : null,

@@ -221,6 +221,7 @@ export function ClientReportPage({ projectId }: { projectId: string }) {
 
         <ReportPages
           data={data}
+          projectId={projectId}
           generatedAt={generatedAt}
           foot={`Prepared with FlyRocketSEO · ${generatedAt}${
             agency ? ` · ${agency}` : ""

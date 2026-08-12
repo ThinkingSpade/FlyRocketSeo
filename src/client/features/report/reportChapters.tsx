@@ -16,6 +16,10 @@ import {
   type OnPageOptimizations,
 } from "@/client/features/report/ReportImprovements";
 import { buildSiteChapters } from "@/client/features/report/reportChaptersSite";
+import {
+  buildFeatureChapters,
+  type ReportChapterData,
+} from "@/client/features/report/chapters";
 import { describeFailedReads } from "@/client/features/report/reportReads";
 import type { ReportSectionKey } from "@/client/features/report/ReportSections";
 import type { useClientReportData } from "@/client/features/report/useClientReportData";
@@ -57,6 +61,13 @@ export type ChapterCollector = {
 
 export type ChapterInput = {
   data: ReturnType<typeof useClientReportData>;
+  /**
+   * The eight feature chapters' own reads. Required rather than optional: a
+   * caller that forgot it would drop eight chapters from the PDF with nothing
+   * on the coverage list to say so, which is the exact failure this file
+   * exists to prevent.
+   */
+  chapters: ReportChapterData;
   /** Renders the shared data sections, so one chapter can span pages. */
   sections: (only: ReportSectionKey[]) => ReactNode;
   narrativeInput: Parameters<typeof buildPerformanceNarrative>[0] | null;
@@ -127,15 +138,18 @@ export const CHAPTER_BODY = "#2f3a49"; // matches ReportChrome's paragraph ink
  * then this is the honest placeholder.
  */
 const NOT_COVERED: readonly string[] = [
-  "Rank Tracking",
-  "Local SEO",
+  // The other eight now have chapters (see `./chapters`), so they reach the
+  // coverage list only through `out.drop` with a project-specific reason.
+  //
+  // Local Rank Grid stays here, and not because it was forgotten: a grid scan
+  // is addressed by its parameters, which live only in the tab's URL, and its
+  // cache key is a digest of them with no row in D1 to enumerate. A chapter
+  // could only guess at the parameters, and a wrong guess returns an empty
+  // grid — byte-identical to a scan that found the client ranking nowhere.
+  // Printing "you rank nowhere nearby" because we could not find the scan is
+  // worse than printing nothing, so this line is the honest answer until the
+  // scans are addressable.
   "Local Rank Grid",
-  "Competitors",
-  "Topic Clusters",
-  "Saved Keywords",
-  "Trends",
-  "SERP",
-  "Citations",
 ];
 
 export function buildReportChapters(input: ChapterInput): {
@@ -158,8 +172,18 @@ export function buildReportChapters(input: ChapterInput): {
 
   buildSearchChapters(input, out);
   buildSiteChapters(input, out);
+  buildFeatureChapters(input.chapters, out);
 
-  return { pages, omissions, notCovered: NOT_COVERED };
+  // The band number is printed on every sheet, and the builders above emit
+  // theirs in source order, not band order — the feature chapters run last but
+  // carry bands 01 through 06. Sorting here keeps the printed numbers running
+  // forwards through the PDF; `sort` is stable, so chapters sharing a band keep
+  // the order their builder chose.
+  const ordered = pages.toSorted((left, right) =>
+    left.number.localeCompare(right.number),
+  );
+
+  return { pages: ordered, omissions, notCovered: NOT_COVERED };
 }
 
 /** Chapters 01–02: everything derived from Search Console. */

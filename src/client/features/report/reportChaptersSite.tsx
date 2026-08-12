@@ -49,7 +49,11 @@ export function buildSiteChapters(
   // sentence it falls back to is itself the finding.
   out.add({
     key: "next",
-    number: "06",
+    // Last band in the report, so it moved up when Local presence (the rank
+    // tracker, the map listings and the citations) took 06. The number/kicker
+    // pairing stays 1:1 — two bands sharing a number is what the citations
+    // chapter's own test guards against.
+    number: "07",
     kicker: "Next steps",
     title: "What we'd do next",
     body: (

@@ -105,13 +105,7 @@ type SnapshotOutcome = "none" | "expired" | "unreadable" | "ready" | null;
  * Returns null for the plain never-run case so each caller keeps wording that
  * in its own voice, naming the analysis the client should ask for.
  */
-export function describeSnapshotGap({
-  subject,
-  restoring,
-  isError,
-  outcome,
-  otherDomain,
-}: {
+type SnapshotGapInput = {
   /** Lower-case noun phrase, e.g. "the saved backlink analysis". */
   subject: string;
   isError: boolean;
@@ -120,7 +114,26 @@ export function describeSnapshotGap({
   outcome: SnapshotOutcome;
   /** A run was restored, but for a different domain than this project's. */
   otherDomain: boolean;
-}): string | null {
+};
+
+// A caller that states a fault outright always gets a sentence back — the two
+// branches below return before any `null` is reachable. Saying so in the type
+// is what lets a chapter derive its own constants from this function instead of
+// retyping the wording and drifting from it.
+export function describeSnapshotGap(
+  input: SnapshotGapInput & { isError: true },
+): string;
+export function describeSnapshotGap(
+  input: SnapshotGapInput & { restoring: true },
+): string;
+export function describeSnapshotGap(input: SnapshotGapInput): string | null;
+export function describeSnapshotGap({
+  subject,
+  restoring,
+  isError,
+  outcome,
+  otherDomain,
+}: SnapshotGapInput): string | null {
   if (isError) {
     return `${sentenceCase(subject)} could not be read while this report was generated — that request failed rather than returning nothing.`;
   }
