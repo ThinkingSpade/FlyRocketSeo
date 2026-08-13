@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   aiRewritableIds,
   clicksByPage,
+  describeEmptyFixes,
   elementProgress,
   focusFirst,
   groupByPage,
@@ -304,5 +305,53 @@ describe("id selectors", () => {
 
   it("aiRewritableIds returns only pending title/meta", () => {
     expect(aiRewritableIds(rows).toSorted()).toEqual(["m", "t"]);
+  });
+});
+
+describe("describeEmptyFixes", () => {
+  it("never calls a crawl with nothing serving a clean audit", () => {
+    const copy = describeEmptyFixes({ pagesAnalyzed: 0, pagesSkipped: 12 });
+    expect(copy.title).toBe("No pages could be analyzed");
+    expect(copy.body).toContain("12 pages");
+    expect(copy.body).toContain("not a clean bill of health");
+    // The claim the old copy made in this exact state: that the audit was
+    // analyzed and simply found nothing wrong.
+    expect(copy.body).not.toMatch(/analyzed successfully/i);
+    expect(copy.body).not.toMatch(/no title, meta, heading, or alt-text/i);
+    // It names what to run next instead of implying a finding.
+    expect(copy.body).toMatch(/re-run the site audit/i);
+  });
+
+  it("blames only what the counts support", () => {
+    const copy = describeEmptyFixes({ pagesAnalyzed: 0, pagesSkipped: 1 });
+    // `pagesSkipped` says the page returned no 2xx. It does not say the page
+    // 404'd, that the site is offline, or that anything is broken.
+    expect(copy.body).toContain("1 page");
+    expect(copy.body).toContain("2xx");
+    expect(copy.body).not.toMatch(/404|offline|broken|down|dead/i);
+  });
+
+  it("distinguishes a crawl that recorded no pages at all", () => {
+    const copy = describeEmptyFixes({ pagesAnalyzed: 0, pagesSkipped: 0 });
+    expect(copy.title).toBe("No pages to analyze");
+    expect(copy.body).toContain("no crawled pages");
+    expect(copy.body).toContain("not a clean bill of health");
+  });
+
+  it("only reports no fixes found when pages were actually analyzed", () => {
+    const copy = describeEmptyFixes({ pagesAnalyzed: 18, pagesSkipped: 0 });
+    expect(copy.title).toBe("No fixes found");
+    expect(copy.body).toContain("18 pages");
+    expect(copy.body).toContain("no title, meta, heading, or alt-text fixes");
+    // The Search Console caveat is still part of an honest "no fixes" answer.
+    expect(copy.body).toMatch(/Search Console/);
+    expect(copy.body).not.toContain("2xx");
+  });
+
+  it("admits the pages it could not read alongside a real finding", () => {
+    const copy = describeEmptyFixes({ pagesAnalyzed: 18, pagesSkipped: 4 });
+    expect(copy.title).toBe("No fixes found");
+    expect(copy.body).toContain("18 pages");
+    expect(copy.body).toContain("4 pages did not return a 2xx response");
   });
 });

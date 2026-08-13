@@ -4,6 +4,7 @@ import { OnPageService } from "@/server/features/onpage/services/OnPageService";
 import { OnPageAiService } from "@/server/features/onpage/services/OnPageAiService";
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { requireProjectContext } from "@/serverFunctions/middleware";
+import { MAX_AI_REWRITE_PER_CLICK } from "@/shared/onpage-limits";
 
 const projectScopedSchema = z.object({ projectId: z.string().min(1) });
 
@@ -13,9 +14,12 @@ const setStatusSchema = z.object({
   status: z.enum(["pending", "approved", "excluded"]),
 });
 
-const rewriteSchema = z.object({
+/** Exported for the test that pins this bound to the one the button applies:
+ *  the two disagreeing is the whole defect, and a literal here is how they got
+ *  to disagree in the first place. */
+export const rewriteSchema = z.object({
   projectId: z.string().min(1),
-  ids: z.array(z.string().min(1)).min(1).max(25),
+  ids: z.array(z.string().min(1)).min(1).max(MAX_AI_REWRITE_PER_CLICK),
 });
 
 /** Brand name for title suffixes: the project's own name, when it has one. */

@@ -7,8 +7,8 @@ import { toast } from "sonner";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
-  aiRewritableIds,
   clicksByPage,
+  describeEmptyFixes,
   elementProgress,
   focusFirst,
   groupByPage,
@@ -18,6 +18,13 @@ import {
   type FixRow,
   type OnPageStatus,
 } from "@/client/features/onpage/onPageModel";
+import {
+  aiRewriteHint,
+  aiRewriteLabel,
+  aiRewriteResultMessage,
+  aiRewriteSelection,
+  type AiRewriteSelection,
+} from "@/client/features/onpage/aiRewrite";
 import { ProjectProfileCard } from "@/client/features/profiles/ProjectProfileCard";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
@@ -126,10 +133,10 @@ export function OnPageFixesPage({
   });
 
   const rewriteMutation = useMutation({
-    mutationFn: (ids: string[]) =>
-      rewriteOnPageFixes({ data: { projectId, ids } }),
-    onSuccess: (result) => {
-      toast.success(`Rewrote ${result.rewritten} suggestions with AI.`);
+    mutationFn: (selection: AiRewriteSelection) =>
+      rewriteOnPageFixes({ data: { projectId, ids: selection.ids } }),
+    onSuccess: (result, selection) => {
+      toast.success(aiRewriteResultMessage(result.rewritten, selection));
       void invalidate();
     },
     onError: (error) =>
@@ -155,7 +162,9 @@ export function OnPageFixesPage({
     () => tiles.map((tile) => tile.element),
     [tiles],
   );
-  const rewritableCount = useMemo(() => aiRewritableIds(rows).length, [rows]);
+  // Capped to what the server accepts in one metered call, so the button can
+  // name the batch it will actually send instead of failing validation.
+  const rewrite = useMemo(() => aiRewriteSelection(rows), [rows]);
 
   const counts = {
     all: summary.total,
@@ -163,6 +172,14 @@ export function OnPageFixesPage({
     approved: summary.approved,
     excluded: summary.excluded,
   };
+
+  // An empty list after a generate has two very different meanings — "nothing
+  // needed fixing" and "nothing was reachable to look at" — and only the counts
+  // the pass returns tell them apart.
+  const emptyResult =
+    rows.length === 0 && generateMutation.data?.added === 0
+      ? describeEmptyFixes(generateMutation.data)
+      : null;
 
   if (fixesQuery.isPending) {
     return (
@@ -199,21 +216,21 @@ export function OnPageFixesPage({
             </p>
           </div>
           <div className="flex items-center gap-2">
-            {rewritableCount > 0 ? (
+            {rewrite.ids.length > 0 ? (
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
                 disabled={rewriteMutation.isPending}
-                onClick={() => rewriteMutation.mutate(aiRewritableIds(rows))}
-                title="Rewrite pending titles and descriptions with AI"
+                onClick={() => rewriteMutation.mutate(rewrite)}
+                title={aiRewriteHint(rewrite)}
               >
                 {rewriteMutation.isPending ? (
                   <CircleNotch className="size-4 animate-spin" />
                 ) : (
                   <MagicWand className="size-4" />
                 )}
-                AI rewrite ({rewritableCount})
+                {aiRewriteLabel(rewrite)}
               </Button>
             ) : null}
             {rows.length > 0 ? (
@@ -269,14 +286,11 @@ export function OnPageFixesPage({
               Open Site Audit
             </Link>
           </div>
-        ) : rows.length === 0 && generateMutation.data?.added === 0 ? (
+        ) : emptyResult ? (
           <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
-            <p className="text-sm font-medium">No fixes found</p>
+            <p className="text-sm font-medium">{emptyResult.title}</p>
             <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/60">
-              The latest audit was analyzed successfully and did not produce any
-              title, meta, heading, or alt-text fixes. Query-informed title
-              suggestions also depend on Search Console rows, which come back
-              capped, so a page ranking further down may still have one.
+              {emptyResult.body}
             </p>
           </div>
         ) : rows.length === 0 ? (

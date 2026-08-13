@@ -204,15 +204,66 @@ export function pendingIds(rows: FixRow[]): string[] {
   return rows.filter((row) => row.status === "pending").map((row) => row.id);
 }
 
+/** Rows the AI rewrite pass can target: pending title/meta only. Exported for
+ *  `aiRewrite.ts`, which decides how many of them one metered click sends. */
+export function isAiRewritable(row: FixRow): boolean {
+  return (
+    row.status === "pending" &&
+    (row.element === "title" || row.element === "meta")
+  );
+}
+
 /** Ids the AI rewrite pass should target: pending title/meta only. */
 export function aiRewritableIds(rows: FixRow[]): string[] {
-  return rows
-    .filter(
-      (row) =>
-        row.status === "pending" &&
-        (row.element === "title" || row.element === "meta"),
-    )
-    .map((row) => row.id);
+  return rows.filter(isAiRewritable).map((row) => row.id);
+}
+
+function pageCount(count: number): string {
+  return `${count} ${count === 1 ? "page" : "pages"}`;
+}
+
+// Not exported: the page reads this shape by inference from
+// `describeEmptyFixes`, so naming it across the boundary would only add a
+// second declaration to keep in step with the function that builds it.
+type EmptyFixesCopy = { title: string; body: string };
+
+/**
+ * What an empty fix list means, given what the generate pass actually looked at.
+ *
+ * "No fixes found" and "nothing was reachable to look at" produce the identical
+ * empty list, and only `pagesAnalyzed`/`pagesSkipped` tell them apart. Calling
+ * the second one a clean audit tells an agency their pages are fine when not
+ * one of them was read — the same failure the client report guards against in
+ * `describeOnPageStatus`.
+ *
+ * `pagesSkipped` supports exactly one claim: those pages returned no 2xx, so
+ * their content was never judged. It does not say why any individual URL did,
+ * so nothing here names a cause for one.
+ */
+export function describeEmptyFixes(result: {
+  pagesAnalyzed: number;
+  pagesSkipped: number;
+}): EmptyFixesCopy {
+  if (result.pagesAnalyzed === 0 && result.pagesSkipped > 0) {
+    return {
+      title: "No pages could be analyzed",
+      body: `The crawl recorded ${pageCount(result.pagesSkipped)} and none returned a 2xx response, so no page content was analyzed. This is not a clean bill of health — it is not evidence your pages are clean. Check that the site is reachable, re-run the site audit, then generate fixes again.`,
+    };
+  }
+  if (result.pagesAnalyzed === 0) {
+    return {
+      title: "No pages to analyze",
+      body: "The latest completed audit recorded no crawled pages, so there was nothing to analyze. This is not a clean bill of health — run the site audit again, then generate fixes.",
+    };
+  }
+  const skipped =
+    result.pagesSkipped > 0
+      ? ` ${pageCount(result.pagesSkipped)} did not return a 2xx response and so went unanalyzed.`
+      : "";
+  return {
+    title: "No fixes found",
+    body: `The last crawl analyzed ${pageCount(result.pagesAnalyzed)} and found no title, meta, heading, or alt-text fixes to make.${skipped} Query-informed title suggestions also depend on Search Console rows, which come back capped, so a page ranking further down may still have one.`,
+  };
 }
 
 /** Prose about the business. Alt text describes an image, so the profile has

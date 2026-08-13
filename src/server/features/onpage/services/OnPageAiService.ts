@@ -10,9 +10,12 @@ import {
   buildProfileBlock,
   type RewriteProfile,
 } from "@/server/lib/onpage/promptProfile";
+import { MAX_AI_REWRITE_PER_CLICK } from "@/shared/onpage-limits";
 
-// Never rewrite more than this in one click — one OpenRouter call, bounded cost.
-const MAX_REWRITE = 25;
+// Never rewrite more than this in one click — one OpenRouter call, bounded
+// cost. The same constant bounds the input schema and the button's selection,
+// so a click can no longer ask for more than this path will do.
+const MAX_REWRITE = MAX_AI_REWRITE_PER_CLICK;
 
 const rewriteSchema = z.object({
   items: z.array(
