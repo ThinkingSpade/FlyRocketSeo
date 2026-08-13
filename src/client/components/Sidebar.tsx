@@ -19,6 +19,7 @@ import {
   getProjectNavGroups,
 } from "@/client/navigation/items";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
+import { WorkspaceSwitcher } from "@/client/features/workspaces/WorkspaceSwitcher";
 import { SamSidebarPanel } from "@/client/features/sam/SamSidebarPanel";
 import { DataforseoBalanceIndicator } from "@/client/components/DataforseoBalanceIndicator";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
@@ -148,7 +149,13 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
         ) : null}
       </div>
 
+      {/* Workspace above project, because that is the containment order — the
+          project switcher below only ever lists the current workspace's
+          projects. The workspace control renders nothing for the usual account
+          with a single workspace, which is why it shares this block rather than
+          owning one: an empty wrapper would leave its padding behind. */}
       <div className="px-3 pb-1">
+        <WorkspaceSwitcher onCloseDrawer={onNavigate} />
         <ProjectSwitcher
           activeProjectId={projectId}
           onCloseDrawer={onNavigate}

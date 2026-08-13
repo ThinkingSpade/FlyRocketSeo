@@ -34,9 +34,16 @@ type AuditVerdictInput = {
  * The issue keys On-Page Fixes can actually resolve. Its generator produces
  * exactly one element per row -- `"title" | "meta" | "h1" | "alt"`
  * (`onpage/onPageModel.ts`) -- so these four map onto it and the rest
- * (broken pages, thin content) do not: those are edits to the page itself,
- * not to a tag this app rewrites. An action only links where the destination
- * can genuinely finish the job.
+ * (broken pages, redirecting pages, thin content) do not: those are edits to
+ * the page itself, not to a tag this app rewrites. An action only links where
+ * the destination can genuinely finish the job.
+ *
+ * These four keys are safe to link because `auditIssues.ts` only ever puts a
+ * page that served a 2xx document under them -- a URL that answered 4xx/5xx,
+ * never answered, or only redirected is reported under `broken-page` or
+ * `redirect-page` and is kept out of all four. Without that upstream
+ * exclusion this set would offer an AI title rewrite for a URL with no title
+ * to rewrite, because an empty crawl row matches every one of them.
  */
 export const ON_PAGE_FIXABLE = new Set([
   "missing-title",
@@ -178,6 +185,11 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
  *  not (yet) recognize, rather than a guess at a fix for it. */
 const ISSUE_FIXES: Record<string, string> = {
   "broken-page": "Restore the page or 301-redirect it to a working URL.",
+  // Not "remove the redirect": the redirect is usually right, and the crawl
+  // cannot tell an intentional one from an accident. What is always worth
+  // doing is not routing readers through it.
+  "redirect-page":
+    "Point internal links, sitemap entries and canonicals at the destination URL so the hop is not on the path to your content.",
   "missing-title":
     "Add a unique, descriptive <title> tag (roughly 50-60 characters).",
   "missing-meta-description":

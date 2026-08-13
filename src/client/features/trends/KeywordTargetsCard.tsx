@@ -35,6 +35,7 @@ export function KeywordTargetsCard({
   const failure = describePaidFailure({
     reason: targets.failureReason,
     domain: domain ?? "your site",
+    hasFreeRows: targets.rows.length > 0,
   });
 
   return (

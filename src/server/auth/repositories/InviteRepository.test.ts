@@ -16,11 +16,7 @@ const mocks = vi.hoisted(() => ({
     column,
     value,
   })),
-  inArray: vi.fn((column: unknown, value: unknown) => ({
-    type: "inArray",
-    column,
-    value,
-  })),
+  or: vi.fn((...conditions: unknown[]) => ({ type: "or", conditions })),
 }));
 
 vi.mock("@/db", () => ({
@@ -49,7 +45,7 @@ vi.mock("drizzle-orm", () => ({
   desc: mocks.desc,
   eq: mocks.eq,
   gt: mocks.gt,
-  inArray: mocks.inArray,
+  or: mocks.or,
 }));
 
 import { InviteRepository } from "./InviteRepository";
@@ -116,15 +112,56 @@ describe("InviteRepository", () => {
       "invitation.email",
       "team@example.com",
     );
-    expect(mocks.inArray).toHaveBeenCalledWith("invitation.status", [
-      "pending",
-      "accepted",
-    ]);
+    expect(mocks.eq).toHaveBeenCalledWith("invitation.status", "accepted");
+    expect(mocks.eq).toHaveBeenCalledWith("invitation.status", "pending");
     expect(mocks.gt).toHaveBeenCalledWith(
       "invitation.expiresAt",
       expect.any(Date),
     );
     expect(limit).toHaveBeenCalledWith(1);
+  });
+
+  it("does not expire an invitation that was already accepted", async () => {
+    // A teammate who joined weeks ago has a user row, credentials and a
+    // membership. Filtering `accepted` on `expiresAt > now` locked them out
+    // the day that timestamp passed, and the app told them the deployment was
+    // private. Access is withdrawn by cancelling or removing the membership,
+    // not by a date quietly going by.
+    const limit = vi.fn().mockResolvedValue([]);
+    const orderBy = vi.fn(() => ({ limit }));
+    const where = vi.fn(() => ({ orderBy }));
+    const from = vi.fn(() => ({ where }));
+    mocks.select.mockReturnValue({ from });
+
+    await InviteRepository.findActiveInviteByEmail("team@example.com");
+
+    // The accepted branch is the bare status check, with no expiry beside it.
+    expect(mocks.or).toHaveBeenCalledWith(
+      { type: "eq", column: "invitation.status", value: "accepted" },
+      expect.anything(),
+    );
+  });
+
+  it("still lets an unaccepted invitation go stale", async () => {
+    const limit = vi.fn().mockResolvedValue([]);
+    const orderBy = vi.fn(() => ({ limit }));
+    const where = vi.fn(() => ({ orderBy }));
+    const from = vi.fn(() => ({ where }));
+    mocks.select.mockReturnValue({ from });
+
+    await InviteRepository.findActiveInviteByEmail("team@example.com");
+
+    // The pending branch keeps its expiry: an invitation nobody took up
+    // SHOULD stop granting access. Asserted as a whole call rather than by
+    // position — arguments evaluate inner-first, so this is not the last one.
+    expect(mocks.and).toHaveBeenCalledWith(
+      { type: "eq", column: "invitation.status", value: "pending" },
+      expect.anything(),
+    );
+    expect(mocks.gt).toHaveBeenCalledWith(
+      "invitation.expiresAt",
+      expect.any(Date),
+    );
   });
 
   it("returns null when no active invite matches", async () => {

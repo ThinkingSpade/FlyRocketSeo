@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   auditRowNote,
   buildAuditVerdict,
+  ON_PAGE_FIXABLE,
   type AuditIssueSummary,
 } from "./audit";
 
@@ -263,6 +264,62 @@ describe("buildAuditVerdict", () => {
   });
 });
 
+describe("a redirecting page in the verdict", () => {
+  const issues: AuditIssueSummary[] = [
+    {
+      key: "redirect-page",
+      label: "Redirecting page (3xx status)",
+      pageCount: 4,
+      severity: "low",
+    },
+  ];
+
+  it("reads correctly where the verdict quotes the label verbatim", () => {
+    const verdict = buildAuditVerdict({
+      pagesCrawled: 40,
+      issues,
+      topPagePaths: ["/old", "/live"],
+      pathsByIssue: { "redirect-page": ["/old", "/x", "/y", "/z"] },
+    });
+
+    expect(verdict.read).toBe(
+      '"Redirecting page (3xx status)" affects 1 of the 2 pages earning the most clicks.',
+    );
+    expect(verdict.actions.map((action) => action.label)).toEqual([
+      'Fix "Redirecting page (3xx status)" on 1 high-traffic page',
+    ]);
+  });
+
+  it("does not send a redirecting URL to the On-Page rewrite tab", () => {
+    // ResultsView links an issue row to On-Page Fixes only when its key is in
+    // ON_PAGE_FIXABLE, and that tab's rewrite path is metered. There is no
+    // title, meta, H1 or alt text on a URL that only redirects to rewrite.
+    expect(ON_PAGE_FIXABLE.has("redirect-page")).toBe(false);
+
+    const verdict = buildAuditVerdict({
+      pagesCrawled: 40,
+      issues,
+      topPagePaths: ["/old"],
+      pathsByIssue: { "redirect-page": ["/old"] },
+    });
+
+    expect(verdict.actions[0].to).toBeUndefined();
+  });
+
+  it("does not let a redirect alone turn the verdict bad", () => {
+    // A 3xx is a working site behaving correctly; only a high-severity issue
+    // may read as "bad", and `broken-page` is the one that carries that.
+    const verdict = buildAuditVerdict({
+      pagesCrawled: 40,
+      issues,
+      topPagePaths: ["/old"],
+      pathsByIssue: { "redirect-page": ["/old"] },
+    });
+
+    expect(verdict.tone).toBe("mixed");
+  });
+});
+
 describe("auditRowNote", () => {
   it("gives the literal fix for a recognized issue key", () => {
     expect(auditRowNote("missing-title")).toBe(
@@ -273,6 +330,9 @@ describe("auditRowNote", () => {
     );
     expect(auditRowNote("broken-page")).toBe(
       "Restore the page or 301-redirect it to a working URL.",
+    );
+    expect(auditRowNote("redirect-page")).toBe(
+      "Point internal links, sitemap entries and canonicals at the destination URL so the hop is not on the path to your content.",
     );
   });
 

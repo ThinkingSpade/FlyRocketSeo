@@ -1,11 +1,12 @@
 import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
-import { ArrowsSplit, Trophy } from "@phosphor-icons/react";
+import { ArrowsSplit, Graph, Trophy } from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   scoreCannibalization,
   type CannibalizationSeverity,
 } from "@/client/features/link-insights/cannibalizationSeverity";
+import { linkOpportunitiesHandoff } from "@/client/features/link-insights/cannibalizationHandoff";
 import {
   toPath,
   useLinkInsights,
@@ -160,82 +161,105 @@ export function CannibalizationPage({
         </div>
       ) : null}
 
-      {rows.map((row) => (
-        <div
-          key={row.query}
-          className={`relative flex flex-col rounded-xl border bg-base-100 ${
-            focus && row.query.toLowerCase() === focus
-              ? "border-primary"
-              : "border-base-300"
-          }`}
-        >
-          <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <span className="inline-flex items-center gap-2">
-                <Badge variant="outline">{row.query}</Badge>
-                <span title={SEVERITY_BADGE[row.severity].hint}>
-                  <Badge variant={SEVERITY_BADGE[row.severity].variant}>
-                    {SEVERITY_BADGE[row.severity].label}
-                  </Badge>
+      {rows.map((row) => {
+        // Reading a card tells you these pages split a query; the next move is
+        // to pick a winner and point internal links at it, which is the one
+        // question Link Opportunities answers. It takes the query as `?q=`, so
+        // the card can hand its own over instead of leaving the user to retype
+        // it into a list of up to 50.
+        const linksHandoff = linkOpportunitiesHandoff(projectId, row.query);
+        return (
+          <div
+            key={row.query}
+            className={`relative flex flex-col rounded-xl border bg-base-100 ${
+              focus && row.query.toLowerCase() === focus
+                ? "border-primary"
+                : "border-base-300"
+            }`}
+          >
+            <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="inline-flex items-center gap-2">
+                  <Badge variant="outline">{row.query}</Badge>
+                  <span title={SEVERITY_BADGE[row.severity].hint}>
+                    <Badge variant={SEVERITY_BADGE[row.severity].variant}>
+                      {SEVERITY_BADGE[row.severity].label}
+                    </Badge>
+                  </span>
+                  {linksHandoff ? (
+                    <Link
+                      {...linksHandoff}
+                      className={buttonVariants({
+                        variant: "ghost",
+                        size: "xs",
+                      })}
+                      title={`Find internal links to point at one winner for "${row.query}"`}
+                    >
+                      <Graph className="size-3.5" />
+                      Link opportunities
+                    </Link>
+                  ) : null}
                 </span>
-              </span>
-              <span className="text-xs text-base-content/50 tabular-nums">
-                {Math.round(row.splitShare * 100)}% of clicks outside the
-                top-clicked page · {row.totalImpressions.toLocaleString()}{" "}
-                impressions · {row.totalClicks.toLocaleString()} clicks ·{" "}
-                {row.pages.length} ranking pages
-              </span>
-            </div>
+                <span className="text-xs text-base-content/50 tabular-nums">
+                  {Math.round(row.splitShare * 100)}% of clicks outside the
+                  top-clicked page · {row.totalImpressions.toLocaleString()}{" "}
+                  impressions · {row.totalClicks.toLocaleString()} clicks ·{" "}
+                  {row.pages.length} ranking pages
+                </span>
+              </div>
 
-            <div className="overflow-x-auto">
-              <Table>
-                <Table.Header>
-                  <Table.Row>
-                    <Table.Head>Page</Table.Head>
-                    <Table.Head className="text-right">Position</Table.Head>
-                    <Table.Head className="text-right">Clicks</Table.Head>
-                    <Table.Head className="text-right">Impressions</Table.Head>
-                  </Table.Row>
-                </Table.Header>
-                <Table.Body>
-                  {row.pages.map((page) => (
-                    <Table.Row key={page.page}>
-                      <Table.Cell className="max-w-md">
-                        <span className="inline-flex items-center gap-1.5">
-                          <a
-                            href={page.page}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="line-clamp-1 hover:underline"
-                          >
-                            {toPath(page.page)}
-                          </a>
-                          {page.isWinner ? (
-                            <span title="Best-RANKING page for this query, and so the likely consolidation target if these really do compete. Not necessarily the page earning the most clicks.">
-                              <Badge variant="success">
-                                <Trophy className="size-3" /> best rank
-                              </Badge>
-                            </span>
-                          ) : null}
-                        </span>
-                      </Table.Cell>
-                      <Table.Cell className="text-right tabular-nums">
-                        {Math.round(page.position)}
-                      </Table.Cell>
-                      <Table.Cell className="text-right tabular-nums">
-                        {page.clicks.toLocaleString()}
-                      </Table.Cell>
-                      <Table.Cell className="text-right tabular-nums">
-                        {page.impressions.toLocaleString()}
-                      </Table.Cell>
+              <div className="overflow-x-auto">
+                <Table>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.Head>Page</Table.Head>
+                      <Table.Head className="text-right">Position</Table.Head>
+                      <Table.Head className="text-right">Clicks</Table.Head>
+                      <Table.Head className="text-right">
+                        Impressions
+                      </Table.Head>
                     </Table.Row>
-                  ))}
-                </Table.Body>
-              </Table>
+                  </Table.Header>
+                  <Table.Body>
+                    {row.pages.map((page) => (
+                      <Table.Row key={page.page}>
+                        <Table.Cell className="max-w-md">
+                          <span className="inline-flex items-center gap-1.5">
+                            <a
+                              href={page.page}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="line-clamp-1 hover:underline"
+                            >
+                              {toPath(page.page)}
+                            </a>
+                            {page.isWinner ? (
+                              <span title="Best-RANKING page for this query, and so the likely consolidation target if these really do compete. Not necessarily the page earning the most clicks.">
+                                <Badge variant="success">
+                                  <Trophy className="size-3" /> best rank
+                                </Badge>
+                              </span>
+                            ) : null}
+                          </span>
+                        </Table.Cell>
+                        <Table.Cell className="text-right tabular-nums">
+                          {Math.round(page.position)}
+                        </Table.Cell>
+                        <Table.Cell className="text-right tabular-nums">
+                          {page.clicks.toLocaleString()}
+                        </Table.Cell>
+                        <Table.Cell className="text-right tabular-nums">
+                          {page.impressions.toLocaleString()}
+                        </Table.Cell>
+                      </Table.Row>
+                    ))}
+                  </Table.Body>
+                </Table>
+              </div>
             </div>
           </div>
-        </div>
-      ))}
+        );
+      })}
 
       {data?.connected ? (
         <p className="text-xs text-base-content/40">
