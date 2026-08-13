@@ -110,6 +110,31 @@ const STRONG_OVERLAP_SHARE = 0.5;
  *  like coincidence. */
 const WEAK_OVERLAP_COUNT = 5;
 
+/**
+ * The Keyword Gap handoff, as a search UPDATER rather than a plain object.
+ *
+ * Every action that uses this renders on the Competitors page and navigates to
+ * another of its own tabs, where `target` is URL state. `functionalUpdate`
+ * (@tanstack/router-core) replaces the entire search when handed an object and
+ * merges only when handed a function -- so `search: { tab: "gap", competitor }`
+ * filled in the rival while dropping the user's own domain, and
+ * `useKeywordGapQuery` (`enabled: ... && target !== "" && competitor !== ""`)
+ * then never ran.
+ *
+ * `page` is reset for the same reason the page's own Compare-competitor row
+ * action resets it (`CompetitorsPage.onCompareCompetitor`): the gap tab is a
+ * different data set, so a page number carried over from the competitor list
+ * would put the first metered gap call on a page nobody asked for.
+ */
+function keywordGapSearch(competitor: string) {
+  return (previous: Record<string, unknown>) => ({
+    ...previous,
+    tab: "gap" as const,
+    competitor,
+    page: 1,
+  });
+}
+
 function formatCount(value: number): string {
   return value.toLocaleString();
 }
@@ -150,7 +175,7 @@ function buildDomainModeVerdict(
               to: "/p/$projectId/competitors",
               // The gap tab this label names, already pointed at this rival --
               // `competitor` and `tab` are both in `competitorsSearchSchema`.
-              search: { tab: "gap" as const, competitor: domain },
+              search: keywordGapSearch(domain),
             },
             evidence: `${formatCount(intersections)} shared keywords, ${pct}% of ${domain}'s own ${formatCount(organicKeywords)}`,
             weight: 100,
@@ -175,7 +200,7 @@ function buildDomainModeVerdict(
             to: "/p/$projectId/competitors",
             // The gap tab this label names, already pointed at this rival --
             // `competitor` and `tab` are both in `competitorsSearchSchema`.
-            search: { tab: "gap" as const, competitor: domain },
+            search: keywordGapSearch(domain),
           },
           evidence: `${formatCount(intersections)} shared keywords`,
           weight: 80,
@@ -232,7 +257,7 @@ function buildSerpModeVerdict(
               to: "/p/$projectId/competitors",
               // The gap tab this label names, already pointed at this rival --
               // `competitor` and `tab` are both in `competitorsSearchSchema`.
-              search: { tab: "gap" as const, competitor: domain },
+              search: keywordGapSearch(domain),
             },
             evidence: `Outranks you on ${formatCount(beatsYouCount)} of your ${formatCount(seedSize)} tracked keywords, ${pct}%`,
             weight: 100,
@@ -257,7 +282,7 @@ function buildSerpModeVerdict(
             to: "/p/$projectId/competitors",
             // The gap tab this label names, already pointed at this rival --
             // `competitor` and `tab` are both in `competitorsSearchSchema`.
-            search: { tab: "gap" as const, competitor: domain },
+            search: keywordGapSearch(domain),
           },
           evidence: `Outranks you on ${formatCount(beatsYouCount)} of your tracked keywords`,
           weight: 80,

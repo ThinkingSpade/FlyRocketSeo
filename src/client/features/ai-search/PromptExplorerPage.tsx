@@ -35,12 +35,9 @@ import {
   promptExplorerRunKey,
 } from "@/client/features/ai-search/activeRun";
 import { useProject } from "@/client/hooks/useProjectDomain";
-import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { defaultHighlightBrand } from "@/client/features/ai-search/promptExplorerBrand";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
-import {
-  buildPromptStarters,
-  domainStem,
-} from "@/client/features/search-performance/projectGscInsights";
+import { buildPromptStarters } from "@/client/features/search-performance/projectGscInsights";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
 
@@ -96,16 +93,7 @@ function PromptExplorerPageInner({
     useState<PromptExplorerFormValues | null>(null);
   const project = useProject(projectId);
   const { profile } = useProjectProfile(projectId);
-  // The profile's curated brand names first: this string is what every model's
-  // answer is scored against, so a client trading under a name that is neither
-  // their project label nor their domain stem was marked "no mention" even
-  // when the answer named them -- a false negative on this tab's whole
-  // promise. Falls back to the project name, then the stem, exactly as before.
-  const defaultBrand =
-    resolveBrandTerms(profile, project?.domain ?? null)[0] ??
-    (project?.name.trim() && project.name.toLowerCase() !== "default"
-      ? project.name.trim()
-      : (domainStem(project?.domain) ?? ""));
+  const defaultBrand = defaultHighlightBrand(profile, project);
   const brandWasEdited = useRef(Boolean(urlState.highlightBrand));
   const run = useAuthorizedRun(promptExplorerRunKey(projectId, form));
   const gscQuery = useQuery({

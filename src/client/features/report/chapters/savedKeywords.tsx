@@ -315,7 +315,11 @@ function describeQuickWins(
   coverage: SavedKeywordsCoverage,
   fitStatus: SavedKeywordsFitStatus,
 ): string | null {
-  const { quickWins, offTarget } = portfolio;
+  // `offTargetQuickWins`, never `offTarget`: the sentence below says these were
+  // "left out of that count", and only keywords that cleared every other bar
+  // ever were. A wrong-customer keyword at KD 80 was never a candidate, so
+  // counting it here tells the client we filtered work we never filtered.
+  const { quickWins, offTargetQuickWins: offTarget } = portfolio;
   if (quickWins === 0) return null;
   if (fitStatus === "unavailable") {
     return "We could not read this project's business profile while this report was generated, so the low-difficulty shortlist is not counted here: that count sets aside keywords aimed at the wrong customer, and without the profile we cannot tell which those are.";

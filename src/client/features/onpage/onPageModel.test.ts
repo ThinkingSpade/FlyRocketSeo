@@ -3,6 +3,7 @@ import {
   aiRewritableIds,
   clicksByPage,
   elementProgress,
+  focusFirst,
   groupByPage,
   offOfferSuggestions,
   pageTrafficKey,
@@ -137,6 +138,57 @@ describe("groupByPage", () => {
     expect(groups).toHaveLength(1);
     expect(groups[0].path).toBe("/b");
     expect(groups[0].pendingIds).toEqual([]);
+  });
+});
+
+describe("focusFirst", () => {
+  // The order groupByPage hands over: /b earns the clicks, /a does not.
+  const groups = [
+    { url: "https://x.com/b" },
+    { url: "https://x.com/a" },
+    { url: "https://x.com/c" },
+  ];
+
+  it("leads with the page an inbound link asked about", () => {
+    expect(focusFirst(groups, "https://x.com/a").map((g) => g.url)).toEqual([
+      "https://x.com/a",
+      "https://x.com/b",
+      "https://x.com/c",
+    ]);
+  });
+
+  it("matches a Search Console page URL against the crawled one", () => {
+    // What `?u=` actually carries: GSC reports the canonical property URL, so
+    // the scheme, host case, www prefix and trailing slash can all differ from
+    // the crawled URL. A raw `===` matched none of these and the handoff from
+    // the CTR table silently did nothing.
+    for (const focus of [
+      "https://www.x.com/a",
+      "http://x.com/a/",
+      "https://X.com/A",
+    ]) {
+      expect(focusFirst(groups, focus)[0].url).toBe("https://x.com/a");
+    }
+  });
+
+  it("keeps the traffic order underneath it", () => {
+    expect(focusFirst(groups, "https://x.com/c").map((g) => g.url)).toEqual([
+      "https://x.com/c",
+      "https://x.com/b",
+      "https://x.com/a",
+    ]);
+  });
+
+  it("changes nothing without a focus, or when the page has no fixes", () => {
+    expect(focusFirst(groups, null)).toEqual(groups);
+    expect(focusFirst(groups, "")).toEqual(groups);
+    expect(
+      focusFirst(groups, "https://x.com/absent").map((g) => g.url),
+    ).toEqual(groups.map((g) => g.url));
+  });
+
+  it("sorts, never filters -- the other pages are the context", () => {
+    expect(focusFirst(groups, "https://x.com/a")).toHaveLength(groups.length);
   });
 });
 

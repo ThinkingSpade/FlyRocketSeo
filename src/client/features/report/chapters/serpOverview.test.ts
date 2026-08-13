@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 /**
  * The server-function modules pull in the D1 provider, which imports
@@ -43,6 +43,37 @@ import {
 
 const GENERATED_AT = "2026-08-11T00:00:00.000Z";
 
+/**
+ * The chapter dates a saved lookup on the READER's calendar (see `describeAge`
+ * — a 9pm Chicago lookup used to print as tomorrow, dated off `getUTCDate()`),
+ * so every exact-date assertion below would otherwise read differently on
+ * every machine. Pin one zone for the file, and a negative-offset one on
+ * purpose: in UTC the local and UTC calendar days never diverge, and a
+ * regression back to the UTC getters would pass unnoticed.
+ */
+const FILE_TZ = "America/Chicago";
+const systemTz = process.env.TZ;
+beforeAll(() => {
+  process.env.TZ = FILE_TZ;
+});
+afterAll(() => {
+  if (systemTz == null) delete process.env.TZ;
+  else process.env.TZ = systemTz;
+});
+
+/** Read a value with the clock in `zone`. Node re-reads `TZ` per call, so this
+ *  is enough to see the same stored instant through another reader's calendar. */
+function inTimeZone<T>(zone: string, read: () => T): T {
+  const previous = process.env.TZ;
+  process.env.TZ = zone;
+  try {
+    return read();
+  } finally {
+    if (previous == null) delete process.env.TZ;
+    else process.env.TZ = previous;
+  }
+}
+
 const READ_FAILED =
   "The saved search-results lookup could not be read while this report was generated — that request failed rather than returning nothing.";
 const NEVER_RUN =
@@ -80,6 +111,20 @@ function run(overrides: Partial<SerpOverviewRun> = {}): SerpOverviewRun {
     paaQuestions: ["How much does an emergency plumber cost?"],
     serpFeatures: [{ type: "people_also_ask", count: 4 }],
     ...overrides,
+  };
+}
+
+/** One saved listing, for the cases where only rank and domain matter. */
+function listing(
+  rank: number | null,
+  domain: string | null,
+): SerpOverviewRun["results"][number] {
+  return {
+    rank,
+    title: domain ?? "Untitled result",
+    url: domain == null ? null : `https://${domain}/page`,
+    domain,
+    domainEtv: null,
   };
 }
 
@@ -172,8 +217,11 @@ describe("buildserpOverviewChapter", () => {
   });
 
   it("drops a lookup older than the 90-day payload window, with its date", () => {
+    // Midday UTC: the instant this asserts a sentence about is the 5th on both
+    // calendars, so the wording below pins the sentence rather than the zone.
+    // Which calendar the day comes from is pinned separately, below.
     const { pages, omissions } = collect(
-      data({ run: run({ fetchedAt: "2026-01-05T00:00:00.000Z" }) }),
+      data({ run: run({ fetchedAt: "2026-01-05T12:00:00.000Z" }) }),
     );
     expect(pages).toEqual([]);
     expect(omissions[0].reason).toBe(
@@ -246,6 +294,128 @@ describe("buildSerpNarrative", () => {
   it("omits the position sentence when the project has no domain", () => {
     const [, opening] = buildSerpNarrative(run(), null, GENERATED_AT);
     expect(opening).not.toContain("Your site");
+  });
+});
+
+/**
+ * Which calendar the lookup's date is read off.
+ *
+ * The rest of the report is dated locally — ClientReportPage formats its
+ * "Generated" foot with `toLocaleDateString`, and citations.tsx moved onto the
+ * same basis — so a chapter dating off `getUTCDate()` could print a lookup as
+ * having happened AFTER the report that contains it.
+ */
+describe("the date the lookup carries", () => {
+  it("dates a late-evening lookup on the reader's day, not the UTC one", () => {
+    // 9pm on 14 July in Chicago is stored as 2026-07-15T02:00:00Z, and printed
+    // as "15 July 2026": a day the client has not lived yet.
+    const [, opening] = buildSerpNarrative(
+      run({ fetchedAt: "2026-07-15T02:00:00.000Z" }),
+      "example.com",
+      GENERATED_AT,
+    );
+    expect(opening).toContain("On 14 July 2026 we looked up");
+    expect(opening).not.toContain("15 July 2026");
+  });
+
+  it("moves the other way for a reader ahead of UTC", () => {
+    // Tokyo is UTC+9, so the same instant is the morning of the 15th there. A
+    // fix that merely subtracted a day would be as wrong as the UTC one.
+    const [, opening] = inTimeZone("Asia/Tokyo", () =>
+      buildSerpNarrative(
+        run({ fetchedAt: "2026-07-14T23:00:00.000Z" }),
+        "example.com",
+        GENERATED_AT,
+      ),
+    );
+    expect(opening).toContain("On 15 July 2026 we looked up");
+  });
+
+  it("keeps the 90-day gate on elapsed time, not on the printed day", () => {
+    // Both instants print as "12 May 2026" for this reader; only the second is
+    // more than 90 × 24 hours before the report was generated. The gate is
+    // r2-cache's retention window, which runs from the moment the payload was
+    // stored, so moving the label onto the local calendar must not move it.
+    const inWindow = "2026-05-13T01:00:00.000Z"; // 89.96 days, and 13 May in UTC
+    const outOfWindow = "2026-05-12T23:00:00.000Z"; // 90.04 days
+
+    const fresh = collect(data({ run: run({ fetchedAt: inWindow }) }));
+    expect(fresh.omissions).toEqual([]);
+    expect(fresh.pages).toHaveLength(1);
+    const [, opening] = buildSerpNarrative(
+      run({ fetchedAt: inWindow }),
+      "example.com",
+      GENERATED_AT,
+    );
+    expect(opening).toContain("On 12 May 2026 we looked up");
+
+    const stale = collect(data({ run: run({ fetchedAt: outOfWindow }) }));
+    expect(stale.pages).toEqual([]);
+    expect(stale.omissions[0].reason).toBe(
+      "The most recent search-results lookup for this project was made on 12 May 2026, too long ago to describe today's results page.",
+    );
+  });
+});
+
+/**
+ * "The top-ranked result was X" is a superlative printed for a paying client,
+ * so it may only come from `rank`, and only when the payload settles it.
+ */
+describe("the top-ranked result", () => {
+  it("reads the claim from rank, not from the order the rows arrived in", () => {
+    const [, , second] = buildSerpNarrative(
+      run({ results: [listing(4, "fourth.com"), listing(1, "first.com")] }),
+      "example.com",
+      GENERATED_AT,
+    );
+    expect(second).toContain("The top-ranked result was first.com.");
+  });
+
+  it("never promotes the runner-up when the first listing has no domain", () => {
+    // `mapSerpOverview` maps `domain: item.domain ?? null`, so the rank-1
+    // organic item can arrive without one. Taking the first row that HAS a
+    // domain then named the #2 site as the top-ranked result.
+    const [, , second] = buildSerpNarrative(
+      run({ results: [listing(1, null), listing(2, "rival.com")] }),
+      "example.com",
+      GENERATED_AT,
+    );
+    expect(second).not.toContain("top-ranked");
+    expect(second).not.toContain("rival.com");
+    expect(second).toContain(
+      "Google returned ordinary listings for this search, shown below.",
+    );
+  });
+
+  it("drops the claim when a listing's position was never recorded", () => {
+    // An unranked row is a gap in the payload, not a position at the bottom:
+    // nothing rules it out as the listing Google actually put first.
+    const [, , second] = buildSerpNarrative(
+      run({ results: [listing(2, "rival.com"), listing(null, "unknown.com")] }),
+      "example.com",
+      GENERATED_AT,
+    );
+    expect(second).not.toContain("top-ranked");
+    expect(second).not.toContain("rival.com");
+  });
+
+  it("drops the claim when two domains tie for the best rank", () => {
+    const [, , second] = buildSerpNarrative(
+      run({ results: [listing(1, "one.com"), listing(1, "two.com")] }),
+      "example.com",
+      GENERATED_AT,
+    );
+    expect(second).not.toContain("top-ranked");
+  });
+
+  it("loses only the sentence, never the sheet, when it cannot be made", () => {
+    const { pages, omissions } = collect(
+      data({
+        run: run({ results: [listing(1, null), listing(2, "rival.com")] }),
+      }),
+    );
+    expect(omissions).toEqual([]);
+    expect(pages).toHaveLength(1);
   });
 });
 

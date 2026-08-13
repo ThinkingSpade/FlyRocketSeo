@@ -1,5 +1,43 @@
 import { describe, expect, it } from "vitest";
+import type { Action } from "../types";
 import { buildCompetitorsVerdict } from "./competitors";
+
+/** An action's `search`, narrowed to the merging-updater form -- a plain
+ *  object would REPLACE the whole search and drop `target` (see
+ *  competitors.test.ts for the full reasoning). */
+function searchUpdater(action: Action) {
+  const search = action.to?.search;
+  if (typeof search !== "function") {
+    throw new TypeError(
+      `"${action.label}" must carry a search updater function; a plain object replaces the entire search`,
+    );
+  }
+  return search;
+}
+
+/** An action with its `search` updater dropped, so `toEqual` can still pin
+ *  every other field exactly (see competitors.test.ts). */
+function withoutSearchUpdater(action: Action) {
+  const { to, ...rest } = action;
+  return { ...rest, to: { to: to?.to } };
+}
+
+const ANALYZED_SEARCH = {
+  target: "acme.com",
+  tab: "competitors" as const,
+  page: 3,
+};
+
+/** The rival added to the user's own target, never substituted for it, on the
+ *  gap tab's first page -- same handoff domain mode makes. */
+function expectKeywordGapHandoff(action: Action, competitor: string) {
+  expect(searchUpdater(action)(ANALYZED_SEARCH)).toStrictEqual({
+    target: "acme.com",
+    tab: "gap",
+    competitor,
+    page: 1,
+  });
+}
 
 /**
  * Serp-mode coverage for buildCompetitorsVerdict, split out of
@@ -67,17 +105,17 @@ describe("buildCompetitorsVerdict (serp mode)", () => {
     expect(verdict.read).toBe(
       "rival-a.com is your closest organic rival, outranking you on 21 of your 40 tracked keywords -- 53%.",
     );
-    expect(verdict.actions).toEqual([
+    expect(verdict.actions.map(withoutSearchUpdater)).toEqual([
       {
         label: "Compare keywords with rival-a.com in the Keyword Gap tab",
         evidence: "Outranks you on 21 of your 40 tracked keywords, 53%",
         weight: 100,
-        to: {
-          to: "/p/$projectId/competitors",
-          search: { tab: "gap", competitor: "rival-a.com" },
-        },
+        to: { to: "/p/$projectId/competitors" },
       },
     ]);
+    // Same regression as domain mode: dropping the user's own target leaves
+    // `useKeywordGapQuery` disabled, so the comparison never runs.
+    expectKeywordGapHandoff(verdict.actions[0], "rival-a.com");
   });
 
   it("picks the candidate with the highest beatsYouCount, not intersections (always null here) or organicKeywords", () => {
@@ -124,17 +162,15 @@ describe("buildCompetitorsVerdict (serp mode)", () => {
     expect(verdict.read).toBe(
       "rival-c.com outranks you on more of your keywords than any other competitor found (6), out of 40 keywords tracked for this run.",
     );
-    expect(verdict.actions).toEqual([
+    expect(verdict.actions.map(withoutSearchUpdater)).toEqual([
       {
         label: "Compare keywords with rival-c.com in the Keyword Gap tab",
         evidence: "Outranks you on 6 of your tracked keywords",
         weight: 80,
-        to: {
-          to: "/p/$projectId/competitors",
-          search: { tab: "gap", competitor: "rival-c.com" },
-        },
+        to: { to: "/p/$projectId/competitors" },
       },
     ]);
+    expectKeywordGapHandoff(verdict.actions[0], "rival-c.com");
   });
 
   it("drops the seed-size clause when seedSize is not provided", () => {

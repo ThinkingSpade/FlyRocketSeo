@@ -225,6 +225,8 @@ export type ListingOnFile = {
   domainNote: string | null;
 };
 
+// Not exported: the chapter gets this type by inference from `listingView`,
+// so naming it across the boundary only creates a second thing to keep in step.
 type ListingView =
   | ListingOnFile
   | { kind: "other"; text: string }
@@ -280,10 +282,24 @@ export function postsView(data: localSeoReportData): PostsView {
   return { kind: "hidden" };
 }
 
-/** Why the listing half has nothing on it, in the order a client can act on:
- *  a failed read first, then an in-flight one, then what the lookup actually
- *  said. */
-function listingReason(data: localSeoReportData, listing: ListingView): string {
+/**
+ * Why the listing half has nothing on it, in the order a client can act on:
+ * a failed read first, then an in-flight one, then what the lookup actually
+ * said.
+ *
+ * Printed in two places, and deliberately the same sentence in both. It is the
+ * listing half of `dropReason` when the chapter is left out, and it is the
+ * paragraph the sheet prints in place of the profile when the chapter was
+ * admitted on posts alone — a single published post used to be enough to earn a
+ * sheet headed "Your Google Business Profile" that held nothing but a posts
+ * table, with the failed lookup stated neither on the sheet nor on the coverage
+ * list. Whether a post happens to exist is not a reason a client hears a
+ * different answer about their profile.
+ */
+export function listingReason(
+  data: localSeoReportData,
+  listing: ListingView,
+): string {
   const failed = describeFailed(readsIn(data.readFailures, ["localBusiness"]));
   if (failed) return failed;
   const pending = describePending(

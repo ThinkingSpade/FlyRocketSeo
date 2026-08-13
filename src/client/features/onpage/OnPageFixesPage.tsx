@@ -10,6 +10,7 @@ import {
   aiRewritableIds,
   clicksByPage,
   elementProgress,
+  focusFirst,
   groupByPage,
   offOfferSuggestions,
   pendingIds,
@@ -139,17 +140,13 @@ export function OnPageFixesPage({
 
   const summary = useMemo(() => summarize(rows), [rows]);
   const tiles = useMemo(() => elementProgress(rows), [rows]);
-  const groups = useMemo(() => {
-    const grouped = groupByPage(rows, filter, pageClicks);
-    if (!focusUrl) return grouped;
-    // Sorted, not filtered: the other pages are the context that makes one
-    // rewrite worth doing before another.
-    return grouped.toSorted((a, b) => {
-      const aHit = a.url === focusUrl ? 0 : 1;
-      const bHit = b.url === focusUrl ? 0 : 1;
-      return aHit - bHit;
-    });
-  }, [rows, filter, pageClicks, focusUrl]);
+  const groups = useMemo(
+    // `focusFirst` matches on the same normalized key the traffic join uses:
+    // `focusUrl` is a Search Console page URL and `group.url` is the crawled
+    // one, so comparing the raw strings made this handoff a no-op.
+    () => focusFirst(groupByPage(rows, filter, pageClicks), focusUrl),
+    [rows, filter, pageClicks, focusUrl],
+  );
   const offOffer = useMemo(
     () => offOfferSuggestions(rows, profile),
     [rows, profile],

@@ -32,14 +32,21 @@ type Mover = Digest["improved"][number];
  * gives as the reason. A read that threw must never print as "never set up".
  */
 
+/** The whole spec, band included: number and kicker print on every sheet, and
+ *  their pairing is an invariant across the report. Taken from the collector
+ *  the builder is handed, so it cannot drift from what a page really carries. */
+type CapturedPage = Parameters<
+  Parameters<typeof buildrankTrackingChapter>[1]["add"]
+>[0];
+
 function collector() {
-  const pages: Array<{ key: string; title: string }> = [];
+  const pages: CapturedPage[] = [];
   const drops: Array<{ title: string; reason: string }> = [];
   return {
     pages,
     drops,
     out: {
-      add: (spec: { key: string; title: string }) => pages.push(spec),
+      add: (spec: CapturedPage) => pages.push(spec),
       drop: (title: string, reason: string) => drops.push({ title, reason }),
     },
   };
@@ -139,6 +146,10 @@ function data(overrides: Partial<ReportData> = {}): ReportData {
     ...overrides,
   };
 }
+
+/** A tracker that gets no sheet: its newest run failed and no earlier one left
+ *  positions, so it drops with its own named reason in the coverage list. */
+const NO_SHEET = { rows: [], lastRunStatus: "failed" };
 
 function build(overrides: Partial<ReportData> = {}) {
   const sink = collector();
@@ -287,6 +298,41 @@ describe("buildrankTrackingChapter", () => {
     });
   });
 
+  it("does not claim a capped tracker was reported when its sheet was dropped", () => {
+    // Two of the three selected trackers have nothing to print, so the coverage
+    // list reads: two named failures, then this line. "The 3 with the most
+    // keywords are reported above" points a client at pages that are not there.
+    const { pages, drops } = build({
+      matchedCount: 5,
+      configs: [
+        config({ configId: "a", ...NO_SHEET }),
+        config({ configId: "b", ...NO_SHEET }),
+        config({ configId: "c", locationLabel: "Canada" }),
+      ],
+    });
+    expect(pages.map((page) => page.key)).toEqual(["rank-tracking-c"]);
+    expect(drops.at(-1)?.reason).toBe(
+      "This project tracks 5 locations; the 3 with the most keywords were selected for this report, and 1 of them is reported above.",
+    );
+    expect(drops.at(-1)?.reason).not.toContain("are reported above");
+  });
+
+  it("does not claim anything was reported when every sheet was dropped", () => {
+    const { pages, drops } = build({
+      matchedCount: 9,
+      configs: [
+        config({ configId: "a", ...NO_SHEET }),
+        config({ configId: "b", ...NO_SHEET }),
+        config({ configId: "c", ...NO_SHEET }),
+      ],
+    });
+    expect(pages).toEqual([]);
+    expect(drops.at(-1)?.reason).toBe(
+      "This project tracks 9 locations; the 3 with the most keywords were selected for this report, and none of them could be reported.",
+    );
+    expect(drops.at(-1)?.reason).not.toContain("reported above");
+  });
+
   it("drops the whole chapter when the project record could not be read", () => {
     const { pages, drops } = build({ projectsError: true, domain: null });
     expect(pages).toEqual([]);
@@ -302,6 +348,27 @@ describe("buildrankTrackingChapter", () => {
     });
     expect(drops).toEqual([]);
     expect(pages).toHaveLength(1);
+  });
+});
+
+describe("the chapter band", () => {
+  /**
+   * Number and kicker print together on every sheet and the pairing is 1:1
+   * across the report — `citations.tsx` reasons from that invariant when
+   * picking its own band. This chapter shipped as "02 Rank tracking" while
+   * `reportChapters.tsx` and `topicClusters.tsx` were printing "02 Content",
+   * so one PDF carried two different kickers under the same number.
+   */
+  it("rides 01/Performance on every sheet, not a second kicker on 02", () => {
+    const { pages } = build({
+      matchedCount: 2,
+      configs: [config({ configId: "a" }), config({ configId: "b" })],
+    });
+    expect(pages).toHaveLength(2);
+    for (const page of pages) {
+      expect([page.number, page.kicker]).toEqual(["01", "Performance"]);
+      expect(page.kicker).not.toBe("Rank tracking");
+    }
   });
 });
 

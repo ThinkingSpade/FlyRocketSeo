@@ -110,6 +110,7 @@ function emptyChapters(): ReportChapterData {
         averageDifficulty: null,
         quickWins: 0,
         offTarget: 0,
+        offTargetQuickWins: 0,
         intentMix: [],
       },
       // Nothing saved, so there is nothing to check against the profile and

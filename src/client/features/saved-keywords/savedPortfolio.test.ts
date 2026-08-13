@@ -75,5 +75,50 @@ describe("computeSavedPortfolio", () => {
     expect(portfolio.averageDifficulty).toBeNull();
     expect(portfolio.intentMix).toEqual([]);
     expect(portfolio.offTarget).toBe(0);
+    expect(portfolio.offTargetQuickWins).toBe(0);
+  });
+
+  it("counts as excluded only the off-target keywords that would have counted", () => {
+    // Both surfaces that read this phrase it as "excluded" from the quick-win
+    // count — the tab's tile and the client report's shortlist sentence. Only
+    // the first row here was ever a candidate: the others fail on difficulty,
+    // on volume, and on having no difficulty score at all, so the profile did
+    // not exclude them from anything.
+    const rows = [
+      row(900, 12, "transactional", "plumber salary"),
+      row(900, 80, "informational", "plumber history"),
+      row(0, 12, "informational", "plumber meme"),
+      row(900, null, "informational", "plumber jokes"),
+    ];
+    const fit = wrongCustomer(
+      "plumber salary",
+      "plumber history",
+      "plumber meme",
+      "plumber jokes",
+    );
+
+    const portfolio = computeSavedPortfolio(rows, fit);
+
+    expect(portfolio.offTarget).toBe(4);
+    expect(portfolio.offTargetQuickWins).toBe(1);
+  });
+
+  it("never reports more excluded than the fit verdict actually cost", () => {
+    // The invariant behind the sentence: removing the verdict must raise
+    // `quickWins` by exactly `offTargetQuickWins`, and by no more.
+    const rows = [
+      row(900, 12, "transactional", "plumber salary"),
+      row(900, 80, "informational", "plumber history"),
+      row(700, 5, "commercial", "emergency plumber"),
+    ];
+    const fit = wrongCustomer("plumber salary", "plumber history");
+
+    const withFit = computeSavedPortfolio(rows, fit);
+    const withoutFit = computeSavedPortfolio(rows);
+
+    expect(withoutFit.quickWins - withFit.quickWins).toBe(
+      withFit.offTargetQuickWins,
+    );
+    expect(withFit.offTargetQuickWins).toBeLessThanOrEqual(withFit.offTarget);
   });
 });

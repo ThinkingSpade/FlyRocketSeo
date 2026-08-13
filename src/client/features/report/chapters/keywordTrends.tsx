@@ -204,7 +204,13 @@ export function usekeywordTrendsReportData(projectId: string) {
     /** The read THREW. Never folded into `connected`. */
     isError: query.isError,
     /** Still in flight, so neither present nor absent. */
-    isPending: query.isLoading,
+    // `isPending`, not `isLoading`. `isLoading` is `isPending && isFetching`,
+    // so a query that is pending but PAUSED -- the ordinary state when the
+    // browser is offline, which is exactly when someone prints a PDF -- reads
+    // as settled with no data, and the drop reason falls through to "Search
+    // Console is not connected for this project". That accuses the agency of
+    // a setup failure on the strength of dropped wifi.
+    isPending: query.isPending,
   };
 }
 

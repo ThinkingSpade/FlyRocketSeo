@@ -31,10 +31,14 @@ function difficultyTone(value: number | null): InsightTone {
  *  profile was in a position to rule anything out. Claiming the count is
  *  fit-aware when no verdict was available would be the same kind of lie the
  *  old "KD under 30 with volume" definition told by omission. */
-function quickWinHint(fitApplied: boolean, offTarget: number): string {
+function quickWinHint(fitApplied: boolean, offTargetQuickWins: number): string {
   if (!fitApplied) return "KD under 30 with volume";
-  if (offTarget === 0) return "Low difficulty, real volume, on-offer";
-  return `Low difficulty, real volume, on-offer · ${offTarget} off-target excluded`;
+  if (offTargetQuickWins === 0) return "Low difficulty, real volume, on-offer";
+  // `offTargetQuickWins`, not `offTarget`: "excluded" names keywords this tile
+  // would otherwise have counted. An off-target keyword at KD 80 was never in
+  // the running, so counting it here credits the profile with a filter it did
+  // not apply -- and inflates the number against the tile beside it.
+  return `Low difficulty, real volume, on-offer · ${offTargetQuickWins} off-target excluded`;
 }
 
 /**
@@ -127,7 +131,7 @@ export function SavedKeywordsPortfolio({
           icon={Target}
           label="Quick wins"
           value={portfolio.quickWins}
-          hint={quickWinHint(fit.size > 0, portfolio.offTarget)}
+          hint={quickWinHint(fit.size > 0, portfolio.offTargetQuickWins)}
           tone={portfolio.quickWins > 0 ? "success" : "neutral"}
         />
       </div>

@@ -173,6 +173,32 @@ export function groupByPage(
     );
 }
 
+/**
+ * Move the page an inbound link asked about to the front, leaving every other
+ * page in the order it arrived in.
+ *
+ * Matched on `pageTrafficKey`, not on the raw string. The `?u=` value comes
+ * from the CTR table, which reports Search Console's canonical page URL, while
+ * `group.url` is the crawled one -- the same two sides `pageTrafficKey` exists
+ * to join, differing on scheme, host case, a www prefix or a trailing slash. A
+ * raw `===` matched neither of those, so the handoff silently did nothing and
+ * the user landed back in plain traffic order on the page they had just been
+ * told to rewrite.
+ *
+ * Sorted, not filtered: the other pages are the context that makes one rewrite
+ * worth doing before another. `toSorted` is stable, so the traffic ranking
+ * underneath survives intact.
+ */
+export function focusFirst<T extends { url: string }>(
+  groups: T[],
+  focusUrl: string | null | undefined,
+): T[] {
+  if (!focusUrl) return groups;
+  const focusKey = pageTrafficKey(focusUrl);
+  const rank = (group: T) => (pageTrafficKey(group.url) === focusKey ? 0 : 1);
+  return groups.toSorted((a, b) => rank(a) - rank(b));
+}
+
 /** Ids eligible for a bulk "approve all pending" action. */
 export function pendingIds(rows: FixRow[]): string[] {
   return rows.filter((row) => row.status === "pending").map((row) => row.id);

@@ -33,7 +33,7 @@ describe("classifyAuditIssues", () => {
     expect(result.issues).toEqual([
       {
         key: "broken-page",
-        label: "Broken page (4xx/5xx status)",
+        label: "Broken page (unreachable, 4xx or 5xx)",
         pageCount: 1,
         severity: "high",
       },
@@ -249,6 +249,81 @@ describe("a broken page is one issue, not five", () => {
     expect(pathsByIssue["missing-title"]).toBeUndefined();
     expect(pathsByIssue["thin-content"]).toBeUndefined();
     expect(pathsByIssue["missing-alt-text"]).toBeUndefined();
+  });
+
+  it("counts a page that never responded (status 0) once, as broken", () => {
+    // A failed fetch -- DNS, TLS, timeout, connection refused -- is persisted
+    // as statusCode 0 with empty title/meta and no H1, not as a 4xx. Testing
+    // only `>= 400` let it through as measurable content, where its emptiness
+    // matched four more issues, three of them ON_PAGE_FIXABLE. That is the
+    // ordinary shape of a dead URL in this app's own crawl data.
+    const { issues, pathsByIssue } = classifyAuditIssues([
+      {
+        url: "https://example.com/unreachable",
+        statusCode: 0,
+        title: "",
+        metaDescription: "",
+        h1Count: 0,
+        wordCount: 0,
+        imagesMissingAlt: 0,
+      },
+    ]);
+
+    expect(issues.map((issue) => issue.key)).toEqual(["broken-page"]);
+    expect(pathsByIssue["broken-page"]).toEqual(["/unreachable"]);
+    expect(pathsByIssue["missing-title"]).toBeUndefined();
+    expect(pathsByIssue["missing-meta-description"]).toBeUndefined();
+    expect(pathsByIssue["missing-h1"]).toBeUndefined();
+    expect(pathsByIssue["thin-content"]).toBeUndefined();
+  });
+
+  it("treats a page with no recorded status the same way", () => {
+    // `statusCode` is nullable in the schema, and a row with none never
+    // evidenced a response either -- so it is not a page whose content we can
+    // report on.
+    const { issues, pathsByIssue } = classifyAuditIssues([
+      {
+        url: "https://example.com/no-status",
+        statusCode: null,
+        title: null,
+        metaDescription: null,
+        h1Count: 0,
+        wordCount: 4,
+        imagesMissingAlt: 1,
+      },
+    ]);
+
+    expect(issues.map((issue) => issue.key)).toEqual(["broken-page"]);
+    expect(pathsByIssue["missing-title"]).toBeUndefined();
+    expect(pathsByIssue["missing-alt-text"]).toBeUndefined();
+  });
+
+  it("does not multiply one unreachable page across the verdict's counts", () => {
+    // The verdict sums the clicks on each issue's paths, so a URL appearing
+    // under four keys counted its traffic four times.
+    const { issues } = classifyAuditIssues([
+      {
+        url: "https://example.com/unreachable",
+        statusCode: 0,
+        title: "",
+        metaDescription: "",
+        h1Count: 0,
+        wordCount: 0,
+        imagesMissingAlt: 0,
+      },
+      {
+        url: "https://example.com/live",
+        statusCode: 200,
+        title: "A fine title",
+        metaDescription: "A fine description.",
+        h1Count: 1,
+        wordCount: 900,
+        imagesMissingAlt: 0,
+      },
+    ]);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0].pageCount).toBe(1);
   });
 
   it("still reports those defects on a page that loads", () => {

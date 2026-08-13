@@ -240,4 +240,51 @@ describe("the position bands", () => {
   it("adds no band note when the tracker is no deeper than the bands", () => {
     expect(buildBandRows(config({ serpDepth: 10 })).note).toBe("");
   });
+
+  it("prints no band deeper than the tracker checked", () => {
+    // serpDepth is min(10).max(100).multipleOf(10) and the config modal's first
+    // option is "1 page (top 10 results)", so this is an ordinary tracker. A
+    // printed "Top 11–20" row could only ever read 0 → 0 here, which a client
+    // reads as a check that came back empty rather than one never made.
+    const { rows, note } = buildBandRows(
+      config({
+        serpDepth: 10,
+        rows: [row("shallow one", 2, 5), row("shallow two", null, 9)],
+      }),
+    );
+    const labels = rows.map((band) => band.cells[0]);
+    expect(labels).toEqual(["Top 3", "Top 4–10", "Not in the top 10"]);
+    expect(labels).not.toContain("Top 11–20");
+    // The row labels keywords by the depth actually checked. "Not in the top
+    // 20" would rank them against 10 positions nobody looked at.
+    expect(labels).not.toContain("Not in the top 20");
+    // Nothing is silently lost with the band: both columns still account for
+    // every keyword checked (2 in, 2 out).
+    const previous = rows.reduce(
+      (total, band) => total + Number(band.cells[1]),
+      0,
+    );
+    const current = rows.reduce(
+      (total, band) => total + Number(band.cells[2]),
+      0,
+    );
+    expect([previous, current]).toEqual([2, 2]);
+    // "shallow one" moved 5 → 2, "shallow two" fell out of the top 10.
+    expect(rows[2].cells).toEqual(["Not in the top 10", 0, 1]);
+    // Nothing is hidden either: bands and depth agree, so there is no gap to
+    // disclose — the branch that left this empty while printing a 20 was the
+    // whole defect.
+    expect(note).toBe("");
+  });
+
+  it("keeps all three bands when the tracker checks to exactly the band limit", () => {
+    const { rows, note } = buildBandRows(config({ serpDepth: 20 }));
+    expect(rows.map((band) => band.cells[0])).toEqual([
+      "Top 3",
+      "Top 4–10",
+      "Top 11–20",
+      "Not in the top 20",
+    ]);
+    expect(note).toBe("");
+  });
 });

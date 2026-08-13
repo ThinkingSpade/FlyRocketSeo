@@ -1,4 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
+import type { ReactNode } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 // The wording/view layer pulls in no server function of its own, so it loads
 // normally; only the chapter module below needs the mocked dynamic import.
 import { describeOtherListing, listingView, postsView } from "./localSeoViews";
@@ -16,6 +18,9 @@ vi.mock("@/serverFunctions/gbp", () => ({
   listGbpScheduledPosts: vi.fn(),
 }));
 
+// `uselocalSeoReportData` is exercised in localSeo.hook.test.ts, which needs
+// `@tanstack/react-query` itself stubbed — a heavier boundary than anything
+// here wants.
 const { buildlocalSeoChapter, photoCount, reportableChecks } =
   await import("./localSeo");
 type LocalSeoData = Parameters<typeof buildlocalSeoChapter>[0];
@@ -118,17 +123,34 @@ function data(overrides: Partial<LocalSeoData> = {}): LocalSeoData {
 
 function collect(overrides: Partial<LocalSeoData> = {}) {
   const pages: Array<{ key: string; title: string }> = [];
+  const bodies: ReactNode[] = [];
   const omissions: Array<{ title: string; reason: string }> = [];
   buildlocalSeoChapter(data(overrides), {
-    add: (spec) => pages.push({ key: spec.key, title: spec.title }),
+    add: (spec) => {
+      pages.push({ key: spec.key, title: spec.title });
+      bodies.push(spec.body);
+    },
     drop: (title, reason) => omissions.push({ title, reason }),
   });
-  return { pages, omissions };
+  return { pages, bodies, omissions };
 }
 
 function dropReason(result: ReturnType<typeof collect>): string | undefined {
   return result.omissions.find((entry) => entry.title === CHAPTER_TITLE)
     ?.reason;
+}
+
+/** The words the printed sheet actually carries. A chapter that was admitted
+ *  but says nothing about a failed read is the defect this file exists to
+ *  catch, and only the rendered body can show that. React escapes apostrophes;
+ *  a client reads the glyph. */
+function sheet(result: ReturnType<typeof collect>): string {
+  const body = result.bodies[0];
+  if (!body) throw new Error("no chapter was added, so there is no sheet");
+  return renderToStaticMarkup(body)
+    .replaceAll("&#x27;", "'")
+    .replaceAll("&quot;", '"')
+    .replaceAll("&amp;", "&");
 }
 
 /** A check row, stripped to the two fields `reportableChecks` sorts on. */
@@ -252,6 +274,67 @@ describe("a drop states both halves", () => {
 
     expect(reason).toBe(LOOKUP_LOADING);
     expect(reason).not.toContain(NEVER_RUN);
+  });
+});
+
+/**
+ * Finding 10: the chapter is admitted when EITHER half has something, but the
+ * body printed the listing half only when it had a listing to show, and
+ * `listingReason` — the sentence naming the failure — was reachable only from
+ * `dropReason`. One published post was therefore enough to turn a failed
+ * profile lookup into a sheet headed "Your Google Business Profile" carrying
+ * nothing but a posts table, with the failure stated neither on the sheet nor
+ * on the report's coverage list. The control case (same failure, no posts)
+ * named it correctly, so whether the client was told depended on whether a post
+ * happened to publish that month.
+ */
+describe("a sheet admitted on posts alone still states the listing half", () => {
+  const withPost = { connected: true, posts: [post()] };
+  const RIVAL = profile({ url: "https://brightsmile.example" });
+
+  it.each([
+    [
+      "a lookup that threw",
+      { readFailures: reads({ localBusiness: true }) },
+      READ_FAILED,
+    ],
+    [
+      "a lookup still in flight",
+      { pendingReads: reads({ localBusiness: true }) },
+      LOOKUP_LOADING,
+    ],
+    ["a lookup that was never run", {}, NEVER_RUN],
+    [
+      "a lookup that found nothing",
+      { profile: profile({ found: false }) },
+      "found no listing for this business",
+    ],
+    [
+      "a listing withheld as another business's",
+      { profile: RIVAL },
+      "not this project's domain (example.com)",
+    ],
+  ] satisfies Array<[string, Partial<LocalSeoData>, string]>)(
+    "names %s on the sheet, in the same words a drop would have used",
+    (_case, state, sentence) => {
+      const printed = collect({ ...state, ...withPost });
+
+      expect(printed.pages).toHaveLength(1);
+      expect(sheet(printed)).toContain(sentence);
+      // Posting is never set up in `state` alone, so the posts half stays
+      // silent and the drop reason is exactly the listing half's sentence.
+      // What the client is told about their profile must not depend on whether
+      // a post happened to publish that month.
+      expect(dropReason(collect(state))).toContain(sentence);
+    },
+  );
+
+  it("prints no such sentence when the listing itself is on the sheet", () => {
+    const printed = sheet(collect({ ...withPost, profile: profile() }));
+
+    expect(printed).toContain("Read from your Google Business Profile");
+    expect(printed).not.toContain(NEVER_RUN);
+    expect(printed).not.toContain("could not be read while this report");
   });
 });
 

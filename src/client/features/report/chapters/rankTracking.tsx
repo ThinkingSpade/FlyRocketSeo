@@ -85,15 +85,22 @@ const STALE_TIME = 10 * 60_000;
 const MAX_CONFIGS = 3;
 
 /**
- * The band number. Rank tracking cannot ride under 01/Performance — that
- * chapter's callout asserts Search Console provenance and these positions are
- * checked directly on Google — so it needs its own kicker, and its own kicker
- * needs a number. 02 is currently Content's; sharing it is the change that
- * touches no other chapter. Renumbering Content onward is the alternative, and
- * that is the coordinator's call, not this file's.
+ * The band, printed as number and kicker together on every sheet. The pairing
+ * is 1:1 across the report — `citations.tsx` reasons from that invariant when
+ * picking its own — so a private kicker on a number another chapter owns is not
+ * available: "02 Rank tracking" shipped in the same PDF as "02 Content".
+ *
+ * 01/Performance is where tracked search positions belong, and several sheets
+ * already share it (`reportChapters.tsx`, `keywordTrends.tsx`). The old
+ * objection to it — that the Performance callout asserts Search Console
+ * provenance — does not hold: that callout is on that chapter's own page and is
+ * gated on its own GSC data, while every sheet built here carries its own
+ * closing callout saying these positions were checked directly on Google and
+ * are not Search Console figures. `buildReportChapters` sorts pages by band, so
+ * this lands with the other 01s and nothing else needs renumbering.
  */
-const CHAPTER_NUMBER = "02";
-const CHAPTER_KICKER = "Rank tracking";
+const CHAPTER_NUMBER = "01";
+const CHAPTER_KICKER = "Performance";
 const CHAPTER_TITLE = "Tracked keyword positions";
 
 const LEAD =
@@ -327,6 +334,7 @@ export function buildrankTrackingChapter(
   }
 
   const multiple = data.configs.length > 1;
+  let reported = 0;
   for (const config of data.configs) {
     // A dropped location reads to a client as keywords we stopped tracking, so
     // each tracker gets its own sheet or its own named line in the coverage
@@ -336,15 +344,34 @@ export function buildrankTrackingChapter(
       : CHAPTER_TITLE;
     const gap = describeConfigGap(config);
     if (gap) out.drop(title, gap);
-    else out.add(buildConfigPage({ config, data, title }));
+    else {
+      out.add(buildConfigPage({ config, data, title }));
+      reported += 1;
+    }
   }
 
   if (data.matchedCount > MAX_CONFIGS) {
+    // "…are reported above" is a claim about pages, and the loop above may have
+    // dropped any number of them: a project whose three largest trackers have
+    // no completed check yet printed three "no check has completed yet" lines
+    // and then told the client the three were reported. Say what was added.
     out.drop(
       `${CHAPTER_TITLE} — other locations`,
-      `This project tracks ${plural(data.matchedCount, "location")}; the ${MAX_CONFIGS} with the most keywords are reported above.`,
+      `This project tracks ${plural(data.matchedCount, "location")}; ${describeCoverage(reported)}.`,
     );
   }
+}
+
+/** How much of the capped selection actually reached the report. The reason
+ *  each missing tracker is missing already has its own line above this one. */
+function describeCoverage(reported: number): string {
+  if (reported >= MAX_CONFIGS) {
+    return `the ${MAX_CONFIGS} with the most keywords are reported above`;
+  }
+  const selected = `the ${MAX_CONFIGS} with the most keywords were selected for this report`;
+  return reported === 0
+    ? `${selected}, and none of them could be reported`
+    : `${selected}, and ${reported} of them ${reported === 1 ? "is" : "are"} reported above`;
 }
 
 const TILE_NOTE =

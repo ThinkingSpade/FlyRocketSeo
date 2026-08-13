@@ -30,10 +30,23 @@ function isBlank(value: string | null): boolean {
   return !value || value.trim() === "";
 }
 
-/** A page the server would not serve. Its body is an error page, so measuring
- *  it as content says nothing about the site. */
+/** A page the server would not serve. Its body is an error page -- or nothing
+ *  at all -- so measuring it as content says nothing about the site.
+ *
+ *  An error status is not the only way to fail: a fetch that never completed
+ *  (DNS failure, TLS error, timeout, connection refused) is persisted as
+ *  `statusCode: 0` with empty title/meta and no H1
+ *  (`site-audit-workflow-helpers.ts`'s `emptyPageResult(url, 0, ...)`, and
+ *  `siteAuditFallbackMapping.ts`'s `item.status_code ?? 0`). Testing only
+ *  `>= 400` let that page through as measurable content, where its emptiness
+ *  matched missing-title, missing-meta, missing-H1 and thin-content at once --
+ *  four rows for one URL that never answered, three of them `ON_PAGE_FIXABLE`,
+ *  so a dead URL was offered an AI title rewrite. `null` is the same claim
+ *  with less detail: nothing ever recorded a response for this URL. */
 function isBroken(page: AuditIssuePage): boolean {
-  return page.statusCode != null && page.statusCode >= 400;
+  return (
+    page.statusCode == null || page.statusCode < 200 || page.statusCode >= 400
+  );
 }
 
 /** Matches audit/shared.tsx's extractPathname exactly, duplicated locally
@@ -61,7 +74,10 @@ type IssueDef = {
 const ISSUE_DEFS: IssueDef[] = [
   {
     key: "broken-page",
-    label: "Broken page (4xx/5xx status)",
+    // Names both halves of `isBroken`: a page that answered with an error and
+    // a page that never answered are the same defect to a visitor, and the
+    // label is user-facing copy (the verdict quotes it verbatim).
+    label: "Broken page (unreachable, 4xx or 5xx)",
     severity: "high",
     matches: isBroken,
   },

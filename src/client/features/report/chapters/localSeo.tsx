@@ -17,6 +17,7 @@ import {
 import {
   dropReason,
   formatDay,
+  listingReason,
   listingView,
   postsView,
   type ListingOnFile,
@@ -154,11 +155,19 @@ export function uselocalSeoReportData(projectId: string): localSeoReportData {
       gbpConnection: connectionQuery.isError,
       gbpPosts: postsQuery.isError,
     } satisfies LocalSeoReads,
+    // `isPending`, not `isLoading`, and for the same reason every sibling
+    // chapter uses it: `isLoading` is `isPending && isFetching`, so a query
+    // that is pending but paused — `fetchStatus: "paused"`, the ordinary state
+    // of an offline browser, which is exactly the browser someone prints a PDF
+    // from — reports neither error, nor loading, nor data. The reason then fell
+    // through to "No Google Business Profile lookup is on file for this
+    // project": an accusation about the agency's work, printed because the
+    // laptop was on a train.
     pendingReads: {
-      projects: projectsQuery.isLoading,
-      localBusiness: businessQuery.isLoading,
-      gbpConnection: connectionQuery.isLoading,
-      gbpPosts: postsQuery.isLoading,
+      projects: projectsQuery.isPending,
+      localBusiness: businessQuery.isPending,
+      gbpConnection: connectionQuery.isPending,
+      gbpPosts: postsQuery.isPending,
     } satisfies LocalSeoReads,
   };
 }
@@ -393,10 +402,15 @@ export function buildlocalSeoChapter(
       <>
         {listing.kind === "listing" ? (
           <ListingBlock listing={listing} domain={data.domain} />
-        ) : null}
-        {/* A listing we could not tie to this project is named, not silently
-            dropped: the posts below are still the client's own. */}
-        {listing.kind === "other" ? <BodyText>{listing.text}</BodyText> : null}
+        ) : (
+          /* Admitted on posts alone. The listing half still states why it is
+             empty — the same sentence `dropReason` would have given, so the
+             answer a client gets about their profile does not depend on
+             whether a post happened to publish that month. A listing we could
+             not tie to this project is named here too; the posts below are
+             still the client's own. */
+          <BodyText>{listingReason(data, listing)}</BodyText>
+        )}
         <PostsSection view={posts} periodLabel={data.periodLabel} />
       </>,
     ),

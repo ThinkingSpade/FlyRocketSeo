@@ -22,6 +22,19 @@ type SavedPortfolio = {
   quickWins: number;
   /** Saved keywords the profile says belong to someone else's customer. */
   offTarget: number;
+  /**
+   * Of those, the ones the fit verdict ACTUALLY cost a place in `quickWins` —
+   * they cleared every other bar (a known KD under 30, some volume) and were
+   * held back only by the profile.
+   *
+   * Separate from `offTarget` because only this number can be described as
+   * "excluded from the count": a wrong-customer keyword at KD 80, or with no
+   * volume, or with no difficulty score, never qualified in the first place,
+   * so naming it as excluded credits the profile with a filter it did not
+   * apply. Both surfaces that phrase it that way — the tab's quick-win tile
+   * and the client report's shortlist sentence — read this one.
+   */
+  offTargetQuickWins: number;
   /** Canonical-order intent mix over rows with a known intent. */
   intentMix: Array<{ intent: string; count: number }>;
 };
@@ -51,6 +64,7 @@ export function computeSavedPortfolio(
   let difficultyCount = 0;
   let quickWins = 0;
   let offTarget = 0;
+  let offTargetQuickWins = 0;
   const intentCounts = new Map<string, number>();
 
   for (const row of rows) {
@@ -60,12 +74,16 @@ export function computeSavedPortfolio(
     if (row.keywordDifficulty != null) {
       difficultySum += row.keywordDifficulty;
       difficultyCount += 1;
-      if (
-        row.keywordDifficulty < QUICK_WIN_MAX_KD &&
-        (row.searchVolume ?? 0) > 0 &&
-        !wrongCustomer
-      ) {
+      // Every quick-win bar except the fit verdict. Splitting it out is what
+      // lets the two counts below differ: `quickWins` needs this AND a clean
+      // verdict, `offTargetQuickWins` needs this AND a wrong-customer one.
+      const otherwiseQualifies =
+        row.keywordDifficulty < QUICK_WIN_MAX_KD && (row.searchVolume ?? 0) > 0;
+      if (otherwiseQualifies && !wrongCustomer) {
         quickWins += 1;
+      }
+      if (otherwiseQualifies && wrongCustomer) {
+        offTargetQuickWins += 1;
       }
     }
     const intent = row.intent?.toLowerCase();
@@ -81,6 +99,7 @@ export function computeSavedPortfolio(
       difficultyCount > 0 ? Math.round(difficultySum / difficultyCount) : null,
     quickWins,
     offTarget,
+    offTargetQuickWins,
     intentMix: INTENT_ORDER.filter((intent) => intentCounts.has(intent)).map(
       (intent) => ({ intent, count: intentCounts.get(intent) ?? 0 }),
     ),

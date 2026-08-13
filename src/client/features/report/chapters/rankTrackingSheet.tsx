@@ -30,6 +30,15 @@ const MAX_DECLINED = 5;
 const BAND_LIMIT = 20;
 
 /**
+ * The last position in each band `computeBucketTransitions` emits before its
+ * catch-all, mirrored here because the rows it returns carry labels only and no
+ * ranges — and this file has to know which bands a given `serpDepth` actually
+ * covered. An unrecognised band is treated as unchecked, which understates
+ * detail rather than claiming a check that never happened.
+ */
+const BAND_UPPER_BOUNDS = [3, 10, BAND_LIMIT];
+
+/**
  * An empty digest with a run on record is TWO states the digest cannot tell
  * apart: one completed check, or two that agreed exactly. It carries no run
  * count, so the sheet names both readings rather than asserting the one that
@@ -184,26 +193,66 @@ export function describeTrackerHeader(
  * that prints "Ranking keywords: 12" and "Not ranking: 12" on one sheet. The
  * row is renamed for what every member of it actually has in common, and the
  * gap between the bands and this tracker's depth is stated rather than hidden.
+ *
+ * The bands are wrong in the other direction too, and that one is worse:
+ * `serpDepth` starts at 10 (schema, and the config modal's "1 page (top 10
+ * results)"), so a depth-10 tracker printed a "Top 11–20" row that could only
+ * ever read `0 → 0` — a client reads that as "they looked and found none of
+ * mine" — and then labelled the rest "Not in the top 20" when nothing was ever
+ * checked past position 10. Both are assertions about positions this tracker
+ * never requested. So a band is printed only when this tracker covered ALL of
+ * it; the rest fold into the trailing row (the columns still sum to every
+ * keyword checked), and that row names the depth actually reached.
  */
 export function buildBandRows(config: RankTrackingConfigRead): {
   rows: Array<{ key: string; cells: Array<string | number> }>;
   note: string;
 } {
-  const rows = computeBucketTransitions(config.rows, config.device).map(
-    (b) => ({
-      key: b.label,
+  const transitions = computeBucketTransitions(config.rows, config.device);
+  // The catch-all is the trailing row by construction, so it is taken by
+  // position rather than by matching the label it happens to carry.
+  const catchAll = transitions.at(-1);
+  const bands = transitions.slice(0, -1);
+  const covered = (index: number) =>
+    (BAND_UPPER_BOUNDS[index] ?? Number.POSITIVE_INFINITY) <= config.serpDepth;
+
+  const rows: Array<{ key: string; cells: Array<string | number> }> = bands
+    .filter((_, index) => covered(index))
+    .map((band) => ({
+      key: band.label,
+      cells: [band.label, band.previous, band.current],
+    }));
+
+  if (catchAll) {
+    // Never `min(serpDepth, BAND_LIMIT)`: it is the deepest band actually
+    // printed that this row is the complement of, and a depth landing between
+    // two bands would otherwise name a position the printed rows never reached.
+    const checkedTo =
+      BAND_UPPER_BOUNDS.filter((_, index) => covered(index)).at(-1) ??
+      Math.min(config.serpDepth, BAND_LIMIT);
+    const folded = bands.filter((_, index) => !covered(index));
+    rows.push({
+      key: catchAll.label,
       cells: [
-        b.label === "Not ranking" ? `Not in the top ${BAND_LIMIT}` : b.label,
-        b.previous,
-        b.current,
+        `Not in the top ${checkedTo}`,
+        folded.reduce(
+          (total, band) => total + band.previous,
+          catchAll.previous,
+        ),
+        folded.reduce((total, band) => total + band.current, catchAll.current),
       ],
-    }),
-  );
-  const note =
-    config.serpDepth > BAND_LIMIT
-      ? ` These bands stop at position ${BAND_LIMIT} while this tracker checks to position ${config.serpDepth}, so a keyword ranked ${BAND_LIMIT + 1}–${config.serpDepth} counts as ranking in the figures above and sits in the last row here.`
-      : "";
-  return { rows, note };
+    });
+    return { rows, note: bandNote(config.serpDepth, checkedTo) };
+  }
+  return { rows, note: "" };
+}
+
+/** Stated rather than hidden: the gap between the printed bands and the depth
+ *  the "Ranking keywords" tile counts to. Empty when there is no gap. */
+function bandNote(serpDepth: number, checkedTo: number): string {
+  return serpDepth > checkedTo
+    ? ` These bands stop at position ${checkedTo} while this tracker checks to position ${serpDepth}, so a keyword ranked ${checkedTo + 1}–${serpDepth} counts as ranking in the figures above and sits in the last row here.`
+    : "";
 }
 
 /**

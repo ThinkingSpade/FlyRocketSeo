@@ -146,6 +146,22 @@ function sameDomain(candidate: string | null, target: string | null): boolean {
  * A date and never a period: `fetchedAt` is the day somebody looked, unrelated
  * to the report's 28-day window, so this sheet says "on 14 July 2026" and can
  * never say "this month".
+ *
+ * The day is the reader's own calendar day, never the UTC one. A lookup run at
+ * 9pm on 14 July in Chicago is stored as `2026-07-15T02:00:00Z`, and reading
+ * that instant with `getUTCDate()` printed "15 July 2026" — a day the client
+ * has not lived yet, and one that can read as LATER than the report's own
+ * "Generated" foot, which ClientReportPage formats locally. `citations.tsx`
+ * fixed the same defect by moving `formatDay` onto `toLocaleDateString`; this
+ * chapter takes that same local calendar basis while keeping its own
+ * day-month-year wording, so the two chapters agree on which day a stored
+ * instant fell on.
+ *
+ * `days` stays the elapsed time between the two instants and is deliberately
+ * NOT re-based on the calendar: the 90-day gate below is r2-cache's retention
+ * window, which runs from the moment the payload was stored, so a lookup whose
+ * local day reads a day earlier than its UTC day is still kept — and still
+ * described as current — for exactly the same 90 × 24 hours.
  */
 function describeAge(
   iso: string,
@@ -157,7 +173,7 @@ function describeAge(
     return null;
   }
   return {
-    label: `${at.getUTCDate()} ${MONTHS[at.getUTCMonth()]} ${at.getUTCFullYear()}`,
+    label: `${at.getDate()} ${MONTHS[at.getMonth()]} ${at.getFullYear()}`,
     days: (reference.getTime() - at.getTime()) / 86_400_000,
   };
 }
@@ -173,6 +189,42 @@ function humanizeFeature(type: string): string {
 function findClientRow(run: SerpOverviewRun, domain: string | null) {
   const own = run.results.find((r) => sameDomain(r.domain ?? r.url, domain));
   return own ?? null;
+}
+
+/**
+ * The domain Google actually placed first, or null when the saved payload does
+ * not establish which listing that was.
+ *
+ * Read off `rank`, never off array position. `mapSerpOverview` preserves the
+ * provider's order and maps `domain: item.domain ?? null`, so the sentence
+ * used to be handed `results.find((result) => result.domain)` — the first row
+ * that happened to carry a domain. When the rank-1 listing came back without
+ * one, a printed sheet told a paying client that the #2 site was "the
+ * top-ranked result": a superlative read off list position rather than off the
+ * one field that records position.
+ *
+ * Three payloads cannot establish the claim at all, and each returns null so
+ * the sentence is left out rather than guessed at:
+ *   - the best-ranked listing carries no domain — naming the runner-up is the
+ *     original defect, not a fallback;
+ *   - some listing carries no rank, so its position was never recorded and
+ *     nothing rules it out as the first one (the same "a gap in the payload is
+ *     not an absence from the page" reading the client's own row gets below);
+ *   - two different domains tie for the best rank, which names no single one.
+ */
+function topRankedDomain(results: SerpResult[]): string | null {
+  let best: { rank: number; domain: string | null } | null = null;
+  let tied = false;
+  for (const result of results) {
+    if (result.rank == null) return null;
+    if (best == null || result.rank < best.rank) {
+      best = { rank: result.rank, domain: result.domain };
+      tied = false;
+    } else if (result.rank === best.rank && result.domain !== best.domain) {
+      tied = true;
+    }
+  }
+  return tied ? null : (best?.domain ?? null);
 }
 
 /** What the table's own header says it is showing. The table prints every
@@ -213,7 +265,9 @@ export function buildSerpNarrative(
           ? " Your site was one of the listings on that page, though the lookup did not record its position."
           : ` Your site ranked #${rank} on that results page.`;
 
-  const leader = run.results.find((result) => result.domain)?.domain;
+  // Never `results.find(...)`: the claim is a superlative, so it comes from
+  // `rank`, and it is dropped entirely when the payload cannot support it.
+  const leader = topRankedDomain(run.results);
   const second = leader
     ? `The top-ranked result was ${leader}.`
     : "Google returned ordinary listings for this search, shown below.";
