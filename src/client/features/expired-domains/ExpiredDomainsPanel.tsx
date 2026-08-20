@@ -281,6 +281,42 @@ export function ExpiredDomainsPanel({
               </Button>
             ) : null}
 
+            {result.acquirable ? (
+              <div className="mt-2 flex flex-col gap-2 border-t border-base-300 pt-3">
+                <p className="text-xs uppercase tracking-wide text-base-content/60">
+                  Available to register
+                </p>
+                {result.acquirable.rows.length > 0 ? (
+                  <>
+                    <p className="text-xs text-base-content/60">
+                      Lapsed domains in your industry and next to it, free to
+                      register right now.
+                    </p>
+                    <ul className="flex flex-col gap-1">
+                      {result.acquirable.rows.map((row) => (
+                        <li key={row.domain} className="font-medium">
+                          {row.domain}
+                          {row.hadHistory === null ? (
+                            <span className="ml-2 text-xs font-normal text-base-content/60">
+                              (archive check inconclusive)
+                            </span>
+                          ) : null}
+                        </li>
+                      ))}
+                    </ul>
+                  </>
+                ) : (
+                  // Same rule as the table above: say what was examined rather
+                  // than rendering an empty space.
+                  <p className="text-base-content/70">
+                    Generated {result.acquirable.summary.generated} names,{" "}
+                    {result.acquirable.summary.hadHistory} of which ever hosted
+                    a site — none are available to register.
+                  </p>
+                )}
+              </div>
+            ) : null}
+
             {result.sourcesSkipped.length > 0 ? (
               // The bug this fixes: a source that returned nothing was counted
               // as searched, so a run on a project with no competitors reported
