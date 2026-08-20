@@ -59,6 +59,12 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
     "Drafting needs an OPENROUTER_API_KEY on the deployment. Add it, or fill the fields in yourself — everything else here works without it.",
   MODEL_CREDITS_EXHAUSTED:
     "Your OpenRouter account is out of credits. Top it up at openrouter.ai/settings/credits, or fill the fields in yourself — nothing else here needs a model.",
+  APIVERVE_NOT_CONFIGURED:
+    "Domain expiry lookups need an APIVERVE_API_KEY on the deployment. Add it — everything else on this tab works without it.",
+  APIVERVE_AUTH_FAILED:
+    "APIVerve rejected the API key. Check that APIVERVE_API_KEY is a valid key from apiverve.com.",
+  APIVERVE_CREDITS_EXHAUSTED:
+    "The APIVerve account is out of credits. Top it up to run more domain expiry lookups — nothing else on this tab needs it.",
 };
 
 export function getStandardErrorMessage(

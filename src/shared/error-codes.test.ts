@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { shouldCaptureAppErrorCode } from "@/shared/error-codes";
+import { isErrorCode, shouldCaptureAppErrorCode } from "@/shared/error-codes";
 
 describe("shouldCaptureAppErrorCode", () => {
   it.each([
@@ -25,5 +25,24 @@ describe("shouldCaptureAppErrorCode", () => {
     // knowing about operationally (e.g. a TTL that's too short in practice),
     // not an expected per-user state — keep it reportable too.
     expect(shouldCaptureAppErrorCode("GEO_SEED_DATA_LOST")).toBe(true);
+  });
+});
+
+describe("APIVerve error codes", () => {
+  it("registers all three codes", () => {
+    expect(isErrorCode("APIVERVE_NOT_CONFIGURED")).toBe(true);
+    expect(isErrorCode("APIVERVE_AUTH_FAILED")).toBe(true);
+    expect(isErrorCode("APIVERVE_CREDITS_EXHAUSTED")).toBe(true);
+  });
+
+  it("does not page for operator configuration or a spent third-party quota", () => {
+    expect(shouldCaptureAppErrorCode("APIVERVE_NOT_CONFIGURED")).toBe(false);
+    expect(shouldCaptureAppErrorCode("APIVERVE_CREDITS_EXHAUSTED")).toBe(false);
+  });
+
+  // Same call as DATAFORSEO_AUTH_FAILED: a key that IS set and still gets
+  // rejected is a real defect signal, not an expected per-user state.
+  it("does page for a key that is set but rejected", () => {
+    expect(shouldCaptureAppErrorCode("APIVERVE_AUTH_FAILED")).toBe(true);
   });
 });
