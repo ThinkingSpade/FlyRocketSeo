@@ -90,6 +90,34 @@ export const projects = pgTable(
   ],
 );
 
+// Hosts under a project's apex `domain` (mirrors the SQLite schema).
+export const projectSubdomains = pgTable(
+  "project_subdomains",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    host: text("host").notNull(),
+    source: text("source", { enum: ["manual", "gsc", "dataforseo"] })
+      .notNull()
+      .default("manual"),
+    isActive: boolean("is_active").notNull().default(true),
+    organicKeywords: integer("organic_keywords"),
+    organicTraffic: integer("organic_traffic"),
+    clicks: integer("clicks"),
+    impressions: integer("impressions"),
+    lastSeenAt: timestampColumn("last_seen_at"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("project_subdomains_project_host_idx").on(
+      table.projectId,
+      table.host,
+    ),
+  ],
+);
+
 // User-saved keywords within a project. This is the canonical saved list.
 export const savedKeywords = pgTable(
   "saved_keywords",

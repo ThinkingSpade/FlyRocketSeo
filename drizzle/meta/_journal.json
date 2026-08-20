@@ -281,6 +281,13 @@
       "when": 1786382227974,
       "tag": "0039_ordinary_blazing_skull",
       "breakpoints": true
+    },
+    {
+      "idx": 40,
+      "version": "6",
+      "when": 1786430722406,
+      "tag": "0040_striped_ezekiel",
+      "breakpoints": true
     }
   ]
 }

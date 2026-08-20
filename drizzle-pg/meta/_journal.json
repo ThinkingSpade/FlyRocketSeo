@@ -113,6 +113,13 @@
       "when": 1786382230468,
       "tag": "0015_handy_speed",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1786430730316,
+      "tag": "0016_brainy_sumo",
+      "breakpoints": true
     }
   ]
 }
