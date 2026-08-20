@@ -56,6 +56,12 @@ const ERROR_CODES = [
   "APIVERVE_NOT_CONFIGURED",
   "APIVERVE_AUTH_FAILED",
   "APIVERVE_CREDITS_EXHAUSTED",
+  // WhoisFreaks supplies the daily deleted-domains feed. Same split as the
+  // APIVerve pair above: an unset key is the operator's job, a rejected key is
+  // a real fault. 403 maps to AUTH_FAILED rather than a credits code because
+  // this is a flat subscription -- there are no per-call credits to exhaust.
+  "WHOISFREAKS_NOT_CONFIGURED",
+  "WHOISFREAKS_AUTH_FAILED",
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES);
@@ -90,6 +96,9 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   // DATAFORSEO_AUTH_FAILED is.
   "APIVERVE_NOT_CONFIGURED",
   "APIVERVE_CREDITS_EXHAUSTED",
+  // Operator configuration, not a bug. WHOISFREAKS_AUTH_FAILED stays
+  // reportable for the same reason DATAFORSEO_AUTH_FAILED does.
+  "WHOISFREAKS_NOT_CONFIGURED",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

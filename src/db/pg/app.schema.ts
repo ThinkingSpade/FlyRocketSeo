@@ -392,6 +392,32 @@ export const audits = pgTable(
 );
 
 // One row per crawled page
+/** Postgres mirror of `harvested_domains` -- see the SQLite schema for why
+ *  these rows outlive the feed subscription and what a null DR means. */
+export const harvestedDomains = pgTable(
+  "harvested_domains",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    domain: text("domain").notNull(),
+    matchedTerm: text("matched_term").notNull(),
+    droppedOn: text("dropped_on").notNull(),
+    domainRating: integer("domain_rating"),
+    isAvailable: boolean("is_available"),
+    availabilityCheckedAt: timestampColumn("availability_checked_at"),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    index("harvested_domains_project_id_idx").on(table.projectId),
+    uniqueIndex("harvested_domains_project_domain_idx").on(
+      table.projectId,
+      table.domain,
+    ),
+  ],
+);
+
 export const auditPages = pgTable(
   "audit_pages",
   {

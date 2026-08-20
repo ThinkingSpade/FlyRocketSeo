@@ -288,6 +288,13 @@
       "when": 1787235975236,
       "tag": "0040_plain_saracen",
       "breakpoints": true
+    },
+    {
+      "idx": 41,
+      "version": "6",
+      "when": 1787263990220,
+      "tag": "0041_public_patriot",
+      "breakpoints": true
     }
   ]
 }
