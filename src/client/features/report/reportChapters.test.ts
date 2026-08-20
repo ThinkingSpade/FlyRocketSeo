@@ -45,6 +45,7 @@ function data(overrides: Partial<Data> = {}): Data {
     refreshKeywordDetails: () => {},
     refreshBacklinkDetails: () => {},
     latestAudit: null,
+    auditDomainExpirationJson: null,
     auditPages: [],
     approvedFixes: [],
     brandVisibility: null,

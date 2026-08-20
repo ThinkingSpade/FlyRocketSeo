@@ -380,6 +380,19 @@ export const audits = sqliteTable(
       .notNull()
       .default(sql`(current_timestamp)`),
     completedAt: text("completed_at"),
+    /**
+     * The audited domain's registration facts at the time someone asked for
+     * them, as JSON: `{ domain, expirationDate, createdDate, lastUpdatedDate }`.
+     *
+     * ABSOLUTE dates only, never the day counts -- those are recomputed from
+     * the clock on read, so a report opened months later states the truth today
+     * rather than the truth on audit day. Same rule as the KV cache.
+     *
+     * Nullable and populated on demand, NOT during the crawl: resolving it
+     * bills APIVerve, and an audit's consent covers the crawl, not a
+     * third-party lookup the user never asked for.
+     */
+    domainExpirationJson: text("domain_expiration_json"),
   },
   (table) => [
     index("audits_project_id_idx").on(table.projectId),

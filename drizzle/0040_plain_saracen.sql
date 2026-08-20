@@ -1,0 +1,1 @@
+ALTER TABLE `audits` ADD `domain_expiration_json` text;

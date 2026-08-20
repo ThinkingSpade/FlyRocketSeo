@@ -198,6 +198,12 @@ export function useClientReportData(projectId: string) {
     // chapter printing the second sentence for the first cause.
     latestAudit: latestAudit ?? null,
     auditPages: auditResultsQuery.data?.pages ?? [],
+    // Taken from the audit RESULTS query rather than the history one: results
+    // already carry the row, and the value is only ever populated by an
+    // explicit click, so a report can show it without ever having spent
+    // anything itself.
+    auditDomainExpirationJson:
+      auditResultsQuery.data?.audit?.domainExpirationJson ?? null,
     approvedFixes: (onPageQuery.data?.rows ?? []).filter(
       (row) => row.status === "approved",
     ),

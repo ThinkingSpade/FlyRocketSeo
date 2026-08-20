@@ -139,6 +139,10 @@ async function getResults(auditId: string, projectId: string) {
       startedAt: audit.startedAt,
       completedAt: audit.completedAt,
       config: parsedConfig,
+      // Raw JSON, deliberately not parsed here: it holds only ABSOLUTE dates,
+      // and the day counts are derived against the reader's clock so a
+      // months-old audit reports what is true today, not on audit day.
+      domainExpirationJson: audit.domainExpirationJson,
     },
     pages,
     lighthouse,
