@@ -122,6 +122,44 @@ describe("resolveDomainExpiration", () => {
     });
   });
 
+  // Regression: the MCP tool passed its raw `domain` argument straight through
+  // while the server function normalized first, so `blog.deliotx.com` and
+  // `deliotx.com` produced two cache keys and two billed calls for one
+  // registrable domain -- and the card and SAM stopped sharing a cache at all.
+  // Normalizing inside resolve() makes that unrepresentable for every caller.
+  it("collapses subdomains and www to one registrable-domain cache entry", async () => {
+    const cache = fakeCache();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(apiResponse("2026-10-04T00:00:00Z"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await resolveDomainExpiration("deliotx.com", cache, NOW);
+    await resolveDomainExpiration("www.deliotx.com", cache, NOW);
+    await resolveDomainExpiration("blog.deliotx.com", cache, NOW);
+    await resolveDomainExpiration("https://deliotx.com/pricing", cache, NOW);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect([...cache.store.keys()]).toEqual([`${CACHE_PREFIX}deliotx.com`]);
+  });
+
+  it("asks APIVerve for the registrable domain, not the raw input", async () => {
+    const cache = fakeCache();
+    let requestedUrl = "";
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: unknown) => {
+        requestedUrl = String(url);
+        return Promise.resolve(apiResponse("2026-10-04T00:00:00Z"));
+      }),
+    );
+
+    await resolveDomainExpiration("blog.deliotx.com", cache, NOW);
+
+    expect(requestedUrl).toContain("domain=deliotx.com");
+    expect(requestedUrl).not.toContain("blog.");
+  });
+
   it("refetches rather than trusting an unparseable cache entry", async () => {
     const cache = fakeCache();
     cache.store.set(`${CACHE_PREFIX}example.com`, "{ not json");

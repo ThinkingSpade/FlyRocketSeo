@@ -5,7 +5,6 @@ import {
   resolveDomainExpiration,
   type ExpirationCache,
 } from "@/server/lib/apiverve/domainExpiration";
-import { normalizeDomainInput } from "@/server/lib/domainUtils";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 
 /**
@@ -26,14 +25,13 @@ export const getDomainExpiration = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(inputSchema)
   .handler(async ({ data }) => {
-    // `false` = collapse to the registrable domain. A subdomain cannot expire
-    // independently, so it must not get its own cache entry or its own charge.
-    const domain = normalizeDomainInput(data.domain, false);
-
     const cache: ExpirationCache = {
       get: (key) => env.KV.get(key),
       put: (key, value, options) => env.KV.put(key, value, options),
     };
 
-    return resolveDomainExpiration(domain, cache, Date.now());
+    // Domain normalization happens inside resolveDomainExpiration, not here --
+    // it is the one choke point every caller shares, so a subdomain can never
+    // open a second cache entry or a second charge.
+    return resolveDomainExpiration(data.domain, cache, Date.now());
   });

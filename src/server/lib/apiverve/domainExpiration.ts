@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { apiverveGet } from "@/server/lib/apiverve/client";
+import { normalizeDomainInput } from "@/server/lib/domainUtils";
 import { AppError } from "@/server/lib/errors";
 import {
   deriveDomainExpiration,
@@ -47,10 +48,18 @@ const cachedFactsSchema = z.object({
 });
 
 export async function resolveDomainExpiration(
-  domain: string,
+  rawDomain: string,
   cache: ExpirationCache,
   nowMs: number,
 ): Promise<DomainExpiration> {
+  // Normalizing HERE, not at each call site, is deliberate. Registration is a
+  // property of the registrable domain (eTLD+1) -- a subdomain has no expiry of
+  // its own -- so `blog.example.com`, `www.example.com` and
+  // `https://example.com/pricing` must all resolve to ONE cache entry and ONE
+  // billed call. When each caller normalized for itself the MCP tool forgot to,
+  // which split the cache key and double-charged for the same domain. A choke
+  // point makes that unrepresentable.
+  const domain = normalizeDomainInput(rawDomain, false);
   const cacheKey = `${CACHE_PREFIX}${domain}`;
 
   const cached = await cache.get(cacheKey);
