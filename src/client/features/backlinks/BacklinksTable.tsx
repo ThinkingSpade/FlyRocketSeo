@@ -12,6 +12,7 @@ import {
 import type { BacklinksRow } from "./backlinksPageTypes";
 import type { BacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import type { DomainRatings } from "./useAhrefsDomainRatings";
+import type { DomainExpirations } from "@/client/features/backlinks/domainExpiryEnrichment";
 
 /** Interleaves expanded domains' extra links beneath their page row. */
 function buildDisplayRows(
@@ -77,20 +78,27 @@ function buildDisplayRows(
 export function BacklinksTable({
   rows,
   domainRatings,
+  domainExpirations,
   sorting,
   onSortingChange,
   expansion,
 }: {
   rows: BacklinksRow[];
   domainRatings: DomainRatings | null;
+  domainExpirations?: DomainExpirations | null;
   sorting: SortingState;
   onSortingChange: OnChangeFn<SortingState>;
   /** Present in the one-per-domain view; null when listing all links. */
   expansion: BacklinksDomainExpansion | null;
 }) {
   const columns = useMemo(
-    () => buildBacklinksColumns(domainRatings, expansion?.toggleDomain),
-    [domainRatings, expansion?.toggleDomain],
+    () =>
+      buildBacklinksColumns(
+        domainRatings,
+        expansion?.toggleDomain,
+        domainExpirations,
+      ),
+    [domainRatings, expansion?.toggleDomain, domainExpirations],
   );
   const displayRows = useMemo(
     () => buildDisplayRows(rows, expansion),

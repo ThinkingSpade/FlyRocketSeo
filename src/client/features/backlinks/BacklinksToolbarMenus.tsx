@@ -1,5 +1,6 @@
 import { useState } from "react";
 import {
+  CalendarX,
   CaretDown,
   Download,
   Gauge,
@@ -98,10 +99,17 @@ export function BacklinksActionsMenu({
   isLoadingRatings,
   loadRatings,
   ratableDomains,
+  isLoadingExpiry,
+  loadExpirations,
+  billableExpiryDomains,
 }: {
   isLoadingRatings: boolean;
   loadRatings: (domains: string[]) => void | Promise<void>;
   ratableDomains: string[];
+  isLoadingExpiry: boolean;
+  loadExpirations: (domains: string[]) => void | Promise<void>;
+  /** How many domains on THIS page would actually be billed. */
+  billableExpiryDomains: number;
 }) {
   return (
     <DropdownMenu>
@@ -133,6 +141,27 @@ export function BacklinksActionsMenu({
           onClick={() => void loadRatings(ratableDomains)}
         >
           Ahrefs DR
+        </DropdownMenu.Item>
+        {/* Unlike Ahrefs DR above -- free and keyless, so it may keep enriching
+            as you page -- this bills 5 APIVerve credits per domain. It is
+            therefore per page: the count is what THIS click costs, and it
+            drops to zero (disabling the item) once the page is covered. */}
+        <DropdownMenu.Item
+          icon={
+            <span className="mr-2 inline-flex">
+              {isLoadingExpiry ? (
+                <Loader size="sm" />
+              ) : (
+                <CalendarX className="size-4" />
+              )}
+            </span>
+          }
+          disabled={isLoadingExpiry || billableExpiryDomains === 0}
+          onClick={() => void loadExpirations(ratableDomains)}
+        >
+          {billableExpiryDomains === 0
+            ? "Domain expiry (this page done)"
+            : `Domain expiry (${billableExpiryDomains} × 5 credits)`}
         </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu>
