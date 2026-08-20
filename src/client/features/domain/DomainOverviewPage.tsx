@@ -55,6 +55,7 @@ import { PagesTab } from "@/client/features/domain/components/PagesTab";
 import { StatCard } from "@/client/features/domain/components/StatCard";
 import { PositionDistribution } from "@/client/features/domain/components/PositionDistribution";
 import { DomainCompetitorsCard } from "@/client/features/domain/components/DomainCompetitorsCard";
+import { DomainExpirationCard } from "@/client/features/domain/components/DomainExpirationCard";
 import { DomainVisibilityTrend } from "@/client/features/domain/components/DomainVisibilityTrend";
 import { SearchTabStrip } from "@/client/features/search-tabs/SearchTabStrip";
 import type { SearchTabInput } from "@/client/features/search-tabs/types";
@@ -871,6 +872,13 @@ export function DomainOverviewPage({
 
           {state.overview.hasData ? (
             <DomainCompetitorsCard
+              projectId={projectId}
+              domain={state.overview.domain}
+            />
+          ) : null}
+
+          {state.overview.hasData ? (
+            <DomainExpirationCard
               projectId={projectId}
               domain={state.overview.domain}
             />
