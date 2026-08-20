@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { Wallet } from "lucide-react";
+import { Wallet } from "@phosphor-icons/react";
 import { getDataforseoAccountStatus } from "@/serverFunctions/config";
 
 // Below the warning floor the balance turns amber; below the error floor, red.

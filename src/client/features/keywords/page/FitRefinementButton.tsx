@@ -1,5 +1,5 @@
 import { getRouteApi } from "@tanstack/react-router";
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
@@ -42,7 +42,7 @@ export function FitRefinementButton({
       onClick={controller.runFitRefinement}
       title={hint}
     >
-      <Sparkles className="size-3.5 text-base-content/60" />
+      <Sparkle className="size-3.5 text-base-content/60" />
       {label}
     </Button>
   );

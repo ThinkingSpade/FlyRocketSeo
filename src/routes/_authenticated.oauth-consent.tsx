@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Check, Database, KeyRound, User } from "lucide-react";
+import { Check, Database, Key, User } from "@phosphor-icons/react";
 import { useState } from "react";
 import { useSession } from "@/lib/auth-client";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export const Route = createFileRoute("/_authenticated/oauth-consent")({
   component: OAuthConsentPage,
@@ -14,7 +15,7 @@ const SCOPES = [
     description: "Projects, keyword reports, and audit results.",
   },
   {
-    icon: KeyRound,
+    icon: Key,
     label: "Act on your behalf via MCP",
     description: "Run tools and write results back to your workspace.",
   },
@@ -65,7 +66,7 @@ function OAuthConsentPage() {
     <div className="w-full max-w-md rounded-2xl border border-base-300 bg-base-100 p-8 shadow-sm">
       <div className="flex flex-col items-center text-center">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="size-10 rounded-lg"
         />
@@ -113,22 +114,24 @@ function OAuthConsentPage() {
       ) : null}
 
       <div className="mt-8 flex gap-2">
-        <button
+        <Button
           type="button"
-          className="btn btn-ghost flex-1"
+          variant="ghost"
+          className="flex-1"
           disabled={isSubmitting}
           onClick={() => void respond(false)}
         >
           Cancel
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className="btn btn-primary flex-1"
+          variant="primary"
+          className="flex-1"
           disabled={isSubmitting}
           onClick={() => void respond(true)}
         >
           {isSubmitting ? "Authorizing..." : "Authorize"}
-        </button>
+        </Button>
       </div>
 
       <p className="mt-6 text-center text-xs text-base-content/50">

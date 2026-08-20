@@ -46,6 +46,11 @@ export function useProjectProfile(projectId: string) {
     // error: a missing profile should cost you labels, not the tab.
     profile: query.data ?? EMPTY_PROFILE,
     isLoading: query.isLoading,
+    // Surfaced separately because one caller cannot treat it as "no profile":
+    // the client report prints, and "the client has not filled this in" and
+    // "we could not read it" are different sentences to hand someone. Every
+    // other caller ignores this and keeps the degrade-quietly behaviour.
+    isError: query.isError,
   };
 }
 

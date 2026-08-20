@@ -1,15 +1,15 @@
 import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { useState, type ReactNode } from "react";
 import {
-  ChevronDown,
+  CaretDown,
   Copy,
   Download,
-  FileDown,
-  MoreHorizontal,
+  FileArrowDown,
+  DotsThree,
   Play,
-  RefreshCw,
-  Sheet,
-} from "lucide-react";
+  ArrowsClockwise,
+  Table,
+} from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 function ToolbarMenu({
@@ -49,7 +49,7 @@ function ToolbarMenu({
         >
           {icon}
           {label}
-          <ChevronDown className="size-3.5 opacity-60" />
+          <CaretDown className="size-3.5 opacity-60" />
         </Button>
       ) : (
         <Button
@@ -117,35 +117,46 @@ function MenuItem({
 export function MoreMenu({
   onCheckNow,
   checkBusy,
-  checkDisabled,
+  checkBlockedReason,
   onRefreshMetrics,
   metricsRefreshing,
   hasData,
 }: {
   onCheckNow: () => void;
   checkBusy: boolean;
-  checkDisabled: boolean;
+  /**
+   * Why a rank check cannot be run right now, or null when it can. Rendered
+   * on a DISABLED item rather than hiding the item: this used to be shown
+   * enabled whenever the plan allowed it, and a config with no keywords sent
+   * the click into `if (count > 0)` in the parent, where it vanished with no
+   * toast and no explanation. A capability you cannot use is still worth
+   * seeing, provided it says why.
+   */
+  checkBlockedReason: string | null;
   onRefreshMetrics: () => void;
   metricsRefreshing: boolean;
   hasData: boolean;
 }) {
   return (
-    <ToolbarMenu
-      icon={<MoreHorizontal className="size-4" />}
-      title="More actions"
-    >
-      {!checkDisabled && (
-        <MenuItem
-          icon={<Play className="size-3.5" />}
-          label={checkBusy ? "Running..." : "Check rankings"}
-          description="Fetch current Google positions"
-          onClick={onCheckNow}
-          disabled={checkBusy}
-        />
-      )}
+    <ToolbarMenu icon={<DotsThree className="size-4" />} title="More actions">
+      <MenuItem
+        icon={<Play className="size-3.5" />}
+        // The metered one of the pair. "Update keyword stats" below has carried
+        // a credits label all along while this -- which fetches live Google
+        // positions for every tracked keyword -- carried none, so the cheaper
+        // action was the one that looked like it cost money.
+        label={
+          checkBusy
+            ? "Running..."
+            : meteredActionLabel("Check rankings", { kind: "credits" })
+        }
+        description={checkBlockedReason ?? "Fetch current Google positions"}
+        onClick={onCheckNow}
+        disabled={checkBusy || checkBlockedReason !== null}
+      />
       <MenuItem
         icon={
-          <RefreshCw
+          <ArrowsClockwise
             className={`size-3.5 ${metricsRefreshing ? "animate-spin" : ""}`}
           />
         }
@@ -178,13 +189,13 @@ export function ExportMenu({
   return (
     <ToolbarMenu label="Export" icon={<Download className="size-3.5" />}>
       <MenuItem
-        icon={<Sheet className="size-3.5" />}
+        icon={<Table className="size-3.5" />}
         label="Export to Sheets"
         onClick={onExportToSheets}
         disabled={!hasData}
       />
       <MenuItem
-        icon={<FileDown className="size-3.5" />}
+        icon={<FileArrowDown className="size-3.5" />}
         label="Export CSV"
         onClick={onExport}
         disabled={!hasData}

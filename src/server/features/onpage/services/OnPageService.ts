@@ -110,6 +110,41 @@ async function loadQueriesByPage(projectId: string) {
 }
 
 /**
+ * Whether the crawl actually got a document back from this URL.
+ *
+ * Numerically identical to `auditIssues.ts`'s `servedContent`, which the audit
+ * issue list applies before it will call a page's content defective:
+ * `!isBroken && !isRedirect` reduces to exactly "not null, and 2xx". Written
+ * here as the positive test rather than as two negations so that a status
+ * nobody has thought about — a 1xx, or the 999 a bot-blocking CDN likes to
+ * return — falls out as "not known to be serving" instead of needing a new
+ * exclusion added alongside the others. It is also the bound
+ * `lighthouse.ts`'s `selectLighthouseSample` already uses to decide which
+ * pages are worth spending a Lighthouse run on, so "did this URL serve
+ * something?" has one answer across the server.
+ *
+ * NULL is excluded, deliberately. No write path in this repo can produce one:
+ * the crawler records a fetch that never completed — DNS failure, TLS error,
+ * timeout, connection refused — as `emptyPageResult(url, 0, ...)`
+ * (`site-audit-workflow-helpers.ts`), and the DataForSEO fallback collapses a
+ * missing status with `item.status_code ?? 0` (`siteAuditFallbackMapping.ts`),
+ * so "never responded" is `0`. The column is nullable only because Drizzle
+ * columns default that way, and it has been nullable since migration 0000, so
+ * a null cannot even be a row that predates the column. A null therefore means
+ * the same thing `0` does with less detail — nothing ever recorded a response
+ * for this URL — which is how `isBroken` and `portfolio.ts` already read it.
+ * The asymmetry settles it regardless: this list feeds `OnPageAiService`,
+ * where a wrongly included row costs a metered LLM rewrite of a URL that
+ * serves nothing, and a wrongly excluded one costs a free rule-based
+ * suggestion that the next crawl — which will record a real status — restores.
+ */
+function servedContent(page: { statusCode: number | null }): boolean {
+  return (
+    page.statusCode != null && page.statusCode >= 200 && page.statusCode < 300
+  );
+}
+
+/**
  * Regenerate the on-page fix list from the latest completed crawl, informed by
  * the queries each page already earns impressions for. Costs nothing: crawl
  * data is already stored and Search Console is free first-party data.
@@ -129,7 +164,19 @@ async function generate(projectId: string, brand: string | null) {
     loadQueriesByPage(projectId),
   ]);
 
-  const inputs: PageInput[] = pages.map((page) => ({
+  // Only pages that served a document can have their content judged. A URL
+  // that 404s, that never answered, or that only redirects is stored with an
+  // empty title, an empty meta description and no H1 (`emptyPageResult`), so
+  // without this every one of them matched the missing-title, missing-meta and
+  // missing-H1 rules at once and earned rule-based rewrite rows. Those rows
+  // are what the "AI rewrite" button sends to `OnPageAiService.rewrite`, the
+  // one metered path in the feature — so the agency paid a model to write a
+  // title for a URL that serves nothing. `OnPageAiService` cannot defend
+  // itself here: it loads suggestions by id and they carry no status, so this
+  // is the only place the candidate can be refused.
+  const servingPages = pages.filter(servedContent);
+
+  const inputs: PageInput[] = servingPages.map((page) => ({
     url: page.url,
     title: page.title,
     metaDescription: page.metaDescription,
@@ -146,7 +193,17 @@ async function generate(projectId: string, brand: string | null) {
 
   return {
     ...result,
-    pagesAnalyzed: pages.length,
+    // The count of pages actually analyzed, which is now narrower than the
+    // count crawled. Reporting `pages.length` here would have the caller's
+    // "Analyzed N pages" toast claim credit for pages this function
+    // deliberately skipped.
+    pagesAnalyzed: servingPages.length,
+    // What was crawled but not analyzed, so an empty tab can say WHY it is
+    // empty. `pagesAnalyzed === 0 && pagesSkipped > 0` is precisely "the crawl
+    // found no serving pages", which reads very differently from "your pages
+    // are all fine" — and the two are indistinguishable from the counts the
+    // caller had before.
+    pagesSkipped: pages.length - servingPages.length,
     auditId: latest.id,
     usedSearchConsole: queriesByPage.size > 0,
   };

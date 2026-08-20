@@ -201,8 +201,22 @@ export const addTrackingKeywords = createServerFn({ method: "POST" })
     let checkTriggered = false;
     if (result.addedIds.length > 0) {
       const isHosted = await isHostedServerAuthMode();
+      // A billing provider that will not answer must not spend, and must not
+      // fail the add either: the keywords are already saved by this point, so
+      // letting this reject would report a successful add as an error and
+      // leave the user with rows they were told they did not get. Skipping the
+      // auto-check is the safe half -- `checkTriggered: false` already tells
+      // the client to offer "Check Now", which is the same path a free plan
+      // takes.
       const hasPaidPlan =
-        !isHosted || (await customerHasPaidPlan(context.organizationId));
+        !isHosted ||
+        (await customerHasPaidPlan(context.organizationId).catch((err) => {
+          console.info(
+            "[rank-tracking] auto-check skipped: plan unknown (%s)",
+            asAppError(err)?.code ?? "read failed",
+          );
+          return false;
+        }));
 
       if (hasPaidPlan) {
         try {

@@ -1,5 +1,5 @@
-import { BadgeCheck, SearchX, Users } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { SealCheck, MagnifyingGlassMinus, Users } from "@phosphor-icons/react";
+import type { Icon } from "@phosphor-icons/react";
 import { InsightIcon, type InsightTone } from "@/client/components/InsightTile";
 import type { KeywordGapMode } from "@/types/schemas/competitors";
 import { useKeywordGapQuery } from "./useCompetitorsQueries";
@@ -7,12 +7,12 @@ import { Loader } from "@cloudflare/kumo/components/loader";
 
 const MODE_META: Record<
   KeywordGapMode,
-  { label: string; hint: string; icon: LucideIcon; tone: InsightTone }
+  { label: string; hint: string; icon: Icon; tone: InsightTone }
 > = {
   missing: {
     label: "Missing",
     hint: "They rank, you don't — your content roadmap",
-    icon: SearchX,
+    icon: MagnifyingGlassMinus,
     tone: "warning",
   },
   shared: {
@@ -24,7 +24,7 @@ const MODE_META: Record<
   advantage: {
     label: "Your advantage",
     hint: "You rank, they don't — defend these",
-    icon: BadgeCheck,
+    icon: SealCheck,
     tone: "success",
   },
 };
@@ -40,6 +40,7 @@ export function KeywordGapOverview({
   projectId,
   target,
   competitor,
+  page,
   pageSize,
   activeMode,
   locationCode,
@@ -51,6 +52,13 @@ export function KeywordGapOverview({
   projectId: string;
   target: string;
   competitor: string;
+  /** The page the table below is showing.
+   *
+   *  Hardcoding 1 here made the active mode's card and the table ask for
+   *  different pages of the same metered endpoint, so any page > 1 issued two
+   *  billed calls instead of one -- React Query dedupes them only while the
+   *  keys match. */
+  page: number;
   pageSize: number;
   activeMode: KeywordGapMode;
   locationCode: number;
@@ -65,7 +73,7 @@ export function KeywordGapOverview({
       target,
       competitor,
       mode: "missing",
-      page: 1,
+      page,
       pageSize,
       locationCode,
       languageCode,
@@ -78,7 +86,7 @@ export function KeywordGapOverview({
       target,
       competitor,
       mode: "shared",
-      page: 1,
+      page,
       pageSize,
       locationCode,
       languageCode,
@@ -91,7 +99,7 @@ export function KeywordGapOverview({
       target,
       competitor,
       mode: "advantage",
-      page: 1,
+      page,
       pageSize,
       locationCode,
       languageCode,

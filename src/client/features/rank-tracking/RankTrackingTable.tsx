@@ -1,6 +1,11 @@
 import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
-import { FileDown, Loader2, Sheet, Trash2 } from "lucide-react";
+import {
+  FileArrowDown,
+  CircleNotch,
+  Table,
+  Trash,
+} from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
 import {
   AppDataTable,
@@ -148,7 +153,7 @@ export function RankTrackingTable({
   if (resultsLoading) {
     return (
       <div className="flex items-center justify-center p-8">
-        <Loader2 className="size-5 animate-spin text-base-content/50" />
+        <CircleNotch className="size-5 animate-spin text-base-content/50" />
       </div>
     );
   }
@@ -171,7 +176,7 @@ export function RankTrackingTable({
         actions={
           <div className="flex items-center px-1.5">
             <TableBulkActionButton
-              icon={<Trash2 className="size-3.5" />}
+              icon={<Trash className="size-3.5" />}
               onClick={() => setShowConfirm(true)}
               variant="danger"
             >
@@ -181,12 +186,12 @@ export function RankTrackingTable({
               actions={[
                 {
                   label: "Export to Sheets",
-                  icon: <Sheet className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: exportSelectionToSheets,
                 },
                 {
                   label: "Export CSV",
-                  icon: <FileDown className="size-4" />,
+                  icon: <FileArrowDown className="size-4" />,
                   onClick: exportSelectionCsv,
                 },
               ]}
@@ -226,7 +231,7 @@ export function RankTrackingTable({
               disabled={removeMutation.isPending}
             >
               {removeMutation.isPending && (
-                <Loader2 className="size-3 animate-spin" />
+                <CircleNotch className="size-3 animate-spin" />
               )}
               Remove {selectedCount} keyword
               {selectedCount !== 1 ? "s" : ""}

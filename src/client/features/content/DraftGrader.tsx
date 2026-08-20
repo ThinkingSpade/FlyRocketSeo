@@ -3,6 +3,7 @@ import { NextStepsCard } from "@/client/features/insights/NextStepsCard";
 import { buildContentVerdict } from "@/client/features/insights/verdicts/content";
 import { computeOutlineThemes, isThemeCovered } from "./outlineGap";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { InputArea } from "@cloudflare/kumo/components/input";
 
 const STOPWORDS = new Set([
   "a",
@@ -144,8 +145,8 @@ export function DraftGrader({
           Paste your article to see which target terms and questions it already
           covers. Checked entirely in your browser.
         </p>
-        <textarea
-          className="textarea textarea-bordered h-32 w-full text-sm"
+        <InputArea
+          className="h-32 w-full text-sm"
           placeholder="Paste your draft here…"
           value={draft}
           onChange={(event) => setDraft(event.target.value)}

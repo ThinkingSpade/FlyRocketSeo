@@ -1,10 +1,10 @@
 import {
   ArrowRight,
-  BadgeCheck,
-  CircleCheck,
-  CircleHelp,
-  TriangleAlert,
-} from "lucide-react";
+  SealCheck,
+  CheckCircle,
+  Question,
+  Warning,
+} from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import type { GbpAudit, GbpCheck } from "./gbpAudit";
 import {
@@ -20,10 +20,10 @@ import { GbpListingFixButton } from "./GbpListingFixButton";
 // reads through color/tone alone rather than a second, competing visual
 // channel.
 const STATUS_ICON = {
-  pass: CircleCheck,
-  warn: TriangleAlert,
-  fail: TriangleAlert,
-  unknown: CircleHelp,
+  pass: CheckCircle,
+  warn: Warning,
+  fail: Warning,
+  unknown: Question,
 } as const;
 
 /** The one check a `found: false` audit collapses to already states the
@@ -66,7 +66,7 @@ export function GbpAuditCard({
         <div className="flex flex-wrap items-start gap-4">
           <div className="w-32 shrink-0">
             <InsightTile
-              icon={BadgeCheck}
+              icon={SealCheck}
               label="GBP score"
               value={audit.score ?? "—"}
               hint={
@@ -79,7 +79,7 @@ export function GbpAuditCard({
           </div>
           <div className="min-w-0 flex-1">
             <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-              <InsightIcon icon={BadgeCheck} tone="neutral" />
+              <InsightIcon icon={SealCheck} tone="neutral" />
               Business profile audit
             </h2>
             <p className="mt-0.5 text-xs text-base-content/55">

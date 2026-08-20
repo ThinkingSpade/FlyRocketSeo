@@ -1,39 +1,17 @@
 import { useMemo } from "react";
-import { Megaphone } from "lucide-react";
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import type { TooltipContentProps } from "recharts";
+import { Megaphone } from "@phosphor-icons/react";
+import { Chart } from "@cloudflare/kumo/components/chart";
 import { InsightIcon } from "@/client/components/InsightTile";
-import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
-import { useChartWidth } from "./RankTrackingTrendChart";
-import { computeVisibilityTrend } from "./visibilityTrend";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
 import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_LINE,
-  CHART_X_TICK_GAP,
-} from "@/client/components/chart/chartTheme";
-import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
+import type { RankPositionMatrixCell } from "@/serverFunctions/rank-tracking";
+import { computeVisibilityTrend } from "./visibilityTrend";
 
-type ChartRow = {
-  label: string;
-  visibility: number;
-};
-
-/** Recharts types tooltip payloads as any; narrow structurally instead. */
-function isChartRow(value: unknown): value is ChartRow {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "label" in value &&
-    "visibility" in value
-  );
-}
+const VISIBILITY_COLOR = "#2563eb";
 
 function formatDate(iso: string): string {
   const parsed = new Date(iso);
@@ -63,14 +41,86 @@ export function VisibilityTrendChart({
     [cells, volumeByKeywordId],
   );
 
-  const { containerRef, width: chartWidth } = useChartWidth();
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
   const height = 180;
-  if (points.length < 2) return null;
 
-  const rows: ChartRow[] = points.map((point) => ({
-    label: formatDate(point.checkedAt),
-    visibility: Math.round(point.visibility * 10) / 10,
-  }));
+  const rows = useMemo(
+    () =>
+      points.map((point) => ({
+        label: formatDate(point.checkedAt),
+        visibility: Math.round(point.visibility * 10) / 10,
+      })),
+    [points],
+  );
+
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        dangerousHtmlFormatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          return [
+            `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
+            `<div style="font-size:13px;font-weight:500">${first.value ?? 0}% visibility</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        type: "category" as const,
+        data: rows.map((row) => row.label),
+        boundaryGap: false,
+        // CartesianGrid was horizontal-only (`vertical={false}`).
+        splitLine: { show: false },
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          // ECharts' own overlap avoidance, in place of Recharts' minTickGap.
+          hideOverlap: true,
+        },
+      },
+      yAxis: {
+        ...base.axisCommon,
+        type: "value" as const,
+        // A share of a whole, so the axis is the whole: 0–100 fixed, or a flat
+        // series would look like it filled the chart.
+        min: 0,
+        max: 100,
+        axisLabel: {
+          ...base.axisCommon.axisLabel,
+          formatter: (value: number) => `${value}%`,
+        },
+      },
+      series: [
+        {
+          type: "line" as const,
+          name: "Visibility",
+          data: rows.map((row) => row.visibility),
+          smooth: true,
+          // Hollow ring on the hovered point — surface fill, series colour on
+          // the border — the marker the Recharts charts drew on hover.
+          symbol: "circle" as const,
+          symbolSize: 8,
+          showSymbol: false,
+          lineStyle: { width: 2, color: VISIBILITY_COLOR },
+          itemStyle: { color: VISIBILITY_COLOR },
+          emphasis: {
+            itemStyle: {
+              color: theme.surface,
+              borderColor: VISIBILITY_COLOR,
+              borderWidth: 2,
+            },
+          },
+        },
+      ],
+    }),
+    [base, rows, theme.surface],
+  );
+
+  if (rows.length < 2) return null;
+
   const first = rows[0].visibility;
   const last = rows[rows.length - 1].visibility;
   const delta = Math.round((last - first) * 10) / 10;
@@ -103,67 +153,13 @@ export function VisibilityTrendChart({
         Volume-weighted share of click potential captured by your rankings — the
         scorecard&rsquo;s visibility, per check.
       </p>
-      <div
-        ref={containerRef}
+      <Chart
+        echarts={echarts}
+        options={options}
+        height={height}
+        isDarkMode={theme.isDark}
         className="mt-2 w-full min-w-0"
-        style={{ height }}
-      >
-        {chartWidth > 0 ? (
-          <LineChart
-            width={chartWidth}
-            height={height}
-            data={rows}
-            margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-          >
-            <CartesianGrid
-              strokeDasharray="3 3"
-              stroke="currentColor"
-              opacity={0.1}
-              vertical={false}
-            />
-            <XAxis
-              dataKey="label"
-              tick={CHART_AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              minTickGap={CHART_X_TICK_GAP}
-            />
-            <YAxis
-              domain={[0, 100]}
-              tickFormatter={(value: number) => `${value}%`}
-              tick={CHART_AXIS_TICK}
-              tickLine={false}
-              axisLine={false}
-              width={38}
-            />
-            <Tooltip
-              cursor={CHART_CURSOR_LINE}
-              content={(props: TooltipContentProps<number, string>) => {
-                const candidates = (props.payload ?? []).map(
-                  (entry: { payload?: unknown }) => entry.payload,
-                );
-                const row = candidates[0];
-                if (!props.active || !isChartRow(row)) return null;
-                return (
-                  <div className="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-xs shadow">
-                    <div className="font-medium">{row.label}</div>
-                    <div>{row.visibility}% visibility</div>
-                  </div>
-                );
-              }}
-            />
-            <Line
-              type="monotone"
-              dataKey="visibility"
-              stroke="#2563eb"
-              strokeWidth={2}
-              dot={false}
-              activeDot={<ChartActiveDot />}
-              isAnimationActive={false}
-            />
-          </LineChart>
-        ) : null}
-      </div>
+      />
     </div>
   );
 }

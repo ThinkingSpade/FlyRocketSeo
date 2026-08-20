@@ -1,12 +1,13 @@
 import {
-  ChevronDown,
+  CaretDown,
   Download,
-  FileDown,
-  Loader2,
-  RefreshCw,
-  Sheet,
-} from "lucide-react";
+  FileArrowDown,
+  CircleNotch,
+  ArrowsClockwise,
+  GridFour,
+} from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 export function SavedKeywordsHeader({
   totalCount,
@@ -36,84 +37,68 @@ export function SavedKeywordsHeader({
       </div>
 
       <div className="flex items-center gap-2">
-        <div className="dropdown dropdown-end">
-          <Button
-            type="button"
-            tabIndex={0}
-            disabled={disabled || metricsRefreshing}
-            aria-haspopup="menu"
-            variant="ghost"
-            size="sm"
-          >
-            <RefreshCw
-              className={`size-4 ${metricsRefreshing ? "animate-spin" : ""}`}
-            />
-            {metricsRefreshing ? "Updating..." : "Actions"}
-            <ChevronDown className="size-3 opacity-60" />
-          </Button>
-          <ul
-            tabIndex={0}
-            role="menu"
-            className="dropdown-content menu z-10 w-64 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-          >
-            <li>
-              <button
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={
+              // aria-haspopup is Kumo's to set now — hand-writing it here
+              // would fight the trigger's own ARIA.
+              <Button
                 type="button"
-                onClick={onRefreshMetrics}
                 disabled={disabled || metricsRefreshing}
+                variant="ghost"
+                size="sm"
               >
-                <RefreshCw className="size-4" />
-                <span className="flex flex-col items-start">
-                  <span>Update keyword stats</span>
-                  <span className="text-xs text-base-content/50">
-                    Volume, difficulty &amp; CPC
-                  </span>
+                <ArrowsClockwise
+                  className={`size-4 ${metricsRefreshing ? "animate-spin" : ""}`}
+                />
+                {metricsRefreshing ? "Updating..." : "Actions"}
+                <CaretDown className="size-3 opacity-60" />
+              </Button>
+            }
+          />
+          <DropdownMenu.Content align="end" className="w-64">
+            <DropdownMenu.Item
+              icon={ArrowsClockwise}
+              onClick={onRefreshMetrics}
+            >
+              <span className="flex flex-col items-start">
+                <span>Update keyword stats</span>
+                <span className="text-xs text-base-content/50">
+                  Volume, difficulty &amp; CPC
                 </span>
-              </button>
-            </li>
-          </ul>
-        </div>
+              </span>
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
 
-        <div className="dropdown dropdown-end">
-          <Button
-            type="button"
-            tabIndex={0}
-            disabled={disabled}
-            aria-haspopup="menu"
-            variant="ghost"
-            size="sm"
-          >
-            {exporting != null ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Download className="size-4" />
-            )}
-            Export
-            <ChevronDown className="size-3 opacity-60" />
-          </Button>
-          <ul
-            tabIndex={0}
-            role="menu"
-            className="dropdown-content menu z-10 w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-          >
-            <li>
-              <button
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={
+              <Button
                 type="button"
-                onClick={onExportSheets}
                 disabled={disabled}
+                variant="ghost"
+                size="sm"
               >
-                <Sheet className="size-4" />
-                Export to Sheets
-              </button>
-            </li>
-            <li>
-              <button type="button" onClick={onExportCsv} disabled={disabled}>
-                <FileDown className="size-4" />
-                Export CSV
-              </button>
-            </li>
-          </ul>
-        </div>
+                {exporting != null ? (
+                  <CircleNotch className="size-4 animate-spin" />
+                ) : (
+                  <Download className="size-4" />
+                )}
+                Export
+                <CaretDown className="size-3 opacity-60" />
+              </Button>
+            }
+          />
+          <DropdownMenu.Content align="end" className="w-56">
+            <DropdownMenu.Item icon={GridFour} onClick={onExportSheets}>
+              Export to Sheets
+            </DropdownMenu.Item>
+            <DropdownMenu.Item icon={FileArrowDown} onClick={onExportCsv}>
+              Export CSV
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
       </div>
     </div>
   );

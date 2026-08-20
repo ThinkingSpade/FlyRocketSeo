@@ -1,4 +1,9 @@
-import { ArrowUpRight, ClipboardCheck, Lightbulb, Wrench } from "lucide-react";
+import {
+  ArrowUpRight,
+  ClipboardText,
+  Lightbulb,
+  Wrench,
+} from "@phosphor-icons/react";
 import { InsightTile } from "@/client/components/InsightTile";
 import { quickWinHint, type Opportunity } from "./opportunityModel";
 
@@ -60,7 +65,7 @@ export function OpportunityTiles({
         tone={technicalIssueCount > 0 ? "warning" : "neutral"}
       />
       <InsightTile
-        icon={ClipboardCheck}
+        icon={ClipboardText}
         label="Pages affected"
         value={technicalSourcesFailed ? "—" : affectedPages.toLocaleString()}
         hint="Across the last audit"

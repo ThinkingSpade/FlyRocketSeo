@@ -26,8 +26,12 @@ import {
   StrikingDistanceTable,
   TotalsCards,
   type ExportTarget,
-  type Tab,
 } from "@/client/features/search-performance/SearchPerformanceParts";
+import {
+  SEARCH_PERFORMANCE_TAB_VALUES,
+  tabSearchValue,
+  type Tab,
+} from "@/client/features/search-performance/searchPerformanceSearch";
 import { CtrOpportunitiesTable } from "@/client/features/search-performance/CtrOpportunitiesTable";
 import { BrandedSplitCard } from "@/client/features/search-performance/BrandedSplitCard";
 import { ContentPerformanceTab } from "@/client/features/search-performance/ContentPerformanceTab";
@@ -48,14 +52,11 @@ import { AppPageShell } from "@/client/components/AppPageShell";
 import { TableSkeleton } from "@/client/components/TableSkeleton";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 
-/** The tab set, declared once so the strip and its value resolver agree. */
-const SEARCH_PERFORMANCE_TABS: ReadonlyArray<{ value: Tab }> = [
-  { value: "striking" },
-  { value: "ctr" },
-  { value: "content" },
-  { value: "queries" },
-  { value: "pages" },
-];
+/** Navigating within this tab only ever rewrites its own search params. */
+type SearchPerformanceNavigate = (args: {
+  search: (prev: Record<string, unknown>) => Record<string, unknown>;
+  replace: boolean;
+}) => void;
 
 function tabDimension(tab: Tab): SearchPerformanceTableDimension {
   return tab === "pages" ? "page" : "query";
@@ -125,13 +126,26 @@ function queryPageEvidence(report: {
   ];
 }
 
-export function SearchPerformancePage({ projectId }: { projectId: string }) {
+export function SearchPerformancePage({
+  projectId,
+  navigate,
+  tab,
+  focusQuery,
+}: {
+  projectId: string;
+  navigate: SearchPerformanceNavigate;
+  /** Which panel to open, resolved from the URL. State this tab holds in the
+   *  URL rather than in `useState`, because it is the one thing another tab
+   *  needs to name when it hands a query over. */
+  tab: Tab;
+  /** The query an inbound link is asking about, or null. */
+  focusQuery: string | null;
+}) {
   const queryClient = useQueryClient();
   const [range, setRange] =
     useState<SearchPerformanceDateRange>("last_28_days");
   const [device, setDevice] = useState<DeviceFilter>(ALL);
   const [country, setCountry] = useState<string>(ALL);
-  const [tab, setTab] = useState<Tab>("striking");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<number>(
     SEARCH_PERFORMANCE_DEFAULT_PAGE_SIZE,
@@ -282,10 +296,20 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                     // Resolve against the declared list rather than asserting:
                     // recovers `Tab` from Kumo's plain string, and ignores any
                     // value that is not one of ours.
-                    const selected = SEARCH_PERFORMANCE_TABS.find(
-                      (t) => t.value === next,
+                    const selected = SEARCH_PERFORMANCE_TAB_VALUES.find(
+                      (value) => value === next,
                     );
-                    if (selected) setTab(selected.value);
+                    if (!selected) return;
+                    // `replace` because switching panels is a change of view,
+                    // not a step: Back should leave GSC Insights rather than
+                    // walk every tab the user tried on the way here.
+                    navigate({
+                      search: (prev) => ({
+                        ...prev,
+                        tab: tabSearchValue(selected),
+                      }),
+                      replace: true,
+                    });
                   }}
                   tabs={[
                     {
@@ -329,8 +353,10 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                 />
               ) : tab === "ctr" ? (
                 <CtrOpportunitiesTable
+                  projectId={projectId}
                   rows={report.ctrOpportunities}
                   sampling={queryPageEvidence(report)}
+                  focusQuery={focusQuery}
                 />
               ) : tab === "content" ? (
                 <ContentPerformanceTab
@@ -358,10 +384,7 @@ export function SearchPerformancePage({ projectId }: { projectId: string }) {
                   emptyBody="Search Console data trails live traffic by two to three days, so a very recent range can be empty while the site is fine."
                 >
                   <div className="p-4">
-                    <DimensionTable
-                      rows={tableRows}
-                      keyLabel={tab === "queries" ? "Query" : "Page"}
-                    />
+                    <DimensionTable rows={tableRows} dimension={dimension} />
                   </div>
                   <TablePagination
                     page={page}

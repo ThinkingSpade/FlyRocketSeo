@@ -1,4 +1,4 @@
-import { History, RotateCw } from "lucide-react";
+import { ClockCounterClockwise, ArrowClockwise } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 type DataFreshnessProps = {
@@ -84,7 +84,7 @@ export function DataFreshness({
     <div
       className={`flex items-center gap-1.5 text-xs text-base-content/60 ${className ?? ""}`}
     >
-      <History className="size-3.5 shrink-0" />
+      <ClockCounterClockwise className="size-3.5 shrink-0" />
       {/* The exact time on hover: "3 hours ago" is the right density for a chip,
           but someone comparing two runs needs the real timestamp. */}
       <span title={date.toLocaleString()}>
@@ -108,7 +108,7 @@ export function DataFreshness({
             title="Check for newer data. Results are cached, so refreshing soon after a run returns the same figures and the time above will not change."
             aria-label="Check for newer data. Results are cached, so refreshing soon after a run returns the same figures."
           >
-            <RotateCw
+            <ArrowClockwise
               className={`size-3.5 ${refreshing ? "animate-spin" : ""}`}
             />
             Refresh

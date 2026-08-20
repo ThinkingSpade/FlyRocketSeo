@@ -1,4 +1,9 @@
-import { Link2, Map, SearchX, Users } from "lucide-react";
+import {
+  LinkSimple,
+  MapTrifold,
+  MagnifyingGlassMinus,
+  Users,
+} from "@phosphor-icons/react";
 import {
   DEFAULT_COMPETITORS_PAGE_SIZE,
   DEFAULT_KEYWORD_GAP_PAGE_SIZE,
@@ -38,17 +43,17 @@ export const COMPETITORS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
     description: "Domains ranking for the same keywords, by overlap",
   },
   {
-    icon: Map,
+    icon: MapTrifold,
     title: "Positioning map",
     description: "Keywords vs traffic, bubble-sized by shared keywords",
   },
   {
-    icon: SearchX,
+    icon: MagnifyingGlassMinus,
     title: "Keyword gap",
     description: "What they rank for that you don't — your content roadmap",
   },
   {
-    icon: Link2,
+    icon: LinkSimple,
     title: "Link gap",
     description: "Sites linking to them but not to you",
   },

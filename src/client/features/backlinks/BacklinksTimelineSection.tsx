@@ -1,31 +1,26 @@
-import { CalendarRange } from "lucide-react";
-import {
-  Bar,
-  CartesianGrid,
-  ComposedChart,
-  Line,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import type { TooltipContentProps } from "recharts";
+import { useMemo } from "react";
+import { CalendarBlank } from "@phosphor-icons/react";
+import { Chart } from "@cloudflare/kumo/components/chart";
 import { Empty } from "@cloudflare/kumo/components/empty";
-import { Loader } from "@cloudflare/kumo/components/loader";
-import { ChartActiveDot } from "@/client/components/chart/ChartActiveDot";
-import {
-  CHART_AXIS_TICK,
-  CHART_CURSOR_LINE,
-  CHART_X_TICK_GAP,
-} from "@/client/components/chart/chartTheme";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
-import { useChartWidth } from "@/client/features/rank-tracking/RankTrackingTrendChart";
+import { echarts } from "@/client/components/chart/echarts";
+import { tooltipRows } from "@/client/components/chart/tooltipParams";
+import {
+  useChartBase,
+  useChartTheme,
+} from "@/client/components/chart/useChartTheme";
 import { getBacklinksTimeline } from "@/serverFunctions/backlinks";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import { Loader } from "@cloudflare/kumo/components/loader";
 import {
   classifyNumericSeries,
   type NumericSeriesInformation,
 } from "./backlinksChartInformation";
+
+const GAINED_COLOR = "#16a34a";
+const LOST_COLOR = "#dc2626";
+const TOTAL_COLOR = "#2563eb";
 
 type TimelineRow = {
   label: string;
@@ -35,17 +30,6 @@ type TimelineRow = {
   lost: number;
   referringDomains: number | null;
 };
-
-/** Recharts types tooltip payloads as any; narrow structurally instead. */
-function isTimelineRow(value: unknown): value is TimelineRow {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "label" in value &&
-    "gained" in value &&
-    "lost" in value
-  );
-}
 
 function monthLabel(date: string): string {
   const parsed = new Date(`${date}T00:00:00Z`);
@@ -76,17 +60,29 @@ export function BacklinksTimelineSection({
     queryFn: () => getBacklinksTimeline({ data: { projectId, target } }),
   });
 
-  const { containerRef, width: chartWidth } = useChartWidth();
+  const theme = useChartTheme();
+  const base = useChartBase(theme);
   const height = 220;
 
-  const points = timelineQuery.data?.points ?? [];
-  const rows: TimelineRow[] = points.map((point) => ({
-    label: monthLabel(point.date),
-    gained: point.newReferringDomains,
-    lostNegative: -point.lostReferringDomains,
-    lost: point.lostReferringDomains,
-    referringDomains: point.referringDomains,
-  }));
+  // Memoized because the `?? []` fallback is a new array on every render, which
+  // would re-derive the rows and the chart options each time.
+  const points = useMemo(
+    () => timelineQuery.data?.points ?? [],
+    [timelineQuery.data],
+  );
+
+  const rows = useMemo<TimelineRow[]>(
+    () =>
+      points.map((point) => ({
+        label: monthLabel(point.date),
+        gained: point.newReferringDomains,
+        lostNegative: -point.lostReferringDomains,
+        lost: point.lostReferringDomains,
+        referringDomains: point.referringDomains,
+      })),
+    [points],
+  );
+
   const gainedInformation = classifyNumericSeries(
     rows.map((row) => row.gained),
   );
@@ -110,10 +106,115 @@ export function BacklinksTimelineSection({
           }
         : null;
 
+  const options = useMemo(
+    () => ({
+      ...base,
+      tooltip: {
+        ...base.tooltip,
+        // Recharts drew a translucent band under the hovered category; the
+        // ECharts equivalent is the shadow axis pointer, tinted with the same
+        // token instead of zrender's default grey.
+        axisPointer: {
+          type: "shadow" as const,
+          shadowStyle: { color: theme.text, opacity: 0.08 },
+        },
+        // ECharts tooltips are formatted, not rendered — there is no React
+        // subtree to hand it, so the markup that used to be a component is a
+        // template. `var(...)` works here where it cannot in a series colour:
+        // this string becomes DOM inside the themed tree, so the BROWSER
+        // resolves the token per theme.
+        //
+        // `dangerousHtmlFormatter`, not `formatter`: Kumo's Chart rewrites the
+        // tooltip as `{...rest, formatter: dangerousHtmlFormatter}` before
+        // calling setOption, so anything passed as `formatter` is overwritten
+        // with undefined and the chart silently falls back to ECharts' default
+        // tooltip. The name is a warning about interpolating untrusted HTML;
+        // every value below is our own markup around our own numbers.
+        dangerousHtmlFormatter: (params: unknown) => {
+          const [first] = tooltipRows(params);
+          if (!first) return "";
+          // The axis carries the month label, so it identifies the row the way
+          // Recharts' payload used to.
+          const row = rows.find(
+            (candidate) => candidate.label === first.axisValue,
+          );
+          if (!row) return "";
+          return [
+            `<div style="font-size:12px;font-weight:500;padding-bottom:2px">${row.label}</div>`,
+            `<div style="font-size:12px;color:var(--color-success)">+${row.gained} won</div>`,
+            `<div style="font-size:12px;color:var(--color-error)">−${row.lost} lost</div>`,
+            row.referringDomains == null
+              ? ""
+              : `<div style="font-size:12px;opacity:0.6">${row.referringDomains.toLocaleString()} referring domains total</div>`,
+          ].join("");
+        },
+      },
+      xAxis: {
+        ...base.axisCommon,
+        type: "category" as const,
+        data: rows.map((row) => row.label),
+        // The Recharts grid was horizontal-only (`vertical={false}`).
+        splitLine: { show: false },
+      },
+      // Two scales on one grid: the diverging bars are monthly deltas, the line
+      // is the running total, and sharing an axis would flatten the deltas to
+      // nothing. The second entry is what `yAxisId="total"` was.
+      yAxis: [
+        {
+          ...base.axisCommon,
+          type: "value" as const,
+          minInterval: 1,
+        },
+        {
+          ...base.axisCommon,
+          type: "value" as const,
+          minInterval: 1,
+          position: "right" as const,
+          // Only the left axis draws grid lines, or the two sets of ticks
+          // would cross-hatch the plot.
+          splitLine: { show: false },
+        },
+      ],
+      series: [
+        // One `stack` id with signed values is Recharts' `stackOffset="sign"`:
+        // ECharts stacks positives up from zero and negatives down.
+        {
+          type: "bar" as const,
+          name: "Won",
+          stack: "delta",
+          data: rows.map((row) => row.gained),
+          itemStyle: { color: GAINED_COLOR, opacity: 0.75 },
+          animation: false,
+        },
+        {
+          type: "bar" as const,
+          name: "Lost",
+          stack: "delta",
+          data: rows.map((row) => row.lostNegative),
+          itemStyle: { color: LOST_COLOR, opacity: 0.65 },
+          animation: false,
+        },
+        {
+          type: "line" as const,
+          name: "Referring domains",
+          yAxisIndex: 1,
+          data: rows.map((row) => row.referringDomains),
+          smooth: true,
+          symbol: "none" as const,
+          connectNulls: true,
+          lineStyle: { width: 2, color: TOTAL_COLOR },
+          itemStyle: { color: TOTAL_COLOR },
+          animation: false,
+        },
+      ],
+    }),
+    [base, rows, theme.text],
+  );
+
   return (
     <section className="rounded-xl border border-base-300 bg-base-100 p-4">
       <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-        <InsightIcon icon={CalendarRange} tone="primary" />
+        <InsightIcon icon={CalendarBlank} tone="primary" />
         Referring domains — won vs lost
       </h2>
       <p className="mt-0.5 text-xs text-base-content/50">
@@ -139,102 +240,13 @@ export function BacklinksTimelineSection({
           description={emptyPresentation.description}
         />
       ) : (
-        <div
-          ref={containerRef}
+        <Chart
+          echarts={echarts}
+          options={options}
+          height={height}
+          isDarkMode={theme.isDark}
           className="mt-3 w-full min-w-0"
-          style={{ height }}
-        >
-          {chartWidth > 0 ? (
-            <ComposedChart
-              width={chartWidth}
-              height={height}
-              data={rows}
-              stackOffset="sign"
-              margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
-            >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                stroke="currentColor"
-                opacity={0.1}
-                vertical={false}
-              />
-              <XAxis
-                dataKey="label"
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                minTickGap={CHART_X_TICK_GAP}
-              />
-              <YAxis
-                yAxisId="delta"
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                width={34}
-                allowDecimals={false}
-              />
-              <YAxis
-                yAxisId="total"
-                orientation="right"
-                tick={CHART_AXIS_TICK}
-                tickLine={false}
-                axisLine={false}
-                width={40}
-                allowDecimals={false}
-              />
-              <Tooltip
-                cursor={CHART_CURSOR_LINE}
-                content={(props: TooltipContentProps<number, string>) => {
-                  const candidates = (props.payload ?? []).map(
-                    (entry: { payload?: unknown }) => entry.payload,
-                  );
-                  const row = candidates[0];
-                  if (!props.active || !isTimelineRow(row)) return null;
-                  return (
-                    <div className="rounded-lg border border-base-300 bg-base-100 px-3 py-2 text-xs shadow">
-                      <div className="pb-1 font-medium">{row.label}</div>
-                      <div className="text-success">+{row.gained} won</div>
-                      <div className="text-error">−{row.lost} lost</div>
-                      {row.referringDomains != null ? (
-                        <div className="text-base-content/60">
-                          {row.referringDomains.toLocaleString()} referring
-                          domains total
-                        </div>
-                      ) : null}
-                    </div>
-                  );
-                }}
-              />
-              <Bar
-                yAxisId="delta"
-                dataKey="gained"
-                stackId="delta"
-                fill="var(--color-success)"
-                fillOpacity={0.75}
-                isAnimationActive={false}
-              />
-              <Bar
-                yAxisId="delta"
-                dataKey="lostNegative"
-                stackId="delta"
-                fill="var(--color-error)"
-                fillOpacity={0.65}
-                isAnimationActive={false}
-              />
-              <Line
-                yAxisId="total"
-                type="monotone"
-                dataKey="referringDomains"
-                stroke="var(--color-primary)"
-                strokeWidth={2}
-                dot={false}
-                activeDot={<ChartActiveDot />}
-                connectNulls
-                isAnimationActive={false}
-              />
-            </ComposedChart>
-          ) : null}
-        </div>
+        />
       )}
     </section>
   );

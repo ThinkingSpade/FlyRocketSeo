@@ -37,9 +37,15 @@ vi.mock("drizzle-orm", () => ({
   and: vi.fn((...conditions: unknown[]) => conditions),
   asc: vi.fn((column: unknown) => ({ ascending: column })),
   eq: vi.fn((column: unknown, value: unknown) => ({ column, value })),
+  notLike: vi.fn((column: unknown, pattern: unknown) => ({
+    notLike: column,
+    pattern,
+  })),
 }));
 
+import { notLike } from "drizzle-orm";
 import { AuthRepository } from "./AuthRepository";
+import { DELEGATED_ORGANIZATION_ID_PATTERN } from "@/server/auth/delegated-organization-id";
 
 type MemberInsert = {
   id: string;
@@ -52,7 +58,9 @@ type MemberInsert = {
 function mockSelectRows(rows: unknown[]) {
   const limit = vi.fn().mockResolvedValue(rows);
   const orderBy = vi.fn(() => ({ limit }));
-  const where = vi.fn(() => ({ limit }));
+  // `where` chains into `orderBy` as well as `limit`: both organization
+  // lookups now filter delegated ids before ordering.
+  const where = vi.fn(() => ({ limit, orderBy }));
   const from = vi.fn(() => ({ limit, orderBy, where }));
   mocks.select.mockReturnValue({ from });
 
@@ -74,6 +82,34 @@ describe("AuthRepository shared organization", () => {
 
     expect(query.orderBy).toHaveBeenCalledOnce();
     expect(query.limit).toHaveBeenCalledWith(1);
+  });
+
+  it("excludes delegated organizations from the shared pick", async () => {
+    // Without this filter the query returns the OLDEST organization outright,
+    // and a per-user delegated workspace created minutes before the team's own
+    // wins forever. Every hosted session then lands in an empty workspace
+    // while the projects sit in the organization ranked second here.
+    const query = mockSelectRows([{ id: "team-org" }]);
+
+    await AuthRepository.findSharedOrganizationId();
+
+    expect(query.where).toHaveBeenCalledWith(
+      expect.objectContaining({ pattern: DELEGATED_ORGANIZATION_ID_PATTERN }),
+    );
+  });
+
+  it("excludes delegated organizations when reading a user's memberships", async () => {
+    const query = mockSelectRows([{ organizationId: "team-org" }]);
+
+    await expect(
+      AuthRepository.findFirstOrganizationIdForUser("operator"),
+    ).resolves.toBe("team-org");
+
+    expect(query.where).toHaveBeenCalledOnce();
+    expect(notLike).toHaveBeenCalledWith(
+      "member.organizationId",
+      DELEGATED_ORGANIZATION_ID_PATTERN,
+    );
   });
 
   it("returns null when no shared organization exists", async () => {

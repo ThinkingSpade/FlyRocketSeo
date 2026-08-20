@@ -1,4 +1,4 @@
-import { Briefcase, Loader2 } from "lucide-react";
+import { Briefcase, CircleNotch } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { parseExclusions } from "@/shared/keyword-fit/keywordFit";
@@ -47,7 +47,7 @@ export function ProfileSummary({
         className="flex flex-wrap items-center gap-2 rounded-xl border border-base-300 bg-base-100 px-4 py-3"
         role="status"
       >
-        <Loader2 className="size-4 shrink-0 animate-spin text-base-content/50" />
+        <CircleNotch className="size-4 shrink-0 animate-spin text-base-content/50" />
         <p className="text-sm text-base-content/80">
           Reading their site to fill this in.{" "}
           <span className="text-base-content/60">

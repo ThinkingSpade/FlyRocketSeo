@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowsDownUp } from "@phosphor-icons/react";
 import { getRankChangeDigest } from "@/serverFunctions/rank-tracking";
 import {
   CardEmpty,
@@ -60,7 +60,7 @@ export function RankChangesCard({ projectId }: { projectId: string }) {
 
   return (
     <DashboardCard
-      icon={ArrowUpDown}
+      icon={ArrowsDownUp}
       title="Recent rank changes"
       headerLink={rankLink}
     >

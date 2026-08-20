@@ -259,7 +259,6 @@ function KeywordTargetsTableComponent({
     <div className="overflow-x-auto">
       <AppDataTable
         table={table}
-        className="table table-sm"
         wrapperClassName=""
         empty={
           <div className="py-6 text-center text-base-content/60">

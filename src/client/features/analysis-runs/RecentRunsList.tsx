@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { History, Loader2 } from "lucide-react";
+import { ClockCounterClockwise, CircleNotch } from "@phosphor-icons/react";
 import { getRecentRuns, restoreRun } from "@/serverFunctions/analysisRuns";
 import { formatRunAge } from "@/client/features/analysis-runs/runAge";
 
@@ -42,7 +42,7 @@ export function RecentRunsList({
         Couldn&rsquo;t load recent runs.{" "}
         <button
           type="button"
-          className="link"
+          className="app-link"
           onClick={() => void query.refetch()}
         >
           Retry
@@ -57,7 +57,7 @@ export function RecentRunsList({
   return (
     <section className="rounded-lg border border-base-300 bg-base-100">
       <div className="flex items-center gap-2 border-b border-base-200 px-3 py-2">
-        <History className="size-4 text-base-content/40" />
+        <ClockCounterClockwise className="size-4 text-base-content/40" />
         <h3 className="text-sm font-semibold">Recent runs</h3>
         <span className="text-xs text-base-content/50">
           Re-opening a run is free
@@ -124,7 +124,7 @@ export function RecentRunsList({
                 <span className="shrink-0 text-xs text-base-content/50">
                   {isChecking ? (
                     <span className="inline-flex items-center gap-1">
-                      <Loader2 className="size-3 animate-spin text-base-content/40" />
+                      <CircleNotch className="size-3 animate-spin text-base-content/40" />
                       Restoring
                     </span>
                   ) : isExpired ? (

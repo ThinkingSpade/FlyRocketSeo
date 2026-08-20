@@ -1,7 +1,7 @@
 /* eslint-disable max-lines, max-lines-per-function -- Content Optimizer keeps its brief and separately-authorized outline workflow together. */
 import { useEffect, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { NotebookPen, Search } from "lucide-react";
+import { NotePencil, MagnifyingGlass } from "@phosphor-icons/react";
 import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { BriefTargets, quantile } from "@/client/features/content/BriefTargets";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
@@ -56,6 +56,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Table } from "@cloudflare/kumo/components/table";
 
 type ContentNavigate = (args: {
   search: (prev: Record<string, unknown>) => Record<string, unknown>;
@@ -179,12 +180,16 @@ function BuildBriefButton({
     <div className="form-control">
       <span
         aria-hidden="true"
-        className="label-text hidden pb-1 text-xs font-medium invisible sm:block"
+        className="hidden pb-1 text-xs font-medium invisible sm:block"
       >
         Build brief
       </span>
       <Button type="submit" variant="primary" size="sm" disabled={disabled}>
-        {isFetching ? <Loader size="sm" /> : <Search className="size-3.5" />}
+        {isFetching ? (
+          <Loader size="sm" />
+        ) : (
+          <MagnifyingGlass className="size-3.5" />
+        )}
         {meteredActionLabel(
           "Build brief",
           { kind: "paidRequests", count: 4 },
@@ -472,9 +477,7 @@ export function ContentOptimizerPage({
           >
             <div className="flex w-full flex-col gap-1.5 sm:max-w-md">
               <label className="form-control w-full">
-                <span className="label-text pb-1 text-xs font-medium">
-                  Target keyword
-                </span>
+                <span className="pb-1 text-xs font-medium">Target keyword</span>
                 <Input
                   passwordManagerIgnore
                   type="text"
@@ -499,9 +502,7 @@ export function ContentOptimizerPage({
               />
             </div>
             <label className="form-control w-full sm:max-w-56">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={locationInput}
@@ -705,16 +706,16 @@ export function ContentOptimizerPage({
               </p>
             ) : null}
             <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th className="w-14">#</th>
-                    <th>Ranking page</th>
-                    <th className="text-right">Words</th>
-                    <th className="text-right">H2s</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <Table>
+                <Table.Header>
+                  <Table.Row>
+                    <Table.Head className="w-14">#</Table.Head>
+                    <Table.Head>Ranking page</Table.Head>
+                    <Table.Head className="text-right">Words</Table.Head>
+                    <Table.Head className="text-right">H2s</Table.Head>
+                  </Table.Row>
+                </Table.Header>
+                <Table.Body>
                   {brief.competitors.map((competitor) => {
                     const analysis = competitor.url
                       ? analysisByUrl.get(competitor.url)
@@ -723,11 +724,11 @@ export function ContentOptimizerPage({
                       ? failedUrls.has(competitor.url)
                       : false;
                     return (
-                      <tr key={`${competitor.rank}-${competitor.url}`}>
-                        <td className="align-top tabular-nums">
+                      <Table.Row key={`${competitor.rank}-${competitor.url}`}>
+                        <Table.Cell className="align-top tabular-nums">
                           {competitor.rank ?? "—"}
-                        </td>
-                        <td className="max-w-xl align-top">
+                        </Table.Cell>
+                        <Table.Cell className="max-w-xl align-top">
                           <a
                             href={competitor.url ?? undefined}
                             target="_blank"
@@ -739,8 +740,8 @@ export function ContentOptimizerPage({
                           <div className="line-clamp-1 text-xs text-success/80">
                             {competitor.url}
                           </div>
-                        </td>
-                        <td className="text-right align-top tabular-nums">
+                        </Table.Cell>
+                        <Table.Cell className="text-right align-top tabular-nums">
                           {analysisFailed ? (
                             <span
                               className="text-base-content/40"
@@ -756,8 +757,8 @@ export function ContentOptimizerPage({
                           ) : (
                             "—"
                           )}
-                        </td>
-                        <td className="text-right align-top tabular-nums">
+                        </Table.Cell>
+                        <Table.Cell className="text-right align-top tabular-nums">
                           {analysisFailed ? (
                             <span
                               className="text-base-content/40"
@@ -771,12 +772,12 @@ export function ContentOptimizerPage({
                           ) : (
                             (analysis?.h2.length ?? "—")
                           )}
-                        </td>
-                      </tr>
+                        </Table.Cell>
+                      </Table.Row>
                     );
                   })}
-                </tbody>
-              </table>
+                </Table.Body>
+              </Table>
             </div>
           </div>
 
@@ -811,7 +812,7 @@ function ContentOptimizerHeading({ scope }: { scope: TargetAreaScope }) {
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <NotebookPen className="size-6" />
+          <NotePencil className="size-6" />
           Content Optimizer
         </h1>
         <p className="text-sm text-base-content/60">

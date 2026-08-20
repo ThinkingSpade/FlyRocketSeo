@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "@tanstack/react-router";
-import { Check, ExternalLink, X } from "lucide-react";
+import { Check, ArrowSquareOut, X } from "@phosphor-icons/react";
 import { Modal } from "@/client/components/Modal";
 import {
   closeExportToSheetsModal,
@@ -67,7 +67,7 @@ export function ExportToSheetsModal() {
           onClick={handleOpenSheet}
         >
           Open new Google Sheet
-          <ExternalLink className="size-3.5" />
+          <ArrowSquareOut className="size-3.5" />
         </Button>
       </div>
     </Modal>

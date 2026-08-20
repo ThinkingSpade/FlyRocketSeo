@@ -1,11 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
+import { auditHistoryKey } from "@/client/features/audit/auditQueryKeys";
 import { Link, type LinkOptions } from "@tanstack/react-router";
-import { CheckCircle2, Circle, Rocket } from "lucide-react";
+import { CheckCircle, Circle, Rocket } from "@phosphor-icons/react";
 import { getProjects } from "@/serverFunctions/projects";
 import { getRankTrackingConfigSummaries } from "@/serverFunctions/rank-tracking";
 import { getGscConnection } from "@/serverFunctions/gsc";
 import { getAuditHistory } from "@/serverFunctions/audit";
 import { DashboardCard, useProjectNavLinks } from "./dashboardShared";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 type ChecklistStep = {
   key: string;
@@ -45,7 +47,7 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
     queryFn: () => getGscConnection({ data: { projectId } }),
   });
   const auditQuery = useQuery({
-    queryKey: ["auditHistory", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
 
@@ -116,10 +118,12 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
   return (
     <DashboardCard icon={Rocket} title="Getting started">
       <div className="flex items-center gap-3">
-        <progress
-          className="progress progress-primary h-2 flex-1"
+        <ProgressBar
+          className="flex-1"
+          barClassName="h-2"
           value={doneCount}
           max={steps.length}
+          label="Getting started progress"
         />
         <span className="shrink-0 text-xs font-medium text-base-content/60 tabular-nums">
           {doneCount} of {steps.length} done
@@ -130,7 +134,7 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
         {steps.map((step) => (
           <li key={step.key} className="flex items-center gap-2 py-1">
             {step.done ? (
-              <CheckCircle2 className="size-4 shrink-0 text-success" />
+              <CheckCircle className="size-4 shrink-0 text-success" />
             ) : (
               <Circle className="size-4 shrink-0 text-base-content/40" />
             )}

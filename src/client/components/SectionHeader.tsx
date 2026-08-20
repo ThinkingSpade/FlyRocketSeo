@@ -1,4 +1,4 @@
-import type { LucideIcon } from "lucide-react";
+import type { Icon } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { InsightIcon } from "@/client/components/InsightTile";
 
@@ -28,7 +28,7 @@ export function SectionHeader({
 }: {
   headingLevel: 2 | 3;
   title: ReactNode;
-  icon?: LucideIcon;
+  icon?: Icon;
   /** Sub-caption under the heading — the "what this is and what it costs" line
    *  several sections already carry. */
   description?: ReactNode;

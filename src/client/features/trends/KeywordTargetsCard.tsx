@@ -1,4 +1,4 @@
-import { TrendingUp } from "lucide-react";
+import { TrendUp } from "@phosphor-icons/react";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
@@ -35,6 +35,7 @@ export function KeywordTargetsCard({
   const failure = describePaidFailure({
     reason: targets.failureReason,
     domain: domain ?? "your site",
+    hasFreeRows: targets.rows.length > 0,
   });
 
   return (
@@ -43,7 +44,7 @@ export function KeywordTargetsCard({
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div>
             <h2 className="flex items-center gap-2 text-sm font-semibold">
-              <TrendingUp className="size-4 text-base-content/50" />
+              <TrendUp className="size-4 text-base-content/50" />
               Keywords to target
             </h2>
             {/* Location lives here, once, rather than as a column repeating

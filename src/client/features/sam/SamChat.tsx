@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Suspense, useCallback, useEffect } from "react";
-import { Loader2, Plus, Wrench } from "lucide-react";
+import { CircleNotch, Plus, Wrench } from "@phosphor-icons/react";
 import { createSamSession } from "@/serverFunctions/sam";
 import {
   invalidateSamSessions,
@@ -85,7 +85,7 @@ export function SamChat({
         <Suspense
           fallback={
             <div className="flex flex-1 items-center justify-center">
-              <Loader2 className="size-5 animate-spin text-base-content/40" />
+              <CircleNotch className="size-5 animate-spin text-base-content/40" />
             </div>
           }
         >
@@ -104,7 +104,7 @@ export function SamChat({
     // the most recent one. Show a loader instead of flashing the empty state.
     return (
       <div className="flex h-full items-center justify-center">
-        <Loader2 className="size-5 animate-spin text-base-content/40" />
+        <CircleNotch className="size-5 animate-spin text-base-content/40" />
       </div>
     );
   }
@@ -129,7 +129,7 @@ export function SamChat({
         onClick={() => createSession.mutate()}
       >
         {createSession.isPending ? (
-          <Loader2 className="size-4 animate-spin" />
+          <CircleNotch className="size-4 animate-spin" />
         ) : (
           <Plus className="size-4" />
         )}

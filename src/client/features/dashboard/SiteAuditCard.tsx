@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
+import { auditHistoryKey } from "@/client/features/audit/auditQueryKeys";
 import { Link } from "@tanstack/react-router";
-import { ClipboardCheck } from "lucide-react";
+import { ClipboardText } from "@phosphor-icons/react";
 import { getAuditHistory } from "@/serverFunctions/audit";
 import { formatStartedAt, StatusBadge } from "@/client/features/audit/shared";
 import {
@@ -9,6 +10,7 @@ import {
   DashboardCard,
   useProjectNavLinks,
 } from "./dashboardShared";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 function AuditSkeleton() {
   return (
@@ -26,7 +28,7 @@ export function SiteAuditCard({ projectId }: { projectId: string }) {
   // getAuditHistory is first-party/cheap — the summary row is enough, so we
   // never fetch per-page results here.
   const historyQuery = useQuery({
-    queryKey: ["auditHistory", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
   // History is returned newest-first.
@@ -34,7 +36,7 @@ export function SiteAuditCard({ projectId }: { projectId: string }) {
 
   return (
     <DashboardCard
-      icon={ClipboardCheck}
+      icon={ClipboardText}
       title="Site audit"
       headerLink={auditLink}
     >
@@ -45,7 +47,10 @@ export function SiteAuditCard({ projectId }: { projectId: string }) {
       ) : latest === null ? (
         <CardEmpty>
           <p>No audits yet.</p>
-          <Link {...auditLink} className="btn btn-primary btn-sm mt-3">
+          <Link
+            {...auditLink}
+            className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
+          >
             Run your first site audit
           </Link>
         </CardEmpty>

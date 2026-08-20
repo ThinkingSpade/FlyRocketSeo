@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import type { getTopicClusters } from "@/serverFunctions/topic-clusters";
 import {
@@ -149,8 +149,8 @@ export function ClusterPlan({
           </Badge>
         ) : null}
         <div className="flex-1" />
-        <Button size="xs" className="btn-soft" onClick={handleCopyPlan}>
-          <Sparkles className="size-3" /> Copy plan for AI
+        <Button size="xs" variant="secondary" onClick={handleCopyPlan}>
+          <Sparkle className="size-3" /> Copy plan for AI
         </Button>
       </div>
 

@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
+import {
+  auditHistoryKey,
+  auditResultsKey,
+} from "@/client/features/audit/auditQueryKeys";
 import { useQuery } from "@tanstack/react-query";
 import {
-  AlertCircle,
+  WarningCircle,
   ArrowDown,
   ArrowRight,
   ArrowUp,
-  Loader2,
-} from "lucide-react";
+  CircleNotch,
+} from "@phosphor-icons/react";
 import { getAuditHistory, getAuditResults } from "@/serverFunctions/audit";
 import type { AuditResultsData } from "@/client/features/audit/results/types";
 import {
@@ -36,7 +40,7 @@ export function AuditComparison({
 }) {
   const currentAuditId = current.audit.id;
   const historyQuery = useQuery({
-    queryKey: ["audit-history", projectId],
+    queryKey: auditHistoryKey(projectId),
     queryFn: () => getAuditHistory({ data: { projectId } }),
   });
 
@@ -64,7 +68,7 @@ export function AuditComparison({
   const [comparisonId, setComparisonId] = useState<string>(NO_COMPARISON);
 
   const comparisonQuery = useQuery({
-    queryKey: ["audit-results", projectId, comparisonId],
+    queryKey: auditResultsKey(projectId, comparisonId),
     queryFn: () =>
       getAuditResults({ data: { projectId, auditId: comparisonId } }),
     enabled: comparisonId !== NO_COMPARISON,
@@ -85,7 +89,7 @@ export function AuditComparison({
           <h3 className="text-base font-medium">Compare to previous run</h3>
           <div className="flex items-center gap-2">
             {comparisonQuery.isFetching && (
-              <Loader2 className="size-4 animate-spin text-base-content/50" />
+              <CircleNotch className="size-4 animate-spin text-base-content/50" />
             )}
             <select
               className="app-select app-select-sm w-full sm:w-auto max-w-xs"
@@ -110,7 +114,7 @@ export function AuditComparison({
         {comparisonId !== NO_COMPARISON &&
           (comparisonQuery.isError ? (
             <Banner variant="error" className="text-sm py-2">
-              <AlertCircle className="size-4" />
+              <WarningCircle className="size-4" />
               <span>
                 Couldn't load that comparison run. Try selecting another one.
               </span>
@@ -119,7 +123,7 @@ export function AuditComparison({
             <ComparisonSummary diff={diff} />
           ) : (
             <div className="flex items-center gap-2 text-sm text-base-content/60 py-2">
-              <Loader2 className="size-4 animate-spin" />
+              <CircleNotch className="size-4 animate-spin" />
               Loading comparison…
             </div>
           ))}

@@ -1,5 +1,5 @@
 import { useMemo, type MutableRefObject } from "react";
-import { ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUp, ArrowDown } from "@phosphor-icons/react";
 import type { ColumnDef, SortingFn } from "@tanstack/react-table";
 import { makeSelectionColumn } from "@/client/components/table/AppDataTable";
 import type { RankTrackingRow } from "@/types/schemas/rank-tracking";
@@ -112,7 +112,7 @@ function makeKeywordColumn(
     cell: ({ row }) => (
       <button
         type="button"
-        className="font-medium text-left link link-hover decoration-dotted underline-offset-2"
+        className="font-medium text-left app-link-subtle decoration-dotted underline-offset-2"
         onClick={() => onKeywordClick(row.original)}
         title="View position history"
       >

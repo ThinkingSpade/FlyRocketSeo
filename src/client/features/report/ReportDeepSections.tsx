@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { formatCount, toPath } from "@/client/features/report/reportModel";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /** Deep-dive report sections: the site's actual rankings, new keyword targets,
  *  internal-link plays, and the raw link profile behind the tile numbers. */
@@ -53,44 +54,44 @@ export function KeywordDeepSections({
           subtitle="The keywords already driving the most organic traffic."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th>Page</th>
-                  <th className="text-right">Position</th>
-                  <th className="text-right">Volume</th>
-                  <th className="text-right">KD</th>
-                  <th className="text-right">Est. traffic</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Keyword</Table.Head>
+                  <Table.Head>Page</Table.Head>
+                  <Table.Head className="text-right">Position</Table.Head>
+                  <Table.Head className="text-right">Volume</Table.Head>
+                  <Table.Head className="text-right">KD</Table.Head>
+                  <Table.Head className="text-right">Est. traffic</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {rankings.map((row) => (
-                  <tr key={row.keyword}>
-                    <td className="max-w-xs">
+                  <Table.Row key={row.keyword}>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{row.keyword}</span>
-                    </td>
-                    <td className="max-w-xs">
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">
                         {row.relativeUrl ?? "—"}
                       </span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.position ?? "—"}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.searchVolume)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.keywordDifficulty ?? "—"}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.traffic)}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}
@@ -101,34 +102,34 @@ export function KeywordDeepSections({
           subtitle="New keywords worth targeting, based on what the site could realistically rank for."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Keyword</th>
-                  <th className="text-right">Volume</th>
-                  <th className="text-right">KD</th>
-                  <th className="text-right">CPC</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Keyword</Table.Head>
+                  <Table.Head className="text-right">Volume</Table.Head>
+                  <Table.Head className="text-right">KD</Table.Head>
+                  <Table.Head className="text-right">CPC</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {suggestions.map((row) => (
-                  <tr key={row.keyword}>
-                    <td className="max-w-md">
+                  <Table.Row key={row.keyword}>
+                    <Table.Cell className="max-w-md">
                       <span className="line-clamp-1">{row.keyword}</span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.searchVolume)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.keywordDifficulty ?? "—"}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.cpc != null ? `$${row.cpc.toFixed(2)}` : "—"}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}
@@ -168,36 +169,40 @@ export function LinkDeepSections({
           subtitle="Add these internal links to push almost-ranking pages over the line."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Anchor (keyword)</th>
-                  <th>Link to</th>
-                  <th className="text-right">Current position</th>
-                  <th className="text-right">Pages to link from</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Anchor (keyword)</Table.Head>
+                  <Table.Head>Link to</Table.Head>
+                  <Table.Head className="text-right">
+                    Current position
+                  </Table.Head>
+                  <Table.Head className="text-right">
+                    Pages to link from
+                  </Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {opportunities.slice(0, 5).map((row) => (
-                  <tr key={row.query}>
-                    <td className="max-w-xs">
+                  <Table.Row key={row.query}>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{row.query}</span>
-                    </td>
-                    <td className="max-w-xs">
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">
                         {toPath(row.target.page)}
                       </span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {Math.round(row.target.position)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.sources.length}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}
@@ -208,44 +213,44 @@ export function LinkDeepSections({
           subtitle="The strongest links pointing at the site (one per referring domain)."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>From</th>
-                  <th>Anchor</th>
-                  <th>To</th>
-                  <th className="text-right">Link authority</th>
-                  <th className="text-right">Follow</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>From</Table.Head>
+                  <Table.Head>Anchor</Table.Head>
+                  <Table.Head>To</Table.Head>
+                  <Table.Head className="text-right">Link authority</Table.Head>
+                  <Table.Head className="text-right">Follow</Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {backlinkRows.map((row) => (
-                  <tr key={`${row.urlFrom}-${row.urlTo}`}>
-                    <td className="max-w-xs">
+                  <Table.Row key={`${row.urlFrom}-${row.urlTo}`}>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">
                         {row.domainFrom ?? toPath(row.urlFrom)}
                       </span>
-                    </td>
-                    <td className="max-w-xs">
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{row.anchor ?? "—"}</span>
-                    </td>
-                    <td className="max-w-xs">
+                    </Table.Cell>
+                    <Table.Cell className="max-w-xs">
                       <span className="line-clamp-1">{toPath(row.urlTo)}</span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.rank ?? "—"}
-                    </td>
-                    <td className="text-right">
+                    </Table.Cell>
+                    <Table.Cell className="text-right">
                       {row.isDofollow == null
                         ? "—"
                         : row.isDofollow
                           ? "dofollow"
                           : "nofollow"}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}
@@ -256,30 +261,32 @@ export function LinkDeepSections({
           subtitle="Where the site's authority comes from."
         >
           <div className="overflow-x-auto rounded-lg border border-base-300">
-            <table className="table table-sm">
-              <thead>
-                <tr>
-                  <th>Domain</th>
-                  <th className="text-right">Backlinks</th>
-                  <th className="text-right">Domain authority</th>
-                </tr>
-              </thead>
-              <tbody>
+            <Table>
+              <Table.Header>
+                <Table.Row>
+                  <Table.Head>Domain</Table.Head>
+                  <Table.Head className="text-right">Backlinks</Table.Head>
+                  <Table.Head className="text-right">
+                    Domain authority
+                  </Table.Head>
+                </Table.Row>
+              </Table.Header>
+              <Table.Body>
                 {referringDomains.map((row, index) => (
-                  <tr key={row.domain ?? `row-${index}`}>
-                    <td className="max-w-md">
+                  <Table.Row key={row.domain ?? `row-${index}`}>
+                    <Table.Cell className="max-w-md">
                       <span className="line-clamp-1">{row.domain ?? "—"}</span>
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {formatCount(row.backlinks)}
-                    </td>
-                    <td className="text-right tabular-nums">
+                    </Table.Cell>
+                    <Table.Cell className="text-right tabular-nums">
                       {row.rank ?? "—"}
-                    </td>
-                  </tr>
+                    </Table.Cell>
+                  </Table.Row>
                 ))}
-              </tbody>
-            </table>
+              </Table.Body>
+            </Table>
           </div>
         </Section>
       ) : null}

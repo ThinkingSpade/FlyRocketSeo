@@ -1,36 +1,25 @@
-import { useMemo } from "react";
+import { useMemo, type ReactNode } from "react";
 import { buildTechnicalIssues } from "@/client/features/opportunities/opportunityModel";
 import { buildTopMovers } from "@/client/features/search-performance/contentGroups";
 import {
   buildRecommendations,
   toPath,
 } from "@/client/features/report/reportModel";
+import { buildSummaryNarrative } from "@/client/features/report/reportNarrative";
 import {
-  buildBacklinkNarrative,
-  buildClickNarrative,
-  buildKeywordNarrative,
-  buildPerformanceNarrative,
-  buildSummaryNarrative,
-  buildTopPagesNarrative,
-} from "@/client/features/report/reportNarrative";
-import {
-  ReportBreakdownCard,
-  ReportCallout,
-  ReportHeroStats,
   ReportNarrative,
   ReportPage,
 } from "@/client/features/report/ReportChrome";
+import { ReportCoverage } from "@/client/features/report/ReportCoverage";
 import {
-  ApprovedFixesSection,
-  BacklinkProfileBlock,
-  ContentMovers,
-  OnPageOptimizations,
-} from "@/client/features/report/ReportImprovements";
-import { ReportAiVisibility } from "@/client/features/report/ReportAiVisibility";
+  buildReportChapters,
+  describeGscGap,
+} from "@/client/features/report/reportChapters";
 import {
   ReportBody,
   type ReportSectionKey,
 } from "@/client/features/report/ReportSections";
+import { useReportChapterData } from "@/client/features/report/chapters";
 import {
   KeywordDeepSections,
   LinkDeepSections,
@@ -40,27 +29,31 @@ import type { useClientReportData } from "@/client/features/report/useClientRepo
 /**
  * The chaptered body of the Client Report, one topic per printed page.
  *
- * Chapters span several pages where they cover several topics (01 Performance
- * runs across four), which is what keeps each sheet to a headline, a short
- * narrative and one table rather than a wall of stacked sections.
+ * This file owns the front matter and the pagination; `reportChapters` decides
+ * which chapters have earned a sheet. Page numbers are derived from that list
+ * rather than written by hand — they were hard-coded 2–13, which was only ever
+ * correct while every chapter printed unconditionally.
  */
+
+const MUTED = "#5c6a7d"; // matches ReportChrome's secondary type
+
 export function ReportPages({
   data,
+  projectId,
   generatedAt,
+  foot,
 }: {
   data: ReturnType<typeof useClientReportData>;
+  projectId: string;
   generatedAt: string;
+  foot: string;
 }) {
-  const {
-    domain,
-    gsc,
-    insights,
-    backlinks,
-    latestAudit,
-    auditPages,
-    topQueries,
-    topPages,
-  } = data;
+  const { domain, gsc, insights, backlinks, latestAudit, auditPages } = data;
+  // The eight feature chapters read their own stored runs. Taken here, next to
+  // the only call that consumes them, rather than folded into
+  // `useClientReportData` — that hook feeds the toolbar and the cover too, and
+  // none of this belongs to either.
+  const chapters = useReportChapterData(projectId);
 
   const technicalIssues = useMemo(
     () => buildTechnicalIssues(auditPages),
@@ -75,20 +68,16 @@ export function ReportPages({
     ? {
         totals: gsc.totals,
         prevTotals: gsc.prevTotals,
-        topPage: topPages[0]
+        topPage: data.topPages[0]
           ? {
-              path: toPath(topPages[0].key),
-              impressions: topPages[0].impressions,
-              clicks: topPages[0].clicks,
+              path: toPath(data.topPages[0].key),
+              impressions: data.topPages[0].impressions,
+              clicks: data.topPages[0].clicks,
             }
           : null,
         queriesTracked: gsc.queryTotals.length,
         clientOffer: data.clientOffer,
       }
-    : null;
-
-  const positionMove = gsc
-    ? gsc.prevTotals.position - gsc.totals.position
     : null;
 
   const recommendations = buildRecommendations({
@@ -119,14 +108,14 @@ export function ReportPages({
   });
 
   /** Renders just the requested sections, so one chapter can span pages. */
-  const sections = (only: ReportSectionKey[]) => (
+  const sections = (only: ReportSectionKey[]): ReactNode => (
     <ReportBody
       gsc={gsc}
       gscPending={data.gscPending}
       domainOverview={data.domainOverview}
       backlinks={backlinks}
-      topQueries={topQueries}
-      topPages={topPages}
+      topQueries={data.topQueries}
+      topPages={data.topPages}
       insights={insights}
       latestAudit={latestAudit}
       recommendations={recommendations}
@@ -147,7 +136,16 @@ export function ReportPages({
     />
   );
 
-  const chapter = { number: "01", kicker: "Performance", domain } as const;
+  const { pages, omissions, notCovered } = buildReportChapters({
+    data,
+    chapters,
+    sections,
+    narrativeInput,
+    positionMove: gsc ? gsc.prevTotals.position - gsc.totals.position : null,
+    movers,
+    technicalIssues,
+    recommendations,
+  });
 
   return (
     <>
@@ -156,221 +154,47 @@ export function ReportPages({
         kicker="Summary"
         domain={domain}
         title="Overall summary"
-        pageNumber={2}
+        foot={foot}
       >
         {narrativeInput ? (
           <ReportNarrative paragraphs={buildSummaryNarrative(narrativeInput)} />
         ) : (
-          <p className="text-sm text-base-content/60">
+          <p className="text-[15px] leading-relaxed" style={{ color: MUTED }}>
+            {/* The summary page's headline claim, so it gets the same treatment
+                as the chapters: a request that threw must not print as "Search
+                Console isn't connected", which blames the agency's setup for a
+                read that failed. */}
             {data.gscPending
               ? "Loading search data…"
-              : "Search Console isn't connected for this project, so the narrative summary is omitted."}
+              : `${describeGscGap(data)} The narrative summary is omitted.`}
           </p>
         )}
-        <p className="text-xs text-base-content/50">
+        <p className="text-xs" style={{ color: MUTED }}>
           Search data{" "}
           {gsc
             ? `${gsc.range.startDate} – ${gsc.range.endDate}`
             : "unavailable"}{" "}
           · Generated {generatedAt}
         </p>
-      </ReportPage>
-
-      <ReportPage {...chapter} title="Overall performance" pageNumber={3}>
-        {narrativeInput ? (
-          <ReportNarrative
-            paragraphs={buildPerformanceNarrative(narrativeInput)}
-          />
-        ) : null}
-        <ReportCallout>
-          FlyRocketSEO read this period&apos;s Search Console data and compared
-          it against the previous period to build every figure on this page.
-        </ReportCallout>
-        {sections(["summary"])}
-      </ReportPage>
-
-      <ReportPage {...chapter} title="Click performance" pageNumber={4}>
-        {narrativeInput ? (
-          <ReportNarrative paragraphs={buildClickNarrative(narrativeInput)} />
-        ) : null}
-        <ReportCallout>
-          Every click here is someone who chose your result over the rest of the
-          page — the titles and descriptions in chapter 03 are what move it.
-        </ReportCallout>
-      </ReportPage>
-
-      <ReportPage {...chapter} title="Top performing pages" pageNumber={5}>
-        <ReportNarrative
-          paragraphs={buildTopPagesNarrative(
-            topPages.map((row) => ({
-              path: toPath(row.key),
-              clicks: row.clicks,
-              impressions: row.impressions,
-            })),
-          )}
-        />
-        {sections(["pages"])}
-      </ReportPage>
-
-      <ReportPage {...chapter} title="Keyword rankings" pageNumber={6}>
-        <ReportNarrative
-          paragraphs={buildKeywordNarrative(
-            topQueries.map((row) => ({
-              query: row.key,
-              clicks: row.clicks,
-              impressions: row.impressions,
-            })),
-            positionMove,
-          )}
-        />
-        {sections(["queries"])}
-      </ReportPage>
-
-      <ReportPage
-        number="02"
-        kicker="Content"
-        domain={domain}
-        title="Pages gaining ground"
-        pageNumber={7}
-      >
-        <ContentMovers rows={movers} />
-      </ReportPage>
-
-      <ReportPage
-        number="03"
-        kicker="Improvements"
-        domain={domain}
-        title={
-          data.approvedFixes.length > 0
-            ? "On-page optimizations approved"
-            : "On-page optimizations"
-        }
-        pageNumber={8}
-      >
-        {data.approvedFixes.length > 0 ? (
-          <>
-            <ApprovedFixesSection fixes={data.approvedFixes} />
-            <ReportCallout>
-              These rewrites were generated from your crawl and Search Console
-              data, then approved by you — ready to publish.
-            </ReportCallout>
-          </>
-        ) : null}
-        <OnPageOptimizations
-          issues={technicalIssues}
-          pagesCrawled={latestAudit?.pagesCrawled ?? null}
-          pagesAnalyzed={auditPages.length}
+        <ReportCoverage
+          included={pages.length}
+          omissions={omissions}
+          notCovered={notCovered}
         />
       </ReportPage>
 
-      <ReportPage
-        number="03"
-        kicker="Improvements"
-        domain={domain}
-        title="Site health"
-        pageNumber={9}
-      >
-        {sections(["siteHealth"])}
-      </ReportPage>
-
-      <ReportPage
-        number="04"
-        kicker="Opportunities"
-        domain={domain}
-        title="Backlink profile"
-        pageNumber={10}
-      >
-        {backlinks ? (
-          <>
-            <ReportHeroStats
-              items={[
-                {
-                  label: "Domain authority",
-                  value:
-                    backlinks.summary.rank == null
-                      ? "—"
-                      : `${backlinks.summary.rank.toLocaleString("en-US")}/100`,
-                },
-                {
-                  label: "Total Backlinks",
-                  value:
-                    backlinks.summary.backlinks?.toLocaleString("en-US") ?? "—",
-                },
-              ]}
-            />
-            <ReportNarrative
-              paragraphs={buildBacklinkNarrative({
-                rank: backlinks.summary.rank,
-                backlinks: backlinks.summary.backlinks,
-                referringDomains: backlinks.summary.referringDomains,
-                spamScore: backlinks.summary.backlinksSpamScore,
-                brokenBacklinks: backlinks.summary.brokenBacklinks,
-              })}
-            />
-            <BacklinkProfileBlock
-              profile={backlinks.summary}
-              topDomains={data.referringDomains.map((row) => ({
-                domain: row.domain,
-                backlinks: row.backlinks,
-              }))}
-            />
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-              <ReportBreakdownCard
-                title="Top countries"
-                rows={backlinks.summary.referringCountries}
-              />
-              <ReportBreakdownCard
-                title="Top domains"
-                rows={backlinks.summary.referringTlds}
-              />
-              <ReportBreakdownCard
-                title="Link types"
-                rows={backlinks.summary.referringLinkTypes}
-              />
-            </div>
-            {sections(["linkProfile", "linkDeep"])}
-          </>
-        ) : (
-          <p className="text-sm text-base-content/60">
-            Run a backlink analysis for this domain to include the link profile
-            in this report.
-          </p>
-        )}
-      </ReportPage>
-
-      <ReportPage
-        number="04"
-        kicker="Opportunities"
-        domain={domain}
-        title="Quick wins & keyword conflicts"
-        pageNumber={11}
-      >
-        {sections(["strikingDistance", "conflicts", "keywordDeep"])}
-      </ReportPage>
-
-      <ReportPage
-        number="05"
-        kicker="AI Visibility"
-        domain={domain}
-        title="AI search visibility"
-        pageNumber={12}
-      >
-        <ReportAiVisibility visibility={data.brandVisibility} />
-      </ReportPage>
-
-      <ReportPage
-        number="06"
-        kicker="Next steps"
-        domain={domain}
-        title="What we'd do next"
-        pageNumber={13}
-      >
-        <ul className="list-inside list-disc space-y-1.5 text-[15px] leading-relaxed text-base-content/80">
-          {recommendations.map((recommendation) => (
-            <li key={recommendation}>{recommendation}</li>
-          ))}
-        </ul>
-      </ReportPage>
+      {pages.map((spec) => (
+        <ReportPage
+          key={spec.key}
+          number={spec.number}
+          kicker={spec.kicker}
+          domain={domain}
+          title={spec.title}
+          foot={foot}
+        >
+          {spec.body}
+        </ReportPage>
+      ))}
     </>
   );
 }

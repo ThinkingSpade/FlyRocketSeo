@@ -1,4 +1,4 @@
-import { Activity, Wrench } from "lucide-react";
+import { Pulse, Wrench } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 import { computeLinkVelocity } from "./linkVelocity";
@@ -8,6 +8,7 @@ import {
   type ReclaimTarget,
 } from "./brokenPageReclaim";
 import type { BacklinksTopPagesData } from "./backlinksPageTypes";
+import { Table } from "@cloudflare/kumo/components/table";
 import { formatBreakdownNumber as formatNumber } from "./backlinksProfileFormat";
 
 /**
@@ -44,7 +45,7 @@ export function LinkVelocityCard({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <InsightIcon icon={Activity} />
+          <InsightIcon icon={Pulse} />
           Link velocity
         </h3>
         <p className={`text-lg font-semibold ${tone}`}>
@@ -114,38 +115,38 @@ export function BrokenLinkReclaimCard({
           them — the links are already earned, so no outreach is needed.
         </p>
         <div className="overflow-x-auto">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Page</th>
-                <th className="text-right">Broken links</th>
-                <th className="text-right">Total links</th>
-                <th className="text-right">Ref. domains</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>Page</Table.Head>
+                <Table.Head className="text-right">Broken links</Table.Head>
+                <Table.Head className="text-right">Total links</Table.Head>
+                <Table.Head className="text-right">Ref. domains</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {targets.map((target) => (
-                <tr key={target.page}>
-                  <td className="max-w-md truncate" title={target.page}>
+                <Table.Row key={target.page}>
+                  <Table.Cell className="max-w-md truncate" title={target.page}>
                     {target.page}
-                  </td>
-                  <td className="text-right tabular-nums font-medium">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums font-medium">
                     {formatNumber(target.brokenBacklinks)}
-                  </td>
-                  <td className="text-right tabular-nums text-base-content/60">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums text-base-content/60">
                     {target.totalBacklinks != null
                       ? formatNumber(target.totalBacklinks)
                       : "—"}
-                  </td>
-                  <td className="text-right tabular-nums text-base-content/60">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums text-base-content/60">
                     {target.referringDomains != null
                       ? formatNumber(target.referringDomains)
                       : "—"}
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </div>
       </div>
     </div>

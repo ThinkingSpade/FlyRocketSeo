@@ -3,7 +3,7 @@ import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { getGscAccessNotice } from "@/client/features/gsc/gscAccessCopy";
 import { startGscLink } from "@/client/features/gsc/startGscLink";
 import type { GscAccessFailureReason } from "@/shared/gsc";
-import { Button } from "@cloudflare/kumo/components/button";
+import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 
 /**
  * Why a Search Console surface has no data, plus the action that fixes it.
@@ -30,7 +30,10 @@ export function GscAccessNotice({
         <p className="mt-1 text-xs text-base-content/60">{notice.detail}</p>
       ) : null}
       {notice.action.kind === "connect" ? (
-        <Link {...connectLink} className="btn btn-primary btn-sm mt-3">
+        <Link
+          {...connectLink}
+          className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-3`}
+        >
           {notice.action.label}
         </Link>
       ) : notice.action.kind === "enable_api" ? (
@@ -38,7 +41,7 @@ export function GscAccessNotice({
           href={notice.action.href}
           target="_blank"
           rel="noreferrer"
-          className="btn btn-sm mt-3"
+          className={`${buttonVariants({ size: "sm" })} mt-3`}
         >
           {notice.action.label}
         </a>

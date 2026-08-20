@@ -5,7 +5,7 @@ import {
   type SortingState,
 } from "@tanstack/react-table";
 import { Link } from "@tanstack/react-router";
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 import {
   AppDataTable,
   useAppTable,
@@ -39,6 +39,7 @@ import {
   type PerformanceRowData,
 } from "@/client/features/audit/results/AuditResultsTableFilterLogic";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 const pageColumnHelper = createColumnHelper<PageRow>();
 const performanceColumnHelper = createColumnHelper<PerformanceRowData>();
@@ -53,10 +54,10 @@ const pagesColumns: ColumnDef<PageRow>[] = [
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="link link-primary inline-flex items-center gap-1 text-xs"
+          className="app-link inline-flex items-center gap-1 text-xs"
         >
           <span className="truncate">{extractPathname(url)}</span>
-          <ExternalLink className="size-3 shrink-0" />
+          <ArrowSquareOut className="size-3 shrink-0" />
         </a>
       );
     },
@@ -154,8 +155,18 @@ export function PagesTable({ pages }: { pages: AuditResultsData["pages"] }) {
       ) : null}
       <AppDataTable
         table={table}
-        className="table table-sm"
-        empty={<EmptyTableMessage label="No pages match these filters." />}
+        empty={
+          // A crawl that returned nothing is not a filter problem, and
+          // blaming filters nobody set sends the user to reset a bar they
+          // never opened instead of to why the crawler came back empty.
+          <EmptyTableMessage
+            label={
+              pages.length === 0
+                ? "This audit stored no pages. The crawler reached nothing it could read — usually bot protection or a start URL that redirects off-site."
+                : "No pages match these filters."
+            }
+          />
+        }
       />
     </div>
   );
@@ -231,9 +242,14 @@ export function PerformanceTable({
       ) : null}
       <AppDataTable
         table={table}
-        className="table table-sm"
         empty={
-          <EmptyTableMessage label="No performance results match these filters." />
+          <EmptyTableMessage
+            label={
+              rows.length === 0
+                ? "This audit ran no Lighthouse checks, so there is nothing to compare."
+                : "No performance results match these filters."
+            }
+          />
         }
       />
     </div>
@@ -358,7 +374,7 @@ function buildPerformanceColumns({
       cell: ({ row }) =>
         row.original.r2Key && !isLighthouseFailure(row.original) ? (
           <Link
-            className="btn btn-primary btn-xs"
+            className={buttonVariants({ variant: "primary", size: "xs" })}
             to="/p/$projectId/audit/issues/$resultId"
             params={{ projectId, resultId: row.original.id }}
             search={{ auditId, category: "performance" }}
@@ -379,8 +395,7 @@ export function ExportDropdown({
 }) {
   return (
     <TableExportMenu
-      buttonClassName="btn btn-sm btn-ghost gap-1"
-      menuClassName="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-52"
+      variant="ghost"
       actions={[
         { label: "Export to Sheets", onClick: () => onExport("sheets") },
         { label: "CSV", onClick: () => onExport("csv") },

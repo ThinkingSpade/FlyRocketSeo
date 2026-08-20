@@ -1,5 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Download, Loader2, Monitor, Moon, Sun } from "lucide-react";
+import {
+  Download,
+  CircleNotch,
+  Monitor,
+  Moon,
+  Sun,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { type ThemePreference, useThemePreference } from "@/client/lib/theme";
@@ -8,6 +14,9 @@ import { isHostedClientAuthMode } from "@/lib/auth-mode";
 import { exportBackup } from "@/serverFunctions/backup";
 import { GscOAuthConfigSection } from "@/client/features/gsc/GscOAuthConfigSection";
 import { GeoLocationSeedSection } from "@/client/features/geo/GeoLocationSeedSection";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Switch } from "@cloudflare/kumo/components/switch";
+import { useReveal } from "@/client/hooks/useReveal";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -71,9 +80,14 @@ function SettingsPage() {
     }
   }
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto max-w-xl space-y-10">
+      <div ref={revealRef} className="mx-auto max-w-xl space-y-10">
         <h1 className="text-2xl font-semibold">Settings</h1>
 
         <section className="space-y-3">
@@ -127,13 +141,11 @@ function SettingsPage() {
                   Share analytics and usage data.
                 </p>
               </div>
-              <input
-                type="checkbox"
-                className="toggle toggle-primary"
+              <Switch
                 checked={analyticsEnabled}
                 disabled={isSessionPending || isSaving || !session?.user}
-                onChange={(event) => {
-                  void updateAnalyticsPreference(event.currentTarget.checked);
+                onCheckedChange={(checked) => {
+                  void updateAnalyticsPreference(checked);
                 }}
                 aria-label="Enable product analytics"
               />
@@ -155,19 +167,21 @@ function SettingsPage() {
                   sessions.
                 </p>
               </div>
-              <button
+              <Button
                 type="button"
-                className="btn btn-sm btn-outline gap-2"
+                variant="outline"
+                size="sm"
+                className="gap-2"
                 onClick={() => void handleDownloadBackup()}
                 disabled={isExportingBackup}
               >
                 {isExportingBackup ? (
-                  <Loader2 className="size-4 animate-spin" />
+                  <CircleNotch className="size-4 animate-spin" />
                 ) : (
                   <Download className="size-4" />
                 )}
                 {isExportingBackup ? "Preparing…" : "Download"}
-              </button>
+              </Button>
             </div>
           </section>
         ) : null}

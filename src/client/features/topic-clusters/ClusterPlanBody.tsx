@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { NotebookPen } from "lucide-react";
+import { NotePencil } from "@phosphor-icons/react";
 import type { getTopicClusters } from "@/serverFunctions/topic-clusters";
 import type {
   prioritizeClusters,
@@ -11,6 +11,7 @@ import {
 } from "@/client/features/topic-clusters/TopicCoverageOverlay";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import { summariseClusterFit } from "./clusterFit";
 
@@ -75,9 +76,9 @@ export function ClusterPlanBody({
                 to="/p/$projectId/content"
                 params={{ projectId }}
                 search={{ q: plan.topic, loc: plan.locationCode }}
-                className="btn btn-primary btn-xs gap-1"
+                className={`${buttonVariants({ variant: "primary", size: "xs" })} gap-1`}
               >
-                <NotebookPen className="size-3" /> Build brief
+                <NotePencil className="size-3" /> Build brief
               </Link>
             </div>
             <div className="flex flex-wrap gap-1.5">
@@ -174,15 +175,15 @@ export function ClusterPlanBody({
                     to="/p/$projectId/content"
                     params={{ projectId }}
                     search={{ q: topKeyword, loc: plan.locationCode }}
-                    className="btn btn-soft btn-xs gap-1"
+                    className={`${buttonVariants({ variant: "secondary", size: "xs" })} gap-1`}
                   >
-                    <NotebookPen className="size-3" /> Build brief
+                    <NotePencil className="size-3" /> Build brief
                   </Link>
                   <Link
                     to="/p/$projectId/serp"
                     params={{ projectId }}
                     search={{ q: topKeyword, loc: plan.locationCode }}
-                    className="btn btn-ghost btn-xs"
+                    className={buttonVariants({ variant: "ghost", size: "xs" })}
                   >
                     View SERP
                   </Link>

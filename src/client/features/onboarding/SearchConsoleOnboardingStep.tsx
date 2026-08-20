@@ -1,6 +1,6 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { GoogleGlyph } from "@/client/features/gsc/GoogleGlyph";
 import { SelfHostedSetupWarning } from "@/client/features/gsc/SelfHostedSetupWarning";

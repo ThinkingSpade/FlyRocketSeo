@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, MapPin, TriangleAlert } from "lucide-react";
+import { CircleNotch, MapPin, Warning } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
@@ -176,7 +176,7 @@ export function GeoLocationSeedSection() {
         {confirming ? (
           <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3">
             <p className="flex items-start gap-2">
-              <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+              <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
               <span>
                 Free — DataForSEO documents this endpoint as not charged
                 (&quot;Your account will not be charged for using this
@@ -185,7 +185,7 @@ export function GeoLocationSeedSection() {
                   href={DATAFORSEO_LOCATIONS_DOCS_URL}
                   target="_blank"
                   rel="noreferrer"
-                  className="link"
+                  className="app-link"
                 >
                   their docs
                 </a>
@@ -219,7 +219,7 @@ export function GeoLocationSeedSection() {
         {running || progress ? (
           <p className="flex items-center gap-2 text-xs text-base-content/60">
             {running ? (
-              <Loader2 className="size-3.5 shrink-0 animate-spin" />
+              <CircleNotch className="size-3.5 shrink-0 animate-spin" />
             ) : null}
             {progress
               ? `${progress.writtenSoFar.toLocaleString()} of ${progress.totalRows.toLocaleString()} written${running ? "…" : "."}`

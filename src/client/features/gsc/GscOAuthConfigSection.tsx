@@ -160,7 +160,7 @@ export function GscOAuthConfigSection() {
                 href={SETUP_DOCS_URL}
                 target="_blank"
                 rel="noreferrer"
-                className="link"
+                className="app-link"
               >
                 Setup guide
               </a>

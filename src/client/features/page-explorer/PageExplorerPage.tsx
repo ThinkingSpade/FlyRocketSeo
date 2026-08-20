@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  Award,
-  FileSearch,
-  KeyRound,
-  Link2,
-  Search,
-  TrendingUp,
-} from "lucide-react";
+  Medal,
+  FileMagnifyingGlass,
+  Key,
+  LinkSimple,
+  MagnifyingGlass,
+  TrendUp,
+} from "@phosphor-icons/react";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getPageExplorer } from "@/serverFunctions/page-explorer";
 import { pageExplorerSchema } from "@/types/schemas/page-explorer";
@@ -19,11 +19,11 @@ import {
   AnalyzeDomainPrompt,
   type AnalyzePreviewItem,
 } from "@/client/components/AnalyzeDomainPrompt";
-import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import {
-  DEFAULT_LOCATION_CODE,
-  LOCATION_OPTIONS,
-} from "@/shared/keyword-locations";
+  useProjectDomain,
+  useProjectMarket,
+} from "@/client/hooks/useProjectDomain";
+import { LOCATION_OPTIONS } from "@/shared/keyword-locations";
 import {
   createMeteredRunKey,
   useAuthorizedRun,
@@ -48,22 +48,22 @@ function normalizePageUrlInput(value: string): string {
 
 const PAGE_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
-    icon: KeyRound,
+    icon: Key,
     title: "Every keyword it ranks for",
     description: "Positions, volume, difficulty and estimated traffic",
   },
   {
-    icon: Award,
+    icon: Medal,
     title: "Ranking real estate",
     description: "#1s, top-3, top-10 and striking-distance counts",
   },
   {
-    icon: TrendingUp,
+    icon: TrendUp,
     title: "Traffic concentration",
     description: "Which few keywords actually carry the page",
   },
   {
-    icon: Link2,
+    icon: LinkSimple,
     title: "Links & on-page",
     description: "Backlinks, referring domains, and the heading outline",
   },
@@ -80,13 +80,32 @@ export function PageExplorerPage({
   url: string;
   locationCode: number | undefined;
 }) {
-  const activeLocation = locationCode ?? DEFAULT_LOCATION_CODE;
+  const market = useProjectMarket(projectId);
+  // The URL's own `loc` param always wins; the project's configured market
+  // only fills in for a tab opened with no location in the URL. Every other
+  // metered tab (content, serp, clusters, trends) already reads the market
+  // here -- this one defaulted straight to the US, so a non-US project billed
+  // every Page Explorer run against the wrong country with no error and no
+  // visual cue.
+  const activeLocation = locationCode ?? market.locationCode;
   const [input, setInput] = useState(url);
   const [locationInput, setLocationInput] = useState(String(activeLocation));
+  const [locationTouched, setLocationTouched] = useState(false);
   const [runInput, setRunInput] = useState<{
     url: string;
     locationCode: number;
   } | null>(null);
+  // On a cold load the `["projects"]` query behind `useProjectMarket` has not
+  // resolved on first render, so `locationInput` locks onto the US fallback via
+  // its useState initializer and would silently keep showing it. Precedence:
+  // URL param > user selection > project market. Depends on the primitive, not
+  // the `market` object, which has caused a render loop in this codebase.
+  useEffect(() => {
+    if (locationCode != null) return;
+    if (locationTouched) return;
+    setLocationInput(String(activeLocation));
+  }, [locationCode, locationTouched, activeLocation]);
+
   const run = useAuthorizedRun(
     createMeteredRunKey(
       projectId,
@@ -146,7 +165,7 @@ export function PageExplorerPage({
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <FileSearch className="size-6" />
+          <FileMagnifyingGlass className="size-6" />
           Page Explorer
         </h1>
         <p className="text-sm text-base-content/60">
@@ -179,9 +198,7 @@ export function PageExplorerPage({
             }}
           >
             <label className="form-control w-full sm:max-w-xl">
-              <span className="label-text pb-1 text-xs font-medium">
-                Page URL
-              </span>
+              <span className="pb-1 text-xs font-medium">Page URL</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -193,13 +210,14 @@ export function PageExplorerPage({
               />
             </label>
             <label className="form-control w-full sm:max-w-56">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={locationInput}
-                onChange={(event) => setLocationInput(event.target.value)}
+                onChange={(event) => {
+                  setLocationTouched(true);
+                  setLocationInput(event.target.value);
+                }}
               >
                 {LOCATION_OPTIONS.map((option) => (
                   <option key={option.code} value={option.code}>
@@ -217,7 +235,7 @@ export function PageExplorerPage({
               {pageQuery.isFetching ? (
                 <Loader size="sm" />
               ) : (
-                <Search className="size-3.5" />
+                <MagnifyingGlass className="size-3.5" />
               )}
               Inspect
             </Button>
@@ -274,16 +292,21 @@ export function PageExplorerPage({
             onAnalyze={() => {
               if (!projectDomain) return;
               const homepage = `https://${projectDomain.replace(/^https?:\/\//, "")}/`;
+              // `locationInput`, not `activeLocation`: the Location select sits
+              // on screen beside this prompt, so pinning the run to the project
+              // default billed a metered analysis against a country the user
+              // had just changed away from, with no error and no visual cue.
+              const chosenLocation = Number(locationInput);
               setInput(homepage);
-              setRunInput({ url: homepage, locationCode: activeLocation });
+              setRunInput({ url: homepage, locationCode: chosenLocation });
               run.authorize(
-                createMeteredRunKey(projectId, homepage, activeLocation),
+                createMeteredRunKey(projectId, homepage, chosenLocation),
               );
               navigate({
                 search: (prev) => ({
                   ...prev,
                   u: homepage,
-                  loc: activeLocation,
+                  loc: chosenLocation,
                 }),
                 replace: false,
               });

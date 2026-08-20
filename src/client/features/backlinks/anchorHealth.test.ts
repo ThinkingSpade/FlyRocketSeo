@@ -169,3 +169,42 @@ describe("computeAnchorHealth", () => {
     expect(health?.verdict).toBe("healthy");
   });
 });
+
+describe("computeAnchorHealth with curated brand terms", () => {
+  const rows = [
+    {
+      anchor: "Delio TX",
+      backlinks: 100,
+      referringDomains: 80,
+      rank: 40,
+      spamScore: 0,
+      firstSeen: null,
+    },
+    {
+      anchor: "best coffee machine",
+      backlinks: 10,
+      referringDomains: 5,
+      rank: 30,
+      spamScore: 0,
+      firstSeen: null,
+    },
+  ];
+
+  it("counts a brand anchor that the domain stem cannot recognise as branded", () => {
+    // The regression this pins: the client trades as "Delio TX" on a domain
+    // whose stem is "deliotx", so the stem never matches the spaced spelling
+    // and those anchors fell through to "descriptive" -- the bucket the
+    // "Over-optimized" verdict is built from.
+    const withProfile = computeAnchorHealth(rows, "deliotx.com", ["delio tx"]);
+    const branded = withProfile?.categories.find(
+      (category) => category.category === "branded",
+    );
+
+    expect(branded?.mentions).toBe(80);
+  });
+
+  it("still works from the domain alone when no terms are supplied", () => {
+    const withoutProfile = computeAnchorHealth(rows, "deliotx.com");
+    expect(withoutProfile).not.toBeNull();
+  });
+});

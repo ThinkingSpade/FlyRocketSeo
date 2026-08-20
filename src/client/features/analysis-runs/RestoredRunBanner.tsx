@@ -1,4 +1,4 @@
-import { History } from "lucide-react";
+import { ClockCounterClockwise } from "@phosphor-icons/react";
 import { formatRunAge } from "@/client/features/analysis-runs/runAge";
 import { Button } from "@cloudflare/kumo/components/button";
 
@@ -23,7 +23,7 @@ export function RestoredRunBanner({
   return (
     <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-base-300 bg-base-200/50 px-3 py-2">
       <span className="inline-flex flex-wrap items-center gap-1.5 text-sm text-base-content/70">
-        <History className="size-4 shrink-0 text-base-content/40" />
+        <ClockCounterClockwise className="size-4 shrink-0 text-base-content/40" />
         Showing your last run for{" "}
         <span className="font-medium text-base-content">{label}</span>
         {age ? ` · ${age}` : ""}

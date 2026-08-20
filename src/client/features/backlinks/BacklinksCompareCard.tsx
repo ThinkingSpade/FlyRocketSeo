@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Swords, X } from "lucide-react";
+import { Plus, Sword, X } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { describeSpamScore } from "@/client/lib/spamScore";
 import { MAX_COMPARE_COMPETITORS } from "@/types/schemas/backlinks-compare";
@@ -12,6 +12,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { Input } from "@cloudflare/kumo/components/input";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * "You vs them" for the link profile. The whole table comes from five `bulk_*`
@@ -144,18 +145,18 @@ function ComparisonTable({ result }: { result: BacklinksCompareResult }) {
 
   return (
     <div className="overflow-x-auto">
-      <table className="table table-sm">
-        <thead>
-          <tr>
-            <th>Domain</th>
-            <th className="text-right">Domain authority</th>
-            <th className="text-right">Referring domains</th>
-            <th className="text-right">Backlinks</th>
-            <th className="text-right">Spam</th>
-            <th className="text-right">Net ref. domains</th>
-          </tr>
-        </thead>
-        <tbody>
+      <Table>
+        <Table.Header>
+          <Table.Row>
+            <Table.Head>Domain</Table.Head>
+            <Table.Head className="text-right">Domain authority</Table.Head>
+            <Table.Head className="text-right">Referring domains</Table.Head>
+            <Table.Head className="text-right">Backlinks</Table.Head>
+            <Table.Head className="text-right">Spam</Table.Head>
+            <Table.Head className="text-right">Net ref. domains</Table.Head>
+          </Table.Row>
+        </Table.Header>
+        <Table.Body>
           {result.rows.map((row) => (
             <ComparisonTableRow
               key={row.target}
@@ -164,8 +165,8 @@ function ComparisonTable({ result }: { result: BacklinksCompareResult }) {
               maxBacklinks={maxBacklinks}
             />
           ))}
-        </tbody>
-      </table>
+        </Table.Body>
+      </Table>
     </div>
   );
 }
@@ -301,7 +302,7 @@ export function BacklinksCompareCard({
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div>
           <h3 className="flex items-center gap-2 text-sm font-semibold">
-            <InsightIcon icon={Swords} />
+            <InsightIcon icon={Sword} />
             Compare against competitors
           </h3>
           <p className="text-xs text-base-content/55">

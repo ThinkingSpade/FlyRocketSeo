@@ -1,5 +1,10 @@
 import type { ColumnDef } from "@tanstack/react-table";
-import { EyeOff, GitCompareArrows, Pin, PinOff } from "lucide-react";
+import {
+  EyeSlash,
+  GitDiff,
+  PushPin,
+  PushPinSlash,
+} from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
 import type { DiscoveryMode } from "@/types/schemas/competitors";
@@ -54,7 +59,7 @@ function DomainCell({ row }: { row: CompetitorRow }) {
   return (
     <span className="inline-flex items-center gap-1.5 font-medium">
       {row.pinned ? (
-        <Pin
+        <PushPin
           aria-hidden="true"
           className="size-3.5 shrink-0 text-base-content/45"
         />
@@ -81,7 +86,7 @@ function RowActionsCell({
         onClick={() => actions.onCompareCompetitor(row.domain)}
         title="Compare keywords with this competitor"
       >
-        <GitCompareArrows className="size-3.5" />
+        <GitDiff className="size-3.5" />
         Keyword Gap
       </Button>
       <Button
@@ -101,9 +106,9 @@ function RowActionsCell({
         }
       >
         {row.pinned ? (
-          <PinOff className="size-3.5" />
+          <PushPinSlash className="size-3.5" />
         ) : (
-          <Pin className="size-3.5" />
+          <PushPin className="size-3.5" />
         )}
       </Button>
       <Button
@@ -116,7 +121,7 @@ function RowActionsCell({
         title="Exclude this domain from competitors"
         onClick={() => actions.onExclude(row.domain)}
       >
-        <EyeOff className="size-3.5" />
+        <EyeSlash className="size-3.5" />
       </Button>
     </div>
   );

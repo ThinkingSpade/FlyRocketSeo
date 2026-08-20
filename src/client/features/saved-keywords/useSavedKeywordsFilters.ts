@@ -17,8 +17,19 @@ const FILTER_KEYS: Array<keyof SavedKeywordsFilterValues> = [
   "maxKd",
 ];
 
-export function useSavedKeywordsFilters() {
-  const filtersForm = useForm({ defaultValues: EMPTY_SAVED_KEYWORDS_FILTERS });
+/**
+ * `initialInclude` seeds the Include field from the route's `?q=`, so a link
+ * that already knows the term lands on the narrowed list instead of the whole
+ * saved set. Read once, as a form default -- typing over it is the user
+ * correcting the handoff, and re-applying the URL would fight them.
+ */
+export function useSavedKeywordsFilters(initialInclude?: string) {
+  const filtersForm = useForm({
+    defaultValues: {
+      ...EMPTY_SAVED_KEYWORDS_FILTERS,
+      include: initialInclude?.trim() ?? "",
+    },
+  });
   const values = useStore(filtersForm.store, (s) => s.values);
   const activeFilterCount = countActiveSavedKeywordsFilters(values);
 

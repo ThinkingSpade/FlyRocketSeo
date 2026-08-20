@@ -1,10 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
-import {
-  keepPreviousData,
-  useMutation,
-  useQuery,
-  useQueryClient,
-} from "@tanstack/react-query";
+import { z } from "zod";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type {
   OnChangeFn,
   RowSelectionState,
@@ -36,19 +32,27 @@ import {
 } from "@/client/features/saved-keywords/savedKeywordsUtils";
 import { useSavedKeywordsExport } from "@/client/features/saved-keywords/useSavedKeywordsExport";
 import { useSavedKeywordsFilters } from "@/client/features/saved-keywords/useSavedKeywordsFilters";
+import { useSavedKeywordsFit } from "@/client/features/saved-keywords/useSavedKeywordsFit";
+import { useSavedKeywordsMutations } from "@/client/features/saved-keywords/useSavedKeywordsMutations";
 import { useTagManage } from "@/client/features/saved-keywords/useTagManage";
-import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import { captureClientEvent } from "@/client/lib/posthog";
-import {
-  getSavedKeywords,
-  refreshSavedKeywordMetrics,
-  removeSavedKeywords,
-  updateSavedKeywordTags,
-} from "@/serverFunctions/keywords";
+import { getSavedKeywords } from "@/serverFunctions/keywords";
 import type { SavedKeywordTag } from "@/types/keywords";
 import { AppPageShell } from "@/client/components/AppPageShell";
 
+/**
+ * `q` is the term an inbound link wants this list narrowed to. Without a
+ * schema here nothing could hand Saved Keywords any context at all -- every
+ * link into the tab arrived at the whole, unfiltered set and left the user to
+ * retype what the sending tab already knew. It seeds the Include filter, so
+ * it goes to the server with the first query rather than filtering a page
+ * that was fetched without it.
+ */
+const savedKeywordsSearchSchema = z.object({
+  q: z.string().optional().catch(undefined),
+});
+
 export const Route = createFileRoute("/_project/p/$projectId/saved")({
+  validateSearch: savedKeywordsSearchSchema,
   component: SavedKeywordsPage,
 });
 
@@ -56,7 +60,7 @@ const FILTER_DEBOUNCE_MS = 350;
 
 function SavedKeywordsPage() {
   const { projectId } = Route.useParams();
-  const queryClient = useQueryClient();
+  const { q: initialInclude } = Route.useSearch();
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
@@ -71,7 +75,7 @@ function SavedKeywordsPage() {
   const [showTagModal, setShowTagModal] = useState(false);
   const [showTrackModal, setShowTrackModal] = useState(false);
 
-  const filters = useSavedKeywordsFilters();
+  const filters = useSavedKeywordsFilters(initialInclude);
   const [committedFilterValues, setCommittedFilterValues] = useState(
     filters.values,
   );
@@ -101,8 +105,6 @@ function SavedKeywordsPage() {
       : "asc"
     : "desc";
   const tagFilterKey = selectedTagIds.join("|");
-  const hasActiveFilters =
-    filters.activeFilterCount > 0 || selectedTagIds.length > 0;
 
   const queryInput = useMemo(
     () => ({
@@ -130,10 +132,24 @@ function SavedKeywordsPage() {
   } = savedKeywordsQuery;
 
   const savedKeywords = data?.rows ?? [];
+  // Free client-side verdicts over the page already fetched -- the tab showed
+  // volume, CPC, competition, KD and intent, every metric except whether the
+  // keyword is one this client can sell into.
+  const keywordFit = useSavedKeywordsFit(projectId, savedKeywords);
   const availableTags = data?.tags ?? [];
   const totalCount = data?.totalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
-  const selectedRows = savedKeywords.filter((row) => rowSelection[row.id]);
+  // Includes the wrong-fit toggle so an emptied page reads as "nothing
+  // matches your filters" rather than the first-run "no saved keywords yet".
+  const hasActiveFilters =
+    filters.activeFilterCount > 0 ||
+    selectedTagIds.length > 0 ||
+    keywordFit.hideWrongFit;
+  // Read off the VISIBLE rows: a wrong-fit row hidden by the toggle must not
+  // stay in the selection that feeds delete, export and rank tracking.
+  const selectedRows = keywordFit.visibleRows.filter(
+    (row) => rowSelection[row.id],
+  );
   const selectedIds = selectedRows.map((row) => row.id);
   const selectedCount = selectedIds.length;
 
@@ -165,68 +181,21 @@ function SavedKeywordsPage() {
     if (page > totalPages) setPage(totalPages);
   }, [page, totalPages]);
 
-  const invalidateSavedKeywords = () =>
-    queryClient.invalidateQueries({ queryKey: ["savedKeywords", projectId] });
-
-  const removeMutation = useMutation({
-    mutationFn: (savedKeywordIds: string[]) =>
-      removeSavedKeywords({ data: { projectId, savedKeywordIds } }),
-    onSuccess: (result) => {
+  const {
+    remove: removeMutation,
+    tag: tagMutation,
+    refreshMetrics: refreshMetricsMutation,
+  } = useSavedKeywordsMutations({
+    projectId,
+    onRemoved: () => {
       setRowSelection({});
       setShowConfirm(false);
       setRemoveError(null);
-      void invalidateSavedKeywords();
-      captureClientEvent("saved_keywords:bulk_remove", {
-        count: result.deletedCount,
-      });
-      toast.success(
-        `${result.deletedCount} keyword${result.deletedCount !== 1 ? "s" : ""} removed`,
-      );
     },
-    onError: (error) => {
-      setRemoveError(getStandardErrorMessage(error, "Remove failed."));
-    },
-  });
-
-  const tagMutation = useMutation({
-    mutationFn: (input: {
-      savedKeywordIds: string[];
-      addTags?: string[];
-      removeTagIds?: string[];
-    }) =>
-      updateSavedKeywordTags({
-        data: {
-          projectId,
-          savedKeywordIds: input.savedKeywordIds,
-          addTags: input.addTags,
-          removeTagIds: input.removeTagIds,
-        },
-      }),
-    onSuccess: (result) => {
+    onRemoveFailed: setRemoveError,
+    onTagged: () => {
       setRowSelection({});
       setShowTagModal(false);
-      void invalidateSavedKeywords();
-      toast.success(
-        `Updated tags for ${result.taggedCount} keyword${result.taggedCount !== 1 ? "s" : ""}`,
-      );
-    },
-    onError: (error) => {
-      toast.error(getStandardErrorMessage(error, "Could not update tags"));
-    },
-  });
-
-  const refreshMetricsMutation = useMutation({
-    mutationFn: () => refreshSavedKeywordMetrics({ data: { projectId } }),
-    onSuccess: (result) => {
-      void invalidateSavedKeywords();
-      toast.success(
-        `Updated stats for ${result.updated} keyword${result.updated !== 1 ? "s" : ""}`,
-      );
-    },
-    onError: (error) => {
-      toast.error(
-        getStandardErrorMessage(error, "Could not update keyword stats."),
-      );
     },
   });
 
@@ -287,6 +256,9 @@ function SavedKeywordsPage() {
             showFilters={showFilters}
             onToggleFilters={() => setShowFilters((v) => !v)}
             onResetAllFilters={handleClearAllFilters}
+            hideWrongFit={keywordFit.hideWrongFit}
+            onToggleWrongFit={() => keywordFit.setHideWrongFit((v) => !v)}
+            wrongFitCount={keywordFit.wrongFitCount}
             availableTags={availableTags}
             selectedTagIds={selectedTagIds}
             busyTagIds={tagManage.busyTagIds}
@@ -317,11 +289,13 @@ function SavedKeywordsPage() {
               totalCount={totalCount}
               onRetry={() => void savedKeywordsQuery.refetch()}
               tableProps={{
-                rows: savedKeywords,
+                projectId,
+                rows: keywordFit.visibleRows,
                 rowSelection,
                 sorting,
                 isLoading,
                 hasActiveFilters,
+                fit: keywordFit.fit,
                 onRowSelectionChange: setRowSelection,
                 onSortingChange: handleSortingChange,
               }}

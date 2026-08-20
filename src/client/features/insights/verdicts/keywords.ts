@@ -133,6 +133,12 @@ export function buildKeywordsVerdict(input: KeywordsVerdictInput): Verdict {
         {
           label: `Target "${easiest.keyword}" first`,
           evidence: `Its difficulty score of ${easiest.keywordDifficulty} is the closest of this batch to your DR ${ownDomainRating}`,
+          // Sizing up the field is the next step after picking a keyword, and
+          // SERP Overview takes `q`.
+          to: {
+            to: "/p/$projectId/serp" as const,
+            search: { q: easiest.keyword },
+          },
           weight: 100,
         },
       ],
@@ -142,6 +148,10 @@ export function buildKeywordsVerdict(input: KeywordsVerdictInput): Verdict {
   const best = pickBestWinnable(winnable);
   const action = {
     label: `Prioritize "${best.keyword}"`,
+    to: {
+      to: "/p/$projectId/serp" as const,
+      search: { q: best.keyword },
+    },
     evidence:
       best.searchVolume != null
         ? `Volume ${formatCount(best.searchVolume)}, difficulty ${best.keywordDifficulty} vs your DR ${ownDomainRating}`
@@ -343,6 +353,10 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
         {
           label: `If timing content, lean toward publishing "${strongest.keyword}" before ${peakName}`,
           evidence: `${strongest.keyword} peaks in ${peakName} vs a low in ${lowName}, only a ${strongest.spread}-point gap`,
+          to: {
+            to: "/p/$projectId/content" as const,
+            search: { q: strongest.keyword },
+          },
           weight: 50,
         },
       ],
@@ -361,6 +375,12 @@ export function buildTrendsVerdict(input: TrendsVerdictInput): Verdict {
       {
         label: `Publish or refresh "${strongest.keyword}" content by ${publishMonth}`,
         evidence: `${strongest.keyword}'s search interest peaks in ${peakName}`,
+        // Content Optimizer is the tab that builds the brief this asks for,
+        // and it accepts `q`.
+        to: {
+          to: "/p/$projectId/content" as const,
+          search: { q: strongest.keyword },
+        },
         weight: 100,
       },
     ],

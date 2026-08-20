@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 
 export function formatUrlForDisplay(value: string): string {
   try {
@@ -53,7 +53,7 @@ export function ExternalUrlCell({
   return (
     <a className={className} href={href} target="_blank" rel="noreferrer">
       <span className="truncate">{visibleLabel}</span>
-      <ExternalLink className="size-3 shrink-0" />
+      <ArrowSquareOut className="size-3 shrink-0" />
     </a>
   );
 }

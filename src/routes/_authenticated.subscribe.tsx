@@ -1,8 +1,10 @@
 import { Link, createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useBillingCustomer } from "@/client/features/billing/useBillingCustomer";
-import { ArrowRight, Settings, User } from "lucide-react";
+import { ArrowRight, Gear, User } from "@phosphor-icons/react";
 import { ThemePreferenceMenuItems } from "@/client/components/ThemePreferenceMenuItems";
+import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 import { captureClientEvent } from "@/client/lib/posthog";
 import { signOutAndRedirect, useSession } from "@/lib/auth-client";
 import { isHostedClientAuthMode } from "@/lib/auth-mode";
@@ -14,6 +16,8 @@ import {
   AUTUMN_MANAGED_ACCESS_FEATURE_ID,
   AUTUMN_PAID_PLAN_ID,
 } from "@/shared/billing";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Tooltip } from "@cloudflare/kumo/components/tooltip";
 
 const SUPPORT_EMAIL = "huy1999nguyen@gmail.com";
 
@@ -119,20 +123,20 @@ function SubscribePage() {
     return (
       <div className="w-full max-w-xs space-y-4 text-center">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
         <h1 className="text-2xl font-semibold">
           Finalizing your subscription&hellip;
         </h1>
-        <span className="loading loading-spinner loading-md" />
+        <Loader />
         <p className="text-sm text-base-content/60">
           This usually takes a few seconds.
         </p>
         <p className="text-xs text-base-content/50">
           Taking longer?{" "}
-          <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
+          <a className="app-link" href={`mailto:${SUPPORT_EMAIL}`}>
             Email {SUPPORT_EMAIL}
           </a>
           .
@@ -146,7 +150,7 @@ function SubscribePage() {
       <div className="w-full max-w-xs space-y-4">
         <div className="text-center space-y-3">
           <img
-            src="/transparent-logo.svg"
+            src="/logo-mark.png"
             alt="FlyRocketSEO"
             className="mx-auto size-10 rounded-lg"
           />
@@ -160,15 +164,16 @@ function SubscribePage() {
           )}
         </p>
 
-        <button
+        <Button
           type="button"
-          className="btn btn-soft w-full"
+          variant="secondary"
+          className="w-full"
           onClick={() => {
             void customerQuery.refetch();
           }}
         >
           Try again
-        </button>
+        </Button>
       </div>
     );
   }
@@ -205,7 +210,7 @@ function SubscribePage() {
 
       <div className="text-center space-y-3">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />
@@ -243,23 +248,23 @@ function SubscribePage() {
 
         {error ? <p className="text-sm text-error">{error}</p> : null}
 
-        <button
-          className="btn btn-soft w-full"
+        <Button
+          variant="secondary"
+          className="w-full"
           disabled={isAttaching}
           onClick={() => void handleSubscribe()}
         >
           {isAttaching ? "Redirecting..." : "Subscribe"}
-        </button>
+        </Button>
 
         <p className="text-center text-xs text-base-content/50">
-          <span
-            className="tooltip before:max-w-60 before:whitespace-normal"
-            data-tip={`Not for you yet? Email ${SUPPORT_EMAIL} within 30 days of your charge and we'll refund your subscription.`}
+          <Tooltip
+            content={`Not for you yet? Email ${SUPPORT_EMAIL} within 30 days of your charge and we'll refund your subscription.`}
           >
             <span className="cursor-help underline decoration-dotted">
               30-day money-back guarantee
             </span>
-          </span>
+          </Tooltip>
           . Cancel anytime. Powered by Stripe.
         </p>
       </div>
@@ -267,7 +272,7 @@ function SubscribePage() {
       <div className="text-center space-y-2">
         <p className="text-sm text-base-content/60">
           Questions?{" "}
-          <a className="link" href={`mailto:${SUPPORT_EMAIL}`}>
+          <a className="app-link" href={`mailto:${SUPPORT_EMAIL}`}>
             Email {SUPPORT_EMAIL}
           </a>
           .
@@ -294,42 +299,37 @@ function SubscribePageAccountMenu({ email }: { email: string | undefined }) {
 
   return (
     <div className="fixed top-4 right-4">
-      <div className="dropdown dropdown-end">
-        <button
-          type="button"
-          tabIndex={0}
-          className="btn btn-ghost btn-circle"
-          aria-label="Open account menu"
-        >
-          <User className="h-5 w-5" />
-        </button>
-        <ul
-          tabIndex={0}
-          className="dropdown-content z-20 menu mt-3 min-w-56 rounded-box border border-base-300 bg-base-100 p-2 shadow-lg"
-        >
-          <li className="menu-title max-w-full">
-            <span className="truncate text-base-content" data-ph-mask>
-              {email}
-            </span>
-          </li>
-          <li>
-            <Link to="/settings" className="flex items-center gap-2">
-              <Settings className="h-4 w-4" />
-              Settings
-            </Link>
-          </li>
-          <ThemePreferenceMenuItems />
-          <li>
-            <button
+      <DropdownMenu>
+        <DropdownMenu.Trigger
+          render={
+            <Button
               type="button"
-              className="text-error"
-              onClick={handleSignOut}
+              variant="ghost"
+              shape="circle"
+              aria-label="Open account menu"
             >
-              Sign out
-            </button>
-          </li>
-        </ul>
-      </div>
+              <User className="h-5 w-5" />
+            </Button>
+          }
+        />
+        <DropdownMenu.Content align="end" className="min-w-56">
+          <DropdownMenu.Group>
+            <DropdownMenu.Label>
+              <span className="block truncate" data-ph-mask>
+                {email}
+              </span>
+            </DropdownMenu.Label>
+          </DropdownMenu.Group>
+          <DropdownMenu.LinkItem icon={Gear} render={<Link to="/settings" />}>
+            Settings
+          </DropdownMenu.LinkItem>
+          <ThemePreferenceMenuItems />
+          <DropdownMenu.Separator />
+          <DropdownMenu.Item variant="danger" onClick={handleSignOut}>
+            Sign out
+          </DropdownMenu.Item>
+        </DropdownMenu.Content>
+      </DropdownMenu>
     </div>
   );
 }

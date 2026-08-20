@@ -29,7 +29,7 @@ function canAnimate(): boolean {
   return !window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-export type UseRevealOptions = {
+type UseRevealOptions = {
   /** Re-hide and replay when the element scrolls back out of view. Off by
    *  default: content that re-animates every time you scroll past it is the
    *  single most common way "polished" tips over into "distracting". */
@@ -42,6 +42,10 @@ export type UseRevealOptions = {
   rootMargin?: string;
   /** Opt out entirely — e.g. for a row inside an already-revealed list. */
   disabled?: boolean;
+  /** Reveal the element's CHILDREN in sequence rather than the element itself.
+   *  Nothing is wrapped: the delay ladder is :nth-child in app.css, so a
+   *  container's sections stagger without any change to its markup. */
+  stagger?: boolean;
 };
 
 export function useReveal<TElement extends HTMLElement = HTMLDivElement>({
@@ -49,6 +53,7 @@ export function useReveal<TElement extends HTMLElement = HTMLDivElement>({
   threshold = 0.15,
   rootMargin = "0px 0px -12% 0px",
   disabled = false,
+  stagger = false,
 }: UseRevealOptions = {}) {
   const ref = React.useRef<TElement | null>(null);
 
@@ -56,15 +61,19 @@ export function useReveal<TElement extends HTMLElement = HTMLDivElement>({
     const element = ref.current;
     if (!element) return;
 
+    // Both attributes drive the same three states; which one is set decides
+    // whether the element or its children carry the transition.
+    const key = stagger ? "revealStagger" : "reveal";
+
     if (disabled || !canAnimate()) {
       // Clear rather than return: `disabled` can flip to true while an element
       // is still hidden, and leaving the attribute behind would strand it at
       // opacity 0 forever.
-      delete element.dataset.reveal;
+      delete element.dataset[key];
       return;
     }
 
-    element.dataset.reveal = "hidden";
+    element.dataset[key] = "hidden";
 
     // The observer watches exactly this one element, so the closed-over
     // `element` is the entry's target — no need to widen `entry.target` back
@@ -73,10 +82,10 @@ export function useReveal<TElement extends HTMLElement = HTMLDivElement>({
       (entries) => {
         for (const entry of entries) {
           if (entry.isIntersecting) {
-            element.dataset.reveal = "shown";
+            element.dataset[key] = "shown";
             if (!replay) observer.disconnect();
           } else if (replay) {
-            element.dataset.reveal = "hidden";
+            element.dataset[key] = "hidden";
           }
         }
       },
@@ -87,9 +96,9 @@ export function useReveal<TElement extends HTMLElement = HTMLDivElement>({
 
     return () => {
       observer.disconnect();
-      delete element.dataset.reveal;
+      delete element.dataset[key];
     };
-  }, [disabled, replay, rootMargin, threshold]);
+  }, [disabled, replay, rootMargin, stagger, threshold]);
 
   return ref;
 }

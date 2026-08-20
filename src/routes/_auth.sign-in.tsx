@@ -12,6 +12,8 @@ import { captureClientEvent } from "@/client/lib/posthog";
 import { authClient } from "@/lib/auth-client";
 import { getSignInSearch, getVerifyEmailSearch } from "@/lib/auth-redirect";
 import { z } from "zod";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Input } from "@cloudflare/kumo/components/input";
 
 const signInSchema = z.object({
   email: z.string().trim().email("Enter a valid email address."),
@@ -183,9 +185,9 @@ function SignInPage() {
 
               return (
                 <div>
-                  <input
+                  <Input
                     type="email"
-                    className="input input-bordered w-full"
+                    className="w-full"
                     placeholder="Email address..."
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -207,9 +209,9 @@ function SignInPage() {
 
               return (
                 <div>
-                  <input
+                  <Input
                     type="password"
-                    className="input input-bordered w-full"
+                    className="w-full"
                     placeholder="Password..."
                     value={field.state.value}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -238,12 +240,13 @@ function SignInPage() {
                   {errorMessage ? (
                     <p className="text-sm text-error">{errorMessage}</p>
                   ) : null}
-                  <button
-                    className="btn btn-soft w-full"
+                  <Button
+                    variant="secondary"
+                    className="w-full"
                     disabled={!isHostedMode || isSubmitting}
                   >
                     {isSubmitting ? "Signing in..." : "Sign in"}
-                  </button>
+                  </Button>
                 </>
               );
             }}

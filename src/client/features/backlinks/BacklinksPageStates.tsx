@@ -1,4 +1,4 @@
-import { ShieldAlert } from "lucide-react";
+import { ShieldWarning } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 const CARD = "rounded-xl border border-base-300 bg-base-100 p-4";
@@ -60,7 +60,7 @@ export function BacklinksErrorState({
       <div className="flex items-start gap-2">
         {/* Bare glyph: the icon carries the tone, so a coloured tile behind it
             is decoration competing with the message. */}
-        <ShieldAlert className="mt-0.5 size-5 shrink-0 text-error/80" />
+        <ShieldWarning className="mt-0.5 size-5 shrink-0 text-error/80" />
         <div className="space-y-1">
           <h2 className="text-sm font-semibold">Could not load backlinks</h2>
           <p className="text-xs text-base-content/55">

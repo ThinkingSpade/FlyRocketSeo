@@ -25,6 +25,42 @@ type BacklinksVerdictInput = {
   backlinksSpamScore: number | null;
 };
 
+/**
+ * Same-route tab switches, as search UPDATERS rather than plain objects.
+ *
+ * Both actions below render on the Backlinks page and navigate to another of
+ * its own tabs, where `target` and `scope` are URL state. `functionalUpdate`
+ * (@tanstack/router-core) replaces the entire search when handed an object and
+ * merges only when handed a function -- so `search: { tab: "pages" }` dropped
+ * the analyzed target, disabled the overview and top-pages queries, and
+ * collapsed the page to its restored-run summary, whose only way back to the
+ * rows that were on screen a second earlier is a METERED re-fetch.
+ *
+ * `page`/`sort`/`order` are cleared for the same reason the page's own tab
+ * switcher clears them (`BacklinksPage.handleResultTabChange`): they are
+ * per-tab, so carrying them across lands on a deep page of, or an unknown sort
+ * column for, a table the user has not seen yet.
+ *
+ * Held as module constants, one per destination tab, so each action carries a
+ * stable function reference instead of building a fresh closure per verdict.
+ */
+const BACKLINKS_TAB_SEARCH = {
+  pages: (previous: Record<string, unknown>) => ({
+    ...previous,
+    tab: "pages" as const,
+    page: undefined,
+    sort: undefined,
+    order: undefined,
+  }),
+  domains: (previous: Record<string, unknown>) => ({
+    ...previous,
+    tab: "domains" as const,
+    page: undefined,
+    sort: undefined,
+    order: undefined,
+  }),
+} as const;
+
 function formatCount(value: number): string {
   return value.toLocaleString();
 }
@@ -83,6 +119,13 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
       actions.push({
         label: `Redirect or restore the ${formatCount(brokenCount)} broken backlink target${brokenCount === 1 ? "" : "s"}`,
         evidence: broken.evidence,
+        // The Top Pages tab is where the broken targets are listed, so the
+        // action lands on the rows it is talking about rather than the tab
+        // the user is already looking at.
+        to: {
+          to: "/p/$projectId/backlinks",
+          search: BACKLINKS_TAB_SEARCH.pages,
+        },
         // Highest weight: these links are already earned, so reclaiming them
         // costs nothing but a redirect -- the cheapest link building there is.
         weight: 100,
@@ -101,6 +144,12 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
         label:
           "Review the referring domains behind this backlink profile for spam",
         evidence: `Backlink spam score ${spam.formatted}/100 · ${spam.label}`,
+        // Referring Domains carries the per-domain spam scores this review
+        // needs; the overview tab shows only the profile-wide figure.
+        to: {
+          to: "/p/$projectId/backlinks",
+          search: BACKLINKS_TAB_SEARCH.domains,
+        },
         // Below the broken-link action: a spam review is a caution, not a
         // guaranteed recovery the way redirecting a dead link is.
         weight: 70,

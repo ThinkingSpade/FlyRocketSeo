@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/client/components/Modal";
 import { useSession } from "@/lib/auth-client";
+import { Kbd } from "@/client/components/Kbd";
 
 // Module-level open channel, mirroring CommandPalette: the global keydown
 // listener lives inside the overlay, but other surfaces (the command palette)
@@ -103,7 +104,7 @@ function KeyboardShortcutsHelpImpl() {
             <span className="text-sm text-base-content/70">
               {shortcut.description}
             </span>
-            <kbd className="kbd kbd-sm">{shortcut.keys}</kbd>
+            <Kbd>{shortcut.keys}</Kbd>
           </li>
         ))}
       </ul>

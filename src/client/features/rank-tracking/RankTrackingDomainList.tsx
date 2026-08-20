@@ -3,13 +3,16 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { toast } from "sonner";
 import {
-  AlertTriangle,
+  Warning,
   Archive,
   Globe,
   Plus,
-  ChevronRight,
-  Search,
-} from "lucide-react";
+  CaretRight,
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { Loader } from "@cloudflare/kumo/components/loader";
 import {
   getRankTrackingConfigSummaries,
   updateRankTrackingConfig,
@@ -54,10 +57,11 @@ export function RankTrackingDomainList({
   const [filters, setFilters] = useState<DomainListFilters>(
     EMPTY_DOMAIN_LIST_FILTERS,
   );
-  const { data: summaries } = useQuery({
+  const summariesQuery = useQuery({
     queryKey: ["rankTrackingConfigSummaries", projectId],
     queryFn: () => getRankTrackingConfigSummaries({ data: { projectId } }),
   });
+  const { data: summaries } = summariesQuery;
   const allSummaries = useMemo(() => summaries ?? [], [summaries]);
   const filteredSummaries = useMemo(
     () => applyDomainListFilters(allSummaries, filters),
@@ -146,7 +150,27 @@ export function RankTrackingDomainList({
           />
         )}
         <div className="divide-y divide-base-300 border-t border-base-300">
-          {allSummaries.length === 0 ? (
+          {/* A failed read left `summaries` undefined, so `allSummaries` was
+              `[]` and this tab's front door told the user they track no
+              domains -- the same bug already fixed one level down in
+              $configId.tsx and RankTrackingDomainDetail.tsx. The in-flight
+              case fell into it too, flashing the empty state on every load. */}
+          {summariesQuery.isError ? (
+            <div className="p-5">
+              <InlineQueryError
+                message={getStandardErrorMessage(
+                  summariesQuery.error,
+                  "Your tracked domains could not be loaded.",
+                )}
+                onRetry={() => void summariesQuery.refetch()}
+                retrying={summariesQuery.isFetching}
+              />
+            </div>
+          ) : summariesQuery.isPending ? (
+            <div className="px-5 py-10 text-center">
+              <Loader size="sm" />
+            </div>
+          ) : allSummaries.length === 0 ? (
             <div className="px-5 py-10 text-center space-y-2">
               <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-base-200">
                 <Globe className="size-5 text-base-content/40" />
@@ -161,7 +185,7 @@ export function RankTrackingDomainList({
           ) : filteredSummaries.length === 0 ? (
             <div className="px-5 py-10 text-center space-y-3">
               <div className="mx-auto flex size-10 items-center justify-center rounded-xl bg-base-200">
-                <Search className="size-5 text-base-content/40" />
+                <MagnifyingGlass className="size-5 text-base-content/40" />
               </div>
               <div className="space-y-1">
                 <p className="text-sm font-medium text-base-content/70">
@@ -267,7 +291,7 @@ function DomainRow({
         </p>
         {summary.lastSkipReason === "insufficient_credits" && (
           <p className="flex items-center gap-1 text-xs text-warning">
-            <AlertTriangle className="size-3" />
+            <Warning className="size-3" />
             Scheduled check skipped — insufficient credits
           </p>
         )}
@@ -296,7 +320,7 @@ function DomainRow({
       >
         <Archive className="size-4" />
       </Button>
-      <ChevronRight className="size-4 shrink-0 text-base-content/40 pointer-events-none" />
+      <CaretRight className="size-4 shrink-0 text-base-content/40 pointer-events-none" />
     </div>
   );
 }

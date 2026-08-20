@@ -1,14 +1,14 @@
 import * as React from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-  AlertCircle,
-  BarChart3,
-  ClipboardCheck,
-  FolderKanban,
-  MousePointerClick,
+  WarningCircle,
+  ChartBar,
+  ClipboardText,
+  Kanban,
+  CursorClick,
   Plus,
-  Search,
-} from "lucide-react";
+  MagnifyingGlass,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   getArchivedProjects,
@@ -24,6 +24,7 @@ import type { PortfolioProject } from "@/client/features/projects/types";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { Button } from "@cloudflare/kumo/components/button";
+import { useReveal } from "@/client/hooks/useReveal";
 
 const compactFormatter = new Intl.NumberFormat(undefined, {
   notation: "compact",
@@ -49,22 +50,22 @@ function PortfolioSummary({ projects }: { projects: PortfolioProject[] }) {
     {
       label: "Total projects",
       value: String(projects.length),
-      icon: FolderKanban,
+      icon: Kanban,
     },
     {
       label: "GSC connected",
       value: String(summary.connected),
-      icon: Search,
+      icon: MagnifyingGlass,
     },
     {
       label: "Clicks this period",
       value: compactFormatter.format(Math.round(summary.clicks)),
-      icon: MousePointerClick,
+      icon: CursorClick,
     },
     {
       label: "Projects with audit issues",
       value: String(summary.auditIssues),
-      icon: ClipboardCheck,
+      icon: ClipboardText,
     },
   ];
 
@@ -126,7 +127,7 @@ function PortfolioError({
 }) {
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-6 text-center">
-      <AlertCircle className="mx-auto size-5 text-base-content/40" />
+      <WarningCircle className="mx-auto size-5 text-base-content/40" />
       <h2 className="mt-2 font-medium">Portfolio could not be loaded</h2>
       <p className="mx-auto mt-1 max-w-md text-sm text-base-content/60">
         {getStandardErrorMessage(error)}
@@ -160,9 +161,14 @@ export function ProjectsPage() {
   });
   const projects = portfolioQuery.data?.projects ?? [];
 
+  // Page entrance, staggered per section — the same treatment AppPageShell
+  // gives every project page. These account pages predate it and hand-roll
+  // their own frame, so without this they were the only pages that snapped in.
+  const revealRef = useReveal({ stagger: true });
+
   return (
     <div className="h-full overflow-auto bg-base-100 px-4 py-8 pb-24 md:px-6 md:py-12 md:pb-8">
-      <div className="mx-auto w-full max-w-7xl space-y-6">
+      <div ref={revealRef} className="mx-auto w-full max-w-7xl space-y-6">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-semibold">Portfolio</h1>
@@ -207,7 +213,7 @@ export function ProjectsPage() {
                   </p>
                 </div>
                 <span className="inline-flex items-center gap-1.5 text-xs text-base-content/45">
-                  <BarChart3 className="size-3.5 text-base-content/35" />
+                  <ChartBar className="size-3.5 text-base-content/35" />
                   Free and cached data only
                 </span>
               </div>

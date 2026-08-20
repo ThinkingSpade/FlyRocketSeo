@@ -84,14 +84,14 @@ export const Route = createRootRoute({
     ],
     links: [
       { rel: "stylesheet", href: appCss },
-      // SVG favicon first — modern browsers prefer it and render the crisp
-      // FlyRocketSEO mark at any DPI; the PNG/ico entries below are fallbacks.
-      {
-        rel: "icon",
-        type: "image/svg+xml",
-        sizes: "any",
-        href: "/favicon.svg",
-      },
+      // No SVG entry. There used to be one, listed first, and browsers that
+      // prefer `image/svg+xml` took it — which is exactly why it had to go:
+      // /favicon.svg was hand-drawn vector of the OLD purple mark, and the
+      // Fly Rocket Media mark ships as raster (public/logo-mark.png) with no
+      // vector source to redraw it from. Left in place it would have kept
+      // serving the old logo to Chrome and Firefox no matter how many PNG
+      // sizes were regenerated. The PNG/ico entries below are now the whole
+      // set; restore an SVG entry only alongside a real vector of the new mark.
       {
         rel: "apple-touch-icon",
         sizes: "180x180",

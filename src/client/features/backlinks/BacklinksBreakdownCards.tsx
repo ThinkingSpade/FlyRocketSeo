@@ -1,12 +1,12 @@
 import {
   ArrowDown,
   Check,
+  CursorClick,
   Globe,
-  LayoutTemplate,
-  Link2,
-  MousePointerClick,
-  Server,
-} from "lucide-react";
+  HardDrives,
+  Layout,
+  LinkSimple,
+} from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Grid } from "@cloudflare/kumo/components/grid";
 import { LayerCard } from "@cloudflare/kumo/components/layer-card";
@@ -239,7 +239,7 @@ export function BacklinksProfileBreakdowns({
         />
         <BreakdownList
           title="Top-level domains"
-          icon={Link2}
+          icon={LinkSimple}
           rows={summary.referringTlds}
           field="sourceTld"
           totalBacklinks={summary.backlinks}
@@ -248,7 +248,7 @@ export function BacklinksProfileBreakdowns({
         />
         <BreakdownList
           title="Link types"
-          icon={Link2}
+          icon={LinkSimple}
           rows={summary.referringLinkTypes}
           field="itemType"
           totalBacklinks={summary.backlinks}
@@ -258,7 +258,7 @@ export function BacklinksProfileBreakdowns({
         {/* Three more splits the same summary call already returned. */}
         <BreakdownList
           title="Link attributes"
-          icon={MousePointerClick}
+          icon={CursorClick}
           rows={summary.referringLinkAttributes}
           field="linkAttribute"
           totalBacklinks={summary.backlinks}
@@ -267,7 +267,7 @@ export function BacklinksProfileBreakdowns({
         />
         <BreakdownList
           title="Site types"
-          icon={Server}
+          icon={HardDrives}
           rows={summary.referringPlatformTypes}
           field="sourcePlatformType"
           totalBacklinks={summary.backlinks}
@@ -276,7 +276,7 @@ export function BacklinksProfileBreakdowns({
         />
         <BreakdownList
           title="Placement on page"
-          icon={LayoutTemplate}
+          icon={Layout}
           rows={summary.referringPlacements}
           field="semanticLocation"
           totalBacklinks={summary.backlinks}

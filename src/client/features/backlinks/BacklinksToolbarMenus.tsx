@@ -1,16 +1,18 @@
 import { useState } from "react";
 import {
-  ChevronDown,
+  CaretDown,
   Download,
   Gauge,
-  MoreHorizontal,
-  Sheet,
-} from "lucide-react";
+  DotsThree,
+  Table,
+} from "@phosphor-icons/react";
 import type { CsvValue } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
 import type { BacklinksSearchState } from "./backlinksPageTypes";
 import { exportBacklinksTabCsv } from "./export";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Button } from "@cloudflare/kumo/components/button";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 export function BacklinksExportMenu({
   activeTab,
@@ -41,55 +43,54 @@ export function BacklinksExportMenu({
   };
 
   return (
-    <div className="dropdown dropdown-end">
-      <div
-        tabIndex={0}
-        role="button"
-        className={`btn btn-sm btn-ghost gap-1 ${rows.length === 0 ? "btn-disabled" : ""}`}
-        aria-label="Export backlinks table"
-      >
-        <Download className="size-4" />
-        Export
-        <ChevronDown className="size-3 opacity-60" />
-      </div>
-      <ul
-        tabIndex={0}
-        role="menu"
-        className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-56"
-      >
-        <li>
-          <button
-            type="button"
-            onClick={() => void handleExportToSheets()}
-            disabled={!canExport}
-          >
-            {isExportingSheets ? (
-              <Loader size="sm" />
-            ) : (
-              <Sheet className="size-4" />
-            )}
-            Export to Sheets
-          </button>
-        </li>
-        <li>
-          <button
-            type="button"
-            onClick={() =>
-              exportBacklinksTabCsv({
-                tab: activeTab,
-                target: exportTarget,
-                headers,
-                rows,
-              })
-            }
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
             disabled={rows.length === 0}
+            aria-label="Export backlinks table"
           >
             <Download className="size-4" />
-            Export CSV
-          </button>
-        </li>
-      </ul>
-    </div>
+            Export
+            <CaretDown className="size-3 opacity-60" />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content align="end" className="w-56">
+        <DropdownMenu.Item
+          // A conditional icon has to be an element, and Kumo only injects its
+          // own `mr-2` for components — so the gap is supplied here instead.
+          icon={
+            <span className="mr-2 inline-flex">
+              {isExportingSheets ? (
+                <Loader size="sm" />
+              ) : (
+                <Table className="size-4" />
+              )}
+            </span>
+          }
+          disabled={!canExport}
+          onClick={() => void handleExportToSheets()}
+        >
+          Export to Sheets
+        </DropdownMenu.Item>
+        <DropdownMenu.Item
+          icon={Download}
+          onClick={() =>
+            exportBacklinksTabCsv({
+              tab: activeTab,
+              target: exportTarget,
+              headers,
+              rows,
+            })
+          }
+        >
+          Export CSV
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }
 
@@ -103,37 +104,37 @@ export function BacklinksActionsMenu({
   ratableDomains: string[];
 }) {
   return (
-    <div className="dropdown dropdown-end">
-      <div
-        tabIndex={0}
-        role="button"
-        className="btn btn-sm btn-ghost btn-square"
-        aria-label="Backlinks table actions"
-        title="Backlinks table actions"
-      >
-        <MoreHorizontal className="size-4" />
-      </div>
-      <ul
-        tabIndex={0}
-        role="menu"
-        className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-52"
-      >
-        <li>
-          <button
-            type="button"
-            onClick={() => void loadRatings(ratableDomains)}
-            disabled={isLoadingRatings}
-            title="Look up Ahrefs Domain Rating for each domain in the table"
+    <DropdownMenu>
+      <DropdownMenu.Trigger
+        render={
+          <Button
+            variant="ghost"
+            size="sm"
+            shape="square"
+            aria-label="Backlinks table actions"
+            title="Backlinks table actions"
           >
-            {isLoadingRatings ? (
-              <Loader size="sm" />
-            ) : (
-              <Gauge className="size-4" />
-            )}
-            Ahrefs DR
-          </button>
-        </li>
-      </ul>
-    </div>
+            <DotsThree className="size-4" />
+          </Button>
+        }
+      />
+      <DropdownMenu.Content align="end" className="w-52">
+        <DropdownMenu.Item
+          icon={
+            <span className="mr-2 inline-flex">
+              {isLoadingRatings ? (
+                <Loader size="sm" />
+              ) : (
+                <Gauge className="size-4" />
+              )}
+            </span>
+          }
+          disabled={isLoadingRatings}
+          onClick={() => void loadRatings(ratableDomains)}
+        >
+          Ahrefs DR
+        </DropdownMenu.Item>
+      </DropdownMenu.Content>
+    </DropdownMenu>
   );
 }

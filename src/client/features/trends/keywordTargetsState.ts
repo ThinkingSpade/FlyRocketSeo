@@ -150,26 +150,45 @@ export function resolveFailureReason(input: {
  * default for an unknown cause is the same thing we said before this
  * function existed, not silence.
  */
+/**
+ * What the rows under the banner are, when there are any.
+ *
+ * The banner sits directly above a populated table, so "couldn't load ranking
+ * data" on its own reads as a caption for the numbers beneath it — a client
+ * looking at a Rank column of 54 and 81 has no way to tell those came from the
+ * free half. Only `insufficient_credits` said so; the other two causes left
+ * the same table unexplained.
+ */
+const FROM_SEARCH_CONSOLE =
+  " The keywords below come from Search Console, which is free.";
+
 export function describePaidFailure(input: {
   /** The persisted tag, or null when no failure row could be read. */
   reason: string | null;
   /** Named in the message; the card passes "your site" when unknown. */
   domain: string;
+  /**
+   * Whether the free rows are actually on screen. Appending the sentence
+   * unconditionally would point at a table that isn't there — the free half
+   * needs Search Console connected, which is not guaranteed here.
+   */
+  hasFreeRows: boolean;
 }): { message: string; canRetry: boolean } {
+  const rowsNote = input.hasFreeRows ? FROM_SEARCH_CONSOLE : "";
   if (input.reason === "insufficient_credits") {
     return {
-      message: `Ranking data for ${input.domain} needs credits, and this account is out. The keywords below come from Search Console, which is free.`,
+      message: `Ranking data for ${input.domain} needs credits, and this account is out.${rowsNote}`,
       canRetry: false,
     };
   }
   if (input.reason === "rate_limited") {
     return {
-      message: `Ranking data for ${input.domain} was rate-limited. Waiting a few minutes before trying again usually clears it.`,
+      message: `Ranking data for ${input.domain} was rate-limited. Waiting a few minutes before trying again usually clears it.${rowsNote}`,
       canRetry: true,
     };
   }
   return {
-    message: `Couldn’t load ranking data for ${input.domain}.`,
+    message: `Couldn’t load ranking data for ${input.domain}.${rowsNote}`,
     canRetry: true,
   };
 }

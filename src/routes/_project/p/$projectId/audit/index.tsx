@@ -1,6 +1,10 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import {
+  auditResultsKey,
+  auditStatusKey,
+} from "@/client/features/audit/auditQueryKeys";
 import { useCallback } from "react";
-import { AlertCircle, Loader2 } from "lucide-react";
+import { WarningCircle, CircleNotch } from "@phosphor-icons/react";
 import { useQuery } from "@tanstack/react-query";
 import {
   getAuditResults,
@@ -19,6 +23,11 @@ import {
 } from "@/client/features/audit/shared";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { Button } from "@cloudflare/kumo/components/button";
+import { Loader } from "@cloudflare/kumo/components/loader";
+import { Banner } from "@cloudflare/kumo/components/banner";
+import { Badge } from "@cloudflare/kumo/components/badge";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 export const Route = createFileRoute<"/_project/p/$projectId/audit/">(
   "/_project/p/$projectId/audit/",
@@ -76,7 +85,7 @@ function AuditDetail({
   onTabChange: (tab: "pages" | "performance") => void;
 }) {
   const statusQuery = useQuery({
-    queryKey: ["audit-status", projectId, auditId],
+    queryKey: auditStatusKey(projectId, auditId),
     queryFn: () => getAuditStatus({ data: { projectId, auditId } }),
     refetchInterval: (query) => {
       const data = query.state.data;
@@ -89,7 +98,7 @@ function AuditDetail({
   const isRunning = statusQuery.data?.status === "running";
 
   const resultsQuery = useQuery({
-    queryKey: ["audit-results", projectId, auditId],
+    queryKey: auditResultsKey(projectId, auditId),
     queryFn: () => getAuditResults({ data: { projectId, auditId } }),
     enabled: isComplete,
   });
@@ -97,7 +106,7 @@ function AuditDetail({
   if (statusQuery.isLoading) {
     return (
       <div className="flex items-center justify-center py-20">
-        <span className="loading loading-spinner loading-lg" />
+        <Loader size="lg" />
       </div>
     );
   }
@@ -106,13 +115,22 @@ function AuditDetail({
     return (
       <div className="px-4 py-6 md:px-6">
         <div className="mx-auto max-w-3xl space-y-4">
-          <div className="alert alert-error">
-            <AlertCircle className="size-5" />
-            <span>We could not load this audit. It may have been deleted.</span>
-          </div>
-          <button className="btn btn-ghost btn-sm" onClick={onBack}>
+          {/* "It may have been deleted" was asserted for every failure -- a
+              dropped connection, a 500, an expired session -- and offered no
+              retry, so a network blip read as data loss and the only way out
+              was back to the list. The server's own message says which it was;
+              reading an audit's status is free, so the retry is safe. */}
+          <InlineQueryError
+            message={getStandardErrorMessage(
+              statusQuery.error,
+              "We could not load this audit. It may have been deleted.",
+            )}
+            onRetry={() => void statusQuery.refetch()}
+            retrying={statusQuery.isFetching}
+          />
+          <Button variant="ghost" size="sm" onClick={onBack}>
             &larr; Back to audits
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -126,9 +144,9 @@ function AuditDetail({
     <div className="px-4 py-4 md:px-6 md:py-6 pb-24 md:pb-8 overflow-auto">
       <div className="mx-auto max-w-5xl space-y-4">
         <div className="space-y-1">
-          <button className="btn btn-ghost btn-sm px-0" onClick={onBack}>
+          <Button variant="ghost" size="sm" className="px-0" onClick={onBack}>
             &larr; All audits
-          </button>
+          </Button>
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold">Site Audit</h1>
             {status?.status !== "running" && status && (
@@ -152,10 +170,10 @@ function AuditDetail({
         )}
 
         {showSupportCta && (
-          <div
-            className={isFailed ? "alert alert-error" : "alert alert-warning"}
+          <Banner
+            variant={isFailed ? "error" : "alert"}
+            icon={<WarningCircle className="size-5" />}
           >
-            <AlertCircle className="size-5" />
             <div className="space-y-1">
               <p className="font-medium">
                 Site audit couldn't fully crawl this website.
@@ -170,7 +188,7 @@ function AuditDetail({
                 robots.txt), then re-run the audit.
               </p>
             </div>
-          </div>
+          </Banner>
         )}
 
         {/* A completed audit whose results fail to load used to render nothing
@@ -246,22 +264,24 @@ function ProgressCard({
 
   return (
     <div className="space-y-3">
-      <div className="card bg-base-100 border border-base-300">
-        <div className="card-body gap-3">
+      <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+        <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-3">
           <div className="flex items-center justify-between">
             <h2 className="font-medium flex items-center gap-2">
-              <Loader2 className="size-4 animate-spin text-primary" />
+              <CircleNotch className="size-4 animate-spin text-primary" />
               {isLighthousePhase
                 ? "Running Lighthouse checks"
                 : "Crawling pages"}
             </h2>
-            <span className="badge badge-ghost badge-sm">{phaseLabel}</span>
+            <Badge variant="neutral">{phaseLabel}</Badge>
           </div>
 
-          <progress
-            className="progress progress-primary w-full"
+          <ProgressBar
+            className="w-full"
+            barClassName="h-2"
             value={progress}
             max={100}
+            label="Audit progress"
           />
 
           <div className="flex items-center justify-between text-sm">
@@ -283,8 +303,8 @@ function ProgressCard({
       </div>
 
       {crawledUrls.length > 0 && (
-        <div className="card bg-base-100 border border-base-300">
-          <div className="card-body gap-2 p-4">
+        <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+          <div className="flex flex-auto flex-col gap-2 p-6 text-sm gap-2 p-4">
             <h3 className="text-sm font-medium text-base-content/70">
               Crawled Pages ({crawledUrls.length})
             </h3>

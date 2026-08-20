@@ -1,13 +1,13 @@
 import {
-  ChevronDown,
+  CaretDown,
   Download,
-  FileDown,
-  LineChart,
-  Save,
-  Sheet,
+  FileArrowDown,
+  ChartLine,
+  FloppyDisk,
+  Table,
   SlidersHorizontal,
-  Sparkles,
-} from "lucide-react";
+  Sparkle,
+} from "@phosphor-icons/react";
 import { useState } from "react";
 import { getRouteApi } from "@tanstack/react-router";
 import {
@@ -38,6 +38,7 @@ import { useKeywordResearchDifficultyBackfill } from "@/client/features/keywords
 import { MobileFilters } from "./keywordResearchMobileFilters";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
 
 const keywordsRoute = getRouteApi("/_project/p/$projectId/keywords");
 
@@ -204,34 +205,32 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
           {keywordCountLabel}
         </span>
         <div className="flex-1" />
-        <div className="dropdown dropdown-end">
-          <div
-            tabIndex={0}
-            role="button"
-            className={`btn btn-ghost btn-xs gap-1 ${!canExport ? "btn-disabled" : ""}`}
-            aria-label="Export"
-          >
-            <Download className="size-3.5" />
-            <ChevronDown className="size-3 opacity-60" />
-          </div>
-          <ul
-            tabIndex={0}
-            className="dropdown-content z-10 menu p-2 shadow-lg bg-base-100 border border-base-300 rounded-box w-56"
-          >
-            <li>
-              <button onClick={handleExportToSheets} disabled={!canExport}>
-                <Sheet className="size-4" />
-                Export to Sheets
-              </button>
-            </li>
-            <li>
-              <button onClick={controller.exportCsv} disabled={!canExport}>
-                <FileDown className="size-4" />
-                Export CSV
-              </button>
-            </li>
-          </ul>
-        </div>
+        <DropdownMenu>
+          <DropdownMenu.Trigger
+            render={
+              <Button
+                variant="ghost"
+                size="xs"
+                disabled={!canExport}
+                aria-label="Export"
+              >
+                <Download className="size-3.5" />
+                <CaretDown className="size-3 opacity-60" />
+              </Button>
+            }
+          />
+          <DropdownMenu.Content align="end">
+            <DropdownMenu.Item icon={Table} onClick={handleExportToSheets}>
+              Export to Sheets
+            </DropdownMenu.Item>
+            <DropdownMenu.Item
+              icon={FileArrowDown}
+              onClick={controller.exportCsv}
+            >
+              Export CSV
+            </DropdownMenu.Item>
+          </DropdownMenu.Content>
+        </DropdownMenu>
       </div>
 
       <TableBulkActionBar
@@ -240,13 +239,13 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
         actions={
           <div className="flex items-center px-1.5">
             <TableBulkActionButton
-              icon={<Save className="size-3.5" />}
+              icon={<FloppyDisk className="size-3.5" />}
               onClick={controller.handleSaveKeywords}
             >
               Save
             </TableBulkActionButton>
             <TableBulkActionButton
-              icon={<LineChart className="size-3.5" />}
+              icon={<ChartLine className="size-3.5" />}
               onClick={() => setShowTrackModal(true)}
             >
               Track
@@ -255,18 +254,18 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
               actions={[
                 {
                   label: "Copy for AI",
-                  icon: <Sparkles className="size-4" />,
+                  icon: <Sparkle className="size-4" />,
                   onClick: () =>
                     void copyKeywordsAsMarkdown(selectedExportRows),
                 },
                 {
                   label: "Export to Sheets",
-                  icon: <Sheet className="size-4" />,
+                  icon: <Table className="size-4" />,
                   onClick: handleExportSelectionToSheets,
                 },
                 {
                   label: "Export CSV",
-                  icon: <FileDown className="size-4" />,
+                  icon: <FileArrowDown className="size-4" />,
                   onClick: handleExportSelectionCsv,
                 },
               ]}

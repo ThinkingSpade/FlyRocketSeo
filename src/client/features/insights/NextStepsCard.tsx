@@ -1,10 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
-  CircleCheck,
-  CircleHelp,
-  TriangleAlert,
-} from "lucide-react";
+  CheckCircle,
+  Question,
+  Warning,
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { useAiExplainAvailable } from "@/client/features/auth/useEmailVerificationBypassed";
 import { ExplainButton } from "./ExplainButton";
@@ -19,10 +19,10 @@ import type { Verdict, VerdictTone } from "./types";
  */
 
 const TONE_ICON = {
-  good: CircleCheck,
-  mixed: TriangleAlert,
-  bad: TriangleAlert,
-  unknown: CircleHelp,
+  good: CheckCircle,
+  mixed: Warning,
+  bad: Warning,
+  unknown: Question,
 } as const;
 
 const TONE_STYLE: Record<
@@ -41,8 +41,10 @@ export function NextStepsCard({
   tab,
 }: {
   verdict: Verdict;
-  /** Both required together to opt this card into the "Explain this" button
-   *  -- call sites not yet wired for it simply omit them. */
+  /** Also what makes an action's `to` clickable: the builders emit a route and
+   *  its search params but cannot know the project, so an action stays plain
+   *  text wherever this is omitted. Pair with `tab` for the "Explain this"
+   *  button. */
   projectId?: string;
   tab?: string;
 }) {
@@ -69,9 +71,15 @@ export function NextStepsCard({
               <li key={action.label} className="flex items-start gap-2 text-sm">
                 <ArrowRight className="mt-0.5 size-3.5 shrink-0 text-base-content/45" />
                 <div className="min-w-0">
-                  {action.to ? (
+                  {action.to && projectId != null ? (
                     <Link
                       {...action.to}
+                      // Supplied here, not by the builder: every destination is
+                      // project-scoped, and the verdict builders are pure
+                      // functions over one tab's results that have no project
+                      // in scope. They name the route and its search params;
+                      // this card owns the only param they all share.
+                      params={{ projectId }}
                       className="font-medium hover:underline"
                     >
                       {action.label}

@@ -1,4 +1,4 @@
-import { Eye, Hash, MapPin, Megaphone, Trophy } from "lucide-react";
+import { Eye, Hash, MapPin, Megaphone, Trophy } from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import type { computeGridShareOfVoice } from "@/client/features/local-grid/gridShareOfVoice";
 

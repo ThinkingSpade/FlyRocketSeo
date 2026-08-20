@@ -1,4 +1,4 @@
-import { and, desc, eq, gt, inArray } from "drizzle-orm";
+import { and, desc, eq, gt, or } from "drizzle-orm";
 import { db } from "@/db";
 import { invitation } from "@/db/schema";
 
@@ -29,6 +29,21 @@ async function createInvite(input: {
   return id;
 }
 
+/**
+ * The invitation that grants this email access, if any.
+ *
+ * Expiry gates ACCEPTING an invitation, not continuing to use an account that
+ * already accepted one. The two statuses were previously filtered together on
+ * `expiresAt > now`, which meant a teammate who had joined weeks earlier —
+ * user row, credentials, member row and all — was locked out the moment the
+ * invitation they had already consumed passed its date, with
+ * `resolveHostedContext` telling them "This deployment is private." Access is
+ * withdrawn by cancelling the invitation or removing the membership, both of
+ * which are deliberate acts; a timestamp quietly passing is neither.
+ *
+ * `pending` keeps the expiry check: an invitation nobody accepted SHOULD go
+ * stale.
+ */
 async function findActiveInviteByEmail(
   email: string,
 ): Promise<{ id: string; status: string } | null> {
@@ -38,8 +53,13 @@ async function findActiveInviteByEmail(
     .where(
       and(
         eq(invitation.email, normalizeEmail(email)),
-        inArray(invitation.status, ["pending", "accepted"]),
-        gt(invitation.expiresAt, new Date()),
+        or(
+          eq(invitation.status, "accepted"),
+          and(
+            eq(invitation.status, "pending"),
+            gt(invitation.expiresAt, new Date()),
+          ),
+        ),
       ),
     )
     .orderBy(desc(invitation.createdAt))

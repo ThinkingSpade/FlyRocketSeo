@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import type { OnChangeFn, SortingState } from "@tanstack/react-table";
-import { ChevronDown } from "lucide-react";
+import { CaretDown } from "@phosphor-icons/react";
 import { BacklinksOverviewPanels } from "./BacklinksOverviewPanels";
 import { LinkVelocityCard } from "./BacklinksProfileSections";
 import { BacklinksProfileBreakdowns } from "./BacklinksBreakdownCards";
@@ -244,6 +244,7 @@ export function BacklinksBody({
             tabInsights={
               <BacklinksTabInsights
                 activeTab={searchState.tab}
+                projectId={projectId}
                 target={overviewData.displayTarget || searchState.target}
                 referringDomains={referringDomainsPage}
                 anchors={anchorsPage}
@@ -316,7 +317,7 @@ export function BacklinksBody({
           <h2 className="text-base font-semibold">
             <Collapsible.Trigger className="flex w-full items-center justify-between gap-2 text-left">
               Competitive research
-              <ChevronDown className="size-4 shrink-0 text-base-content/60 transition-transform [[data-panel-open]_&]:rotate-180" />
+              <CaretDown className="size-4 shrink-0 text-base-content/60 transition-transform [[data-panel-open]_&]:rotate-180" />
             </Collapsible.Trigger>
           </h2>
           <Collapsible.Panel keepMounted className="space-y-3">

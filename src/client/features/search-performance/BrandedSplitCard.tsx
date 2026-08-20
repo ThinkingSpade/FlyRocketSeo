@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { BadgeCheck, Globe2, Tags } from "lucide-react";
+import { SealCheck, Globe, Tag } from "@phosphor-icons/react";
 import { InsightIcon, InsightTile } from "@/client/components/InsightTile";
 import { getProjects } from "@/serverFunctions/projects";
 import {
   computeBrandedSplit,
-  defaultBrandTerms,
   parseBrandTerms,
   type QueryTotals,
 } from "./brandedSplit";
+import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { Input } from "@cloudflare/kumo/components/input";
 
 function formatCount(value: number): string {
@@ -36,14 +37,24 @@ export function BrandedSplitCard({
     projectsQuery.data?.find((project) => project.id === projectId)?.domain ??
     "";
 
+  const { profile } = useProjectProfile(projectId);
+  const prefillTerms = useMemo(
+    () => resolveBrandTerms(profile, domain || null),
+    [profile, domain],
+  );
+
   const [termsInput, setTermsInput] = useState("");
   const [touched, setTouched] = useState(false);
   useEffect(() => {
-    // Prefill once from the domain stem; never clobber user edits.
-    if (!touched && domain) {
-      setTermsInput(defaultBrandTerms(domain).join(", "));
+    // Prefill once from the profile's brand names unioned with the domain
+    // stem; never clobber user edits. The stem alone got this wrong for any
+    // client whose brand is not their domain -- and the profile has a
+    // "Brand names" field the user may already have filled in, which this
+    // card was ignoring while asking them to retype the same thing.
+    if (!touched && prefillTerms.length > 0) {
+      setTermsInput(prefillTerms.join(", "));
     }
-  }, [domain, touched]);
+  }, [prefillTerms, touched]);
 
   const split = useMemo(
     () => computeBrandedSplit(queryTotals, parseBrandTerms(termsInput)),
@@ -58,7 +69,7 @@ export function BrandedSplitCard({
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-            <InsightIcon icon={Tags} tone="primary" />
+            <InsightIcon icon={Tag} tone="primary" />
             Branded vs non-branded
           </h2>
           <label className="flex items-center gap-2 text-xs text-base-content/60">
@@ -80,28 +91,28 @@ export function BrandedSplitCard({
 
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           <InsightTile
-            icon={BadgeCheck}
+            icon={SealCheck}
             label="Branded click share"
             value={share != null ? `${Math.round(share * 100)}%` : "—"}
             tone="primary"
             hint="Of clicks in the analyzed queries"
           />
           <InsightTile
-            icon={BadgeCheck}
+            icon={SealCheck}
             label="Branded"
             value={formatCount(split.branded.clicks)}
             hint={`${formatCount(split.branded.queries)} queries`}
             tone="info"
           />
           <InsightTile
-            icon={Globe2}
+            icon={Globe}
             label="Non-branded"
             value={formatCount(split.nonBranded.clicks)}
             hint={`${formatCount(split.nonBranded.queries)} queries`}
             tone="success"
           />
           <InsightTile
-            icon={Globe2}
+            icon={Globe}
             label="Non-branded impressions"
             value={formatCount(split.nonBranded.impressions)}
             hint="Your SEO growth surface"

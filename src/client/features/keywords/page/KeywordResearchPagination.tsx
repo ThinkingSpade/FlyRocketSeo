@@ -1,4 +1,4 @@
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { useEffect, useMemo, useState } from "react";
 import type { KeywordResearchRow } from "@/types/keywords";
 import { Button } from "@cloudflare/kumo/components/button";
@@ -66,7 +66,7 @@ export function KeywordResearchPagination({
               onClick={() => onPageChange(page - 1)}
               aria-label="Previous page"
             >
-              <ChevronLeft className="size-4" />
+              <CaretLeft className="size-4" />
             </Button>
             <Button
               type="button"
@@ -77,7 +77,7 @@ export function KeywordResearchPagination({
               onClick={() => onPageChange(page + 1)}
               aria-label="Next page"
             >
-              <ChevronRight className="size-4" />
+              <CaretRight className="size-4" />
             </Button>
           </div>
         </div>

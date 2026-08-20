@@ -1,4 +1,4 @@
-import { Check, X } from "lucide-react";
+import { Check, Warning, X } from "@phosphor-icons/react";
 import {
   ELEMENT_LABEL,
   type ElementProgress,
@@ -9,6 +9,7 @@ import {
 import { SegmentedToggle } from "@/client/components/SegmentedToggle";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { ProgressBar } from "@/client/components/ProgressBar";
 
 /** Short element tag shown on each suggestion row. */
 const ELEMENT_TAG: Record<OnPageElement, string> = {
@@ -41,10 +42,16 @@ export function ProgressTiles({ tiles }: { tiles: ElementProgress[] }) {
                 of {tile.total} approved
               </span>
             </div>
-            <progress
-              className="progress progress-primary mt-2 h-1.5"
+            {/* The tile's own caption, not a shared "On-page score": all
+                four bars carried the same assistive label, so a screen
+                reader heard the same meter four times while the visible
+                captions read Page titles / Meta descriptions / H1 headings /
+                Image alt text. */}
+            <ProgressBar
+              className="mt-2"
               value={pct}
               max={100}
+              label={`${tile.label} decided`}
             />
           </div>
         );
@@ -56,7 +63,7 @@ export function ProgressTiles({ tiles }: { tiles: ElementProgress[] }) {
 /** Current → suggested, with the reason underneath. */
 function FixDiff({ row }: { row: FixRow }) {
   return (
-    <div className="min-w-0 flex-1 space-y-1">
+    <div className="space-y-1">
       {row.currentValue ? (
         <p className="truncate text-xs text-base-content/45 line-through">
           {row.currentValue}
@@ -90,11 +97,13 @@ function StatusPill({ status }: { status: FixRow["status"] }) {
 /** One suggestion, with approve / exclude controls. */
 function FixRowView({
   row,
+  offOfferReason,
   onApprove,
   onExclude,
   busy,
 }: {
   row: FixRow;
+  offOfferReason: string | null;
   onApprove: () => void;
   onExclude: () => void;
   busy: boolean;
@@ -104,7 +113,20 @@ function FixRowView({
       <span className="mt-0.5 w-10 shrink-0 text-[11px] font-medium uppercase text-base-content/40">
         {ELEMENT_TAG[row.element]}
       </span>
-      <FixDiff row={row} />
+      <div className="min-w-0 flex-1 space-y-1">
+        <FixDiff row={row} />
+        {/* Nothing that wrote this text knows what the client sells, so a
+            suggestion can cheerfully advertise a service they told us they
+            do not offer. Quoting their own exclusion line back makes a
+            false positive legible as a wrong exclusion rather than as the
+            tool being broken. */}
+        {offOfferReason ? (
+          <p className="flex items-start gap-1.5 text-xs text-warning">
+            <Warning className="mt-0.5 size-3.5 shrink-0" />
+            {offOfferReason}
+          </p>
+        ) : null}
+      </div>
       <div className="flex shrink-0 items-center gap-1.5">
         {row.source === "ai" ? <Badge variant="outline">AI</Badge> : null}
         <StatusPill status={row.status} />
@@ -145,36 +167,46 @@ function FixRowView({
 /** All the fixes for one page, in a card. */
 export function PageGroupCard({
   group,
+  offOffer,
   onApprove,
   onExclude,
   onApprovePage,
   busy,
 }: {
   group: PageGroup;
+  /** Row id → why that suggestion contradicts the client's profile. */
+  offOffer: ReadonlyMap<string, string>;
   onApprove: (id: string) => void;
   onExclude: (id: string) => void;
   onApprovePage: (ids: string[]) => void;
   busy: boolean;
 }) {
-  const pendingIds = group.rows
-    .filter((row) => row.status === "pending")
-    .map((row) => row.id);
-
   return (
     <div className="rounded-lg border border-base-300 bg-base-100 p-4">
       <div className="flex items-center justify-between gap-2">
-        <h3 className="truncate text-sm font-semibold" title={group.url}>
-          {group.path}
-        </h3>
-        {pendingIds.length > 0 ? (
+        <div className="flex min-w-0 items-center gap-2">
+          <h3 className="truncate text-sm font-semibold" title={group.url}>
+            {group.path}
+          </h3>
+          {/* Why this page is where it is in the list. Omitted rather than
+              shown as "0 clicks" when Search Console has no row for it —
+              which means "not connected" just as often as it means "nobody
+              landed here". */}
+          {group.clicks != null && group.clicks > 0 ? (
+            <span className="shrink-0 text-xs tabular-nums text-base-content/40">
+              {group.clicks.toLocaleString()} clicks
+            </span>
+          ) : null}
+        </div>
+        {group.pendingIds.length > 0 ? (
           <Button
             type="button"
             variant="ghost"
             size="xs"
             disabled={busy}
-            onClick={() => onApprovePage(pendingIds)}
+            onClick={() => onApprovePage(group.pendingIds)}
           >
-            Approve all {pendingIds.length}
+            Approve all {group.pendingIds.length}
           </Button>
         ) : (
           <span className="text-xs text-base-content/40">All decided</span>
@@ -185,6 +217,7 @@ export function PageGroupCard({
           <FixRowView
             key={row.id}
             row={row}
+            offOfferReason={offOffer.get(row.id) ?? null}
             busy={busy}
             onApprove={() => onApprove(row.id)}
             onExclude={() => onExclude(row.id)}

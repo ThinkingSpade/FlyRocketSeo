@@ -1,4 +1,4 @@
-import { Minus, Plus, RotateCcw, X } from "lucide-react";
+import { Minus, Plus, ArrowCounterClockwise, X } from "@phosphor-icons/react";
 import { useState, type KeyboardEvent } from "react";
 import type { SavedKeywordsFilterValues } from "./savedKeywordsFilterTypes";
 import type { SavedKeywordsFilterForm } from "./useSavedKeywordsFilters";
@@ -33,7 +33,7 @@ export function SavedKeywordsFilterPanel({
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
-          <RotateCcw className="size-3" />
+          <ArrowCounterClockwise className="size-3" />
           Clear all
         </Button>
       </div>

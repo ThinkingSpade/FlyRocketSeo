@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
+import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import {
   buildOpportunities,
   buildTechnicalIssues,
+  excludeWrongCustomer,
   isSourceUnavailable,
   quickWinClicks,
   quickWinHint,
@@ -256,6 +258,91 @@ describe("quickWinHint", () => {
       opportunity({ kind: "consolidate" }),
     ];
     expect(quickWinHint(opportunities)).toBe("0 quick wins");
+  });
+});
+
+function fitMap(
+  entries: Record<string, FitResult["verdict"]>,
+): ReadonlyMap<string, FitResult> {
+  return new Map(
+    Object.entries(entries).map(([keyword, verdict]) => [
+      keyword,
+      { verdict, reason: "because the profile says so" },
+    ]),
+  );
+}
+
+describe("excludeWrongCustomer", () => {
+  const rows = [
+    opportunity({ query: "office coffee service" }),
+    opportunity({ query: "vending machines for sale" }),
+    opportunity({ query: "coffee beans wholesale" }),
+  ];
+
+  it("drops wrong-customer rows and counts them", () => {
+    // Dropped rather than demoted: every row is an instruction to go do work,
+    // and no version of "improve this page" is right for somebody else's
+    // customer.
+    const { kept, excluded } = excludeWrongCustomer(
+      rows,
+      fitMap({ "vending machines for sale": "wrong-customer" }),
+    );
+
+    expect(kept.map((row) => row.query)).toEqual([
+      "office coffee service",
+      "coffee beans wholesale",
+    ]);
+    expect(excluded).toBe(1);
+  });
+
+  it("keeps adjacent rows, which are plausibly theirs", () => {
+    const { kept, excluded } = excludeWrongCustomer(
+      rows,
+      fitMap({ "coffee beans wholesale": "adjacent" }),
+    );
+
+    expect(kept).toHaveLength(3);
+    expect(excluded).toBe(0);
+  });
+
+  it("drops nothing when no profile is confirmed", () => {
+    // An unfiltered list is the honest failure mode; a silently shortened one
+    // would look identical to a project with less opportunity.
+    const { kept, excluded } = excludeWrongCustomer(rows, new Map());
+
+    expect(kept).toEqual(rows);
+    expect(excluded).toBe(0);
+  });
+
+  it("reports the count when the fit pass empties the list", () => {
+    // The caller has to be able to tell "nothing to do" from "we removed
+    // everything", because those need different copy.
+    const { kept, excluded } = excludeWrongCustomer(
+      rows,
+      fitMap({
+        "office coffee service": "wrong-customer",
+        "vending machines for sale": "wrong-customer",
+        "coffee beans wholesale": "wrong-customer",
+      }),
+    );
+
+    expect(kept).toEqual([]);
+    expect(excluded).toBe(3);
+  });
+
+  it("keeps every signal about one query together", () => {
+    // Fit is a property of the QUERY, so a query ruled out has to leave with
+    // all of its rows -- otherwise the same off-offer keyword survives on
+    // whichever page happened to produce a second signal.
+    const { kept } = excludeWrongCustomer(
+      [
+        opportunity({ query: "vending machines", page: "https://x.com/a" }),
+        opportunity({ query: "vending machines", page: "https://x.com/b" }),
+      ],
+      fitMap({ "vending machines": "wrong-customer" }),
+    );
+
+    expect(kept).toEqual([]);
   });
 });
 

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SlidersHorizontal } from "lucide-react";
+import { SlidersHorizontal } from "@phosphor-icons/react";
 import { TableExportMenu } from "@/client/components/table/TableBulkActionBar";
 import { TableLoadingRows } from "@/client/features/domain/components/TableLoadingRows";
 import { Button } from "@cloudflare/kumo/components/button";

@@ -6,6 +6,7 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { getRankTrackingConfigs } from "@/serverFunctions/rank-tracking";
 import { RankTrackingDomainDetail } from "@/client/features/rank-tracking/RankTrackingDomainDetail";
 import { RankTrackingConfigModal } from "@/client/features/rank-tracking/RankTrackingConfigModal";
+import { Button } from "@cloudflare/kumo/components/button";
 
 export const Route = createFileRoute(
   "/_project/p/$projectId/rank-tracking/$configId",
@@ -63,9 +64,9 @@ function RankTrackingConfigRoute() {
           onRetry={() => void refetch()}
           retrying={isFetching}
         />
-        <button className="btn btn-ghost btn-sm" onClick={handleBack}>
+        <Button variant="ghost" size="sm" onClick={handleBack}>
           Back to domains
-        </button>
+        </Button>
       </>
     );
   }
@@ -76,9 +77,9 @@ function RankTrackingConfigRoute() {
         <p className="text-sm text-base-content/70">
           Domain configuration not found.
         </p>
-        <button className="btn btn-ghost btn-sm" onClick={handleBack}>
+        <Button variant="ghost" size="sm" onClick={handleBack}>
           Back to domains
-        </button>
+        </Button>
       </>
     );
   }

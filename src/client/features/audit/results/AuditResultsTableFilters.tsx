@@ -1,4 +1,7 @@
-import { RotateCcw, SlidersHorizontal } from "lucide-react";
+import {
+  ArrowCounterClockwise,
+  SlidersHorizontal,
+} from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import type {
   PagesFilters,
@@ -222,7 +225,7 @@ function FilterPanel({
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
-          <RotateCcw className="size-3" />
+          <ArrowCounterClockwise className="size-3" />
           Clear all
         </Button>
       </div>

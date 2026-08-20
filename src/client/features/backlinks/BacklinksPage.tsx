@@ -1,6 +1,11 @@
 import { useCallback, useMemo, useState } from "react";
 import type { SortingState, Updater } from "@tanstack/react-table";
-import { CalendarRange, Link2, Network, ShieldAlert } from "lucide-react";
+import {
+  CalendarBlank,
+  LinkSimple,
+  Network,
+  ShieldWarning,
+} from "@phosphor-icons/react";
 import {
   AnalyzeDomainPrompt,
   type AnalyzePreviewItem,
@@ -34,12 +39,12 @@ import { useBacklinksSearchFlow } from "./useBacklinksSearchFlow";
 
 const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
-    icon: Link2,
+    icon: LinkSimple,
     title: "Backlinks & domains",
     description: "Total links, referring domains, and authority rank",
   },
   {
-    icon: CalendarRange,
+    icon: CalendarBlank,
     title: "Won vs lost",
     description: "Referring domains gained and lost month by month",
   },
@@ -49,7 +54,7 @@ const BACKLINKS_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
     description: "Which pages attract links and the anchor text used",
   },
   {
-    icon: ShieldAlert,
+    icon: ShieldWarning,
     title: "Spam & broken links",
     description: "Toxic-link exposure and links pointing at dead pages",
   },

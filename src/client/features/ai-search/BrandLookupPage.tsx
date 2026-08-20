@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Link } from "@tanstack/react-router";
 import {
-  AlertCircle,
+  WarningCircle,
   ArrowLeft,
-  BarChart3,
-  Quote,
-  TrendingUp,
-} from "lucide-react";
+  ChartBar,
+  Quotes,
+  TrendUp,
+} from "@phosphor-icons/react";
 import { lookupBrand } from "@/serverFunctions/ai-search";
 import {
   HostedPlanGate,
@@ -26,7 +26,14 @@ import {
 } from "@/types/schemas/ai-search";
 import { detectTarget } from "@/shared/targetDetection";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import {
+  brandLookupRunKey,
+  isRunOnScreen,
+} from "@/client/features/ai-search/activeRun";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
+import { LOCATIONS } from "@/shared/keyword-locations";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = {
   projectId: string;
@@ -35,19 +42,29 @@ type Props = {
   onSearchChange: (nextQuery: string, nextCompetitors: string[]) => void;
 };
 
+/** The lookup a click paid for, market included, so a project switched (or a
+ *  `["projects"]` read that landed late) can never re-point a request that is
+ *  already in flight at a different country. */
+type AuthorizedLookup = {
+  query: string;
+  competitors: string[];
+  locationCode: number;
+  languageCode: string;
+};
+
 const BRAND_LOOKUP_BULLETS = [
   {
-    icon: TrendingUp,
+    icon: TrendUp,
     title: "Track AI visibility",
     body: "See estimated counts for ChatGPT and Google AI Overview answers that cite your brand, and watch the trend month over month.",
   },
   {
-    icon: Quote,
+    icon: Quotes,
     title: "See the prompts",
     body: "View sample user questions where LLMs reference your brand or domain.",
   },
   {
-    icon: BarChart3,
+    icon: ChartBar,
     title: "Map the competition",
     body: "Spot the pages LLMs cite alongside you so you know who's competing for attention in AI answers.",
   },
@@ -78,11 +95,18 @@ function BrandLookupPageInner({
     field: "query" | "competitors";
     message: string;
   } | null>(null);
-  const [authorizedLookup, setAuthorizedLookup] = useState<{
-    query: string;
-    competitors: string[];
-  } | null>(null);
+  const [authorizedLookup, setAuthorizedLookup] =
+    useState<AuthorizedLookup | null>(null);
   const [runNonce, setRunNonce] = useState(0);
+
+  // The project's own market, not a hardcoded US. The tracked panel further
+  // down this same page already queries the project's `locationCode`, so a UK
+  // project was asking two different AI Overview markets from one screen and
+  // presenting the answers side by side. Captured into the authorized lookup
+  // on submit, so the request, the cache key and the market named on the form
+  // cannot drift apart mid-run.
+  const market = useProjectMarket(projectId);
+  const marketLabel = LOCATIONS[market.locationCode] ?? null;
 
   const activeQuery = authorizedLookup?.query ?? "";
   const hasActiveQuery = activeQuery.length > 0;
@@ -102,8 +126,8 @@ function BrandLookupPageInner({
           projectId,
           query: activeQuery,
           competitors: authorizedLookup?.competitors ?? [],
-          locationCode: 2840,
-          languageCode: "en",
+          locationCode: authorizedLookup?.locationCode ?? market.locationCode,
+          languageCode: authorizedLookup?.languageCode ?? market.languageCode,
         },
       }),
     // Client-side gate is a UX optimization only; the paywall is enforced
@@ -184,7 +208,12 @@ function BrandLookupPageInner({
       return;
     }
     setValidationError(null);
-    setAuthorizedLookup({ query: trimmed, competitors });
+    setAuthorizedLookup({
+      query: trimmed,
+      competitors,
+      locationCode: market.locationCode,
+      languageCode: market.languageCode,
+    });
     setRunNonce((previous) => previous + 1);
     onSearchChange(trimmed, competitors);
   };
@@ -200,12 +229,24 @@ function BrandLookupPageInner({
     setValidationError(null);
   }, [initialQuery, competitorKey]);
 
+  // What is on screen belongs to the URL, not to the click that produced it.
+  // `authorizedLookup` is deliberately never reset (it is the metered-run
+  // authorization) and `staleTime: Infinity` means the answer never goes
+  // stale, so "Recent searches" used to clear the URL and the form and leave
+  // the results — and browser-back and a different history row did the same.
+  const showsAuthorizedRun = isRunOnScreen(
+    authorizedLookup ? brandLookupRunKey(authorizedLookup) : null,
+    brandLookupRunKey({ query: initialQuery, competitors: initialCompetitors }),
+  );
+  // Still keyed on the authorization, not the URL: a request in flight has
+  // already been paid for, and the router writes the new params a render
+  // later, so this is what covers that gap.
   const isLoading = hasActiveQuery && lookupQuery.isPending;
   const errorMessage =
-    hasActiveQuery && lookupQuery.isError
+    showsAuthorizedRun && lookupQuery.isError
       ? getStandardErrorMessage(lookupQuery.error)
       : null;
-  const resultData = authorizedLookup ? lookupQuery.data : undefined;
+  const resultData = showsAuthorizedRun ? lookupQuery.data : undefined;
 
   return (
     <AppPageShell>
@@ -238,6 +279,7 @@ function BrandLookupPageInner({
             onSubmit={handleSubmit}
             isLoading={isLoading}
             validationError={validationError}
+            marketLabel={marketLabel}
           />
 
           {errorMessage ? (
@@ -245,7 +287,7 @@ function BrandLookupPageInner({
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
             >
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <WarningCircle className="mt-0.5 size-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           ) : null}
@@ -261,7 +303,7 @@ function BrandLookupPageInner({
                   params={{ projectId }}
                   search={{ q: undefined, c: undefined }}
                   replace
-                  className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+                  className={`${buttonVariants({ variant: "ghost", size: "sm" })} gap-2 px-0 text-base-content/70 hover:bg-transparent`}
                 >
                   <ArrowLeft className="size-4" />
                   Recent searches
@@ -269,7 +311,11 @@ function BrandLookupPageInner({
               </div>
               <BrandLookupResults result={resultData} projectId={projectId} />
             </>
-          ) : !errorMessage ? (
+          ) : (
+            // Rendered under the error banner too. A failed ad-hoc lookup says
+            // nothing about the tracked panel or the stored history beside it,
+            // and hiding both made one failed search look like the loss of
+            // every snapshot this project has ever recorded.
             <>
               <ProjectVisibilityPanel projectId={projectId} />
               <BrandLookupHistorySection
@@ -279,7 +325,7 @@ function BrandLookupPageInner({
                 onRemoveHistoryItem={removeHistoryItem}
               />
             </>
-          ) : null}
+          )}
         </>
       )}
     </AppPageShell>

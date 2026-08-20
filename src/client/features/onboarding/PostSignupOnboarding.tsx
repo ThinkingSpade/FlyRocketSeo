@@ -1,4 +1,4 @@
-import { ArrowLeft, ArrowRight, Check } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check } from "@phosphor-icons/react";
 import type { ReactNode } from "react";
 import { ONBOARDING_LAST_STEP } from "@/client/features/onboarding/onboardingModel";
 import { SearchConsoleOnboardingStep } from "@/client/features/onboarding/SearchConsoleOnboardingStep";
@@ -33,7 +33,7 @@ export function PostSignupOnboarding({
 
       <div className="text-center space-y-3">
         <img
-          src="/transparent-logo.svg"
+          src="/logo-mark.png"
           alt="FlyRocketSEO"
           className="mx-auto size-10 rounded-lg"
         />

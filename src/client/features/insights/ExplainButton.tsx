@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react";
 import { explainFindings } from "@/serverFunctions/insights";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { Verdict } from "./types";
@@ -67,7 +67,7 @@ export function ExplainButton({
           {explain.isPending ? (
             <Loader size="sm" />
           ) : (
-            <Sparkles className="size-3.5 text-base-content/45" />
+            <Sparkle className="size-3.5 text-base-content/45" />
           )}
           Explain this in plain English
         </Button>

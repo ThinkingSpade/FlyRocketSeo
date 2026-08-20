@@ -5,18 +5,30 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Loader2, AlertCircle, X } from "lucide-react";
+import {
+  CircleNotch,
+  UserMinus,
+  WarningCircle,
+  X,
+} from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getDomainKeywordSuggestions } from "@/serverFunctions/domain";
 import { addTrackingKeywords } from "@/serverFunctions/rank-tracking";
 import { isLabsLocationCode } from "@/client/features/keywords/locations";
+import {
+  useKeywordFit,
+  useProjectProfile,
+} from "@/client/features/profiles/useProjectProfile";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   AppDataTable,
   makeSelectionColumn,
   useAppTable,
 } from "@/client/components/table/AppDataTable";
-import { SortableHeader } from "./RankTrackingColumns";
+import {
+  suggestionColumns,
+  type SuggestedKeyword,
+} from "./keywordSuggestionColumns";
 import {
   applyShiftRangeSelection,
   type SelectionAnchor,
@@ -26,110 +38,10 @@ import {
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
+import { pickPreSelectedSuggestions } from "./suggestionPreSelection";
 import { Button } from "@cloudflare/kumo/components/button";
 
-type SuggestedKeyword = {
-  keyword: string;
-  position: number | null;
-  searchVolume: number | null;
-  traffic: number | null;
-};
-
 const PRE_SELECT_COUNT = 20;
-
-const baseColumns: ColumnDef<SuggestedKeyword>[] = [
-  {
-    id: "keyword",
-    accessorKey: "keyword",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Keyword"
-        id="keyword"
-        tooltip="The search term this domain ranks for"
-      />
-    ),
-    cell: ({ getValue }) => (
-      <span className="font-medium">{getValue<string>()}</span>
-    ),
-    sortingFn: "alphanumeric",
-  },
-  {
-    id: "position",
-    accessorKey: "position",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Position"
-        id="position"
-        tooltip="Current Google ranking position"
-      />
-    ),
-    cell: ({ getValue }) => {
-      const pos = getValue<number | null>();
-      return pos != null ? (
-        pos
-      ) : (
-        <span className="text-base-content/40">—</span>
-      );
-    },
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.position ?? 999;
-      const b = rowB.original.position ?? 999;
-      return a - b;
-    },
-  },
-  {
-    id: "searchVolume",
-    accessorKey: "searchVolume",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Volume"
-        id="searchVolume"
-        tooltip="Monthly search volume"
-      />
-    ),
-    cell: ({ getValue }) => {
-      const vol = getValue<number | null>();
-      return vol != null ? (
-        vol.toLocaleString()
-      ) : (
-        <span className="text-base-content/40">—</span>
-      );
-    },
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.searchVolume ?? 0;
-      const b = rowB.original.searchVolume ?? 0;
-      return a - b;
-    },
-  },
-  {
-    id: "traffic",
-    accessorKey: "traffic",
-    header: ({ column }) => (
-      <SortableHeader
-        column={column}
-        label="Traffic"
-        id="traffic"
-        tooltip="Estimated monthly organic traffic"
-      />
-    ),
-    cell: ({ getValue }) => {
-      const traffic = getValue<number | null>();
-      return traffic != null ? (
-        Math.round(traffic).toLocaleString()
-      ) : (
-        <span className="text-base-content/40">—</span>
-      );
-    },
-    sortingFn: (rowA, rowB) => {
-      const a = rowA.original.traffic ?? 0;
-      const b = rowB.original.traffic ?? 0;
-      return a - b;
-    },
-  },
-];
 
 type Props = {
   configId: string;
@@ -157,14 +69,6 @@ export function KeywordSuggestionStep({
   ]);
   const selectAnchorRef = useRef<SelectionAnchor | null>(null);
 
-  const columns = useMemo<ColumnDef<SuggestedKeyword>[]>(
-    () => [
-      makeSelectionColumn<SuggestedKeyword>(selectAnchorRef),
-      ...baseColumns,
-    ],
-    [],
-  );
-
   // Ranked-keyword suggestions are Labs-backed; countries served from Google
   // Ads keyword data (e.g. Iceland) have no ranking data to suggest from.
   const labsSupported = isLabsLocationCode(locationCode);
@@ -190,23 +94,46 @@ export function KeywordSuggestionStep({
 
   const data = suggestionsQuery.data ?? [];
 
-  // Pre-select top 20 by traffic once data loads.
+  // Free, client-side, over rows this step already fetched -- see
+  // useProjectProfile. Nothing here is metered, so a verdict costs nothing
+  // even though what it guards (a RECURRING rank check) does.
+  const { profile, isLoading: profileLoading } = useProjectProfile(projectId);
+  const suggestedKeywords = useMemo(
+    () => (suggestionsQuery.data ?? []).map((item) => item.keyword),
+    [suggestionsQuery.data],
+  );
+  const fit = useKeywordFit(profile, suggestedKeywords);
+
+  const columns = useMemo<ColumnDef<SuggestedKeyword>[]>(
+    () => [
+      makeSelectionColumn<SuggestedKeyword>(selectAnchorRef),
+      ...suggestionColumns(fit),
+    ],
+    [fit],
+  );
+
+  const [wrongFitSkipped, setWrongFitSkipped] = useState(0);
+
+  // Pre-select the top rows by traffic, minus anything the profile rules out.
+  // What gets ticked here is what gets BILLED, on a schedule: traffic alone
+  // pre-selected "<trade> salary" for a tradesman and re-checked it forever.
   useEffect(() => {
     const items = suggestionsQuery.data;
-    if (items && items.length > 0 && !hasInitialized) {
-      const indexed = items.map((item, i) => ({
-        index: i,
-        traffic: item.traffic ?? 0,
-      }));
-      indexed.sort((a, b) => b.traffic - a.traffic);
-      const initial: RowSelectionState = {};
-      for (let i = 0; i < Math.min(PRE_SELECT_COUNT, indexed.length); i++) {
-        initial[indexed[i].index] = true;
-      }
-      setRowSelection(initial);
-      setHasInitialized(true);
-    }
-  }, [suggestionsQuery.data, hasInitialized]);
+    if (!items || items.length === 0 || hasInitialized) return;
+    // Waits for the profile read to settle first. The suggestions call is
+    // metered and slow, but it can still land first on a warm cache, and
+    // initializing then would tick rows against an empty verdict map and
+    // never revisit them -- the exact bug this pass exists to remove.
+    if (profileLoading) return;
+    const preSelection = pickPreSelectedSuggestions(
+      items,
+      fit,
+      PRE_SELECT_COUNT,
+    );
+    setRowSelection(preSelection.selection);
+    setWrongFitSkipped(preSelection.wrongFitCount);
+    setHasInitialized(true);
+  }, [suggestionsQuery.data, hasInitialized, fit, profileLoading]);
 
   const table = useAppTable({
     data,
@@ -309,7 +236,7 @@ export function KeywordSuggestionStep({
       <>
         {sectionHeader("Finding your top keywords...")}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
-          <Loader2 className="size-8 animate-spin text-primary" />
+          <CircleNotch className="size-8 animate-spin text-primary" />
           <p className="text-xs text-base-content/50">
             This usually takes a few seconds
           </p>
@@ -324,7 +251,7 @@ export function KeywordSuggestionStep({
       <>
         {sectionHeader("Couldn't fetch keywords")}
         <div className="flex flex-col items-center justify-center gap-3 py-16">
-          <AlertCircle className="size-8 text-error" />
+          <WarningCircle className="size-8 text-error" />
           <p className="text-xs text-base-content/50">
             You can skip this step and add keywords manually later.
           </p>
@@ -365,15 +292,28 @@ export function KeywordSuggestionStep({
   return (
     <div className="flex flex-col gap-3">
       {sectionHeader("Choose keywords to track")}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
         <p className="text-sm text-base-content/60">
           We found {data.length} keywords {domain} ranks for.
         </p>
+        {wrongFitSkipped > 0 ? (
+          // Said out loud rather than left as silently-unticked rows: the
+          // user is about to authorize a repeating charge and is entitled to
+          // know what we left out of it, and why.
+          <p className="flex items-center gap-1.5 text-sm text-base-content/60">
+            <UserMinus className="size-3.5 shrink-0 text-base-content/40" />
+            {wrongFitSkipped} look{wrongFitSkipped === 1 ? "s" : ""} aimed at a
+            different customer, so{" "}
+            {wrongFitSkipped === 1 ? "it is" : "they are"} left unticked — tick{" "}
+            {wrongFitSkipped === 1 ? "it" : "them"} if you want{" "}
+            {wrongFitSkipped === 1 ? "it" : "them"} tracked.
+          </p>
+        ) : null}
       </div>
 
       <AppDataTable
         table={table}
-        className="table table-xs table-pin-rows w-full"
+        className="w-full"
         wrapperClassName="overflow-y-auto max-h-[400px] border border-base-300 rounded-lg"
         stickyHeader
         getRowProps={(row) => ({
@@ -404,7 +344,7 @@ export function KeywordSuggestionStep({
             disabled={addMutation.isPending || selectedCount === 0}
           >
             {addMutation.isPending && (
-              <Loader2 className="size-3.5 animate-spin" />
+              <CircleNotch className="size-3.5 animate-spin" />
             )}
             Save Keyword{selectedCount !== 1 ? "s" : ""}
           </Button>

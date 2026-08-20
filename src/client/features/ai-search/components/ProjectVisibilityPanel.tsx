@@ -10,7 +10,7 @@ import {
 } from "@/shared/analysis-costs";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Radar, RefreshCw } from "lucide-react";
+import { CircleNotch, Broadcast, ArrowsClockwise } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { getProjects } from "@/serverFunctions/projects";
 import {
@@ -18,6 +18,7 @@ import {
   getBrandVisibilityHistory,
 } from "@/serverFunctions/brandVisibility";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { parseCompetitorList } from "@/types/schemas/ai-search";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { BrandLookupResults } from "@/client/features/ai-search/components/BrandLookupResults";
@@ -90,6 +91,22 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
   });
 
   // Every hook is above this line; only now is it safe to bail out.
+
+  // Before the bail-out, always. A failed `["projects"]` read also leaves
+  // `domain` null, and returning null for that took the whole tracked panel
+  // off the page -- the trend, the deltas and the opportunities with it --
+  // leaving no trace that anything was meant to be here. Absence has to mean
+  // "this project has no domain to track", which is the only case that now
+  // reaches the null below.
+  if (projectsQuery.isError) {
+    return (
+      <InlineQueryError
+        message="Your tracked AI visibility could not be loaded because this project could not be read. Any analyses you have run are still stored."
+        retrying={projectsQuery.isFetching}
+        onRetry={() => void projectsQuery.refetch()}
+      />
+    );
+  }
   if (!domain) return null;
 
   const history = historyQuery.data;
@@ -100,7 +117,7 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
     <section className="space-y-4 rounded-2xl border border-base-300 bg-base-200/40 p-4 md:p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="flex items-start gap-2.5">
-          <Radar className="mt-0.5 size-5 text-base-content/50" />
+          <Broadcast className="mt-0.5 size-5 text-base-content/50" />
           <div>
             <h2 className="text-lg font-semibold">
               AI visibility for {domain}
@@ -124,9 +141,9 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
           }
         >
           {analyzing ? (
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch className="size-4 animate-spin" />
           ) : (
-            <RefreshCw className="size-4" />
+            <ArrowsClockwise className="size-4" />
           )}
           {meteredActionLabel(
             latest ? "Re-analyze" : `Analyze ${domain}`,
@@ -167,7 +184,7 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
 
       {historyQuery.isPending && Boolean(domain) ? (
         <div className="flex items-center gap-2 py-4 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" /> Loading tracked
+          <CircleNotch className="size-4 animate-spin" /> Loading tracked
           visibility…
         </div>
       ) : latest ? (
@@ -185,11 +202,13 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
         // Before the first-run copy, always. A failed history read also leaves
         // `latest` null, and telling someone with stored snapshots that they
         // have never analyzed the domain invites them to pay for an analysis
-        // they already have.
-        <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-6 text-center text-sm text-base-content/70">
-          Past analyses for {domain} could not be loaded, so the trend is
-          unavailable. Any analyses you have run are still stored.
-        </div>
+        // they already have. Reading stored snapshots back is free, so the
+        // retry here is the cheap way out — unlike the metered button above.
+        <InlineQueryError
+          message={`Past analyses for ${domain} could not be loaded, so the trend is unavailable. Any analyses you have run are still stored.`}
+          retrying={historyQuery.isFetching}
+          onRetry={() => void historyQuery.refetch()}
+        />
       ) : !analyzing ? (
         <div className="rounded-xl border border-dashed border-base-300 bg-base-100 p-6 text-center text-sm text-base-content/70">
           You haven&apos;t analyzed {domain} yet. Run your first analysis to
@@ -199,9 +218,22 @@ export function ProjectVisibilityPanel({ projectId }: { projectId: string }) {
 
       {analyzing ? (
         <div className="flex items-center gap-2 py-2 text-sm text-base-content/60">
-          <Loader2 className="size-4 animate-spin" /> Analyzing {domain} across
-          ChatGPT and Google AI Overview…
+          <CircleNotch className="size-4 animate-spin" /> Analyzing {domain}{" "}
+          across ChatGPT and Google AI Overview…
         </div>
+      ) : null}
+
+      {/* The toast this failure also raises is gone in seconds, and what it
+          leaves behind is a panel that looks exactly like one nobody pressed.
+          No retry affordance: re-running is metered, and the button above is
+          already it. */}
+      {analyzeMutation.isError ? (
+        <InlineQueryError
+          message={getStandardErrorMessage(
+            analyzeMutation.error,
+            "The analysis did not complete, so nothing new was recorded.",
+          )}
+        />
       ) : null}
 
       {freshResult ? (

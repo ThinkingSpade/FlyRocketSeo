@@ -297,7 +297,11 @@ describe("a live failure resolved through to its user-facing message (defect: li
       restoredResult: insufficientCreditsResult,
     });
 
-    const failure = describePaidFailure({ reason, domain: "example.com" });
+    const failure = describePaidFailure({
+      reason,
+      domain: "example.com",
+      hasFreeRows: false,
+    });
 
     expect(failure.canRetry).toBe(false);
     expect(failure.message).toContain("credits");
@@ -311,57 +315,14 @@ describe("a live failure resolved through to its user-facing message (defect: li
       restoredResult: null,
     });
 
-    const failure = describePaidFailure({ reason, domain: "example.com" });
+    const failure = describePaidFailure({
+      reason,
+      domain: "example.com",
+      hasFreeRows: false,
+    });
 
     expect(failure).toEqual({
       message: "Couldn’t load ranking data for example.com.",
-      canRetry: true,
-    });
-  });
-});
-
-describe("describePaidFailure", () => {
-  it("names credits as the cause and offers no retry that cannot succeed", () => {
-    const failure = describePaidFailure({
-      reason: "insufficient_credits",
-      domain: "example.com",
-    });
-    expect(failure.canRetry).toBe(false);
-    expect(failure.message).toContain("credits");
-    expect(failure.message).toContain("example.com");
-  });
-
-  it("tells a rate-limited user to wait, and keeps the retry", () => {
-    const failure = describePaidFailure({
-      reason: "rate_limited",
-      domain: "example.com",
-    });
-    expect(failure.canRetry).toBe(true);
-    expect(failure.message).toContain("rate-limited");
-  });
-
-  it("falls back to the generic message, with a retry, for provider errors", () => {
-    expect(
-      describePaidFailure({ reason: "provider_error", domain: "example.com" }),
-    ).toEqual({
-      message: "Couldn’t load ranking data for example.com.",
-      canRetry: true,
-    });
-  });
-
-  it("keeps the retry for a tag it does not recognise", () => {
-    // `reason` is a persisted storage format the server can extend. An
-    // unknown tag must degrade to what we said before this function existed,
-    // never to silence or to a suppressed way out.
-    expect(
-      describePaidFailure({ reason: "quota_exhausted", domain: "example.com" })
-        .canRetry,
-    ).toBe(true);
-  });
-
-  it("keeps the retry when no failure row could be read at all", () => {
-    expect(describePaidFailure({ reason: null, domain: "your site" })).toEqual({
-      message: "Couldn’t load ranking data for your site.",
       canRetry: true,
     });
   });

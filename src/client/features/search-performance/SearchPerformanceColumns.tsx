@@ -38,20 +38,65 @@ const rightAligned = {
   cellClassName: "text-right tabular-nums",
 } as const;
 
+/**
+ * A GSC page URL, rendered as a link to the live page.
+ *
+ * GSC page keys are canonical http(s) URLs of the verified property; the
+ * scheme check is defense-in-depth before rendering an href, and a value that
+ * fails it degrades to text rather than disappearing.
+ *
+ * Shared because the striking-distance Page column and the Pages table were
+ * showing the same URLs two different ways -- one clickable, one inert -- and
+ * every one of these rows is about a page the reader is going to want to look
+ * at.
+ */
+function PageUrlCell({
+  value,
+  className,
+}: {
+  value: string;
+  className: string;
+}) {
+  if (!/^https?:\/\//.test(value)) {
+    return (
+      <span className={className} title={value}>
+        {value}
+      </span>
+    );
+  }
+  return (
+    <a
+      href={value}
+      target="_blank"
+      rel="noreferrer"
+      className={`app-link-subtle ${className}`}
+      title={value}
+    >
+      {value}
+    </a>
+  );
+}
+
 const dimensionHelper = createColumnHelper<DimensionRow>();
 
 export function buildDimensionColumns(
   keyLabel: string,
+  /** Whether the key column holds page URLs (the Pages dimension) rather than
+   *  query strings. */
+  keysArePages: boolean,
 ): ColumnDef<DimensionRow>[] {
   return [
     dimensionHelper.accessor("key", {
       enableSorting: false,
       header: () => keyLabel,
-      cell: ({ getValue }) => (
-        <span className="block max-w-xl truncate" title={getValue()}>
-          {getValue()}
-        </span>
-      ),
+      cell: ({ getValue }) =>
+        keysArePages ? (
+          <PageUrlCell value={getValue()} className="block max-w-xl truncate" />
+        ) : (
+          <span className="block max-w-xl truncate" title={getValue()}>
+            {getValue()}
+          </span>
+        ),
     }),
     dimensionHelper.accessor("clicks", {
       header: ({ column }) => (
@@ -103,24 +148,9 @@ export function buildStrikingColumns(
     strikingHelper.accessor("page", {
       enableSorting: false,
       header: () => "Page",
-      // GSC page keys are canonical http(s) URLs of the verified property;
-      // the scheme check is defense-in-depth before rendering an href.
-      cell: ({ getValue }) =>
-        /^https?:\/\//.test(getValue()) ? (
-          <a
-            href={getValue()}
-            target="_blank"
-            rel="noreferrer"
-            className="link link-hover block max-w-sm truncate"
-            title={getValue()}
-          >
-            {getValue()}
-          </a>
-        ) : (
-          <span className="block max-w-sm truncate" title={getValue()}>
-            {getValue()}
-          </span>
-        ),
+      cell: ({ getValue }) => (
+        <PageUrlCell value={getValue()} className="block max-w-sm truncate" />
+      ),
     }),
     strikingHelper.accessor("impressions", {
       header: ({ column }) => (

@@ -1,4 +1,4 @@
-import { RotateCcw } from "lucide-react";
+import { ArrowCounterClockwise } from "@phosphor-icons/react";
 import { LOCATIONS } from "@/client/features/keywords/locations";
 import { devicesLabel } from "@/shared/rank-tracking";
 import type {
@@ -86,7 +86,7 @@ export function FilterPanel({
           onClick={onReset}
           disabled={activeFilterCount === 0}
         >
-          <RotateCcw className="size-3" />
+          <ArrowCounterClockwise className="size-3" />
           Clear all
         </Button>
       </div>
@@ -225,7 +225,7 @@ export function DomainListFilterBar({
             className="self-start lg:self-auto"
             onClick={onReset}
           >
-            <RotateCcw className="size-3" />
+            <ArrowCounterClockwise className="size-3" />
             Clear
             <Badge variant="primary" className="border-0 text-primary-content">
               {activeFilterCount}

@@ -1,4 +1,4 @@
-import { Target, Zap } from "lucide-react";
+import { Target, Lightning } from "@phosphor-icons/react";
 import { PositionDistribution } from "@/client/features/domain/components/PositionDistribution";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
@@ -8,6 +8,7 @@ import {
   type PageKeyword,
 } from "./pageInsights";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Table } from "@cloudflare/kumo/components/table";
 
 function formatCount(value: number | null | undefined): string {
   if (value == null) return "—";
@@ -29,7 +30,7 @@ export function TrafficConcentrationCard({
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h2 className="flex items-center gap-1.5 text-sm font-semibold">
-          <InsightIcon icon={Zap} tone="primary" />
+          <InsightIcon icon={Lightning} tone="primary" />
           Traffic concentration
         </h2>
         <ul className="space-y-1.5">
@@ -86,28 +87,30 @@ export function StrikingDistanceCard({
           Ranked #4–15 — the keywords a content refresh moves onto page-one
           money spots.
         </p>
-        <table className="table table-xs">
-          <thead>
-            <tr>
-              <th>Keyword</th>
-              <th className="text-right">Pos</th>
-              <th className="text-right">Volume</th>
-            </tr>
-          </thead>
-          <tbody>
+        <Table>
+          <Table.Header>
+            <Table.Row>
+              <Table.Head>Keyword</Table.Head>
+              <Table.Head className="text-right">Pos</Table.Head>
+              <Table.Head className="text-right">Volume</Table.Head>
+            </Table.Row>
+          </Table.Header>
+          <Table.Body>
             {rows.map((row) => (
-              <tr key={row.keyword}>
-                <td className="max-w-56">
+              <Table.Row key={row.keyword}>
+                <Table.Cell className="max-w-56">
                   <span className="line-clamp-1">{row.keyword}</span>
-                </td>
-                <td className="text-right tabular-nums">{row.position}</td>
-                <td className="text-right tabular-nums">
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums">
+                  {row.position}
+                </Table.Cell>
+                <Table.Cell className="text-right tabular-nums">
                   {formatCount(row.searchVolume)}
-                </td>
-              </tr>
+                </Table.Cell>
+              </Table.Row>
             ))}
-          </tbody>
-        </table>
+          </Table.Body>
+        </Table>
       </div>
     </div>
   );

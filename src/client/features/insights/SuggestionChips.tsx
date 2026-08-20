@@ -1,4 +1,4 @@
-import { Lightbulb } from "lucide-react";
+import { Lightbulb } from "@phosphor-icons/react";
 import type { SeedSuggestion } from "./types";
 import { Button } from "@cloudflare/kumo/components/button";
 

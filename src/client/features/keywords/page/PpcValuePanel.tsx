@@ -1,4 +1,4 @@
-import { CircleDollarSign } from "lucide-react";
+import { CurrencyCircleDollar } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import type { KeywordResearchRow } from "@/types/keywords";
 import {
@@ -8,6 +8,7 @@ import {
 } from "@/client/features/keywords/ppcValue";
 import type { ComponentProps } from "react";
 import { Badge } from "@cloudflare/kumo/components/badge";
+import { Table } from "@cloudflare/kumo/components/table";
 
 /**
  * The paid-search read on the current result set: what this traffic would cost
@@ -59,7 +60,7 @@ export function PpcValuePanel({ rows }: { rows: KeywordResearchRow[] }) {
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <h3 className="flex items-center gap-2 text-sm font-semibold">
-          <InsightIcon icon={CircleDollarSign} />
+          <InsightIcon icon={CurrencyCircleDollar} />
           Buy vs rank
         </h3>
         <p className="text-xs text-base-content/60">
@@ -81,36 +82,39 @@ export function PpcValuePanel({ rows }: { rows: KeywordResearchRow[] }) {
           traffic forecast.
         </p>
         <div className="overflow-x-auto">
-          <table className="table table-sm">
-            <thead>
-              <tr>
-                <th>Keyword</th>
-                <th className="text-right">Volume</th>
-                <th className="text-right">CPC</th>
-                <th className="text-right">Difficulty</th>
-                <th className="text-right">Cost / mo</th>
-                <th>Verdict</th>
-              </tr>
-            </thead>
-            <tbody>
+          <Table>
+            <Table.Header>
+              <Table.Row>
+                <Table.Head>Keyword</Table.Head>
+                <Table.Head className="text-right">Volume</Table.Head>
+                <Table.Head className="text-right">CPC</Table.Head>
+                <Table.Head className="text-right">Difficulty</Table.Head>
+                <Table.Head className="text-right">Cost / mo</Table.Head>
+                <Table.Head>Verdict</Table.Head>
+              </Table.Row>
+            </Table.Header>
+            <Table.Body>
               {keywords.map((keyword) => (
-                <tr key={keyword.keyword}>
-                  <td className="max-w-xs truncate" title={keyword.keyword}>
+                <Table.Row key={keyword.keyword}>
+                  <Table.Cell
+                    className="max-w-xs truncate"
+                    title={keyword.keyword}
+                  >
                     {keyword.keyword}
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums">
                     {keyword.searchVolume.toLocaleString()}
-                  </td>
-                  <td className="text-right tabular-nums">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums">
                     ${keyword.cpc.toFixed(2)}
-                  </td>
-                  <td className="text-right tabular-nums text-base-content/60">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums text-base-content/60">
                     {keyword.keywordDifficulty ?? "—"}
-                  </td>
-                  <td className="text-right tabular-nums font-medium">
+                  </Table.Cell>
+                  <Table.Cell className="text-right tabular-nums font-medium">
                     {usd(keyword.monthlyCostUsd)}
-                  </td>
-                  <td>
+                  </Table.Cell>
+                  <Table.Cell>
                     {/* Wrapper carries the tooltip — Kumo's Badge takes no
                         HTML attributes. */}
                     <span title={VERDICT_HINT[keyword.verdict]}>
@@ -118,11 +122,11 @@ export function PpcValuePanel({ rows }: { rows: KeywordResearchRow[] }) {
                         {VERDICT_LABEL[keyword.verdict]}
                       </Badge>
                     </span>
-                  </td>
-                </tr>
+                  </Table.Cell>
+                </Table.Row>
               ))}
-            </tbody>
-          </table>
+            </Table.Body>
+          </Table>
         </div>
       </div>
     </div>

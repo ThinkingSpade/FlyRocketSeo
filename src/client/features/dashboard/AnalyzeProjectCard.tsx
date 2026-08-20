@@ -1,32 +1,22 @@
+import { Link } from "@tanstack/react-router";
+import {
+  ANALYSES,
+  type RunStatus,
+} from "@/client/features/dashboard/projectAnalyses";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 import { useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2, Rocket, TriangleAlert, X } from "lucide-react";
+import { Check, CircleNotch, Rocket, Warning, X } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { DashboardCard } from "@/client/features/dashboard/dashboardShared";
-import { isHostedClientAuthMode } from "@/lib/auth-mode";
-import { applyBillingMarkupUsd } from "@/shared/billing";
-import { BRAND_LOOKUP_RAW_COST_USD } from "@/shared/analysis-costs";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
-import {
-  useProjectMarket,
-  type ProjectMarket,
-} from "@/client/hooks/useProjectDomain";
-import { getDomainOverview } from "@/serverFunctions/domain";
-import { getBacklinksOverview } from "@/serverFunctions/backlinks";
-import { getCompetitorsList } from "@/serverFunctions/competitors";
-import { analyzeProjectBrand } from "@/serverFunctions/brandVisibility";
-import { getPageExplorer } from "@/serverFunctions/page-explorer";
-import { researchKeywords } from "@/serverFunctions/keywords";
-import { getKeywordTrends } from "@/serverFunctions/trends";
-import { getSerpOverview } from "@/serverFunctions/serp";
-import { getContentBrief } from "@/serverFunctions/content";
-import { getTopicClusters } from "@/serverFunctions/topic-clusters";
-import { startAudit } from "@/serverFunctions/audit";
+import { useProjectMarket } from "@/client/hooks/useProjectDomain";
 import {
   SeedKeywordField,
   useSeedSuggestions,
 } from "@/client/features/dashboard/SeedKeywordField";
 import { Button } from "@cloudflare/kumo/components/button";
+import { Checkbox } from "@cloudflare/kumo/components/checkbox";
 
 /**
  * Runs the project's analyses in one go, so a new project stops being a grid of
@@ -47,138 +37,6 @@ import { Button } from "@cloudflare/kumo/components/button";
  * Opportunities, Cannibalization, SEO Opportunities and the Client Report are
  * derived free from Search Console and need no run at all.
  */
-
-const markup = (rawUsd: number) =>
-  isHostedClientAuthMode() ? applyBillingMarkupUsd(rawUsd) : rawUsd;
-
-type RunStatus = "idle" | "running" | "done" | "failed";
-
-type Analysis = {
-  key: string;
-  label: string;
-  detail: string;
-  /** Measured cost, or null when we have no profiled figure to quote. */
-  estimateUsd: number | null;
-  /** True when the analysis needs a seed keyword rather than just the domain. */
-  needsKeyword?: boolean;
-  run: (
-    projectId: string,
-    domain: string,
-    keyword: string,
-    market: ProjectMarket,
-  ) => Promise<unknown>;
-};
-
-const ANALYSES: Analysis[] = [
-  {
-    key: "domain_overview",
-    label: "Domain Overview",
-    detail: "Traffic, keywords and ranking distribution",
-    estimateUsd: null,
-    run: (projectId, domain, _keyword, market) =>
-      getDomainOverview({
-        data: {
-          projectId,
-          domain,
-          includeSubdomains: true,
-          locationCode: market.locationCode,
-          languageCode: market.languageCode,
-        },
-      }),
-  },
-  {
-    key: "backlinks",
-    label: "Backlinks",
-    detail: "Domain authority, referring domains and link profile",
-    estimateUsd: null,
-    run: (projectId, domain, _keyword, _market) =>
-      getBacklinksOverview({ data: { projectId, target: domain } }),
-  },
-  {
-    key: "competitors",
-    label: "Competitors",
-    detail: "Domains competing for the same keywords",
-    estimateUsd: null,
-    run: (projectId, domain, _keyword, _market) =>
-      getCompetitorsList({ data: { projectId, target: domain } }),
-  },
-  {
-    key: "ai_visibility",
-    label: "AI Visibility",
-    detail: "How ChatGPT and Google AI Overview cite you",
-    estimateUsd: markup(BRAND_LOOKUP_RAW_COST_USD),
-    run: (projectId, _domain, _keyword, _market) =>
-      analyzeProjectBrand({ data: { projectId, competitors: [] } }),
-  },
-  {
-    key: "page_explorer",
-    label: "Page Explorer",
-    detail: "What the homepage itself ranks for",
-    estimateUsd: null,
-    run: (projectId, domain, _keyword, _market) =>
-      getPageExplorer({ data: { projectId, url: `https://${domain}/` } }),
-  },
-  {
-    key: "site_audit",
-    label: "Site Audit",
-    detail: "Crawls the site for technical issues (runs in the background)",
-    estimateUsd: null,
-    run: (projectId, domain, _keyword, _market) =>
-      startAudit({ data: { projectId, startUrl: `https://${domain}/` } }),
-  },
-  {
-    key: "keyword_research",
-    label: "Keyword Research",
-    detail: "Volume, difficulty and intent around the seed keyword",
-    estimateUsd: null,
-    needsKeyword: true,
-    run: (projectId, _domain, keyword, _market) =>
-      researchKeywords({ data: { projectId, keywords: [keyword] } }),
-  },
-  {
-    key: "serp_overview",
-    label: "SERP Overview",
-    detail: "Who ranks top-20 for the seed keyword, and how strong they are",
-    estimateUsd: null,
-    needsKeyword: true,
-    run: (projectId, _domain, keyword, _market) =>
-      getSerpOverview({ data: { projectId, keyword } }),
-  },
-  {
-    key: "content_brief",
-    label: "Content Optimizer",
-    detail: "Word-count targets, subtopics and questions to cover",
-    estimateUsd: null,
-    needsKeyword: true,
-    run: (projectId, _domain, keyword, _market) =>
-      getContentBrief({ data: { projectId, keyword } }),
-  },
-  {
-    key: "topic_clusters",
-    label: "Topic Clusters",
-    detail: "Hub-and-spoke content plan around the seed keyword",
-    estimateUsd: null,
-    needsKeyword: true,
-    run: (projectId, _domain, keyword, _market) =>
-      getTopicClusters({ data: { projectId, topic: keyword } }),
-  },
-  {
-    key: "keyword_trends",
-    label: "Keyword Trends",
-    detail: "Search interest for the seed keyword over time",
-    estimateUsd: null,
-    needsKeyword: true,
-    run: (projectId, _domain, keyword, market) =>
-      getKeywordTrends({
-        data: {
-          projectId,
-          keywords: [keyword],
-          languageCode: market.languageCode,
-          locationCode: market.locationCode,
-        },
-      }),
-  },
-];
 
 export function AnalyzeProjectCard({
   projectId,
@@ -303,12 +161,10 @@ export function AnalyzeProjectCard({
           const blocked = analysis.needsKeyword && keyword === "";
           return (
             <li key={analysis.key} className="flex items-center gap-2.5">
-              <input
-                type="checkbox"
-                className="checkbox checkbox-sm"
+              <Checkbox
                 checked={selected.has(analysis.key) && !blocked}
                 disabled={running || blocked}
-                onChange={() => toggle(analysis.key)}
+                onCheckedChange={() => toggle(analysis.key)}
                 aria-label={analysis.label}
               />
               <div className="min-w-0 flex-1">
@@ -322,7 +178,24 @@ export function AnalyzeProjectCard({
                   ? `~$${analysis.estimateUsd.toFixed(2)}`
                   : "metered"}
               </span>
-              <StatusGlyph status={status} />
+              {/* A finished run is the moment the promise above comes due:
+                  before this the row showed a checkmark and stopped, leaving
+                  the user to find the tab themselves. Only after "done", so
+                  the link never offers a result that isn't there yet. */}
+              {status === "done" ? (
+                <Link
+                  to={analysis.to}
+                  params={{ projectId }}
+                  search={
+                    analysis.carriesKeyword && keyword ? { q: keyword } : {}
+                  }
+                  className={buttonVariants({ variant: "ghost", size: "xs" })}
+                >
+                  Open
+                </Link>
+              ) : (
+                <StatusGlyph status={status} />
+              )}
             </li>
           );
         })}
@@ -339,7 +212,7 @@ export function AnalyzeProjectCard({
       {confirming ? (
         <div className="space-y-2 rounded-lg border border-warning/40 bg-warning/10 p-3">
           <p className="flex items-start gap-2 text-sm">
-            <TriangleAlert className="mt-0.5 size-4 shrink-0 text-warning" />
+            <Warning className="mt-0.5 size-4 shrink-0 text-warning" />
             <span>
               This spends. Running {chosen.length}{" "}
               {chosen.length === 1 ? "analysis" : "analyses"} for {domain}
@@ -379,7 +252,7 @@ export function AnalyzeProjectCard({
           onClick={() => setConfirming(true)}
         >
           {running ? (
-            <Loader2 className="size-4 animate-spin" />
+            <CircleNotch className="size-4 animate-spin" />
           ) : (
             <Rocket className="size-4" />
           )}
@@ -394,7 +267,9 @@ export function AnalyzeProjectCard({
 
 function StatusGlyph({ status }: { status: RunStatus | undefined }) {
   if (status === "running") {
-    return <Loader2 className="size-4 shrink-0 animate-spin text-primary" />;
+    return (
+      <CircleNotch className="size-4 shrink-0 animate-spin text-primary" />
+    );
   }
   if (status === "done") {
     return <Check className="size-4 shrink-0 text-success" />;

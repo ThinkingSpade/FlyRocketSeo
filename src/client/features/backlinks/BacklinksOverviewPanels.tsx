@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 import {
   BacklinksAuthorityChart,
@@ -13,6 +13,7 @@ import {
 } from "./backlinksPageUtils";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Banner } from "@cloudflare/kumo/components/banner";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 const SUMMARY_TONE_CLASS: Record<SummaryStat["tone"], string> = {
   neutral: "text-base-content/55",
@@ -46,7 +47,7 @@ export function BacklinksOverviewPanels({
             order: undefined,
           }}
           replace
-          className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+          className={`${buttonVariants({ variant: "ghost", size: "sm" })} gap-2 px-0 text-base-content/70 hover:bg-transparent`}
         >
           <ArrowLeft className="size-4" />
           Recent searches
@@ -96,7 +97,7 @@ function SummaryStatsGrid({ summaryStats }: { summaryStats: SummaryStat[] }) {
   const diagnosticStats = summaryStats.slice(4);
 
   return (
-    <div className="card border border-base-300 bg-base-100">
+    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
       <div className="flex flex-auto flex-col gap-4 p-4 text-sm xl:h-full">
         <div className="grid grid-cols-2 gap-x-6 gap-y-5 md:grid-cols-4">
           {primaryStats.map((item) => (

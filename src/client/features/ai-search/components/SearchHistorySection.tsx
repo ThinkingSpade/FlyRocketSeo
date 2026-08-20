@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { Clock, History, X } from "lucide-react";
+import { Clock, ClockCounterClockwise, X } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 
 type Props<TItem extends { timestamp: number }> = {
@@ -54,7 +54,7 @@ export function SearchHistorySection<TItem extends { timestamp: number }>({
     <section className="rounded-2xl border border-base-300 bg-base-100 p-5 md:p-6">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <History className="size-4 text-base-content/45" />
+          <ClockCounterClockwise className="size-4 text-base-content/45" />
           <span className="text-sm text-base-content/60">
             {history.length} recent {noun}
             {history.length !== 1 ? "s" : ""}

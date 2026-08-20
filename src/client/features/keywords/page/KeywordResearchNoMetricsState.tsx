@@ -1,4 +1,4 @@
-import { MapPinOff } from "lucide-react";
+import { MapPinSimple } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { countryLabelForCode } from "@/shared/geo/resolveGeo";
 import type { KeywordResearchControllerState } from "./types";
@@ -59,7 +59,7 @@ export function KeywordResearchNoMetricsState({
   return (
     <div className="pt-1">
       <div className="mx-auto w-full max-w-2xl space-y-4 rounded-2xl border border-base-300 bg-base-100 p-6 text-center md:p-8">
-        <MapPinOff className="mx-auto size-10 text-base-content/40" />
+        <MapPinSimple className="mx-auto size-10 text-base-content/40" />
         <div className="space-y-2">
           <p className="text-lg font-semibold text-base-content">
             {wentLocal

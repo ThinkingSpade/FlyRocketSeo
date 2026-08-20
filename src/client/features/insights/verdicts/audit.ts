@@ -22,7 +22,35 @@ type AuditVerdictInput = {
   topPagePaths: string[];
   /** Paths each issue touches, keyed by issue key. */
   pathsByIssue: Record<string, string[]>;
+  /** True while the traffic read has not answered (in flight, or failed).
+   *  Without it an empty `topPagePaths` is indistinguishable from a resolved
+   *  "Search Console is connected and reported nothing", and the verdict
+   *  below states the latter as fact. Optional so existing callers that do
+   *  resolve their read first are unaffected. */
+  topPagesUnresolved?: boolean;
 };
+
+/**
+ * The issue keys On-Page Fixes can actually resolve. Its generator produces
+ * exactly one element per row -- `"title" | "meta" | "h1" | "alt"`
+ * (`onpage/onPageModel.ts`) -- so these four map onto it and the rest
+ * (broken pages, redirecting pages, thin content) do not: those are edits to
+ * the page itself, not to a tag this app rewrites. An action only links where
+ * the destination can genuinely finish the job.
+ *
+ * These four keys are safe to link because `auditIssues.ts` only ever puts a
+ * page that served a 2xx document under them -- a URL that answered 4xx/5xx,
+ * never answered, or only redirected is reported under `broken-page` or
+ * `redirect-page` and is kept out of all four. Without that upstream
+ * exclusion this set would offer an AI title rewrite for a URL with no title
+ * to rewrite, because an empty crawl row matches every one of them.
+ */
+export const ON_PAGE_FIXABLE = new Set([
+  "missing-title",
+  "missing-meta-description",
+  "missing-h1",
+  "missing-alt-text",
+]);
 
 /** Higher severities must outrank lower ones regardless of how many pages an
  *  issue touches -- one broken page on a top performer matters more than ten
@@ -92,7 +120,9 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
   if (input.topPagePaths.length === 0) {
     const affected = countDistinctAffectedPaths(input.pathsByIssue);
     return unknownVerdict(
-      `This audit found issues on ${affected} of ${input.pagesCrawled} pages crawled, but no Search Console click data is available to tell which of them affect pages that actually earn traffic.`,
+      input.topPagesUnresolved
+        ? `This audit found issues on ${affected} of ${input.pagesCrawled} pages crawled. Search Console click data has not loaded, so which of them earn traffic is not known yet.`
+        : `This audit found issues on ${affected} of ${input.pagesCrawled} pages crawled, but no Search Console click data is available to tell which of them affect pages that actually earn traffic.`,
     );
   }
 
@@ -126,6 +156,9 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
   const top = ranked.slice(0, MAX_AUDIT_ACTIONS);
   const actions = top.map((entry) => ({
     label: `Fix "${entry.issue.label}" on ${pluralize(entry.hitCount, "high-traffic page")}`,
+    to: ON_PAGE_FIXABLE.has(entry.issue.key)
+      ? ({ to: "/p/$projectId/on-page" } as const)
+      : undefined,
     // "N of your top-clicked pages" selects N members from a fixed group, so
     // "pages" stays plural regardless of N (unlike "N high-traffic page(s)"
     // above, which conjugates with N) -- written out rather than pluralize()
@@ -152,6 +185,11 @@ export function buildAuditVerdict(input: AuditVerdictInput): Verdict {
  *  not (yet) recognize, rather than a guess at a fix for it. */
 const ISSUE_FIXES: Record<string, string> = {
   "broken-page": "Restore the page or 301-redirect it to a working URL.",
+  // Not "remove the redirect": the redirect is usually right, and the crawl
+  // cannot tell an intentional one from an accident. What is always worth
+  // doing is not routing readers through it.
+  "redirect-page":
+    "Point internal links, sitemap entries and canonicals at the destination URL so the hop is not on the path to your content.",
   "missing-title":
     "Add a unique, descriptive <title> tag (roughly 50-60 characters).",
   "missing-meta-description":

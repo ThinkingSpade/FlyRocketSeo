@@ -22,6 +22,17 @@
    their colours. Imported explicitly so the theme is actually complete. */
 @import "@cloudflare/kumo/styles/theme-kumo";
 @import "tailwindcss";
+
+/* Point the `dark:` variant at this app's theme instead of the OS preference.
+
+   Tailwind's default `dark:` is `prefers-color-scheme: dark`, but the theme
+   here is a user choice stored in localStorage and written to data-theme — the
+   two disagree whenever someone picks light on a dark-mode machine, or the
+   reverse. Kumo only uses `dark:` in five places (its palette is otherwise
+   light-dark(), which reads color-scheme and is therefore already correct),
+   but those five would have styled themselves from the OS while everything
+   around them followed the toggle. */
+@custom-variant dark (&:where([data-theme="flyrocketseo-dark"], [data-theme="flyrocketseo-dark"] *));
 /* Leaflet map chrome for the Local Rank Grid. */
 @import "leaflet/dist/leaflet.css";
 
@@ -54,80 +65,128 @@
   --trend-tooltip-shadow: oklch(0% 0 0 / 0.1);
 }
 
-@plugin "daisyui" {
-  /* @property isn't supported by some browsers and gives a noisy warning https://github.com/saadeghi/daisyui/issues/3882 */
-  exclude: properties;
+/* The palette. One block, and the only one.
+   ---------------------------------------------------------------------------
+   DaisyUI is gone, and with it the two @plugin "daisyui/theme" blocks that
+   defined these names. The names stay, because 2,468 usages across the app
+   spell colour this way -- text-base-content alone appears 1,120 times -- and
+   renaming those would be a large mechanical diff with no visual result. What
+   changed is where the values come from: each is now an alias onto Kumo's
+   ramp, so there is one source of truth instead of two palettes kept agreeing.
+
+   Light and dark need no separate blocks any more. Kumo's tokens are written
+   with light-dark(), which resolves off the color-scheme the two theme classes
+   below set, so an alias inherits both modes for free.
+
+   TO RE-THEME THE APP, CHANGE --brand-ink AND --brand-signal in the identity
+   block further down. Everything brand-carrying here derives from those two;
+   the rest are neutrals and status colours that should not move with a logo.
+
+   Four surfaces deliberately do NOT follow them, and each has its reason at
+   the site: LoadingShell.tsx paints before this stylesheet loads, ReportChrome
+   and ClientReportPage are printed and emailed so they must not track the
+   viewer's theme, and RankGridMap builds a Leaflet marker as an HTML string.
+
+   The status colours now come from Kumo rather than the old hand-picked hexes.
+   That closes the split this migration has been carrying: a DaisyUI alert and
+   a Kumo banner rendered two different reds, and the note in the identity
+   block said the drift would end when the last DaisyUI component went. It
+   just did. */
+@theme {
+  /* Surfaces */
+  --color-base-100: var(--color-kumo-base); /* cards, panels, popovers */
+  --color-base-200: var(--color-kumo-canvas); /* the page behind them */
+  --color-base-300: var(--color-kumo-hairline); /* borders, dividers, wells */
+
+  /* Body text. Kumo expresses this in its --text-color-* namespace, which only
+     generates text-* utilities; this app also writes bg-base-content and
+     border-base-content, so it needs a --color-* entry and takes Kumo's
+     resolved values directly. */
+  --color-base-content: light-dark(oklch(21% 0.006 285.885), oklch(97% 0 0));
+
+  /* Brand.
+     Three entries where there used to be one, because the purple they replaced
+     could do every job at once and this palette cannot.
+
+     `primary` is Signal, the accent: it drives the sidebar's active rail, tab
+     dots, the tinted active-row backgrounds (bg-primary/5..15), focus borders
+     and every chart's series colour. Orange is right for all of those — they
+     are marks and highlights, not text and not fields carrying white labels.
+
+     `--text-color-primary` splits `text-primary` back off, because Signal at
+     2.87:1 on white is unreadable as text. Same darkened orange the Kumo link
+     token uses. Tailwind's text-color namespace wins over --color-* for the
+     text-* utilities specifically, which is the mechanism Kumo's own
+     --text-color-kumo-brand already relies on.
+
+     `--color-primary-content` is Ink rather than white: it is the label on top
+     of a Signal fill (the chat bubble, the tag button), and Ink on Signal is
+     6.39:1 where white would have been 2.87:1. */
+  --color-primary: var(--brand-signal);
+  --text-color-primary: var(--text-color-kumo-brand);
+  --color-primary-content: var(--brand-ink);
+
+  /* Status */
+  --color-error: var(--color-kumo-danger);
+  --color-info: var(--color-kumo-info);
+  --color-success: var(--color-kumo-success);
+  --color-warning: var(--color-kumo-warning);
+  --color-neutral: var(--color-kumo-contrast);
+
+  /* Status TEXT, split off exactly the way `--text-color-primary` splits Signal
+     above, and for the identical reason.
+
+     Kumo ships each status hue as a PAIR: `--color-kumo-danger` is the solid
+     that carries white text (a filled banner, a badge), and
+     `--text-color-kumo-danger` is the darker/lighter sibling meant for a status
+     word sitting on a normal surface. Only the solid was aliased here, so every
+     `text-error` / `text-success` in the app painted the fill colour as text.
+
+     Measured in the browser at 12px on the project dashboard, both themes:
+       text-error   #fb2c36 on #ffffff = 3.81:1   ("-0.5 pts", "8 declined")
+       text-error   #e7000b on #0f0f0f = 4.02:1
+       text-success #009966 on #ffffff = 3.65:1   ("1 improved")
+     All three fail the 4.5:1 body-text floor. Kumo's text pair clears it —
+     danger is red-700/red-400, success emerald-800/emerald-200 — because that
+     is the job it was tuned for.
+
+     Only the `text-*` utilities move. `bg-error`, `border-warning` and the
+     `/10` tints keep the solid above, so filled banners and alert backgrounds
+     are untouched; this is the same namespace precedence `--text-color-primary`
+     relies on. Warning stays yellow-800/yellow-400 rather than anything nearer
+     Signal, so amber still reads as distinct from the brand orange. */
+  --text-color-error: var(--text-color-kumo-danger);
+  --text-color-info: var(--text-color-kumo-info);
+  --text-color-success: var(--text-color-kumo-success);
+  --text-color-warning: var(--text-color-kumo-warning);
 }
 
-/* Light theme */
-@plugin "daisyui/theme" {
-  name: "flyrocketseo";
-  default: true;
-  prefersdark: false;
+/* The theme classes now carry only color-scheme. That is all Kumo ever needed
+   from them: light-dark() reads it, so this one switch drives the whole
+   palette above.
+
+   The :root default is not redundant, and leaving it out is a real failure.
+   light-dark() is INVALID when no color-scheme is in effect — not "falls back
+   to light", invalid — so every token above would compute to transparent and
+   the app would render as unstyled text on white. DaisyUI's `default: true`
+   theme used to cover that case by applying at :root unconditionally; nothing
+   did after it was removed.
+
+   `light dark` rather than `light`, so that a document which somehow never
+   gets a data-theme still follows the OS preference — which is what the old
+   theme's `prefersdark` did. The inline script in <head> sets data-theme
+   before first paint, so this should never be the one in effect; it is here
+   for when it is. */
+:root {
+  color-scheme: light dark;
+}
+
+[data-theme="flyrocketseo"] {
   color-scheme: light;
-  --color-base-100: #ffffff;
-  --color-base-200: #f5f7fb;
-  --color-base-300: #e2e7f0;
-  --color-base-content: #172033;
-  --color-primary: #4934c7;
-  --color-primary-content: #ffffff;
-  --color-secondary: #087a70;
-  --color-secondary-content: #ffffff;
-  --color-accent: #c2410c;
-  --color-accent-content: #ffffff;
-  --color-neutral: #243047;
-  --color-neutral-content: #ffffff;
-  --color-info: #0b6e99;
-  --color-info-content: #ffffff;
-  --color-success: #087a55;
-  --color-success-content: #ffffff;
-  --color-warning: #8a5200;
-  --color-warning-content: #ffffff;
-  --color-error: #b42318;
-  --color-error-content: #ffffff;
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.75rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
 }
 
-/* Dark theme - auto-activates via prefers-color-scheme */
-@plugin "daisyui/theme" {
-  name: "flyrocketseo-dark";
-  prefersdark: true;
+[data-theme="flyrocketseo-dark"] {
   color-scheme: dark;
-  --color-base-100: #131c2b;
-  --color-base-200: #0b1120;
-  --color-base-300: #263247;
-  --color-base-content: #eaf0fa;
-  --color-primary: #a89bff;
-  --color-primary-content: #14102e;
-  --color-secondary: #4fd1be;
-  --color-secondary-content: #062b27;
-  --color-accent: #ff9a62;
-  --color-accent-content: #351405;
-  --color-neutral: #cbd5e1;
-  --color-neutral-content: #172033;
-  --color-info: #67c7f2;
-  --color-info-content: #062636;
-  --color-success: #55d6a0;
-  --color-success-content: #052a1d;
-  --color-warning: #f6c453;
-  --color-warning-content: #321f00;
-  --color-error: #ff8a80;
-  --color-error-content: #3b0a06;
-  --radius-selector: 0.5rem;
-  --radius-field: 0.5rem;
-  --radius-box: 0.75rem;
-  --size-selector: 0.25rem;
-  --size-field: 0.25rem;
-  --border: 1px;
-  --depth: 0;
-  --noise: 0;
 }
 
 html,
@@ -158,16 +217,6 @@ body {
   }
 }
 
-/* Global input focus styling - use primary color instead of default ring */
-.input:focus,
-.input:focus-visible,
-.textarea:focus,
-.textarea:focus-visible {
-  outline: none;
-  border-color: var(--color-primary);
-  background-color: color-mix(in oklab, var(--color-primary) 10%, transparent);
-}
-
 /* Safe area utilities for mobile devices */
 @layer utilities {
   .pb-safe {
@@ -178,18 +227,6 @@ body {
   }
 }
 
-/* Override DaisyUI dock's fixed positioning to use flex layout instead */
-/* This allows the TabBar to work correctly with Safari's browser toolbar */
-.dock {
-  position: relative;
-  bottom: auto;
-  left: auto;
-  right: auto;
-  border-top: none;
-  height: 4rem;
-  padding-bottom: 0;
-}
-
 /* Touch device optimizations */
 @media (pointer: coarse) {
   html {
@@ -198,39 +235,6 @@ body {
   body {
     touch-action: pan-x pan-y;
   }
-}
-
-/* Dark mode: neutral interactive surfaces should lift above the panel, not
-   sink below it. DaisyUI derives default buttons and the tabs-box well from
-   base-200, which is darker than the base-100 content panel in dark mode,
-   so they read as sunken/disabled. Colored variants (primary, error, ...)
-   set their own --btn-color and are excluded. */
-html[data-theme="flyrocketseo-dark"]
-  .btn:not(
-    .btn-primary,
-    .btn-error,
-    .btn-neutral,
-    .btn-ghost,
-    .btn-outline,
-    .btn-soft
-  ) {
-  --btn-color: var(--color-base-300);
-}
-
-/* Light mode: the base-200 default button is nearly invisible on the
-   base-100 content panel; use a white surface with a visible border,
-   matching inputs/selects. */
-html[data-theme="flyrocketseo"]
-  .btn:not(
-    .btn-primary,
-    .btn-error,
-    .btn-neutral,
-    .btn-ghost,
-    .btn-outline,
-    .btn-soft
-  ) {
-  --btn-color: var(--color-base-100);
-  --btn-border: var(--color-base-300);
 }
 
 /* Tag chip colors — muted background + readable text in both themes.
@@ -306,42 +310,107 @@ html[data-theme="flyrocketseo-dark"] .tag-chip-fuchsia {
    Kumo ships Cloudflare's own brand values: a blue --color-kumo-brand and the
    #f6821f orange on --text-color-kumo-brand. We want their density, spacing
    and motion — not their identity — so only the brand-carrying tokens are
-   remapped, onto the palette the DaisyUI themes above already define.
-   Everything else (the neutral surface ramp, badge hues, the type scale, the
-   focus ring) is left exactly as Kumo ships it.
+   remapped, onto the Fly Rocket Media palette below. Everything else (the
+   neutral surface ramp, badge hues, the type scale, the focus ring) is left
+   exactly as Kumo ships it.
 
    The rule is map identity, keep their craft — which is why the semantic
    status colours (--color-kumo-danger/info/success/warning and their -tint and
-   text pairs) are NOT remapped, even though the app has its own error red.
-   Each of those is a tuned triple: a solid that carries white text, a
-   translucent tint, and a text colour for a surface, all balanced across both
-   modes. Substituting the DaisyUI values would mean inventing eight new
-   colours and hand-checking their contrast, and since the plan is to migrate
-   off DaisyUI entirely, it would be inventing them only to delete them later.
-   Until then a DaisyUI alert and a Kumo banner will show slightly different
-   reds; both read as red, and the drift ends when the last DaisyUI component
-   goes. If that mismatch turns out to be intolerable sooner, this is the block
-   to add them to.
+   text pairs) are NOT remapped. Each of those is a tuned triple: a solid that
+   carries white text, a translucent tint, and a text colour for a surface, all
+   balanced across both modes. Red, amber and green are not brand colours here
+   and should not move with a logo.
 
    light-dark() rather than a [data-theme] override, because that is the
-   mechanism Kumo's own :root tokens use and it is already driven correctly:
-   the two DaisyUI themes set color-scheme, so this follows the existing theme
-   toggle with no data-mode wiring of our own.
+   mechanism Kumo's own :root tokens use: the two theme classes set
+   color-scheme, so this follows the existing toggle with no wiring of our own.
 
-   The background and the text tokens do NOT get the same dark value, which
-   looks like an inconsistency and is not. Kumo's primary button hardcodes
-   `!text-white`, so --color-kumo-brand has to stay dark enough for white text
-   in BOTH modes — the DaisyUI dark primary (#a89bff) is a light lavender that
-   pairs with dark text, and white on it would fail contrast. The text/link
-   tokens sit on a page surface instead, so there they take the lavender. */
+   Signal orange appears at three different values in this block, which looks
+   like drift and is not. It is one colour measured against three backgrounds:
+   #ff6a14 as a fill, #c2410c as text on white, #ff6a14 again as text on
+   near-black. The notes at each entry give the ratio that forced it. */
 :root {
-  /* Button/emphasis backgrounds — always carries white text. */
-  --color-kumo-brand: light-dark(#4934c7, #5b46d9);
-  --color-kumo-brand-hover: light-dark(#3b29a3, #6d5ae8);
-  /* Brand-coloured text and links — sits on base/canvas, so it tracks the
-     DaisyUI primary exactly. */
-  --text-color-kumo-brand: light-dark(#4934c7, #a89bff);
-  --text-color-kumo-link: light-dark(#4934c7, #a89bff);
+  /* The three colours off the Fly Rocket Media brand sheet, unmodified. Every
+     value below is derived from these two; Canvas is plain #fff and already
+     lives in Kumo's base. */
+  --brand-ink: #0a1525;
+  --brand-signal: #ff6a14;
+
+  /* Kumo's primary button, which hardcodes `!text-white`. That single fact
+     decides this whole block: white on Signal is 2.87:1, which fails even the
+     3:1 large-text floor, so Signal cannot be the button. Ink can — white on
+     Ink is 18.3:1 — and it matches how the logo is built, an Ink field with the
+     rocket as the signal on top.
+
+     Dark mode cannot use Ink itself: at 1.05:1 against a near-black page the
+     button would vanish into it. Lifted along the same hue instead, far enough
+     to read as a raised surface (2.8:1) while white text clears AA.
+
+     One caveat, measured rather than assumed: 6.2:1 is this colour flat, and
+     the button is not flat — the gradient's top stop is this mixed with 15%
+     white, which lands at about 4.5:1. That is on the AA line rather than
+     comfortably past it, so lightening this value further would push the top
+     of the button under it. */
+  --color-kumo-brand: light-dark(#0a1525, #3b6390);
+  --color-kumo-brand-hover: light-dark(#1a2b45, #4a76a6);
+
+  /* Brand-coloured TEXT, which sits on a surface rather than carrying one, and
+     so has the opposite problem: Ink text is indistinguishable from body copy
+     and gives a link no affordance at all.
+
+     Orange, then — but Signal on white is the same 2.87:1 that ruled it out
+     above, so light mode takes it darkened to 5.18:1. Dark mode keeps true
+     Signal, which needs no help at 6.1:1 on a near-black page. */
+  --text-color-kumo-brand: light-dark(#c2410c, #ff6a14);
+  --text-color-kumo-link: light-dark(#c2410c, #ff6a14);
+
+  /* Kumo's primary/destructive button paints itself out of these four, and
+     ships NO default for any of them — it sets them as INLINE styles on the
+     element, computed from the variant. That works for <Button variant="primary">
+     and not at all for `buttonVariants({ variant: "primary" })`, the class-only
+     helper we put on routed <Link>s: the classes land, the inline style does
+     not, and `bg-(--kumo-button-emphasis-bg)` resolves to nothing. With the
+     variant's `!text-white` that is white text on a transparent background —
+     thirteen invisible call-to-action links, most of them the empty-state
+     button a new project sees first.
+
+     Same formulas Kumo uses, so a real <Button>'s inline values are identical
+     to these and nothing about it changes; these only fill the gap where no
+     inline style was written. */
+  --kumo-button-emphasis-ring: color-mix(
+    in oklch,
+    var(--color-kumo-brand),
+    black 10%
+  );
+  --kumo-button-emphasis-bg: color-mix(
+    in oklch,
+    var(--color-kumo-brand),
+    white 30%
+  );
+  --kumo-button-emphasis-gradient-start: color-mix(
+    in oklch,
+    var(--color-kumo-brand),
+    white 15%
+  );
+  --kumo-button-emphasis-gradient-end: var(--color-kumo-brand);
+}
+
+/* The gradient half of that button.
+   Kumo's <Button> paints it with an absolutely-positioned overlay span, which
+   `buttonVariants()` cannot produce because it returns a class string and not
+   markup. Without this, a Link would take --kumo-button-emphasis-bg on its own
+   — brand mixed with 30% white, which is the INSET HIGHLIGHT colour, not the
+   button's face: a washed-out lilac carrying white text.
+
+   Unlayered, so it outranks the Tailwind utility that sets background-color.
+   A real <Button> is unaffected: its overlay span covers the element edge to
+   edge, so the element's own background-image is never seen. */
+.bg-\(--kumo-button-emphasis-bg\) {
+  background-image: linear-gradient(
+    to bottom,
+    var(--kumo-button-emphasis-gradient-start),
+    var(--kumo-button-emphasis-gradient-end)
+  );
 }
 
 /* Keyword difficulty score badges — muted/transparent style to match tag chips */
@@ -511,10 +580,71 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 
 [data-reveal="shown"] {
   opacity: 1;
-  transform: translate3d(0, 0, 0);
+  /* `none`, NOT `translate3d(0, 0, 0)`. An identity transform is still a
+     transform, and ANY transform other than `none` makes the element the
+     containing block for its `position: fixed` descendants — so a landed
+     reveal would re-anchor any fixed-with-insets overlay inside it to the
+     content column instead of the viewport. Modal also portals to <body> so
+     this can never be load-bearing again; see Modal.tsx. */
+  transform: none;
   /* Release the compositor layer once the element has landed — a permanent
      will-change on many elements costs memory and can blur text on some GPUs. */
   will-change: auto;
+}
+
+/* Per-section stagger.
+
+   Same reveal, but applied to the CHILDREN of the marked element rather than to
+   the element itself, so a page's sections arrive one after another instead of
+   as one block.
+
+   The delay comes from :nth-child rather than a --motion-index set per element,
+   which is what makes this worth doing: the alternative was wrapping every
+   section in its own <Reveal>, and these containers hang tables, charts and
+   grids directly off themselves — inserting a div between them reshuffles those
+   layouts. This changes no markup at all.
+
+   The ladder stops at the sixth child, and everything after it shares that
+   delay. A stagger is a reading cue, not a queue: past roughly six steps the
+   last section is still waiting long after the eye has arrived, which reads as
+   the page being slow rather than as sequence. Long pages therefore arrive in
+   six beats regardless of how many sections they have. */
+[data-reveal-stagger] > * {
+  transition-property: opacity, transform;
+  transition-duration: var(--motion-duration-slow);
+  transition-timing-function: var(--ease-out-soft);
+  will-change: opacity, transform;
+}
+
+[data-reveal-stagger="hidden"] > * {
+  opacity: 0;
+  transform: translate3d(0, var(--motion-rise-distance), 0);
+}
+
+[data-reveal-stagger="shown"] > * {
+  opacity: 1;
+  /* `none`, for the reason spelled out on `[data-reveal="shown"]` above. This
+     selector makes it worse, not better: AppPageShell staggers every page's
+     sections, so a landed identity transform would sit on EVERY direct child
+     of EVERY page's content wrapper. */
+  transform: none;
+  will-change: auto;
+}
+
+[data-reveal-stagger="shown"] > *:nth-child(2) {
+  transition-delay: calc(1 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(3) {
+  transition-delay: calc(2 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(4) {
+  transition-delay: calc(3 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(5) {
+  transition-delay: calc(4 * var(--motion-stagger-step));
+}
+[data-reveal-stagger="shown"] > *:nth-child(n + 6) {
+  transition-delay: calc(5 * var(--motion-stagger-step));
 }
 
 /* Micro-interactions. `motion-lift` is the hover treatment for cards and other
@@ -542,6 +672,49 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
 .motion-lift:active {
   transform: translate3d(0, 0, 0);
   transition-duration: 60ms;
+}
+
+/* Table density — putting back what Kumo's default padding took away.
+
+   Kumo styles cells with `[&_td]:p-3`, i.e. 12px on every side. Every table in
+   this app was previously `table-sm` (8px) or `table-xs` (4px), because an SEO
+   tool's tables are long lists someone scans — a keyword table at 12px shows
+   roughly half the rows per screen. That is the opposite of the density the
+   reference dashboard is liked for.
+
+   Only the vertical padding is tightened. The 12px horizontal is Kumo's and is
+   right: columns need the separation, rows do not.
+
+   Unlayered on purpose. `[&_td]:p-3` is an arbitrary-variant utility and lives
+   in Tailwind's utilities layer, and an unlayered rule outranks a layered one
+   regardless of source order — the same cascade rule the skeleton fix below
+   depends on. A `@layer components` version of this silently loses. The cost is
+   that a table wanting Kumo's roomier default cannot ask for it with a utility;
+   it would need its own unlayered rule here. */
+table :is(td, th) {
+  padding-block: 0.375rem;
+}
+
+/* Kumo's Switch does not read the brand token.
+
+   Its track is hardcoded `bg-blue-500` / `ring-blue-600` — Tailwind's literal
+   blue, not `--color-kumo-brand` — so remapping the brand elsewhere in this
+   file reaches the buttons, the links and the tab indicator, but leaves every
+   toggle Cloudflare blue. This is a gap in Kumo rather than in our mapping.
+
+   Targeted through Kumo's own `data-kumo-component` hook, and unlayered for the
+   same cascade reason as the rule above. */
+[data-kumo-component="Switch"][aria-checked="true"] {
+  background-color: var(--color-kumo-brand);
+  --tw-ring-color: var(--color-kumo-brand-hover);
+}
+
+/* The thumb too: Kumo paints it `dark:bg-blue-300`, so in dark mode the knob
+   came back Cloudflare blue on top of the brand-coloured track. It should be
+   the neutral surface colour in both modes, which is what it already is in
+   light. */
+[data-kumo-component="Switch"] > * {
+  background-color: var(--color-kumo-base);
 }
 
 /* Skeleton placeholders — restoring the base colour Kumo's reset removed.
@@ -656,6 +829,41 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
    The arrow is inline SVG rather than DaisyUI's two-gradient triangle: it is a
    real chevron, it scales, and `currentColor` cannot be used inside a data URI,
    so each theme sets its own stroke below. */
+/* Text links, replacing DaisyUI's .link family.
+   ---------------------------------------------------------------------------
+   Kumo does ship a Link component, but these 42 sites are spread across three
+   different elements — TanStack's <Link>, plain <a>, and SafeExternalLink —
+   and swapping the element would cost the router's typed navigation on the
+   first and the external-link safety wrapper on the third. Same reasoning as
+   .app-select above, and the same shape: keep the element, take Kumo's look.
+
+   Two variants, matching the two DaisyUI spellings actually in use:
+   `.app-link` is always underlined (a link inside a sentence, which needs to
+   be visible without hovering), `.app-link-subtle` underlines only on hover
+   and inherits its colour (a link that is a whole row or cell, where a
+   permanent underline is noise). */
+@layer components {
+  .app-link {
+    color: var(--text-color-kumo-link);
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
+
+  .app-link:hover {
+    text-decoration-thickness: 2px;
+  }
+
+  .app-link-subtle {
+    color: inherit;
+    text-decoration-line: none;
+  }
+
+  .app-link-subtle:hover {
+    text-decoration-line: underline;
+    text-underline-offset: 2px;
+  }
+}
+
 @layer base {
   .app-select {
     appearance: none;
@@ -678,9 +886,27 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
     @apply h-6.5 rounded-md pl-2 pr-6 text-xs;
   }
 
+  /* Focus. The Signal border alone was not a focus indicator.
+
+     Signal on the select's own `bg-base-100` measures 2.87:1 in light mode —
+     the same ratio that disqualified it as text further up, and it fails the
+     3:1 floor a focus indicator has to clear (WCAG 1.4.11 / 2.4.11). With
+     `outline: none` next to it there was nothing else to see, so a keyboard
+     user tabbing through the 36 native selects in light mode got a border
+     shift they cannot reliably perceive. Dark mode was never affected: Signal
+     on the dark surface is 5.94:1.
+
+     Kumo's own controls focus with `focus-visible:ring-2 ring-kumo-focus`, and
+     `--color-kumo-focus` is deliberately a near-black/near-white neutral rather
+     than a brand colour — 18.1:1 on the light surface, 15.4:1 on the dark one,
+     so it clears the floor in both without depending on the palette. Take that
+     ring, keep the Signal border underneath for identity. `outline` rather than
+     a box-shadow so it survives forced-colors mode and cannot be clipped by an
+     ancestor's overflow. */
   .app-select:focus,
   .app-select:focus-visible {
-    outline: none;
+    outline: 2px solid var(--color-kumo-focus);
+    outline-offset: 1px;
     border-color: var(--color-primary);
   }
 

@@ -2,12 +2,12 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
-  AlertCircle,
+  WarningCircle,
   ArrowLeft,
-  Columns3,
-  SearchCheck,
-  Sparkles,
-} from "lucide-react";
+  Columns,
+  Quotes,
+  Sparkle,
+} from "@phosphor-icons/react";
 import { explorePrompt } from "@/serverFunctions/ai-search";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import {
@@ -27,16 +27,19 @@ import {
   type WebSearchCountryCode,
 } from "@/types/schemas/ai-search";
 import {
-  createMeteredRunKey,
   useAuthorizedRun,
   useMeteredQuery,
 } from "@/client/lib/useMeteredQuery";
-import { useProject } from "@/client/hooks/useProjectDomain";
 import {
-  buildPromptStarters,
-  domainStem,
-} from "@/client/features/search-performance/projectGscInsights";
+  isRunOnScreen,
+  promptExplorerRunKey,
+} from "@/client/features/ai-search/activeRun";
+import { useProject } from "@/client/hooks/useProjectDomain";
+import { defaultHighlightBrand } from "@/client/features/ai-search/promptExplorerBrand";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
+import { buildPromptStarters } from "@/client/features/search-performance/projectGscInsights";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type PromptExplorerFormValues = {
   prompt: string;
@@ -54,35 +57,21 @@ type Props = {
 
 const PROMPT_EXPLORER_BULLETS = [
   {
-    icon: Columns3,
+    icon: Columns,
     title: "Four models side-by-side",
     body: "Run one prompt across ChatGPT, Claude, Gemini, and Perplexity and compare answers in a single view.",
   },
   {
-    icon: SearchCheck,
+    icon: Quotes,
     title: "See what the models cite",
     body: "Every answer lists the sources it drew from, so you can audit where each model gets its information.",
   },
   {
-    icon: Sparkles,
+    icon: Sparkle,
     title: "Check brand mentions",
     body: "Highlight a brand to instantly see whether it shows up in the answer text or the cited sources.",
   },
 ];
-
-function promptRunKey(
-  projectId: string,
-  values: PromptExplorerFormValues,
-): string {
-  return createMeteredRunKey(
-    projectId,
-    values.prompt.trim(),
-    values.models.toSorted(),
-    values.webSearch,
-    values.webSearchCountryCode,
-    values.highlightBrand.trim(),
-  );
-}
 
 export function PromptExplorerPage(props: Props) {
   return (
@@ -103,12 +92,10 @@ function PromptExplorerPageInner({
   const [authorizedInput, setAuthorizedInput] =
     useState<PromptExplorerFormValues | null>(null);
   const project = useProject(projectId);
-  const defaultBrand =
-    project?.name.trim() && project.name.toLowerCase() !== "default"
-      ? project.name.trim()
-      : (domainStem(project?.domain) ?? "");
+  const { profile } = useProjectProfile(projectId);
+  const defaultBrand = defaultHighlightBrand(profile, project);
   const brandWasEdited = useRef(Boolean(urlState.highlightBrand));
-  const run = useAuthorizedRun(promptRunKey(projectId, form));
+  const run = useAuthorizedRun(promptExplorerRunKey(projectId, form));
   const gscQuery = useQuery({
     queryKey: ["searchPerformance", projectId, "overview", "last_28_days"],
     queryFn: () =>
@@ -231,15 +218,28 @@ function PromptExplorerPageInner({
       highlightBrand: form.highlightBrand.trim(),
     };
     setAuthorizedInput(next);
-    run.authorize(promptRunKey(projectId, next));
+    run.authorize(promptExplorerRunKey(projectId, next));
     onSubmit(next);
   };
 
-  const errorMessage = exploreQuery.isError
-    ? getStandardErrorMessage(exploreQuery.error)
-    : null;
+  // What is on screen belongs to the URL, not to the click that produced it.
+  // `authorizedInput` is never reset and the answers sit in a
+  // `staleTime: Infinity` cache, so "Recent searches" used to clear the URL
+  // and the form and leave four model answers underneath it — and clicking a
+  // different history row showed the previous prompt's answers under the new
+  // prompt. Same key the run was authorized against, so the two cannot drift.
+  const showsAuthorizedRun = isRunOnScreen(
+    authorizedInput ? promptExplorerRunKey(projectId, authorizedInput) : null,
+    promptExplorerRunKey(projectId, urlState),
+  );
+  const errorMessage =
+    showsAuthorizedRun && exploreQuery.isError
+      ? getStandardErrorMessage(exploreQuery.error)
+      : null;
+  // Still keyed on the authorization: a request in flight has already been
+  // paid for, and the router writes the new params a render later.
   const isLoading = hasActivePrompt && exploreQuery.isPending;
-  const resultData = authorizedInput ? exploreQuery.data : undefined;
+  const resultData = showsAuthorizedRun ? exploreQuery.data : undefined;
 
   const updateForm = <K extends keyof PromptExplorerFormValues>(
     key: K,
@@ -290,7 +290,7 @@ function PromptExplorerPageInner({
               role="alert"
               className="flex items-start gap-2 rounded-lg border border-error/30 bg-error/10 p-3 text-sm text-error"
             >
-              <AlertCircle className="mt-0.5 size-4 shrink-0" />
+              <WarningCircle className="mt-0.5 size-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
           ) : null}
@@ -306,7 +306,7 @@ function PromptExplorerPageInner({
                   params={{ projectId }}
                   search={{}}
                   replace
-                  className="btn btn-ghost btn-sm gap-2 px-0 text-base-content/70 hover:bg-transparent"
+                  className={`${buttonVariants({ variant: "ghost", size: "sm" })} gap-2 px-0 text-base-content/70 hover:bg-transparent`}
                 >
                   <ArrowLeft className="size-4" />
                   Recent searches
@@ -314,14 +314,17 @@ function PromptExplorerPageInner({
               </div>
               <PromptExplorerResults result={resultData} />
             </>
-          ) : !errorMessage ? (
+          ) : (
+            // Rendered under the error banner too: one failed prompt says
+            // nothing about the prompts already stored, and hiding them left
+            // a failed run with no way back to the previous ones.
             <PromptExplorerHistorySection
               projectId={projectId}
               history={history}
               historyLoaded={historyLoaded}
               onRemoveHistoryItem={removeHistoryItem}
             />
-          ) : null}
+          )}
         </>
       )}
     </AppPageShell>

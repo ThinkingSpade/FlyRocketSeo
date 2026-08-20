@@ -7,7 +7,7 @@ import {
   getRankPositionMatrix,
   estimateRankCheckCost,
 } from "@/serverFunctions/rank-tracking";
-import { AlertTriangle, ArrowLeft } from "lucide-react";
+import { Warning, ArrowLeft } from "@phosphor-icons/react";
 import { useSession } from "@/lib/auth-client";
 import { getCustomerPlanStatus } from "@/client/features/billing/plan-detection";
 import { captureClientEvent } from "@/client/lib/posthog";
@@ -42,11 +42,29 @@ import {
   type Filters,
 } from "./RankTrackingFilters";
 import { CheckConfirmModal } from "./CheckConfirmModal";
+import { resolveRankCheckAvailability } from "./rankCheckAvailability";
 import { useMetricsRefresh } from "./useMetricsRefresh";
 import { useRankCheckTrigger } from "./useRankCheckTrigger";
 import { useRankRunPolling } from "./useRankRunPolling";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
+
+/** Null while the billing read is in flight, or before a session exists --
+ *  the gate treats that as "unknown", never as "paid". Module scope purely so
+ *  the branch does not count against the component's complexity budget. */
+function resolvePlanStatus(
+  customer: Parameters<typeof getCustomerPlanStatus>[0],
+) {
+  return customer ? getCustomerPlanStatus(customer) : null;
+}
+
+/** The keyword count a check would actually bill for. */
+function checkableKeywordCount(
+  costEstimate: { keywordCount: number } | undefined,
+  rows: unknown[] | undefined,
+): number {
+  return costEstimate?.keywordCount ?? rows?.length ?? 0;
+}
 
 function deviceVisibility(
   devices: RankTrackingConfig["devices"],
@@ -79,9 +97,7 @@ export function RankTrackingDomainDetail({
   const customerQuery = useBillingCustomer({
     enabled: Boolean(session?.user?.id),
   });
-  const isFreePlan =
-    !!customerQuery.data &&
-    getCustomerPlanStatus(customerQuery.data) === "free";
+  const planStatus = resolvePlanStatus(customerQuery.data);
 
   const queryClient = useQueryClient();
   const [showAddKeywords, setShowAddKeywords] = useState(false);
@@ -195,6 +211,16 @@ export function RankTrackingDomainDetail({
 
   const rows = resultsData?.rows;
   const run = resultsData?.run;
+  // The same count the click acts on, so the menu item can never be offered
+  // for a check that would then be swallowed. See rankCheckAvailability.ts
+  // for why the plan half of this must fail closed.
+  const keywordCount = checkableKeywordCount(costEstimate, rows);
+  const checkAvailability = resolveRankCheckAvailability({
+    billingDisabled: customerQuery.billingDisabled,
+    planReadFailed: customerQuery.isError,
+    planStatus,
+    keywordCount,
+  });
   const hasBothDevices = config.devices === "both";
   const { showDesktop, showMobile } = deviceVisibility(
     config.devices,
@@ -223,7 +249,7 @@ export function RankTrackingDomainDetail({
 
       {config.lastSkipReason === "insufficient_credits" && (
         <Banner variant="alert" className="text-sm py-2">
-          <AlertTriangle className="size-4" />
+          <Warning className="size-4" />
           <span>
             Last scheduled check was skipped due to insufficient credits. Top up
             your balance to resume automatic tracking.
@@ -233,14 +259,14 @@ export function RankTrackingDomainDetail({
 
       {latestRun?.maybeStale && (
         <Banner variant="alert" className="text-sm py-2">
-          <AlertTriangle className="size-4" />
+          <Warning className="size-4" />
           <span>
             This run may be unresponsive and will be cleaned up automatically.
           </span>
         </Banner>
       )}
 
-      <FreePlanAlert visible={isFreePlan} />
+      <FreePlanAlert visible={checkAvailability.showFreePlanAlert} />
 
       {/* Results card */}
       <div className="flex-1 flex flex-col min-w-0 border border-base-300 rounded-xl bg-base-100 overflow-hidden">
@@ -320,14 +346,11 @@ export function RankTrackingDomainDetail({
             );
             toast.success("Keywords copied to clipboard");
           }}
-          onCheckNow={() => {
-            const count = costEstimate?.keywordCount ?? rows?.length ?? 0;
-            if (count > 0) requestCheck(count);
-          }}
+          onCheckNow={() => requestCheck(keywordCount)}
           onRefreshMetrics={refreshMetrics}
           metricsRefreshing={metricsRefreshing}
           checkBusy={isBusy}
-          checkDisabled={isFreePlan}
+          checkBlockedReason={checkAvailability.blockedReason}
           hasData={filtered.length > 0}
         />
 

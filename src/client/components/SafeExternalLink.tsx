@@ -1,4 +1,4 @@
-import { ExternalLink } from "lucide-react";
+import { ArrowSquareOut } from "@phosphor-icons/react";
 
 import { getSafeExternalUrl } from "./table/url";
 
@@ -19,7 +19,7 @@ export function SafeExternalLink({
   return (
     <a className={className} href={safeUrl} target="_blank" rel="noreferrer">
       {label}
-      <ExternalLink className="size-3 shrink-0" />
+      <ArrowSquareOut className="size-3 shrink-0" />
     </a>
   );
 }

@@ -2,14 +2,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import {
-  Grid3x3,
+  GridNine,
   Hash,
-  LocateFixed,
+  CrosshairSimple,
   MapPin,
   Megaphone,
-  Search,
+  MagnifyingGlass,
   Trophy,
-} from "lucide-react";
+} from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import {
   geocodeLocation,
@@ -26,6 +26,7 @@ import {
   RankGridMap,
   type CellState,
 } from "@/client/features/local-grid/RankGridMap";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { computeGridShareOfVoice } from "@/client/features/local-grid/gridShareOfVoice";
 import { GridShareOfVoiceCards } from "@/client/features/local-grid/GridShareOfVoiceCards";
 import type { AnalyzePreviewItem } from "@/client/components/AnalyzeDomainPrompt";
@@ -130,7 +131,10 @@ export function LocalRankGridPage({
   useEffect(() => {
     if (hasPrefilledKeyword.current || !suggestions[0]) return;
     hasPrefilledKeyword.current = true;
-    setInput(suggestions[0].keyword);
+    // Only prefill an untouched field. The suggestions resolve behind two async
+    // reads, so without this guard they land mid-typing and replace whatever
+    // the user had already entered.
+    setInput((current) => (current.trim() ? current : suggestions[0].keyword));
   }, [suggestions]);
 
   const mapCenter = pendingCenter ?? activeScan?.center ?? committedCenter;
@@ -250,10 +254,27 @@ export function LocalRankGridPage({
           );
           return;
         }
-        center = { lat: found.lat, lng: found.lng };
+        // Rounded HERE, not just where the run key is built below. `mapCenter`
+        // reads `pendingCenter` first, so storing the geocoder's full precision
+        // made `currentRunKey` (raw) and the key handed to `run.authorize`
+        // (rounded) disagree forever -- `createMeteredRunKey` is
+        // `JSON.stringify`, so 33.0136764 never equals 33.0137. Every cell
+        // query stayed `enabled: false` while `activeScan` still rendered a
+        // full grid, so the page reported "Share of voice 0%, 0/25 pins": a
+        // confident absence built from zero checks. Clicking the map already
+        // rounded (see `onPickCenter`), which is why only the typed-location
+        // path was affected.
+        center = { lat: roundCoord(found.lat), lng: roundCoord(found.lng) };
         setPendingCenter(center);
         setPendingLabel(found.label.split(",").slice(0, 2).join(","));
         setLocationInput("");
+      } catch (error) {
+        // Without this the promise rejects into `void handleScan()` and the
+        // user gets a cleared spinner and no explanation.
+        setLocationError(
+          getStandardErrorMessage(error, "Couldn't look up that location."),
+        );
+        return;
       } finally {
         setIsLocating(false);
       }
@@ -303,7 +324,7 @@ export function LocalRankGridPage({
     <AppPageShell>
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
-          <Grid3x3 className="size-6" />
+          <GridNine className="size-6" />
           Local Rank Grid
         </h1>
         <p className="text-sm text-base-content/60">
@@ -323,9 +344,7 @@ export function LocalRankGridPage({
             }}
           >
             <label className="form-control w-full lg:max-w-xs">
-              <span className="label-text pb-1 text-xs font-medium">
-                Keyword
-              </span>
+              <span className="pb-1 text-xs font-medium">Keyword</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -337,9 +356,7 @@ export function LocalRankGridPage({
               />
             </label>
             <label className="form-control w-full lg:max-w-xs">
-              <span className="label-text pb-1 text-xs font-medium">
-                Location
-              </span>
+              <span className="pb-1 text-xs font-medium">Location</span>
               <Input
                 passwordManagerIgnore
                 type="text"
@@ -351,9 +368,7 @@ export function LocalRankGridPage({
               />
             </label>
             <label className="form-control w-28">
-              <span className="label-text pb-1 text-xs font-medium">
-                Radius
-              </span>
+              <span className="pb-1 text-xs font-medium">Radius</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={radiusInput}
@@ -367,7 +382,7 @@ export function LocalRankGridPage({
               </select>
             </label>
             <label className="form-control w-28">
-              <span className="label-text pb-1 text-xs font-medium">Grid</span>
+              <span className="pb-1 text-xs font-medium">Grid</span>
               <select
                 className="app-select app-select-sm w-full"
                 value={gridInput}
@@ -389,7 +404,7 @@ export function LocalRankGridPage({
               {isLocating ? (
                 <Loader size="sm" />
               ) : (
-                <Search className="size-3.5" />
+                <MagnifyingGlass className="size-3.5" />
               )}
               Scan grid
             </Button>
@@ -457,7 +472,7 @@ export function LocalRankGridPage({
 
         {pendingCenter ? (
           <div className="pointer-events-none absolute left-3 top-3 z-[1000] flex items-center gap-1.5 rounded-full border border-primary/40 bg-base-100/95 px-3 py-1.5 text-xs shadow">
-            <LocateFixed className="size-3.5 text-primary" />
+            <CrosshairSimple className="size-3.5 text-primary" />
             {pendingLabel ??
               `${pendingCenter.lat.toFixed(3)}, ${pendingCenter.lng.toFixed(3)}`}{" "}
             — scan to check here

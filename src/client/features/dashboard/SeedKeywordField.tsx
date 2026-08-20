@@ -1,13 +1,15 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { getSearchPerformanceReport } from "@/serverFunctions/searchPerformance";
 import { getSavedKeywords } from "@/serverFunctions/keywords";
 import { SuggestionChips } from "@/client/features/insights/SuggestionChips";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import {
-  defaultBrandTerms,
   isBrandSeed,
   isBrandedQuery,
 } from "@/client/features/search-performance/brandedSplit";
+import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import { Input } from "@cloudflare/kumo/components/input";
 
 /**
@@ -64,7 +66,17 @@ export function useSeedSuggestions(projectId: string): SeedSuggestion[] {
 
   // Free: shares the dashboard's ["projects"] cache entry.
   const domain = useProjectDomain(projectId);
-  const brandTerms = domain ? defaultBrandTerms(domain) : [];
+  // The curated field unioned with the domain stem, not the stem alone. This
+  // list decides which queries get demoted as branded, and the winner
+  // prefills Overview's "run everything" card -- six metered analyses -- and
+  // the Local Rank Grid's scan keyword. A client trading under a name that is
+  // not their domain had every branded search counted as real demand, so the
+  // suggested seed could be their own brand.
+  const { profile } = useProjectProfile(projectId);
+  const brandTerms = useMemo(
+    () => resolveBrandTerms(profile, domain),
+    [profile, domain],
+  );
 
   // Only the connected variant of the report carries rows.
   const gscReport = gscQuery.data;

@@ -1,4 +1,4 @@
-import { CalendarX } from "lucide-react";
+import { CalendarX } from "@phosphor-icons/react";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { ExpiredDomainsPanel } from "@/client/features/expired-domains/ExpiredDomainsPanel";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";

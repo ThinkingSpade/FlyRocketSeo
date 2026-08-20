@@ -1,4 +1,4 @@
-import { FileText, Printer } from "lucide-react";
+import { FileText, Printer } from "@phosphor-icons/react";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Input } from "@cloudflare/kumo/components/input";
 
@@ -31,9 +31,7 @@ export function ReportToolbar({
       </div>
       <div className="flex flex-wrap items-end gap-2">
         <label className="form-control">
-          <span className="label-text text-xs text-base-content/60">
-            Prepared by
-          </span>
+          <span className="text-xs text-base-content/60">Prepared by</span>
           <Input
             passwordManagerIgnore
             size="sm"
@@ -44,9 +42,7 @@ export function ReportToolbar({
           />
         </label>
         <label className="form-control">
-          <span className="label-text text-xs text-base-content/60">
-            Agency
-          </span>
+          <span className="text-xs text-base-content/60">Agency</span>
           <Input
             passwordManagerIgnore
             size="sm"

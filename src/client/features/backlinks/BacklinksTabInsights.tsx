@@ -1,3 +1,6 @@
+import { useMemo } from "react";
+import { resolveBrandTerms } from "@/client/features/profiles/profileBrandTerms";
+import { useProjectProfile } from "@/client/features/profiles/useProjectProfile";
 import {
   AnchorHealthCard,
   DomainQualityCard,
@@ -27,17 +30,30 @@ import type {
  */
 export function BacklinksTabInsights({
   activeTab,
+  projectId,
   target,
   referringDomains,
   anchors,
   topPages,
 }: {
   activeTab: BacklinksSearchState["tab"];
+  projectId: string;
   target: string;
   referringDomains: BacklinksReferringDomainsData | undefined;
   anchors: BacklinksAnchorsData | undefined;
   topPages: BacklinksTopPagesData | undefined;
 }) {
+  const { profile } = useProjectProfile(projectId);
+  // Anchors that match no brand token fall through to "descriptive", which is
+  // what the "Over-optimized" verdict counts -- so a client whose brand is not
+  // their domain had their own brand anchors read as commercial anchor
+  // stuffing. The curated names are exactly the spellings a domain cannot
+  // tell you.
+  const brandTerms = useMemo(
+    () => resolveBrandTerms(profile, target),
+    [profile, target],
+  );
+
   if (activeTab === "domains") {
     return (
       <InsightGroup rowCount={referringDomains?.rows.length}>
@@ -50,7 +66,11 @@ export function BacklinksTabInsights({
   if (activeTab === "anchors") {
     return (
       <InsightGroup rowCount={anchors?.rows.length}>
-        <AnchorHealthCard anchors={anchors} target={target} />
+        <AnchorHealthCard
+          anchors={anchors}
+          target={target}
+          brandTerms={brandTerms}
+        />
       </InsightGroup>
     );
   }

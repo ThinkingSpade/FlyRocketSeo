@@ -1,3 +1,4 @@
+import { FitMarker } from "@/client/features/profiles/FitMarker";
 import {
   createColumnHelper,
   type ColumnDef,
@@ -5,7 +6,8 @@ import {
   type RowSelectionState,
   type SortingState,
 } from "@tanstack/react-table";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react";
+import { Link } from "@tanstack/react-router";
 import { useMemo } from "react";
 import {
   AppDataTable,
@@ -16,6 +18,7 @@ import {
 import { SortableHeader } from "@/client/components/table/SortableHeader";
 import { DifficultyBadge } from "@/client/features/domain/components/DifficultyBadge";
 import { IntentBadge } from "@/client/features/keywords/components";
+import type { FitResult } from "@/shared/keyword-fit/keywordFit";
 import type { KeywordIntent, SavedKeywordRow } from "@/types/keywords";
 import { TagChip } from "./TagChip";
 import {
@@ -25,12 +28,22 @@ import {
 
 const columnHelper = createColumnHelper<SavedKeywordRow>();
 
+/**
+ * The one visual mark a fit verdict earns, deliberately identical in shape to
+ * Keyword Research's own (`KeywordResearchDesktopTable`): only
+ * `wrong-customer` renders anything, because marking the expected cases would
+ * put an icon on nearly every row. A bare muted glyph rather than a coloured
+ * badge -- this table already carries difficulty, intent and tag colours.
+ */
+
 export function SavedKeywordsTable({
   rows,
   rowSelection,
   sorting,
   isLoading,
   hasActiveFilters,
+  projectId,
+  fit,
   onRowSelectionChange,
   onSortingChange,
 }: {
@@ -39,6 +52,12 @@ export function SavedKeywordsTable({
   sorting: SortingState;
   isLoading: boolean;
   hasActiveFilters: boolean;
+  projectId: string;
+  /** Verdicts for the rows on this page. Empty when the project has no
+   *  usable profile, in which case no row is marked at all. Computed by the
+   *  page rather than here so the marker, the hide-wrong-fit filter and its
+   *  count can never disagree about the same row. */
+  fit: ReadonlyMap<string, FitResult>;
   onRowSelectionChange: OnChangeFn<RowSelectionState>;
   onSortingChange: OnChangeFn<SortingState>;
 }) {
@@ -51,7 +70,10 @@ export function SavedKeywordsTable({
           <SortableHeader column={column} label="Keyword" />
         ),
         cell: ({ getValue }) => (
-          <span className="font-medium">{getValue()}</span>
+          <span className="flex items-center gap-1.5">
+            <span className="font-medium">{getValue()}</span>
+            <FitMarker fit={fit.get(getValue())} />
+          </span>
         ),
       }),
       columnHelper.accessor("searchVolume", {
@@ -115,7 +137,7 @@ export function SavedKeywordsTable({
         ),
       }),
     ],
-    [selectAnchorRef],
+    [fit, selectAnchorRef],
   );
   const table = useAppTable({
     data: rows,
@@ -131,10 +153,14 @@ export function SavedKeywordsTable({
   return (
     <AppDataTable
       table={table}
-      className="table table-sm"
       isLoading={isLoading}
       loading={<SavedKeywordsSkeleton />}
-      empty={<SavedKeywordsEmptyState hasActiveFilters={hasActiveFilters} />}
+      empty={
+        <SavedKeywordsEmptyState
+          hasActiveFilters={hasActiveFilters}
+          projectId={projectId}
+        />
+      }
     />
   );
 }
@@ -187,17 +213,31 @@ function SavedKeywordsSkeleton() {
 
 function SavedKeywordsEmptyState({
   hasActiveFilters,
+  projectId,
 }: {
   hasActiveFilters: boolean;
+  projectId: string;
 }) {
   return (
     <div className="py-12 text-center text-sm text-base-content/55">
-      <Search className="mx-auto mb-2 size-8 opacity-40" />
-      <p>
-        {hasActiveFilters
-          ? "No saved keywords match the current filters."
-          : "No saved keywords yet. Use the Keyword Research page to find and save keywords."}
-      </p>
+      <MagnifyingGlass className="mx-auto mb-2 size-8 opacity-40" />
+      {hasActiveFilters ? (
+        <p>No saved keywords match the current filters.</p>
+      ) : (
+        // This is the tab's entire first-run experience, and it named the
+        // destination without offering a way to get there.
+        <p>
+          No saved keywords yet. Find and save some in{" "}
+          <Link
+            to="/p/$projectId/keywords"
+            params={{ projectId }}
+            className="app-link"
+          >
+            Keyword Research
+          </Link>
+          .
+        </p>
+      )}
     </div>
   );
 }

@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { AlertTriangle, RotateCcw } from "lucide-react";
+import { Warning, ArrowCounterClockwise } from "@phosphor-icons/react";
 import {
   FilterNumberInput,
   FilterRangeGroup,
@@ -166,7 +166,7 @@ export function DomainFilterPanel<TValues extends FilterValues>({
           onClick={resetFilters}
           disabled={activeFilterCount === 0 && !meta.isDirty}
         >
-          <RotateCcw className="size-3" />
+          <ArrowCounterClockwise className="size-3" />
           Clear all
         </Button>
       </div>
@@ -206,7 +206,7 @@ export function DomainFilterPanel<TValues extends FilterValues>({
 
       {meta.overLimit ? (
         <Banner variant="alert" className="py-2 text-xs">
-          <AlertTriangle className="size-4 shrink-0" />
+          <Warning className="size-4 shrink-0" />
           <span>
             Too many filter conditions ({meta.conditionCount} of{" "}
             {MAX_DATAFORSEO_FILTER_CONDITIONS} max). Remove some terms or ranges

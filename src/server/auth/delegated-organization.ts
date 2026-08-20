@@ -1,9 +1,6 @@
 import { AuthRepository } from "@/server/auth/repositories/AuthRepository";
+import { delegatedOrganizationId } from "@/server/auth/delegated-organization-id";
 import { slugify, toHex } from "./org-slug";
-
-function getDelegatedOrganizationId(userId: string) {
-  return `delegated-${userId}`;
-}
 
 function getDelegatedOrganizationName(email: string, userId: string) {
   return `${email.split("@")[0] || userId} workspace`;
@@ -18,7 +15,7 @@ export async function ensureDelegatedOrganizationForUser(
   userId: string,
   email: string,
 ) {
-  const organizationId = getDelegatedOrganizationId(userId);
+  const organizationId = delegatedOrganizationId(userId);
   const name = getDelegatedOrganizationName(email, userId);
   const slug = getDelegatedOrganizationSlug(email, userId);
 

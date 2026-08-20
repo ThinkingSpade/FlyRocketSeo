@@ -1,4 +1,4 @@
-import { Sparkles } from "lucide-react";
+import { Sparkle } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { buildCsv, downloadCsv } from "@/client/lib/csv";
 import { exportTableToSheets } from "@/client/lib/exportToSheets";
@@ -44,7 +44,7 @@ export function SerpFeatureTags({ features }: { features: string[] }) {
         // and these SERP-feature chips are cursor-help by design.
         <span key={f} className="cursor-help" title={FEATURE_TOOLTIPS[f] ?? f}>
           <Badge variant="neutral">
-            {f === "ai_overview" && <Sparkles className="size-2.5" />}
+            {f === "ai_overview" && <Sparkle className="size-2.5" />}
             {FEATURE_SHORT_LABELS[f]}
           </Badge>
         </span>
@@ -121,7 +121,7 @@ export function DeviceUrlCell({
       href={toFullUrl(result.rankingUrl, domain)}
       target="_blank"
       rel="noopener noreferrer"
-      className="link link-hover block truncate text-xs"
+      className="app-link-subtle block truncate text-xs"
       title={result.rankingUrl}
     >
       {toPath(result.rankingUrl)}
