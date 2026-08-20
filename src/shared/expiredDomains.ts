@@ -20,14 +20,6 @@ import type {
  * by construction, and it is what gets scored.
  */
 
-/*
- * FinderRow, FinderSummary and SURFACED_STATUSES are intentionally NOT
- * exported yet: nothing imports them, and knip is right that an exported name
- * with no consumer is just a wider API surface. Consumers still get the row and
- * summary shapes structurally from `buildFinderRows`' return type. Export them
- * by name when the finder service and panel actually need them.
- */
-
 export type CandidateEvidence = {
   /** Competitor domains this candidate links to. The strongest niche signal. */
   linksToCompetitors: string[];
@@ -44,7 +36,7 @@ export type Candidate = {
   evidence: CandidateEvidence;
 };
 
-type FinderRow = Candidate & {
+export type FinderRow = Candidate & {
   score: number;
   /** Non-null BY CONSTRUCTION: buildFinderRows counts a null status as failed
    *  and never emits a row for it, so consumers (and the sort) never have to
@@ -55,7 +47,7 @@ type FinderRow = Candidate & {
   available: boolean | null;
 };
 
-type FinderSummary = {
+export type FinderSummary = {
   /** Candidates actually submitted for checking. */
   checked: number;
   /** Rows that reached the table. */

@@ -2,6 +2,7 @@ import {
   Activity,
   Bookmark,
   Bot,
+  CalendarX,
   ClipboardCheck,
   FileSearch,
   FileText,
@@ -108,6 +109,11 @@ const projectNavItems = [
     icon: Link2,
   },
   {
+    to: "/p/$projectId/expired-domains" as const,
+    label: "Expired Domains",
+    icon: CalendarX,
+  },
+  {
     to: "/p/$projectId/competitors" as const,
     label: "Competitors",
     icon: Users,
@@ -187,6 +193,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/domain"),
         byPath("/p/$projectId/competitors"),
         byPath("/p/$projectId/backlinks"),
+        byPath("/p/$projectId/expired-domains"),
         byPath("/p/$projectId/brand-lookup"),
         byPath("/p/$projectId/prompt-explorer"),
         byPath("/p/$projectId/local"),

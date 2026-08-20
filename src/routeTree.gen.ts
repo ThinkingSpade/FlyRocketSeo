@@ -54,6 +54,7 @@ import { Route as ProjectPProjectIdLocalGridRouteImport } from './routes/_projec
 import { Route as ProjectPProjectIdLocalRouteImport } from './routes/_project/p/$projectId/local'
 import { Route as ProjectPProjectIdLinksRouteImport } from './routes/_project/p/$projectId/links'
 import { Route as ProjectPProjectIdKeywordsRouteImport } from './routes/_project/p/$projectId/keywords'
+import { Route as ProjectPProjectIdExpiredDomainsRouteImport } from './routes/_project/p/$projectId/expired-domains'
 import { Route as ProjectPProjectIdDomainRouteImport } from './routes/_project/p/$projectId/domain'
 import { Route as ProjectPProjectIdContentRouteImport } from './routes/_project/p/$projectId/content'
 import { Route as ProjectPProjectIdCompetitorsRouteImport } from './routes/_project/p/$projectId/competitors'
@@ -299,6 +300,12 @@ const ProjectPProjectIdKeywordsRoute =
     path: '/keywords',
     getParentRoute: () => ProjectPProjectIdRouteRoute,
   } as any)
+const ProjectPProjectIdExpiredDomainsRoute =
+  ProjectPProjectIdExpiredDomainsRouteImport.update({
+    id: '/expired-domains',
+    path: '/expired-domains',
+    getParentRoute: () => ProjectPProjectIdRouteRoute,
+  } as any)
 const ProjectPProjectIdDomainRoute = ProjectPProjectIdDomainRouteImport.update({
   id: '/domain',
   path: '/domain',
@@ -401,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
+  '/p/$projectId/expired-domains': typeof ProjectPProjectIdExpiredDomainsRoute
   '/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
@@ -454,6 +462,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
+  '/p/$projectId/expired-domains': typeof ProjectPProjectIdExpiredDomainsRoute
   '/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
@@ -513,6 +522,7 @@ export interface FileRoutesById {
   '/_project/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/_project/p/$projectId/content': typeof ProjectPProjectIdContentRoute
   '/_project/p/$projectId/domain': typeof ProjectPProjectIdDomainRoute
+  '/_project/p/$projectId/expired-domains': typeof ProjectPProjectIdExpiredDomainsRoute
   '/_project/p/$projectId/keywords': typeof ProjectPProjectIdKeywordsRoute
   '/_project/p/$projectId/links': typeof ProjectPProjectIdLinksRoute
   '/_project/p/$projectId/local': typeof ProjectPProjectIdLocalRoute
@@ -570,6 +580,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/competitors'
     | '/p/$projectId/content'
     | '/p/$projectId/domain'
+    | '/p/$projectId/expired-domains'
     | '/p/$projectId/keywords'
     | '/p/$projectId/links'
     | '/p/$projectId/local'
@@ -623,6 +634,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/competitors'
     | '/p/$projectId/content'
     | '/p/$projectId/domain'
+    | '/p/$projectId/expired-domains'
     | '/p/$projectId/keywords'
     | '/p/$projectId/links'
     | '/p/$projectId/local'
@@ -681,6 +693,7 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/competitors'
     | '/_project/p/$projectId/content'
     | '/_project/p/$projectId/domain'
+    | '/_project/p/$projectId/expired-domains'
     | '/_project/p/$projectId/keywords'
     | '/_project/p/$projectId/links'
     | '/_project/p/$projectId/local'
@@ -1038,6 +1051,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPProjectIdKeywordsRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
+    '/_project/p/$projectId/expired-domains': {
+      id: '/_project/p/$projectId/expired-domains'
+      path: '/expired-domains'
+      fullPath: '/p/$projectId/expired-domains'
+      preLoaderRoute: typeof ProjectPProjectIdExpiredDomainsRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
     '/_project/p/$projectId/domain': {
       id: '/_project/p/$projectId/domain'
       path: '/domain'
@@ -1197,6 +1217,7 @@ interface ProjectPProjectIdRouteRouteChildren {
   ProjectPProjectIdCompetitorsRoute: typeof ProjectPProjectIdCompetitorsRoute
   ProjectPProjectIdContentRoute: typeof ProjectPProjectIdContentRoute
   ProjectPProjectIdDomainRoute: typeof ProjectPProjectIdDomainRoute
+  ProjectPProjectIdExpiredDomainsRoute: typeof ProjectPProjectIdExpiredDomainsRoute
   ProjectPProjectIdKeywordsRoute: typeof ProjectPProjectIdKeywordsRoute
   ProjectPProjectIdLinksRoute: typeof ProjectPProjectIdLinksRoute
   ProjectPProjectIdLocalRoute: typeof ProjectPProjectIdLocalRoute
@@ -1227,6 +1248,7 @@ const ProjectPProjectIdRouteRouteChildren: ProjectPProjectIdRouteRouteChildren =
     ProjectPProjectIdCompetitorsRoute: ProjectPProjectIdCompetitorsRoute,
     ProjectPProjectIdContentRoute: ProjectPProjectIdContentRoute,
     ProjectPProjectIdDomainRoute: ProjectPProjectIdDomainRoute,
+    ProjectPProjectIdExpiredDomainsRoute: ProjectPProjectIdExpiredDomainsRoute,
     ProjectPProjectIdKeywordsRoute: ProjectPProjectIdKeywordsRoute,
     ProjectPProjectIdLinksRoute: ProjectPProjectIdLinksRoute,
     ProjectPProjectIdLocalRoute: ProjectPProjectIdLocalRoute,
