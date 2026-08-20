@@ -13,6 +13,8 @@ import {
   formatNumber,
 } from "./backlinksPageUtils";
 import type { DomainRatings } from "./useAhrefsDomainRatings";
+import type { DomainExpirations } from "@/client/features/backlinks/domainExpiryEnrichment";
+import { getDomain } from "tldts";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
@@ -306,6 +308,46 @@ function buildBaseColumns(
 }
 
 /**
+ * Expiry for the linking domain, shown only after the user explicitly asks for
+ * this page (see BacklinksActionsMenu -- it bills 5 APIVerve credits a domain).
+ *
+ * Keyed on the REGISTRABLE domain via `getDomain`, matching what the server
+ * caches under. The Ahrefs DR cell next door strips only a leading `www.`,
+ * which is fine for a free endpoint that gets asked again on the next page,
+ * but here a key mismatch would show an em dash for a domain we already paid
+ * to look up.
+ */
+function buildExpiryColumn(
+  expirations: DomainExpirations,
+): ColumnDef<BacklinksDisplayRow> {
+  return {
+    id: "domainExpiry",
+    enableSorting: false,
+    header: () => (
+      <span className="flex w-full justify-end">
+        <HeaderHelpLabel
+          label="Expires"
+          helpText="Days until the linking domain's registration lapses. Blank until you request it for this page."
+        />
+      </span>
+    ),
+    size: 90,
+    minSize: 70,
+    cell: linkCell((row) => {
+      const raw = row.domainFrom?.trim().toLowerCase() ?? "";
+      const domain = raw ? (getDomain(raw) ?? raw) : "";
+      const expiry = domain ? (expirations[domain] ?? null) : null;
+      const days = expiry?.daysToExpiration ?? null;
+      return (
+        <div className="text-right tabular-nums text-sm">
+          {days == null ? "—" : days.toLocaleString()}
+        </div>
+      );
+    }),
+  };
+}
+
+/**
  * Columns for the backlinks table. When `domainRatings` is provided (the user
  * clicked "Ahrefs DR"), an Ahrefs DR column is inserted after DA; otherwise it
  * stays hidden. DR is loaded client-side from Ahrefs, so it can't participate
@@ -314,9 +356,13 @@ function buildBaseColumns(
 export function buildBacklinksColumns(
   domainRatings: DomainRatings | null,
   onToggleDomain?: (domain: string) => void,
+  domainExpirations?: DomainExpirations | null,
 ): ColumnDef<BacklinksDisplayRow>[] {
   const baseColumns = buildBaseColumns(onToggleDomain);
-  if (!domainRatings) return baseColumns;
+  const withExpiry = domainExpirations
+    ? [...baseColumns, buildExpiryColumn(domainExpirations)]
+    : baseColumns;
+  if (!domainRatings) return withExpiry;
 
   const ratings = domainRatings;
   const drColumn: ColumnDef<BacklinksDisplayRow> = {
@@ -343,11 +389,14 @@ export function buildBacklinksColumns(
     }),
   };
 
+  // Slice `withExpiry`, not `baseColumns`: slicing the base would drop the
+  // expiry column whenever DR is also enabled, so a user who turned both on
+  // would watch expiry vanish -- and would very likely pay to fetch it again.
   const insertAt =
-    baseColumns.findIndex((column) => column.id === "domainRank") + 1;
+    withExpiry.findIndex((column) => column.id === "domainRank") + 1;
   return [
-    ...baseColumns.slice(0, insertAt),
+    ...withExpiry.slice(0, insertAt),
     drColumn,
-    ...baseColumns.slice(insertAt),
+    ...withExpiry.slice(insertAt),
   ];
 }

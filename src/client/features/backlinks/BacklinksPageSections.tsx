@@ -29,6 +29,8 @@ import type { BacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import type { BreakdownOrigin } from "./useBacklinksRowsTransaction";
 import { useAhrefsDomainRatings } from "./useAhrefsDomainRatings";
+import { useDomainExpirations } from "./useDomainExpirations";
+import { countBillableDomains } from "./domainExpiryEnrichment";
 import { TablePagination } from "@/client/components/table/TablePagination";
 import {
   BACKLINKS_PAGE_SIZES,
@@ -104,6 +106,12 @@ export function BacklinksResultsCard({
     isLoading: isLoadingRatings,
     loadRatings,
   } = useAhrefsDomainRatings(projectId);
+  const {
+    expirations: domainExpirations,
+    isLoading: isLoadingExpiry,
+    pending: pendingExpiryDomains,
+    loadExpirations,
+  } = useDomainExpirations(projectId);
   const activeFilterCount = filters[activeTab].activeFilterCount;
   const categoryFiltersActive = hasActiveCategoryFilter(
     filters.backlinks.values,
@@ -148,6 +156,19 @@ export function BacklinksResultsCard({
   const ratableDomains = useMemo(
     () => collectRatableDomains(tabRows),
     [tabRows],
+  );
+  // What the NEXT expiry click would cost on this page. Recomputed from the
+  // current rows, so paging to fresh domains re-enables the action and paging
+  // back to covered ones disables it -- deliberately NOT an effect, which is
+  // what makes the DR column's follow-along behaviour safe there and unsafe here.
+  const billableExpiryDomains = useMemo(
+    () =>
+      countBillableDomains(
+        ratableDomains,
+        domainExpirations,
+        pendingExpiryDomains,
+      ),
+    [ratableDomains, domainExpirations, pendingExpiryDomains],
   );
   // Once the user has opted in, keep newly loaded domains enriched without a
   // re-click (e.g. after paging or switching to the Referring Domains tab).
@@ -207,6 +228,9 @@ export function BacklinksResultsCard({
               isLoadingRatings={isLoadingRatings}
               loadRatings={loadRatings}
               ratableDomains={ratableDomains}
+              isLoadingExpiry={isLoadingExpiry}
+              loadExpirations={loadExpirations}
+              billableExpiryDomains={billableExpiryDomains}
             />
           ) : null}
         </div>
@@ -294,6 +318,7 @@ export function BacklinksResultsCard({
               <BacklinksTable
                 rows={tabRows.backlinks}
                 domainRatings={domainRatings}
+                domainExpirations={domainExpirations}
                 sorting={sorting}
                 onSortingChange={onSortingChange}
                 expansion={view === "all" ? null : domainExpansion}
