@@ -16,6 +16,10 @@ import {
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { resolveDomainAvailability } from "@/server/lib/apiverve/domainAvailability";
+import { findAcquirableDomains } from "@/server/features/expired-domains/acquirableDomains";
+import { deriveAdjacentTerms } from "@/server/features/expired-domains/adjacentTerms";
+import { deriveSeedTerms } from "@/shared/domainNameCandidates";
+import { hadArchivedSite } from "@/server/lib/wayback";
 import {
   resolveDomainExpirations,
   type ExpirationCache,
@@ -47,6 +51,13 @@ const inputSchema = z.object({
   projectId: z.string().min(1),
   /** Bounded so a client cannot ask for an unbounded, unbounded-cost sweep. */
   cap: z.number().int().min(1).max(100).default(DEFAULT_CANDIDATE_CAP),
+  /**
+   * Also search for lapsed, registerable domains in adjacent industries.
+   * Generation and the archive filter are free; only names that once hosted a
+   * site reach the billed availability check, capped below.
+   */
+  includeAcquirable: z.boolean().default(true),
+  acquirableLimit: z.number().int().min(0).max(120).default(60),
   /**
    * Optional keyword override for the SERP-rivals source. Left empty, the
    * project's RANK-TRACKED keywords are used -- those are the queries the user
@@ -136,7 +147,7 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
       createSerpRivalsSource(fetchSerpCompetitors),
     ];
 
-    const result = await runExpiredDomainFinder({
+    const finderResult = await runExpiredDomainFinder({
       context: {
         projectDomain,
         competitorDomains,
@@ -153,6 +164,28 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
       resolveExpirations: resolveDomainExpirations,
       resolveAvailability: resolveDomainAvailability,
     });
+
+    // The graph sources can only surface domains already connected to this
+    // project, which is why a run on a vending operator returns vending. This
+    // second pass generates names from the industry's own vocabulary plus
+    // ADJACENT industries, and keeps the ones that had a site and are free to
+    // register today -- an expired domain actually available to buy.
+    let acquirable = null;
+    if (data.includeAcquirable && data.acquirableLimit > 0) {
+      const industryTerms = deriveSeedTerms(keywords, profile?.offer ?? "");
+      acquirable = await findAcquirableDomains({
+        keywords,
+        profileText: profile?.offer ?? "",
+        adjacentTerms: await deriveAdjacentTerms(industryTerms),
+        exclude: [projectDomain, ...competitorDomains],
+        cache,
+        limit: data.acquirableLimit,
+        hadArchivedSite,
+        resolveAvailability: resolveDomainAvailability,
+      });
+    }
+
+    const result = { ...finderResult, acquirable };
 
     // Record the run so revisiting the tab is FREE. Without this, re-opening
     // it costs another `cap * 5` credits to see the same answer.

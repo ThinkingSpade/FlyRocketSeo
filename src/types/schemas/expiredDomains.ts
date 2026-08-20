@@ -55,4 +55,24 @@ export const expiredDomainsResultSchema = z.object({
   sourcesSkipped: z
     .array(z.object({ source: z.string(), reason: z.string() }))
     .default([]),
+  // Lapsed domains that are registerable today, found by generating names in
+  // the client's industry and adjacent ones. Nullable: older runs predate it,
+  // and a run can be asked to skip the pass entirely.
+  acquirable: z
+    .object({
+      rows: z.array(
+        z.object({
+          domain: z.string(),
+          hadHistory: z.boolean().nullable(),
+        }),
+      ),
+      summary: z.object({
+        generated: z.number(),
+        hadHistory: z.number(),
+        availabilityChecked: z.number(),
+        archiveUnavailable: z.boolean().default(false),
+      }),
+    })
+    .nullable()
+    .default(null),
 });
