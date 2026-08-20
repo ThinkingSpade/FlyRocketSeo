@@ -9,6 +9,9 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { DomainExpirationStatus } from "@/shared/domainExpiration";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
+import { expiredDomainsResultSchema } from "@/types/schemas/expiredDomains";
 
 const DEFAULT_CAP = 50;
 const CREDITS_PER_LOOKUP = 5;
@@ -87,7 +90,19 @@ export function ExpiredDomainsPanel({
       runExpiredDomainSearch({ data: { projectId, cap: DEFAULT_CAP } }),
   });
 
-  const result = searchQuery.data ?? null;
+  // Restoring reads a stored row plus the R2 object that run already paid for,
+  // so it can never bill. It is enabled only while this tab has no live result
+  // of its own, and the live query stays disabled until an explicit click --
+  // which is what keeps a restored table from re-triggering a paid search.
+  const { restored } = useAutoRestoredRun({
+    projectId,
+    feature: RUN_FEATURES.expiredDomains,
+    schema: expiredDomainsResultSchema,
+    enabled: !run.authorized && !searchQuery.data,
+  });
+
+  const result = searchQuery.data ?? restored?.result ?? null;
+  const isRestored = !searchQuery.data && restored != null;
 
   return (
     <div
@@ -101,7 +116,15 @@ export function ExpiredDomainsPanel({
           </p>
         </div>
 
-        {!run.authorized ? (
+        {isRestored && result ? (
+          <p className="text-xs text-base-content/60">
+            Showing your last search from{" "}
+            {new Date(restored.lastRanAt).toLocaleDateString()}. Re-running
+            costs credits again.
+          </p>
+        ) : null}
+
+        {!run.authorized && !isRestored ? (
           <div className="flex flex-col gap-2">
             <p className="text-base-content/70">
               Checks the domains that link to your competitors and rank for your
@@ -126,11 +149,11 @@ export function ExpiredDomainsPanel({
               Find expired domains
             </Button>
           </div>
-        ) : searchQuery.isLoading ? (
+        ) : run.authorized && searchQuery.isLoading ? (
           <div className="flex justify-center py-6">
             <Loader size="sm" />
           </div>
-        ) : searchQuery.isError ? (
+        ) : run.authorized && searchQuery.isError ? (
           <InlineQueryError
             message={getStandardErrorMessage(
               searchQuery.error,
@@ -190,6 +213,18 @@ export function ExpiredDomainsPanel({
                 ? ` · ${result.summary.failed} did not answer`
                 : ""}
             </p>
+
+            {isRestored ? (
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                className="self-start"
+                onClick={() => run.authorize()}
+              >
+                Search again ({DEFAULT_CAP * CREDITS_PER_LOOKUP} credits)
+              </Button>
+            ) : null}
 
             {result.sourceErrors.length > 0 ? (
               // A source that failed is named rather than silently reducing

@@ -18,4 +18,5 @@ export const RUN_FEATURES = {
   contentBrief: "content_brief",
   topicClusters: "topic_clusters",
   citationTracker: "citation_tracker",
+  expiredDomains: "expired_domains",
 } as const;
