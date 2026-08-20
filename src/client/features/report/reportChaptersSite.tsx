@@ -1,4 +1,5 @@
 import { buildBacklinkNarrative } from "@/client/features/report/reportNarrative";
+import { buildDomainRegistrationLine } from "@/client/features/report/domainRegistrationLine";
 import {
   ReportBreakdownCard,
   ReportCallout,
@@ -74,8 +75,20 @@ function buildImprovementChapters(
   { data, sections, technicalIssues }: ChapterInput,
   out: ChapterCollector,
 ): void {
-  const { latestAudit, auditPages, approvedFixes, readFailures } = data;
+  const {
+    latestAudit,
+    auditPages,
+    approvedFixes,
+    readFailures,
+    auditDomainExpirationJson,
+  } = data;
   const pagesCrawled = latestAudit?.pagesCrawled ?? null;
+  // Null unless someone explicitly ran the lookup on the audit -- the report
+  // never spends anything itself, so it simply omits the sentence.
+  const domainRegistrationLine = buildDomainRegistrationLine(
+    auditDomainExpirationJson,
+    Date.now(),
+  );
   // `latestAudit` is a `.find()` over `auditsQuery.data ?? []`, so a history
   // read that threw is byte-for-byte "no audit has ever completed". This is
   // the only place that difference still exists, and both chapters below
@@ -98,6 +111,9 @@ function buildImprovementChapters(
           : "On-page optimizations",
       body: (
         <>
+          {domainRegistrationLine ? (
+            <ReportCallout>{domainRegistrationLine}</ReportCallout>
+          ) : null}
           {approvedFixes.length > 0 ? (
             <>
               <ApprovedFixesSection fixes={approvedFixes} />

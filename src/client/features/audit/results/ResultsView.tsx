@@ -4,6 +4,7 @@ import { Link } from "@tanstack/react-router";
 import { Warning } from "@phosphor-icons/react";
 import { InsightIcon } from "@/client/components/InsightTile";
 import { extractPathname, StatCard } from "@/client/features/audit/shared";
+import { AuditDomainExpiryCard } from "@/client/features/audit/results/AuditDomainExpiryCard";
 import {
   exportPages,
   exportPerformance,
@@ -146,6 +147,12 @@ export function ResultsView({
               }
               exportPages(pages, format);
             }}
+          />
+
+          <AuditDomainExpiryCard
+            projectId={projectId}
+            auditId={audit.id}
+            storedFactsJson={audit.domainExpirationJson ?? null}
           />
 
           {activeTab === "pages" && <PagesTable pages={pages} />}

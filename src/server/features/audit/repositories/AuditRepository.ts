@@ -279,6 +279,23 @@ async function deleteAuditForProject(auditId: string, projectId: string) {
     .where(and(eq(audits.id, auditId), eq(audits.projectId, projectId)));
 }
 
+/**
+ * Store the audited domain's registration facts on the audit row.
+ *
+ * Scoped by projectId as well as auditId so one project can never write onto
+ * another's audit, matching every other accessor in this repository.
+ */
+async function setAuditDomainExpiration(
+  auditId: string,
+  projectId: string,
+  factsJson: string,
+): Promise<void> {
+  await db
+    .update(audits)
+    .set({ domainExpirationJson: factsJson })
+    .where(and(eq(audits.id, auditId), eq(audits.projectId, projectId)));
+}
+
 export const AuditRepository = {
   createAudit,
   updateAuditProgress,
@@ -287,6 +304,7 @@ export const AuditRepository = {
   getAuditForWorkflow,
   batchWriteResults,
   getAuditForProject,
+  setAuditDomainExpiration,
   getAuditsByProject,
   getAuditUsageForUser,
   getAuditResultsForProject,
