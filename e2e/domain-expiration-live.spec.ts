@@ -74,10 +74,10 @@ test.describe("Domain Overview expiry card", () => {
     );
     await page.getByRole("button", { name: "Search", exact: true }).click();
 
-    const card = page
-      .locator("div")
-      .filter({ hasText: /^Domain registration/ })
-      .first();
+    // Anchored on a testid rather than matching a bare `div` by its text: the
+    // text filter could drift onto an ancestor, and an assertion like
+    // `not.toContainText("—")` would then be reading the whole page.
+    const card = page.getByTestId("domain-expiration-card");
     const runButton = page.getByRole("button", { name: "Check domain health" });
 
     // The whole point of the card: it mounts idle. If this button is absent,

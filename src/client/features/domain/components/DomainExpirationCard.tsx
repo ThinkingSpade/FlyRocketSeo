@@ -66,7 +66,10 @@ export function DomainExpirationCard({
   const status = data?.status ?? null;
 
   return (
-    <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
+    <div
+      data-testid="domain-expiration-card"
+      className="relative flex flex-col rounded-xl border border-base-300 bg-base-100"
+    >
       <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
         <div className="flex items-baseline justify-between gap-2">
           <p className="text-xs uppercase tracking-wide text-base-content/60">

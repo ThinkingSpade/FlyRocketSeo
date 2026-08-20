@@ -38,7 +38,7 @@ export const getDomainExpirationTool = {
   config: {
     title: "Get domain expiration",
     description:
-      "Returns a domain's registration expiry date, days remaining, health status and age. Does NOT charge DataForSEO credits — prefer this over get_domain_whois when only expiry or age is needed.",
+      "Returns a domain's registration expiry date, days remaining, health status and age. Costs 5 APIVerve credits on a cache miss, then free for 7 days. It does not touch DataForSEO, so prefer it over get_domain_whois when only expiry or age is needed. Subdomains resolve to their registrable domain.",
     inputSchema: getDomainExpirationInputSchema,
     outputSchema: {
       expiration: expirationOutputSchema.nullable(),

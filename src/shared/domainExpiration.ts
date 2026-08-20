@@ -53,12 +53,21 @@ const DAYS_PER_YEAR = 365.25;
 const CRITICAL_MAX_DAYS = 30;
 const WARNING_MAX_DAYS = 90;
 
-/** `null` in means `null` out: an unknown day count must never read as healthy. */
+/**
+ * `null` in means `null` out: an unknown day count must never read as healthy.
+ *
+ * The boundary is `< 0`, not `<= 0`, and that is load-bearing. `wholeDaysBetween`
+ * floors, so ANY timestamp already in the past lands on -1 or lower (an hour ago
+ * is `floor(-0.04)` = -1), while everything still in the future floors to 0 or
+ * above. `0` therefore means "expires at some point later today" -- still live,
+ * still renewable. Treating that as expired branded a domain with 20 hours left
+ * as already gone.
+ */
 export function statusFromDaysToExpiration(
   days: number | null,
 ): DomainExpirationStatus | null {
   if (days == null) return null;
-  if (days <= 0) return "expired";
+  if (days < 0) return "expired";
   if (days <= CRITICAL_MAX_DAYS) return "critical";
   if (days <= WARNING_MAX_DAYS) return "warning";
   return "healthy";
