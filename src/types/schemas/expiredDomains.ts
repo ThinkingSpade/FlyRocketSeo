@@ -51,4 +51,8 @@ export const expiredDomainsResultSchema = z.object({
   }),
   sourcesUsed: z.array(z.string()),
   sourceErrors: z.array(z.object({ source: z.string(), code: z.string() })),
+  // Older runs predate this field; default keeps them restorable.
+  sourcesSkipped: z
+    .array(z.object({ source: z.string(), reason: z.string() }))
+    .default([]),
 });

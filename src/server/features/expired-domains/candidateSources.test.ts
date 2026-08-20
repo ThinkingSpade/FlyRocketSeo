@@ -102,15 +102,20 @@ describe("createLinkGapSource", () => {
     });
   });
 
-  it("returns nothing rather than calling out when there are no competitors", async () => {
-    const fetchIntersection = vi.fn();
-    const candidates = await createLinkGapSource(fetchIntersection).collect({
+  // The guard lives in `unavailableReason`, not in `collect`, so the run can
+  // TELL the user link gap did not search rather than silently counting it.
+  it("declares itself unavailable when there are no competitors", () => {
+    const source = createLinkGapSource(vi.fn());
+    const reason = source.unavailableReason({
       ...CONTEXT,
       competitorDomains: [],
     });
 
-    expect(candidates).toEqual([]);
-    expect(fetchIntersection).not.toHaveBeenCalled();
+    expect(reason).toMatch(/no competitors/i);
+    // The message has to point at the fix, since this is the source that finds
+    // adjacent sites and its absence is why a run looks thin.
+    expect(reason).toMatch(/Competitors tab/i);
+    expect(source.unavailableReason(CONTEXT)).toBeNull();
   });
 });
 
@@ -148,15 +153,13 @@ describe("createSerpRivalsSource", () => {
     ]);
   });
 
-  it("returns nothing rather than calling out when there are no keywords", async () => {
-    const fetchSerp = vi.fn();
-    const candidates = await createSerpRivalsSource(fetchSerp).collect({
-      ...CONTEXT,
-      keywords: [],
-    });
+  it("declares itself unavailable when there are no keywords", () => {
+    const source = createSerpRivalsSource(vi.fn());
 
-    expect(candidates).toEqual([]);
-    expect(fetchSerp).not.toHaveBeenCalled();
+    expect(source.unavailableReason({ ...CONTEXT, keywords: [] })).toMatch(
+      /rank-tracked keywords/i,
+    );
+    expect(source.unavailableReason(CONTEXT)).toBeNull();
   });
 });
 
@@ -165,6 +168,7 @@ describe("collectCandidates", () => {
     const good = {
       name: "competitors",
       metered: false,
+      unavailableReason: () => null,
       collect: vi.fn().mockResolvedValue([
         {
           domain: "rivala.com",
@@ -180,6 +184,7 @@ describe("collectCandidates", () => {
     const bad = {
       name: "link-gap",
       metered: true,
+      unavailableReason: () => null,
       collect: vi.fn().mockRejectedValue(new Error("BACKLINKS_BILLING_ISSUE")),
     };
 
@@ -196,6 +201,7 @@ describe("collectCandidates", () => {
     const source = (name: string) => ({
       name,
       metered: false,
+      unavailableReason: () => null,
       collect: vi.fn().mockResolvedValue([]),
     });
 
@@ -206,5 +212,26 @@ describe("collectCandidates", () => {
 
     expect(result.sourcesUsed).toEqual(["competitors", "link-gap"]);
     expect(result.sourceErrors).toEqual([]);
+  });
+
+  // The bug this pins: link gap returned [] on a project with no competitors,
+  // was counted as "used", and the run reported coverage it never had.
+  it("records an unavailable source as skipped, never as used", async () => {
+    const skipped = {
+      name: "link-gap",
+      metered: true,
+      unavailableReason: () => "no competitors saved",
+      collect: vi.fn().mockResolvedValue([]),
+    };
+
+    const result = await collectCandidates([skipped], CONTEXT);
+
+    expect(result.sourcesUsed).toEqual([]);
+    expect(result.sourcesSkipped).toEqual([
+      { source: "link-gap", reason: "no competitors saved" },
+    ]);
+    // And it must not have been called at all -- a skipped metered source that
+    // still fires would be a billed no-op.
+    expect(skipped.collect).not.toHaveBeenCalled();
   });
 });

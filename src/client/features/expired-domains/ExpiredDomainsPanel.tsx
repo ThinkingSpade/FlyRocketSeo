@@ -7,8 +7,13 @@ import {
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import type { DomainExpirationStatus } from "@/shared/domainExpiration";
+import {
+  filterFinderRows,
+  type FinderStatusFilter,
+} from "@/shared/expiredDomains";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { useMemo, useState } from "react";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { expiredDomainsResultSchema } from "@/types/schemas/expiredDomains";
@@ -104,6 +109,18 @@ export function ExpiredDomainsPanel({
   const result = searchQuery.data ?? restored?.result ?? null;
   const isRestored = !searchQuery.data && restored != null;
 
+  const [statusFilter, setStatusFilter] = useState<FinderStatusFilter>("all");
+  const [query, setQuery] = useState("");
+  // Filtering is client-side over rows already paid for -- changing a filter
+  // must never re-request anything.
+  const visibleRows = useMemo(
+    () =>
+      result
+        ? filterFinderRows(result.rows, { status: statusFilter, query })
+        : [],
+    [result, statusFilter, query],
+  );
+
   return (
     <div
       data-testid="expired-domains-panel"
@@ -166,6 +183,38 @@ export function ExpiredDomainsPanel({
         ) : result ? (
           <>
             {result.rows.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                {(
+                  [
+                    ["all", "All"],
+                    ["expired", "Expired only"],
+                    ["critical", "Expires soon"],
+                    ["warning", "This quarter"],
+                  ] as const
+                ).map(([value, label]) => (
+                  <Button
+                    key={value}
+                    type="button"
+                    size="sm"
+                    variant={statusFilter === value ? "primary" : "ghost"}
+                    aria-pressed={statusFilter === value}
+                    onClick={() => setStatusFilter(value)}
+                  >
+                    {label}
+                  </Button>
+                ))}
+                <input
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Filter by domain"
+                  aria-label="Filter by domain"
+                  className="input input-sm input-bordered ml-auto w-48"
+                />
+              </div>
+            ) : null}
+
+            {visibleRows.length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="table table-sm">
                   <thead>
@@ -178,7 +227,7 @@ export function ExpiredDomainsPanel({
                     </tr>
                   </thead>
                   <tbody>
-                    {result.rows.map((row) => (
+                    {visibleRows.map((row) => (
                       <tr key={row.domain}>
                         <td className="font-medium">{row.domain}</td>
                         <td className={STATUS_CLASSES[row.status]}>
@@ -194,6 +243,11 @@ export function ExpiredDomainsPanel({
                   </tbody>
                 </table>
               </div>
+            ) : result.rows.length > 0 ? (
+              // Filtered to nothing is a different message from found nothing.
+              <p className="py-4 text-base-content/70">
+                None of the {result.rows.length} results match this filter.
+              </p>
             ) : (
               // Shows its work. "Nothing found" over 50 checked domains is a
               // real, informative answer; a blank card is not.
@@ -225,6 +279,19 @@ export function ExpiredDomainsPanel({
               >
                 Search again ({DEFAULT_CAP * CREDITS_PER_LOOKUP} credits)
               </Button>
+            ) : null}
+
+            {result.sourcesSkipped.length > 0 ? (
+              // The bug this fixes: a source that returned nothing was counted
+              // as searched, so a run on a project with no competitors reported
+              // full coverage and simply looked weak.
+              <p className="text-xs text-warning">
+                Not searched:{" "}
+                {result.sourcesSkipped
+                  .map((skip) => `${skip.source} (${skip.reason})`)
+                  .join("; ")}
+                .
+              </p>
             ) : null}
 
             {result.sourceErrors.length > 0 ? (

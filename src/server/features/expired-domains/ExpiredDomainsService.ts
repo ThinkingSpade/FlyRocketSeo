@@ -34,6 +34,7 @@ type FinderResult = {
   summary: FinderSummary;
   sourcesUsed: string[];
   sourceErrors: { source: string; code: string }[];
+  sourcesSkipped: { source: string; reason: string }[];
 };
 
 /**
@@ -83,6 +84,7 @@ export async function runExpiredDomainFinder(input: {
       summary: { checked: 0, surfaced: 0, failed: 0 },
       sourcesUsed: collected.sourcesUsed,
       sourceErrors: collected.sourceErrors,
+      sourcesSkipped: collected.sourcesSkipped,
     };
   }
 
@@ -119,5 +121,6 @@ export async function runExpiredDomainFinder(input: {
     summary,
     sourcesUsed: collected.sourcesUsed,
     sourceErrors: collected.sourceErrors,
+    sourcesSkipped: collected.sourcesSkipped,
   };
 }
