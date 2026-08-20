@@ -47,6 +47,15 @@ const ERROR_CODES = [
   "PROFILE_DRAFT_UNREADABLE",
   "MODEL_NOT_CONFIGURED",
   "MODEL_CREDITS_EXHAUSTED",
+  // APIVerve backs the domain expiry lookup. Three distinct states, for the
+  // same reason the MODEL_* pair above exists: an unset key is the operator's
+  // job, a rejected key is a real fault, and an empty APIVerve quota is
+  // neither -- and crucially none of them is INSUFFICIENT_CREDITS, which means
+  // the CUSTOMER's metered balance is empty. Reusing that code here would tell
+  // a user to top up an account that is not the problem.
+  "APIVERVE_NOT_CONFIGURED",
+  "APIVERVE_AUTH_FAILED",
+  "APIVERVE_CREDITS_EXHAUSTED",
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES);
@@ -75,6 +84,12 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   "PROFILE_SITE_UNREADABLE",
   "MODEL_NOT_CONFIGURED",
   "MODEL_CREDITS_EXHAUSTED",
+  // Operator configuration and a third-party quota -- someone can fix each,
+  // neither is a bug. APIVERVE_AUTH_FAILED is deliberately absent: a key that
+  // IS set and still gets rejected is a real defect signal, exactly as
+  // DATAFORSEO_AUTH_FAILED is.
+  "APIVERVE_NOT_CONFIGURED",
+  "APIVERVE_CREDITS_EXHAUSTED",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

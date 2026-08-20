@@ -1,4 +1,4 @@
-import { z } from "zod";
+import type { z } from "zod";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { buildProjectMeta } from "@/server/mcp/context";
 import { mcpResponse } from "@/server/mcp/formatters";
@@ -8,19 +8,7 @@ import {
 } from "@/server/mcp/output-schemas";
 import { withMcpProjectAuth } from "@/server/mcp/project-auth";
 import { isRecord } from "@/server/lib/dataforseo/envelope";
-import { projectIdSchema } from "@/server/mcp/schemas";
-
-const domainTargetSchema = z
-  .string()
-  .min(1)
-  .max(255)
-  .refine(
-    (value) =>
-      /^(?!https?:\/\/)(?!www\.)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i.test(
-        value,
-      ),
-    "Use a domain or subdomain without protocol and without www.",
-  );
+import { domainTargetSchema, projectIdSchema } from "@/server/mcp/schemas";
 
 /* ------------------------------------------------------------------ */
 /*  get_domain_technologies                                             */

@@ -36,6 +36,7 @@ import {
   getDomainTechnologiesTool,
   getDomainWhoisTool,
 } from "@/server/mcp/tools/domain-analytics-tools";
+import { getDomainExpirationTool } from "@/server/mcp/tools/domain-expiration-tools";
 import { auditPageTool } from "@/server/mcp/tools/onpage-tools";
 
 // Competitor, backlink-insight, trends, and local SEO research tools, split
@@ -260,6 +261,15 @@ function registerMarketIntelligenceTools(server: McpServer) {
       getDomainWhoisTool.name,
       getDomainWhoisTool.config.outputSchema,
       getDomainWhoisTool.handler,
+    ),
+  );
+  server.registerTool(
+    getDomainExpirationTool.name,
+    getDomainExpirationTool.config,
+    instrumentMcpToolHandler(
+      getDomainExpirationTool.name,
+      getDomainExpirationTool.config.outputSchema,
+      getDomainExpirationTool.handler,
     ),
   );
   server.registerTool(
