@@ -2,7 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CACHE_PREFIX,
   CACHE_TTL_SECONDS,
+  FETCH_CONCURRENCY,
+  MAX_DOMAINS_PER_CALL,
   resolveDomainExpiration,
+  resolveDomainExpirations,
   type ExpirationCache,
 } from "@/server/lib/apiverve/domainExpiration";
 
@@ -172,5 +175,112 @@ describe("resolveDomainExpiration", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(result.daysToExpiration).toBe(45);
+  });
+});
+
+describe("resolveDomainExpirations", () => {
+  beforeEach(() => {
+    process.env.APIVERVE_API_KEY = "test-key";
+  });
+
+  afterEach(() => {
+    delete process.env.APIVERVE_API_KEY;
+    vi.unstubAllGlobals();
+  });
+
+  it("degrades one failure to null without failing the batch", async () => {
+    const cache = fakeCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn((url: unknown) =>
+        Promise.resolve(
+          String(url).includes("bad.com")
+            ? new Response("{}", { status: 500 })
+            : apiResponse("2026-10-04T00:00:00Z"),
+        ),
+      ),
+    );
+
+    const result = await resolveDomainExpirations(
+      ["good.com", "bad.com"],
+      cache,
+      NOW,
+    );
+
+    expect(result.get("bad.com")).toBeNull();
+    expect(result.get("good.com")?.daysToExpiration).toBe(45);
+  });
+
+  it("keys results by the normalized domain and dedupes the input", async () => {
+    const cache = fakeCache();
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(apiResponse("2026-10-04T00:00:00Z"));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await resolveDomainExpirations(
+      ["example.com", "www.example.com", "blog.example.com"],
+      cache,
+      NOW,
+    );
+
+    expect([...result.keys()]).toEqual(["example.com"]);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("never runs more than FETCH_CONCURRENCY requests at once", async () => {
+    const cache = fakeCache();
+    let inFlight = 0;
+    let peak = 0;
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        () =>
+          new Promise<Response>((resolve) => {
+            inFlight += 1;
+            peak = Math.max(peak, inFlight);
+            setTimeout(() => {
+              inFlight -= 1;
+              resolve(apiResponse("2026-10-04T00:00:00Z"));
+            }, 5);
+          }),
+      ),
+    );
+
+    const domains = Array.from({ length: 20 }, (_, index) => `d${index}.com`);
+    await resolveDomainExpirations(domains, cache, NOW);
+
+    expect(peak).toBeGreaterThan(1);
+    expect(peak).toBeLessThanOrEqual(FETCH_CONCURRENCY);
+  });
+
+  // A truncated sweep that looks complete is worse than a refusal: the finder
+  // would report "none expired" over domains it never actually checked.
+  it("rejects an over-cap batch instead of silently truncating", async () => {
+    const cache = fakeCache();
+    const domains = Array.from(
+      { length: MAX_DOMAINS_PER_CALL + 1 },
+      (_, index) => `d${index}.com`,
+    );
+
+    await expect(resolveDomainExpirations(domains, cache, NOW)).rejects.toThrow(
+      /exceeds the cap/,
+    );
+  });
+
+  it("skips unparseable domains rather than throwing the batch away", async () => {
+    const cache = fakeCache();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(apiResponse("2026-10-04T00:00:00Z")),
+    );
+
+    const result = await resolveDomainExpirations(
+      ["good.com", "not a domain"],
+      cache,
+      NOW,
+    );
+
+    expect([...result.keys()]).toEqual(["good.com"]);
   });
 });

@@ -105,3 +105,67 @@ function parseCachedFacts(raw: string): DomainExpirationFacts | null {
     return null;
   }
 }
+
+export const MAX_DOMAINS_PER_CALL = 100;
+/** APIVerve rate-limits per minute, so Ahrefs' batch of 20 would trip it. */
+export const FETCH_CONCURRENCY = 5;
+
+/**
+ * Resolve many domains at once, keyed by their NORMALIZED form so the returned
+ * map agrees with the cache and with what a single `resolveDomainExpiration`
+ * would have produced.
+ *
+ * Two deliberate behaviours:
+ *
+ * - One domain failing degrades THAT entry to `null` and never takes the batch
+ *   down. `null` means "unknown", which the finder counts and reports rather
+ *   than quietly treating as healthy.
+ * - An over-cap request THROWS instead of truncating. A silently shortened
+ *   sweep is worse than a refusal, because the caller would go on to report
+ *   "none expired" over domains it never actually checked.
+ */
+export async function resolveDomainExpirations(
+  domains: string[],
+  cache: ExpirationCache,
+  nowMs: number,
+): Promise<Map<string, DomainExpiration | null>> {
+  if (domains.length > MAX_DOMAINS_PER_CALL) {
+    throw new AppError(
+      "VALIDATION_ERROR",
+      `Too many domains: ${domains.length} exceeds the cap of ${MAX_DOMAINS_PER_CALL}`,
+    );
+  }
+
+  // Normalize and dedupe BEFORE spending: two spellings of one registrable
+  // domain must cost one call, not two.
+  const unique = [
+    ...new Set(
+      domains.map((domain) => {
+        try {
+          return normalizeDomainInput(domain, false);
+        } catch {
+          return "";
+        }
+      }),
+    ),
+  ].filter(Boolean);
+
+  const results = new Map<string, DomainExpiration | null>();
+  for (let index = 0; index < unique.length; index += FETCH_CONCURRENCY) {
+    const batch = unique.slice(index, index + FETCH_CONCURRENCY);
+    const settled = await Promise.all(
+      batch.map(async (domain) => {
+        try {
+          return [
+            domain,
+            await resolveDomainExpiration(domain, cache, nowMs),
+          ] as const;
+        } catch {
+          return [domain, null] as const;
+        }
+      }),
+    );
+    for (const [domain, value] of settled) results.set(domain, value);
+  }
+  return results;
+}
