@@ -23,6 +23,9 @@ import { fetchBacklinksDomainIntersection } from "@/server/lib/dataforseo/backli
 import { fetchSerpCompetitors } from "@/server/lib/dataforseo/labs-competitors";
 import { AppError } from "@/server/lib/errors";
 import { requireProjectContext } from "@/serverFunctions/middleware";
+import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
+import { buildCacheKey, CACHE_TTL, setCached } from "@/server/lib/r2-cache";
+import { RUN_FEATURES } from "@/shared/analysis-run-features";
 
 /**
  * Runs the expired-domain finder for a project.
@@ -90,7 +93,7 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
       createSerpRivalsSource(fetchSerpCompetitors),
     ];
 
-    return runExpiredDomainFinder({
+    const result = await runExpiredDomainFinder({
       context: {
         projectDomain,
         competitorDomains,
@@ -107,4 +110,31 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
       resolveExpirations: resolveDomainExpirations,
       resolveAvailability: resolveDomainAvailability,
     });
+
+    // Record the run so revisiting the tab is FREE. Without this, re-opening
+    // it costs another `cap * 5` credits to see the same answer.
+    //
+    // Best-effort `record`, not `recordOrThrow`: the row is history here, not
+    // a spend guard -- the spend guard is the explicit click -- so a failed
+    // write must not fail a request the user has already paid for.
+    const params = {
+      cap: data.cap,
+      keywords: data.keywords,
+      projectDomain,
+      competitorDomains,
+    };
+    const cacheKey = await buildCacheKey("expired-domains", params);
+    // The cache object is short-lived by design (the bucket hard-deletes this
+    // prefix after 7 days); `record` immediately copies it to the durable run
+    // payload, which is what restore actually reads.
+    await setCached(cacheKey, result, CACHE_TTL.researchResult);
+    await AnalysisRunService.record({
+      projectId: context.projectId,
+      feature: RUN_FEATURES.expiredDomains,
+      params,
+      cacheKey,
+      label: projectDomain,
+    });
+
+    return result;
   });
