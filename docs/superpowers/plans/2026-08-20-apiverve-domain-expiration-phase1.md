@@ -12,7 +12,7 @@
 
 ## Global Constraints
 
-- **Vitest runs `environment: "node"` and includes only `src/**/*.test.ts`** (not `.tsx`). Any module that statically imports `cloudflare:workers` **cannot be imported by a test**. Testable logic must live outside such modules. This is a real scar in this repo — see the doc comment in `src/shared/ahrefsRating.ts`.
+- **Vitest runs `environment: "node"` and includes only `src/**/\*.test.ts`** (not `.tsx`). Any module that statically imports `cloudflare:workers`**cannot be imported by a test**. Testable logic must live outside such modules. This is a real scar in this repo — see the doc comment in`src/shared/ahrefsRating.ts`.
 - **Top-level imports only in test files.** A deferred `await import()` inside a test body bills the whole module-graph load to the first test as a phantom ~5s timeout.
 - **`null` means "we do not know" and nothing else.** Never a fabricated `0`, never a silent collapse to `healthy`.
 - **Never auto-retry a metered call.** Use `useMeteredQuery`, which omits `retry` from its options type so a call site structurally cannot re-open that path.
@@ -28,10 +28,12 @@
 ### Task 1: Pure expiration logic
 
 **Files:**
+
 - Create: `src/shared/domainExpiration.ts`
 - Test: `src/shared/domainExpiration.test.ts`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `DomainExpirationStatus`, `DomainExpirationFacts`, `DomainExpiration`, `statusFromDaysToExpiration(days: number | null): DomainExpirationStatus | null`, `deriveDomainExpiration(facts: DomainExpirationFacts, nowMs: number): DomainExpiration`, and the constants `CRITICAL_MAX_DAYS = 30`, `WARNING_MAX_DAYS = 90`.
 
@@ -263,11 +265,13 @@ git commit -m "Derive domain expiry day counts from the clock, not from cache"
 ### Task 2: Error codes and user-facing copy
 
 **Files:**
+
 - Modify: `src/shared/error-codes.ts`
 - Modify: `src/client/lib/error-messages.ts`
 - Test: `src/shared/error-codes.test.ts` (create if absent; otherwise append)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: three `ErrorCode` members — `APIVERVE_NOT_CONFIGURED`, `APIVERVE_AUTH_FAILED`, `APIVERVE_CREDITS_EXHAUSTED` — used by Task 3.
 
@@ -373,10 +377,12 @@ git commit -m "Give each APIVerve failure its own code and its own copy"
 ### Task 3: APIVerve HTTP client
 
 **Files:**
+
 - Create: `src/server/lib/apiverve/client.ts`
 - Test: `src/server/lib/apiverve/client.test.ts`
 
 **Interfaces:**
+
 - Consumes: `AppError` from `@/server/lib/errors`; `getOptionalEnvValue` from `@/server/lib/runtime-env`; the codes from Task 2.
 - Produces: `apiverveGet(path: string, params: Record<string, string>): Promise<unknown>`.
 
@@ -603,10 +609,12 @@ git commit -m "Add the APIVerve transport, with a distinct code per failure"
 ### Task 4: Expiration fetch and cache codec
 
 **Files:**
+
 - Create: `src/server/lib/apiverve/domainExpiration.ts`
 - Test: `src/server/lib/apiverve/domainExpiration.test.ts`
 
 **Interfaces:**
+
 - Consumes: `apiverveGet` (Task 3); `deriveDomainExpiration`, `DomainExpirationFacts`, `DomainExpiration` (Task 1).
 - Produces: `ExpirationCache` (a KV-shaped interface), `CACHE_PREFIX`, `CACHE_TTL_SECONDS`, and `resolveDomainExpiration(domain: string, cache: ExpirationCache, nowMs: number): Promise<DomainExpiration>`.
 
@@ -882,9 +890,11 @@ git commit -m "Cache domain expiry facts, derive the countdown on every read"
 ### Task 5: Server function
 
 **Files:**
+
 - Create: `src/serverFunctions/domainExpiration.ts`
 
 **Interfaces:**
+
 - Consumes: `resolveDomainExpiration`, `ExpirationCache` (Task 4); `normalizeDomainInput` from `@/server/lib/domainUtils`; `requireProjectContext` from `@/serverFunctions/middleware`.
 - Produces: `getDomainExpiration` — a `createServerFn` accepting `{ projectId: string; domain: string }` and resolving to `DomainExpiration` (Task 1).
 
@@ -958,10 +968,12 @@ git commit -m "Expose domain expiry as a project-scoped server function"
 ### Task 6: Domain Overview card
 
 **Files:**
+
 - Create: `src/client/features/domain/components/DomainExpirationCard.tsx`
 - Modify: `src/client/features/domain/DomainOverviewPage.tsx`
 
 **Interfaces:**
+
 - Consumes: `getDomainExpiration` (Task 5); `DomainExpiration`, `DomainExpirationStatus` (Task 1).
 - Produces: `DomainExpirationCard({ projectId, domain }: { projectId: string; domain: string })`.
 
@@ -1088,7 +1100,9 @@ export function DomainExpirationCard({
             </div>
             <div>
               <dt className="text-xs text-base-content/60">Age</dt>
-              <dd className="font-medium">{formatYears(data.domainAgeYears)}</dd>
+              <dd className="font-medium">
+                {formatYears(data.domainAgeYears)}
+              </dd>
             </div>
           </dl>
         ) : null}
@@ -1109,12 +1123,14 @@ import { DomainExpirationCard } from "@/client/features/domain/components/Domain
 Then render it directly after the existing `DomainCompetitorsCard` block, which sits at roughly line 873. Match its `hasData` guard exactly — without it the card renders against an empty domain string:
 
 ```tsx
-          {state.overview.hasData ? (
-            <DomainExpirationCard
-              projectId={projectId}
-              domain={state.overview.domain}
-            />
-          ) : null}
+{
+  state.overview.hasData ? (
+    <DomainExpirationCard
+      projectId={projectId}
+      domain={state.overview.domain}
+    />
+  ) : null;
+}
 ```
 
 - [ ] **Step 3: Typecheck and lint**
@@ -1128,6 +1144,7 @@ Expected: clean.
 - [ ] **Step 4: Verify in the browser**
 
 Start the dev server and open a project's Domain tab. Confirm:
+
 1. The card renders with a **"Check domain health" button and no data** on load — if any request fires before the click, the no-auto-spend rule is broken and this must be fixed before commit.
 2. Clicking it populates expiry date, days left and age.
 3. A reload returns to the un-authorized button state.
@@ -1146,16 +1163,19 @@ git commit -m "Show domain registration health on the Domain Overview tab"
 ### Task 7: SAM/MCP tool
 
 **Files:**
+
 - Create: `src/server/mcp/tools/domain-expiration-tools.ts`
 - Modify: `src/server/mcp/register-research-tools.ts`
 
 **Files (revised):**
+
 - Modify: `src/server/mcp/schemas.ts`
 - Modify: `src/server/mcp/tools/domain-analytics-tools.ts:13-24`
 - Create: `src/server/mcp/tools/domain-expiration-tools.ts`
 - Modify: `src/server/mcp/register-research-tools.ts`
 
 **Interfaces:**
+
 - Consumes: `resolveDomainExpiration`, `ExpirationCache` (Task 4); `projectIdSchema` from `@/server/mcp/schemas`; `withMcpProjectAuth` from `@/server/mcp/project-auth`; `mcpResponse` from `@/server/mcp/formatters`; `buildProjectMeta` from `@/server/mcp/context`; `optionalMetaOutputSchema` from `@/server/mcp/output-schemas`.
 - Produces: `domainTargetSchema` (relocated, now exported from `@/server/mcp/schemas`) and `getDomainExpirationTool`.
 
@@ -1283,15 +1303,15 @@ import { getDomainExpirationTool } from "@/server/mcp/tools/domain-expiration-to
 Then inside `registerMarketIntelligenceTools`, append a registration block in the exact shape of the surrounding ones:
 
 ```ts
-  server.registerTool(
+server.registerTool(
+  getDomainExpirationTool.name,
+  getDomainExpirationTool.config,
+  instrumentMcpToolHandler(
     getDomainExpirationTool.name,
-    getDomainExpirationTool.config,
-    instrumentMcpToolHandler(
-      getDomainExpirationTool.name,
-      getDomainExpirationTool.config.outputSchema,
-      getDomainExpirationTool.handler,
-    ),
-  );
+    getDomainExpirationTool.config.outputSchema,
+    getDomainExpirationTool.handler,
+  ),
+);
 ```
 
 - [ ] **Step 4: Typecheck**

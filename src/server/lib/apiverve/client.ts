@@ -21,7 +21,10 @@ export async function apiverveGet(
   const key = await getOptionalEnvValue("APIVERVE_API_KEY");
   if (!key) {
     // Thrown BEFORE any network call: an unset key must never spend a request.
-    throw new AppError("APIVERVE_NOT_CONFIGURED", "APIVERVE_API_KEY is not set");
+    throw new AppError(
+      "APIVERVE_NOT_CONFIGURED",
+      "APIVERVE_API_KEY is not set",
+    );
   }
 
   const url = new URL(`${APIVERVE_BASE_URL}/${path}`);
@@ -47,7 +50,7 @@ export async function apiverveGet(
   }
 
   try {
-    return (await response.json()) as unknown;
+    return await response.json();
   } catch {
     throw new AppError(
       "UPSTREAM_UNAVAILABLE",

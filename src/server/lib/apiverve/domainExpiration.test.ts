@@ -21,6 +21,15 @@ function fakeCache(): ExpirationCache & { store: Map<string, string> } {
   };
 }
 
+/** Sorted top-level keys of a JSON string, or `[]` if it isn't an object.
+ *  A guard rather than a cast, so the lint rule stays satisfied and a
+ *  non-object cache entry fails the assertion instead of throwing. */
+function sortedKeysOf(json: string): string[] {
+  const parsed: unknown = JSON.parse(json);
+  if (typeof parsed !== "object" || parsed === null) return [];
+  return Object.keys(parsed).toSorted();
+}
+
 function apiResponse(expirationDate: string): Response {
   return new Response(
     JSON.stringify({
@@ -58,8 +67,7 @@ describe("resolveDomainExpiration", () => {
 
     const raw = cache.store.get(`${CACHE_PREFIX}example.com`);
     expect(raw).toBeDefined();
-    const stored = JSON.parse(raw as string) as Record<string, unknown>;
-    expect(Object.keys(stored).sort()).toEqual([
+    expect(sortedKeysOf(raw ?? "null")).toEqual([
       "createdDate",
       "domain",
       "expirationDate",

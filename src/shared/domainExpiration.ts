@@ -46,8 +46,12 @@ export type DomainExpiration = DomainExpirationFacts & {
 const MS_PER_DAY = 86_400_000;
 const DAYS_PER_YEAR = 365.25;
 
-export const CRITICAL_MAX_DAYS = 30;
-export const WARNING_MAX_DAYS = 90;
+// Module-local: the thresholds are an implementation detail of
+// `statusFromDaysToExpiration`, which is the one supported way to ask what a
+// day count means. Export them if and when a caller genuinely needs the raw
+// numbers -- an exported constant nobody imports is just a wider API surface.
+const CRITICAL_MAX_DAYS = 30;
+const WARNING_MAX_DAYS = 90;
 
 /** `null` in means `null` out: an unknown day count must never read as healthy. */
 export function statusFromDaysToExpiration(

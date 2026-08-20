@@ -34,7 +34,7 @@ later without reworking the pipeline.
 
 **Honest ceiling, to be stated in the UI:** this finds domains connected to the
 project's link or SERP graph. It does not enumerate the expired-.com universe.
-A food blog that links to a competing vending operator *will* be found; an
+A food blog that links to a competing vending operator _will_ be found; an
 unrelated expired nutrition domain with no graph connection will not.
 
 ## API reference
@@ -78,11 +78,11 @@ target actually acquirable.
 
 ## Phasing
 
-| Phase | Scope |
-| --- | --- |
-| 1 | APIVerve client + KV cache + Domain Overview card + SAM/MCP tool |
-| 2 | Expired-domain finder (graph-derived candidates) |
-| 3 | Audit run metadata + backlinks/competitor column |
+| Phase | Scope                                                            |
+| ----- | ---------------------------------------------------------------- |
+| 1     | APIVerve client + KV cache + Domain Overview card + SAM/MCP tool |
+| 2     | Expired-domain finder (graph-derived candidates)                 |
+| 3     | Audit run metadata + backlinks/competitor column                 |
 
 No phase requires a D1 migration. Phase 1 caches in KV; Phase 2 persists through
 the existing `analysisRuns` + R2 run-history pattern. This deliberately avoids
@@ -133,12 +133,12 @@ trusting their string would let status and days drift apart in the same view.
 
 Thresholds live in `src/shared/domainExpiration.ts` and are documented as ours:
 
-| Status | Condition |
-| --- | --- |
-| `expired` | `daysToExpiration <= 0` |
-| `critical` | `<= 30` |
-| `warning` | `<= 90` |
-| `healthy` | `> 90` |
+| Status     | Condition               |
+| ---------- | ----------------------- |
+| `expired`  | `daysToExpiration <= 0` |
+| `critical` | `<= 30`                 |
+| `warning`  | `<= 90`                 |
+| `healthy`  | `> 90`                  |
 
 The API's own `expirationStatus` string is parsed but not used for display.
 
@@ -155,21 +155,21 @@ asymmetry is why a 7-day flat TTL is safe.
 Each HTTP status maps to a specific `ErrorCode` so a failure names itself rather
 than surfacing as a generic error:
 
-| HTTP | `ErrorCode` | New? | Handling |
-| --- | --- | --- | --- |
-| 400 | `VALIDATION_ERROR` | existing | user-facing |
-| 401, key absent | `APIVERVE_NOT_CONFIGURED` | **new** | operator misconfiguration; surface hides itself |
-| 401, key present | `APIVERVE_AUTH_FAILED` | **new** | mirrors `DATAFORSEO_AUTH_FAILED` |
-| 403 | `APIVERVE_CREDITS_EXHAUSTED` | **new** | mirrors `MODEL_CREDITS_EXHAUSTED` |
-| 429 | `RATE_LIMITED` | existing | shown as retryable, not auto-retried |
-| 5xx | `UPSTREAM_UNAVAILABLE` | existing | degrades that domain to unknown |
+| HTTP             | `ErrorCode`                  | New?     | Handling                                        |
+| ---------------- | ---------------------------- | -------- | ----------------------------------------------- |
+| 400              | `VALIDATION_ERROR`           | existing | user-facing                                     |
+| 401, key absent  | `APIVERVE_NOT_CONFIGURED`    | **new**  | operator misconfiguration; surface hides itself |
+| 401, key present | `APIVERVE_AUTH_FAILED`       | **new**  | mirrors `DATAFORSEO_AUTH_FAILED`                |
+| 403              | `APIVERVE_CREDITS_EXHAUSTED` | **new**  | mirrors `MODEL_CREDITS_EXHAUSTED`               |
+| 429              | `RATE_LIMITED`               | existing | shown as retryable, not auto-retried            |
+| 5xx              | `UPSTREAM_UNAVAILABLE`       | existing | degrades that domain to unknown                 |
 
 The three new codes must be registered in the `ERROR_CODES` tuple in
 `src/shared/error-codes.ts`, which backs a `z.enum` and the `ErrorCode` type.
 
 **`INSUFFICIENT_CREDITS` is deliberately not reused for the 403.** That existing
-code means the *customer's* metered balance is empty. An exhausted APIVerve
-quota is an *operator* problem the customer can do nothing about, and conflating
+code means the _customer's_ metered balance is empty. An exhausted APIVerve
+quota is an _operator_ problem the customer can do nothing about, and conflating
 the two would tell a user to top up an account that is not the problem. This is
 the same separation `MODEL_CREDITS_EXHAUSTED` already makes for OpenRouter.
 
@@ -230,11 +230,11 @@ type CandidateDomain = {
 
 v1 sources:
 
-| Source | Origin | Metered |
-| --- | --- | --- |
-| `competitors` | `projectCompetitors` rows in D1 | no |
-| `link-gap` | `fetchBacklinksDomainIntersection` | yes (DataForSEO) |
-| `serp-rivals` | `fetchSerpCompetitors` | yes (DataForSEO) |
+| Source        | Origin                             | Metered          |
+| ------------- | ---------------------------------- | ---------------- |
+| `competitors` | `projectCompetitors` rows in D1    | no               |
+| `link-gap`    | `fetchBacklinksDomainIntersection` | yes (DataForSEO) |
+| `serp-rivals` | `fetchSerpCompetitors`             | yes (DataForSEO) |
 
 A future `drop-feed` source implements the same interface and requires no
 pipeline change.
@@ -253,7 +253,7 @@ candidate.
 
 Inferring that `nutritionhub.com` is food-adjacent by reading its name is weak
 and unreliable. The strong signal is already known: that domain is in the
-candidate set *because* it links to three of the project's competitors, or
+candidate set _because_ it links to three of the project's competitors, or
 because it ranks for a keyword the project targets. Relevance is scored from
 that evidence — competitor-link count, keyword overlap — filtered by
 `projectProfiles.exclusions`.

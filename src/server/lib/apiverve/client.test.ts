@@ -9,6 +9,17 @@ function jsonResponse(body: unknown, status = 200): Response {
   });
 }
 
+/** Reads a request header off a captured fetch init without asserting its
+ *  type -- the lint rule that forbids narrowing assertions is right, and a
+ *  guard reads better here than a cast anyway. */
+function headerValue(init: unknown, name: string): string | undefined {
+  if (typeof init !== "object" || init === null) return undefined;
+  const headers: unknown = Reflect.get(init, "headers");
+  if (typeof headers !== "object" || headers === null) return undefined;
+  const value: unknown = Reflect.get(headers, name);
+  return typeof value === "string" ? value : undefined;
+}
+
 async function codeOf(promise: Promise<unknown>): Promise<string> {
   try {
     await promise;
@@ -29,18 +40,21 @@ describe("apiverveGet", () => {
   });
 
   it("sends the key as a header and the params as query string", async () => {
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse({ status: "ok" }));
+    let capturedUrl: unknown;
+    let capturedInit: unknown;
+    const fetchMock = vi.fn((url: unknown, init: unknown) => {
+      capturedUrl = url;
+      capturedInit = init;
+      return Promise.resolve(jsonResponse({ status: "ok" }));
+    });
     vi.stubGlobal("fetch", fetchMock);
 
     await apiverveGet("domainexpiration", { domain: "example.com" });
 
-    const [url, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
-    expect(url.toString()).toBe(
+    expect(String(capturedUrl)).toBe(
       "https://api.apiverve.com/v1/domainexpiration?domain=example.com",
     );
-    expect((init.headers as Record<string, string>)["X-API-Key"]).toBe(
-      "test-key",
-    );
+    expect(headerValue(capturedInit, "X-API-Key")).toBe("test-key");
   });
 
   it("refuses to call out at all when no key is configured", async () => {

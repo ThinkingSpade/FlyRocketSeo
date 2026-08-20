@@ -70,3 +70,21 @@ export const languageCodeSchema = z
       "Unsupported language code. Use a supported code such as 'en', 'es', 'de', or 'fr'.",
   })
   .describe("Language code (e.g. 'en', 'es', 'fr'). Defaults to 'en'.");
+
+/**
+ * A bare registrable domain or subdomain -- no protocol, no `www.`. Shared by
+ * every domain-scoped MCP tool so they reject the same inputs with the same
+ * message; it began as a module-local const in domain-analytics-tools.ts and
+ * moved here the moment a second tool needed it.
+ */
+export const domainTargetSchema = z
+  .string()
+  .min(1)
+  .max(255)
+  .refine(
+    (value) =>
+      /^(?!https?:\/\/)(?!www\.)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,}$/i.test(
+        value,
+      ),
+    "Use a domain or subdomain without protocol and without www.",
+  );
