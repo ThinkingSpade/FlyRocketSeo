@@ -14,6 +14,7 @@ import {
   runExpiredDomainFinder,
 } from "@/server/features/expired-domains/ExpiredDomainsService";
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
+import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { resolveDomainAvailability } from "@/server/lib/apiverve/domainAvailability";
 import {
   resolveDomainExpirations,
@@ -47,9 +48,10 @@ const inputSchema = z.object({
   /** Bounded so a client cannot ask for an unbounded, unbounded-cost sweep. */
   cap: z.number().int().min(1).max(100).default(DEFAULT_CANDIDATE_CAP),
   /**
-   * Optional keyword seed for the SERP-rivals source. Empty by default: that
-   * source returns nothing without calling out, so v1 runs on competitors and
-   * link gap until we settle which keyword list should drive it.
+   * Optional keyword override for the SERP-rivals source. Left empty, the
+   * project's RANK-TRACKED keywords are used -- those are the queries the user
+   * has explicitly said they care about, which makes them the most defensible
+   * seed for "who else competes here".
    */
   keywords: z.array(z.string().trim().min(1)).max(20).default([]),
 });
@@ -60,6 +62,38 @@ function parseExclusions(raw: string): string[] {
     .split(/[\n,]/)
     .map((value) => value.trim())
     .filter(Boolean);
+}
+
+/**
+ * The project's rank-tracked keywords, flattened across its tracking configs.
+ *
+ * Deduped here so one keyword tracked under two configs is not paid for twice
+ * by the per-keyword SERP endpoint. Returns `[]` when the project tracks
+ * nothing, which makes the SERP-rivals source a no-op rather than an error.
+ */
+async function collectTrackedKeywords(projectId: string): Promise<string[]> {
+  try {
+    const configs =
+      await RankTrackingRepository.getConfigsForProject(projectId);
+    const perConfig = await Promise.all(
+      configs.map((config) =>
+        RankTrackingRepository.getKeywordsForConfig(config.id),
+      ),
+    );
+    return [
+      ...new Set(
+        perConfig
+          .flat()
+          .map((row) => row.keyword.trim())
+          .filter(Boolean),
+      ),
+    ];
+  } catch (error) {
+    // A rank-tracking read failing must not take down a run whose other two
+    // sources are fine.
+    console.error("expired-domains.trackedKeywords failed:", error);
+    return [];
+  }
 }
 
 export const runExpiredDomainSearch = createServerFn({ method: "POST" })
@@ -82,6 +116,15 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
       .map((row) => row.domain)
       .filter(Boolean);
 
+    // Rank-tracked keywords seed the SERP-rivals source. They live per tracking
+    // config, so gather across the project's configs, dedupe, and let the
+    // source apply its own cap -- the SERP endpoint is priced PER KEYWORD, so
+    // an unbounded seed would be an unbounded bill.
+    const keywords =
+      data.keywords.length > 0
+        ? data.keywords
+        : await collectTrackedKeywords(context.projectId);
+
     const cache: ExpirationCache = {
       get: (key) => env.KV.get(key),
       put: (key, value, options) => env.KV.put(key, value, options),
@@ -97,7 +140,7 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
       context: {
         projectDomain,
         competitorDomains,
-        keywords: data.keywords,
+        keywords,
         locationCode: context.project.locationCode,
         languageCode: "en",
       },
@@ -119,7 +162,7 @@ export const runExpiredDomainSearch = createServerFn({ method: "POST" })
     // write must not fail a request the user has already paid for.
     const params = {
       cap: data.cap,
-      keywords: data.keywords,
+      keywords,
       projectDomain,
       competitorDomains,
     };

@@ -57,6 +57,9 @@ test.describe("Expired domains panel", () => {
     // after the money is gone.
     await expect(panel).toContainText("Up to 50 domains");
     await expect(panel).toContainText("250 APIVerve credits");
+    // The DataForSEO side has to be quoted too -- the SERP call is priced per
+    // rank-tracked keyword, so it is not a rounding error on the bill.
+    await expect(panel).toContainText(/two\s+DataForSEO lookups/);
     await expect(
       page.getByRole("button", { name: "Find expired domains" }),
     ).toBeVisible();

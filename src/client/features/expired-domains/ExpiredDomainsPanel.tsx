@@ -136,8 +136,9 @@ export function ExpiredDomainsPanel({
             <p className="text-xs text-base-content/60">
               Up to {DEFAULT_CAP} domains — up to{" "}
               {(DEFAULT_CAP * CREDITS_PER_LOOKUP).toLocaleString()} APIVerve
-              credits, plus a few more if any have lapsed. Also runs one
-              DataForSEO link-gap lookup.
+              credits, plus a few more if any have lapsed. Also runs two
+              DataForSEO lookups: one link-gap call, and one SERP call priced
+              per rank-tracked keyword.
             </p>
             <Button
               type="button"
