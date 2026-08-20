@@ -53,7 +53,12 @@ function expiration(
 }
 
 function sourceOf(name: string, candidates: Candidate[]): CandidateSource {
-  return { name, metered: false, collect: () => Promise.resolve(candidates) };
+  return {
+    name,
+    metered: false,
+    unavailableReason: () => null,
+    collect: () => Promise.resolve(candidates),
+  };
 }
 
 describe("estimateFinderCost", () => {
@@ -141,6 +146,7 @@ describe("runExpiredDomainFinder", () => {
     const failing: CandidateSource = {
       name: "link-gap",
       metered: true,
+      unavailableReason: () => null,
       collect: () => Promise.reject(new Error("BACKLINKS_BILLING_ISSUE")),
     };
 

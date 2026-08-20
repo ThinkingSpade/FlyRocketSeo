@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   buildFinderRows,
+  filterFinderRows,
   mergeCandidates,
   rankAndCap,
   scoreCandidate,
@@ -319,5 +320,64 @@ describe("buildFinderRows", () => {
 
     expect(summary.checked).toBe(1);
     expect(summary.failed).toBe(1);
+  });
+});
+
+describe("filterFinderRows", () => {
+  function row(
+    domain: string,
+    status: NonNullable<DomainExpiration["status"]>,
+  ) {
+    return {
+      domain,
+      sources: ["serp-rivals"],
+      evidence: {
+        linksToCompetitors: [],
+        ranksForKeywords: [],
+        isKnownCompetitor: false,
+      },
+      score: 0,
+      status,
+      expiration: expiration(status, 10),
+      available: null,
+    };
+  }
+
+  const rows = [
+    row("gone.com", "expired"),
+    row("soon.com", "critical"),
+    row("later.com", "warning"),
+  ];
+
+  it("returns everything when no filter is applied", () => {
+    expect(filterFinderRows(rows, { status: "all", query: "" })).toHaveLength(
+      3,
+    );
+  });
+
+  // The point of the feature: "which of these can I actually buy today".
+  it("narrows to genuinely expired domains", () => {
+    const filtered = filterFinderRows(rows, { status: "expired", query: "" });
+    expect(filtered.map((r) => r.domain)).toEqual(["gone.com"]);
+  });
+
+  it("matches a domain substring case-insensitively", () => {
+    expect(
+      filterFinderRows(rows, { status: "all", query: "SOON" }).map(
+        (r) => r.domain,
+      ),
+    ).toEqual(["soon.com"]);
+  });
+
+  it("applies status and query together", () => {
+    expect(
+      filterFinderRows(rows, { status: "expired", query: "soon" }),
+    ).toEqual([]);
+  });
+
+  it("ignores surrounding whitespace in the query", () => {
+    expect(
+      filterFinderRows(rows, { status: "all", query: "  gone  " }),
+    ).toHaveLength(1);
   });
 });

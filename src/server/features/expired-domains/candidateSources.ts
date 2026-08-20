@@ -28,6 +28,16 @@ export type CandidateSource = {
   readonly name: string;
   /** True when collecting from this source costs DataForSEO credits. */
   readonly metered: boolean;
+  /**
+   * Why this source cannot run for this project, or null when it can.
+   *
+   * A source that silently returns nothing is worse than one that errors: it
+   * gets counted as searched, and the summary then claims coverage it never
+   * had. That is exactly what happened on a project with no saved competitors
+   * -- link gap contributed nothing, the run reported "50 checked", and the
+   * user reasonably concluded the feature was just weak.
+   */
+  unavailableReason(context: FinderContext): string | null;
   collect(context: FinderContext): Promise<Candidate[]>;
 };
 
@@ -58,6 +68,10 @@ export function createCompetitorsSource(
   return {
     name: "competitors",
     metered: false,
+    unavailableReason: (context) =>
+      context.competitorDomains.length === 0
+        ? "no competitors saved for this project"
+        : null,
     async collect(context) {
       const domains = await listCompetitors(context);
       return domains.map((domain) => ({
@@ -86,11 +100,15 @@ export function createLinkGapSource(
   return {
     name: "link-gap",
     metered: true,
+    // This is the source that reaches ADJACENT domains -- food and nutrition
+    // sites that link to a vending competitor, say. Without competitors it can
+    // do nothing, and the run collapses to whatever SERP rivals finds, which is
+    // by definition more of the same vertical.
+    unavailableReason: (context) =>
+      context.competitorDomains.length === 0
+        ? "no competitors saved — link gap is what finds adjacent sites, so add a few on the Competitors tab"
+        : null,
     async collect(context) {
-      // No competitors means no intersection to compute -- return early rather
-      // than spend a billed call on an empty target list.
-      if (context.competitorDomains.length === 0) return [];
-
       const response = await fetchIntersection({
         targets: context.competitorDomains,
         excludeTargets: [context.projectDomain],
@@ -121,10 +139,12 @@ export function createSerpRivalsSource(
   return {
     name: "serp-rivals",
     metered: true,
+    unavailableReason: (context) =>
+      context.keywords.length === 0
+        ? "no rank-tracked keywords for this project"
+        : null,
     async collect(context) {
       const keywords = context.keywords.slice(0, MAX_SERP_KEYWORDS);
-      if (keywords.length === 0) return [];
-
       const response = await fetchSerp({
         keywords,
         locationCode: context.locationCode,
@@ -161,6 +181,8 @@ type CollectedCandidates = {
   lists: Candidate[][];
   sourcesUsed: string[];
   sourceErrors: { source: string; code: string }[];
+  /** Sources that could not run at all, and why. Surfaced to the user. */
+  sourcesSkipped: { source: string; reason: string }[];
 };
 
 /**
@@ -179,8 +201,16 @@ export async function collectCandidates(
   const lists: Candidate[][] = [];
   const sourcesUsed: string[] = [];
   const sourceErrors: { source: string; code: string }[] = [];
+  const sourcesSkipped: { source: string; reason: string }[] = [];
 
   for (const source of sources) {
+    const reason = source.unavailableReason(context);
+    if (reason !== null) {
+      // Recorded, NOT counted as used. The summary must never imply a source
+      // searched when it could not.
+      sourcesSkipped.push({ source: source.name, reason });
+      continue;
+    }
     try {
       lists.push(await source.collect(context));
       sourcesUsed.push(source.name);
@@ -192,5 +222,5 @@ export async function collectCandidates(
     }
   }
 
-  return { lists, sourcesUsed, sourceErrors };
+  return { lists, sourcesUsed, sourceErrors, sourcesSkipped };
 }

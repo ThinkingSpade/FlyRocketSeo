@@ -231,3 +231,25 @@ export function buildFinderRows(
     summary: { checked: candidates.length, surfaced: sorted.length, failed },
   };
 }
+
+/** What the table is narrowed to. `expired` is the "can I buy this" view. */
+export type FinderStatusFilter = "all" | "expired" | "critical" | "warning";
+
+/**
+ * Narrow the table client-side.
+ *
+ * Filtering happens AFTER the run, over rows already paid for -- changing a
+ * filter must never re-request anything. That is why this takes rows rather
+ * than run parameters.
+ */
+export function filterFinderRows(
+  rows: FinderRow[],
+  filter: { status: FinderStatusFilter; query: string },
+): FinderRow[] {
+  const query = filter.query.trim().toLowerCase();
+  return rows.filter((row) => {
+    if (filter.status !== "all" && row.status !== filter.status) return false;
+    if (query && !row.domain.toLowerCase().includes(query)) return false;
+    return true;
+  });
+}
