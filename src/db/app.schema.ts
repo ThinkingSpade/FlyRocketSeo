@@ -444,6 +444,39 @@ export const harvestedDomains = sqliteTable(
   ],
 );
 
+/**
+ * One row per (project, feed date) actually processed.
+ *
+ * Separate from `harvested_domains` because completion cannot be inferred from
+ * matches: a day that legitimately yields ZERO matches would leave no trace,
+ * and the scheduler would re-download that 2 MB file on every 15-minute tick
+ * for as long as it stayed the newest date -- 84 downloads a day.
+ *
+ * Written only after every insert chunk succeeds, so a partial write is retried
+ * rather than silently skipped.
+ */
+export const harvestRuns = sqliteTable(
+  "harvest_runs",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** Feed date (yyyy-MM-dd). */
+    droppedOn: text("dropped_on").notNull(),
+    matched: integer("matched").notNull().default(0),
+    completedAt: text("completed_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("harvest_runs_project_date_idx").on(
+      table.projectId,
+      table.droppedOn,
+    ),
+  ],
+);
+
 // One row per crawled page
 export const auditPages = sqliteTable(
   "audit_pages",

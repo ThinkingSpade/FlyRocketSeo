@@ -1,7 +1,7 @@
 import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/server/lib/errors";
-import { fetchDroppedDomains } from "@/server/lib/whoisfreaks";
+import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 
 /** The real feed is gzipped, newline-delimited names with no header. */
 function feedResponse(lines: string[], status = 200): Response {
@@ -13,6 +13,21 @@ function jsonResponse(body: unknown, status: number): Response {
   return new Response(JSON.stringify(body), { status });
 }
 
+async function collect(
+  input: { date: string; tlds: string[] },
+  limit = Infinity,
+): Promise<string[]> {
+  const seen: string[] = [];
+  await streamDroppedDomains({
+    ...input,
+    onDomain: (domain) => {
+      seen.push(domain);
+      return seen.length < limit;
+    },
+  });
+  return seen;
+}
+
 async function codeOf(promise: Promise<unknown>): Promise<string> {
   try {
     await promise;
@@ -22,7 +37,7 @@ async function codeOf(promise: Promise<unknown>): Promise<string> {
   }
 }
 
-describe("fetchDroppedDomains", () => {
+describe("streamDroppedDomains", () => {
   beforeEach(() => {
     process.env.WHOISFREAKS_API_KEY = "test-key";
   });
@@ -33,8 +48,8 @@ describe("fetchDroppedDomains", () => {
   });
 
   // Pinned deliberately: the documented endpoint on the marketing host does not
-  // exist and answers with a Next.js 404 PAGE, which parses as a failure only by
-  // luck. This asserts the host/path verified against the live API.
+  // exist and answers with a Next.js 404 PAGE. This asserts the host and path
+  // verified against the live API.
   it("calls the verified files host, not the marketing host", async () => {
     let requested = "";
     vi.stubGlobal(
@@ -45,7 +60,7 @@ describe("fetchDroppedDomains", () => {
       }),
     );
 
-    await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] });
+    await collect({ date: "2026-08-19", tlds: ["com"] });
 
     expect(requested).toContain(
       "https://files.whoisfreaks.com/v3.1/download/domainer/dropped",
@@ -56,7 +71,7 @@ describe("fetchDroppedDomains", () => {
     expect(requested).toContain("whois=false");
   });
 
-  it("decompresses the gzipped feed and normalizes names", async () => {
+  it("decompresses the feed and normalizes names", async () => {
     vi.stubGlobal(
       "fetch",
       vi
@@ -64,13 +79,15 @@ describe("fetchDroppedDomains", () => {
         .mockResolvedValue(feedResponse(["A.COM", " b.com ", "", "c.com"])),
     );
 
-    expect(
-      await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] }),
-    ).toEqual(["a.com", "b.com", "c.com"]);
+    expect(await collect({ date: "2026-08-19", tlds: ["com"] })).toEqual([
+      "a.com",
+      "b.com",
+      "c.com",
+    ]);
   });
 
   // There is no server-side TLD filter on this endpoint -- the download is the
-  // whole day across every TLD, so narrowing has to happen client-side.
+  // whole day across every TLD, so narrowing happens as it streams.
   it("filters to the requested TLDs", async () => {
     vi.stubGlobal(
       "fetch",
@@ -81,18 +98,40 @@ describe("fetchDroppedDomains", () => {
         ),
     );
 
-    expect(
-      await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com", "net"] }),
-    ).toEqual(["a.com", "c.net", "e.com"]);
+    expect(await collect({ date: "2026-08-19", tlds: ["com", "net"] })).toEqual(
+      ["a.com", "c.net", "e.com"],
+    );
   });
 
   it("handles CRLF line endings without corrupting names", async () => {
     const body = gzipSync(Buffer.from("a.com\r\nb.com\r\n", "utf-8"));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
 
-    expect(
-      await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] }),
-    ).toEqual(["a.com", "b.com"]);
+    expect(await collect({ date: "2026-08-19", tlds: ["com"] })).toEqual([
+      "a.com",
+      "b.com",
+    ]);
+  });
+
+  it("emits a final line with no trailing newline", async () => {
+    const body = gzipSync(Buffer.from("a.com\nb.com", "utf-8"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
+
+    expect(await collect({ date: "2026-08-19", tlds: ["com"] })).toEqual([
+      "a.com",
+      "b.com",
+    ]);
+  });
+
+  // The whole reason for streaming: a capped caller must stop the download
+  // rather than pay to decompress the rest of a 240,000-row file.
+  it("stops reading once the caller has seen enough", async () => {
+    const many = Array.from({ length: 500 }, (_, i) => `d${i}.com`);
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(feedResponse(many)));
+
+    const seen = await collect({ date: "2026-08-19", tlds: ["com"] }, 3);
+
+    expect(seen).toEqual(["d0.com", "d1.com", "d2.com"]);
   });
 
   it("refuses to call out when no key is configured", async () => {
@@ -100,9 +139,9 @@ describe("fetchDroppedDomains", () => {
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
 
-    expect(
-      await codeOf(fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] })),
-    ).toBe("WHOISFREAKS_NOT_CONFIGURED");
+    expect(await codeOf(collect({ date: "2026-08-19", tlds: ["com"] }))).toBe(
+      "WHOISFREAKS_NOT_CONFIGURED",
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
@@ -121,11 +160,9 @@ describe("fetchDroppedDomains", () => {
         "fetch",
         vi.fn().mockResolvedValue(jsonResponse({ status }, status)),
       );
-      expect(
-        await codeOf(
-          fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] }),
-        ),
-      ).toBe(expected);
+      expect(await codeOf(collect({ date: "2026-08-19", tlds: ["com"] }))).toBe(
+        expected,
+      );
     }
   });
 
@@ -135,8 +172,8 @@ describe("fetchDroppedDomains", () => {
       vi.fn().mockResolvedValue(new Response("not gzip at all")),
     );
 
-    expect(
-      await codeOf(fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] })),
-    ).toBe("UPSTREAM_UNAVAILABLE");
+    expect(await codeOf(collect({ date: "2026-08-19", tlds: ["com"] }))).toBe(
+      "UPSTREAM_UNAVAILABLE",
+    );
   });
 });

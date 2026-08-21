@@ -50,6 +50,7 @@ describe("harvestDroppedDomains", () => {
     projectId: "p1",
     terms: ["vending", "coffee", "snack"],
     exclude: ["deliotx.com"],
+    recordRun: () => Promise.resolve(),
   };
 
   it("stores only the domains that match the vocabulary", async () => {
@@ -58,12 +59,16 @@ describe("harvestDroppedDomains", () => {
     await harvestDroppedDomains({
       ...BASE,
       dates: ["2026-08-19"],
-      fetchDropped: () =>
-        Promise.resolve([
+      streamDropped: (_date, onDomain) => {
+        for (const d of [
           "swindonvending.com",
           "randomthing.com",
           "murocoffee.com",
-        ]),
+        ]) {
+          if (!onDomain(d)) break;
+        }
+        return Promise.resolve();
+      },
       insertMatches: (rows) => {
         inserted.push(...rows);
         return Promise.resolve();
@@ -82,7 +87,10 @@ describe("harvestDroppedDomains", () => {
     await harvestDroppedDomains({
       ...BASE,
       dates: ["2026-08-19"],
-      fetchDropped: () => Promise.resolve(["a-vending.com"]),
+      streamDropped: (_date, onDomain) => {
+        onDomain("a-vending.com");
+        return Promise.resolve();
+      },
       insertMatches: (rows) => {
         inserted.push(...rows);
         return Promise.resolve();
@@ -98,10 +106,13 @@ describe("harvestDroppedDomains", () => {
     const result = await harvestDroppedDomains({
       ...BASE,
       dates: ["2026-08-19", "2026-08-18"],
-      fetchDropped: (date: string) =>
-        date === "2026-08-19"
-          ? Promise.reject(new Error("UPSTREAM_UNAVAILABLE"))
-          : Promise.resolve(["good-vending.com"]),
+      streamDropped: (date, onDomain) => {
+        if (date === "2026-08-19") {
+          return Promise.reject(new Error("UPSTREAM_UNAVAILABLE"));
+        }
+        onDomain("good-vending.com");
+        return Promise.resolve();
+      },
       insertMatches: (rows) => {
         inserted.push(...rows.map((row) => row.domain));
         return Promise.resolve();
@@ -123,7 +134,12 @@ describe("harvestDroppedDomains", () => {
     await harvestDroppedDomains({
       ...BASE,
       dates: ["2026-08-19"],
-      fetchDropped: () => Promise.resolve(many),
+      streamDropped: (_date, onDomain) => {
+        for (const d of many) {
+          if (!onDomain(d)) break;
+        }
+        return Promise.resolve();
+      },
       insertMatches: (rows) => {
         count += rows.length;
         return Promise.resolve();
@@ -134,28 +150,74 @@ describe("harvestDroppedDomains", () => {
   });
 
   it("does nothing at all when there are no dates to pull", async () => {
-    const fetchDropped = vi.fn();
+    const streamDropped = vi.fn();
     const result = await harvestDroppedDomains({
       ...BASE,
       dates: [],
-      fetchDropped,
+      streamDropped,
       insertMatches: vi.fn(),
     });
 
-    expect(fetchDropped).not.toHaveBeenCalled();
+    expect(streamDropped).not.toHaveBeenCalled();
     expect(result.matched).toBe(0);
   });
 
   it("does not call out when the project has no vocabulary", async () => {
-    const fetchDropped = vi.fn();
+    const streamDropped = vi.fn();
     await harvestDroppedDomains({
       ...BASE,
       terms: [],
       dates: ["2026-08-19"],
-      fetchDropped,
+      streamDropped,
       insertMatches: vi.fn(),
     });
 
-    expect(fetchDropped).not.toHaveBeenCalled();
+    expect(streamDropped).not.toHaveBeenCalled();
+  });
+
+  // The bug this pins: completion used to be inferred from matched rows, so a
+  // legitimate zero-match day left no trace and was re-downloaded on every
+  // 15-minute tick -- 84 pulls of a 2 MB file per day.
+  it("records a day that matched nothing", async () => {
+    const recorded: Array<{ droppedOn: string; matched: number }> = [];
+
+    await harvestDroppedDomains({
+      ...BASE,
+      dates: ["2026-08-19"],
+      streamDropped: (_date, onDomain) => {
+        onDomain("totally-unrelated.com");
+        return Promise.resolve();
+      },
+      insertMatches: () => Promise.resolve(),
+      recordRun: (input) => {
+        recorded.push(input);
+        return Promise.resolve();
+      },
+    });
+
+    expect(recorded).toEqual([
+      { projectId: "p1", droppedOn: "2026-08-19", matched: 0 },
+    ]);
+  });
+
+  it("does not record a day whose inserts failed", async () => {
+    const recorded: string[] = [];
+
+    const result = await harvestDroppedDomains({
+      ...BASE,
+      dates: ["2026-08-19"],
+      streamDropped: (_date, onDomain) => {
+        onDomain("a-vending.com");
+        return Promise.resolve();
+      },
+      insertMatches: () => Promise.reject(new Error("D1 write failed")),
+      recordRun: (input) => {
+        recorded.push(input.droppedOn);
+        return Promise.resolve();
+      },
+    });
+
+    expect(recorded).toEqual([]);
+    expect(result.failedDates).toEqual(["2026-08-19"]);
   });
 });

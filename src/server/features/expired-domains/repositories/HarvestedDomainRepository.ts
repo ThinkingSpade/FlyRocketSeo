@@ -1,6 +1,6 @@
 import { and, desc, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db";
-import { harvestedDomains } from "@/db/schema";
+import { harvestedDomains, harvestRuns } from "@/db/schema";
 
 type HarvestedDomainRow = typeof harvestedDomains.$inferSelect;
 
@@ -28,8 +28,11 @@ async function insertMatches(
   }>,
 ): Promise<void> {
   if (rows.length === 0) return;
-  // D1 has a bound-parameter ceiling per statement; chunk well under it.
-  const CHUNK = 50;
+  // D1 allows at most 100 BOUND PARAMETERS per statement and drizzle binds
+  // every column, so the ceiling is 100/5 = 20 rows. 15 leaves headroom if a
+  // column is ever added -- at 50 the very first insert of any day with 21+
+  // matches failed outright and the day saved nothing.
+  const CHUNK = 15;
   for (let index = 0; index < rows.length; index += CHUNK) {
     await db
       .insert(harvestedDomains)
@@ -100,13 +103,41 @@ async function listForProject(
     .limit(limit);
 }
 
-/** Which dates this project has already harvested, so a day is pulled once. */
+/**
+ * Which dates this project has already processed.
+ *
+ * Read from `harvest_runs`, NOT from matched rows. A day that legitimately
+ * yields zero matches leaves no `harvested_domains` row, and inferring
+ * completion from matches made the scheduler re-download that day's 2 MB file
+ * on every 15-minute tick for as long as it stayed newest.
+ */
 async function listHarvestedDates(projectId: string): Promise<string[]> {
   const rows = await db
-    .selectDistinct({ droppedOn: harvestedDomains.droppedOn })
-    .from(harvestedDomains)
-    .where(eq(harvestedDomains.projectId, projectId));
+    .select({ droppedOn: harvestRuns.droppedOn })
+    .from(harvestRuns)
+    .where(eq(harvestRuns.projectId, projectId));
   return rows.map((row) => row.droppedOn);
+}
+
+/**
+ * Mark a date done. Called ONLY after every insert chunk succeeded, so a
+ * partially written day is retried on the next tick instead of being skipped
+ * forever -- the unique index makes replaying its rows harmless.
+ */
+async function recordRun(input: {
+  projectId: string;
+  droppedOn: string;
+  matched: number;
+}): Promise<void> {
+  await db
+    .insert(harvestRuns)
+    .values({
+      id: crypto.randomUUID(),
+      projectId: input.projectId,
+      droppedOn: input.droppedOn,
+      matched: input.matched,
+    })
+    .onConflictDoNothing();
 }
 
 export const HarvestedDomainRepository = {
@@ -116,4 +147,5 @@ export const HarvestedDomainRepository = {
   setAvailability,
   listForProject,
   listHarvestedDates,
+  recordRun,
 } as const;

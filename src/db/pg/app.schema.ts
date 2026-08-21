@@ -418,6 +418,27 @@ export const harvestedDomains = pgTable(
   ],
 );
 
+/** Postgres mirror of `harvest_runs` -- see the SQLite schema for why a
+ *  zero-match day still has to be recorded. */
+export const harvestRuns = pgTable(
+  "harvest_runs",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    droppedOn: text("dropped_on").notNull(),
+    matched: integer("matched").notNull().default(0),
+    completedAt: timestampColumn("completed_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("harvest_runs_project_date_idx").on(
+      table.projectId,
+      table.droppedOn,
+    ),
+  ],
+);
+
 export const auditPages = pgTable(
   "audit_pages",
   {

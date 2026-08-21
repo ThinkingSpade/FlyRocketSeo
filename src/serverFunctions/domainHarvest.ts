@@ -12,7 +12,7 @@ import { RankTrackingRepository } from "@/server/features/rank-tracking/reposito
 import { resolveDomainAvailability } from "@/server/lib/apiverve/domainAvailability";
 import type { ExpirationCache } from "@/server/lib/apiverve/domainExpiration";
 import { AppError } from "@/server/lib/errors";
-import { fetchDroppedDomains } from "@/server/lib/whoisfreaks";
+import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 import { resolveHarvestVocabulary } from "@/server/features/expired-domains/harvestVocabulary";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 
@@ -108,8 +108,10 @@ export const runHarvestNow = createServerFn({ method: "POST" })
         ...competitors.map((row) => row.domain.toLowerCase()),
       ],
       dates: dates.slice(0, 1),
-      fetchDropped: (date) => fetchDroppedDomains({ date, tlds: ["com"] }),
+      streamDropped: (date, onDomain) =>
+        streamDroppedDomains({ date, tlds: ["com"], onDomain }),
       insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
+      recordRun: (run) => HarvestedDomainRepository.recordRun(run),
     });
 
     return { ...result, terms };
@@ -145,7 +147,11 @@ export const checkHarvestedAvailability = createServerFn({ method: "POST" })
     const checkedAt = new Date().toISOString();
     const result: Record<string, boolean | null> = {};
 
-    for (const domain of data.domains) {
+    // Deduplicate: 25 copies of one domain used to bill 25 times whenever the
+    // post-fetch cache write failed, because each duplicate re-missed the cache.
+    for (const domain of new Set(
+      data.domains.map((d) => d.trim().toLowerCase()),
+    )) {
       const id = byDomain.get(domain);
       // Only ever check domains this project actually harvested -- otherwise
       // the endpoint becomes an arbitrary billed availability oracle.

@@ -7,7 +7,7 @@ import {
   resolveDomainRating,
   type RatingCache,
 } from "@/server/lib/ahrefsDomainRating";
-import { fetchDroppedDomains } from "@/server/lib/whoisfreaks";
+import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 import {
   datesToHarvest,
@@ -38,10 +38,10 @@ const BACKFILL_DAYS = 7;
 const TLDS = ["com"];
 
 export async function runScheduledDomainHarvest(): Promise<void> {
-  // No key means the subscription is over (or never started). That is an
-  // expected end state, not an error: the harvested rows stay readable and
-  // nothing else in the app depends on the feed being live.
-  if (!(await getOptionalEnvValue("WHOISFREAKS_API_KEY"))) return;
+  // The feed key gates HARVESTING only. Ahrefs DR is free and keyless, so
+  // grading must keep running after the subscription ends -- otherwise every
+  // row harvested in the final days stays ungraded forever.
+  const canHarvest = Boolean(await getOptionalEnvValue("WHOISFREAKS_API_KEY"));
 
   const cache: RatingCache = {
     get: (key) => env.KV.get(key),
@@ -50,7 +50,7 @@ export async function runScheduledDomainHarvest(): Promise<void> {
 
   for (const project of await listHarvestProjects()) {
     try {
-      await harvestForProject(project);
+      if (canHarvest) await harvestForProject(project);
       await gradeForProject(project.id, cache);
     } catch (error) {
       // One project's failure must not stop the others.
@@ -82,6 +82,21 @@ async function listHarvestProjects(): Promise<HarvestProject[]> {
     .map((row) => ({ id: row.id, domain: row.domain }));
 }
 
+/**
+ * The newest feed date that actually exists.
+ *
+ * A day's file publishes at 03:00 UTC the FOLLOWING day. Before that hour,
+ * "yesterday" does not exist yet, and asking for it is a guaranteed failed
+ * request on every tick between midnight and 03:00.
+ */
+function newestPublishedDate(now: Date): string {
+  const shifted = new Date(now.getTime());
+  if (shifted.getUTCHours() < 3) {
+    shifted.setUTCDate(shifted.getUTCDate() - 1);
+  }
+  return shifted.toISOString().slice(0, 10);
+}
+
 const vocabularyCache = {
   get: (key: string) => env.KV.get(key),
   put: (key: string, value: string, options: { expirationTtl: number }) =>
@@ -96,6 +111,16 @@ async function harvestForProject(project: HarvestProject): Promise<void> {
     HarvestedDomainRepository.listHarvestedDates(project.id),
   ]);
 
+  // Check for work BEFORE resolving vocabulary. Vocabulary can cost a model
+  // call on a cache miss, and doing it first meant a fully-harvested project
+  // paid for one on every 15-minute tick -- 96 a day, with no user action.
+  const dates = datesToHarvest({
+    today: newestPublishedDate(new Date()),
+    already,
+    maxDays: BACKFILL_DAYS,
+  });
+  if (dates.length === 0) return;
+
   // Seed terms PLUS the industries around this business -- schools, gyms,
   // hotels for a vending operator. Cached, so this is one model call a month.
   const { all: terms } = await resolveHarvestVocabulary({
@@ -105,13 +130,6 @@ async function harvestForProject(project: HarvestProject): Promise<void> {
     cache: vocabularyCache,
   });
   if (terms.length === 0) return;
-
-  const dates = datesToHarvest({
-    today: new Date().toISOString().slice(0, 10),
-    already,
-    maxDays: BACKFILL_DAYS,
-  });
-  if (dates.length === 0) return;
 
   await harvestDroppedDomains({
     projectId: project.id,
@@ -124,8 +142,10 @@ async function harvestForProject(project: HarvestProject): Promise<void> {
     // fifteen minutes away, so a backfill drains steadily without ever holding
     // several files in memory at once.
     dates: dates.slice(0, 1),
-    fetchDropped: (date) => fetchDroppedDomains({ date, tlds: TLDS }),
+    streamDropped: (date, onDomain) =>
+      streamDroppedDomains({ date, tlds: TLDS, onDomain }),
     insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
+    recordRun: (run) => HarvestedDomainRepository.recordRun(run),
   });
 }
 
