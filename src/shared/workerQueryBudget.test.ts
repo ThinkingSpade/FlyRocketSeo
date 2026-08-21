@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { HARVEST_TICKS_PER_HOUR } from "@/shared/cronDispatch";
 import {
   MAX_DOMAIN_RATING_LOOKUPS,
   MAX_GRADING_SUBREQUESTS,
@@ -9,11 +10,11 @@ import {
 
 describe("expired-domain Worker query budget", () => {
   it("fits the required harvest and grading units inside one Free-plan invocation", () => {
-    expect(MAX_MATCHES_PER_DAY).toBe(248);
+    expect(MAX_MATCHES_PER_DAY).toBe(184);
     expect(MAX_DOMAIN_RATING_LOOKUPS).toBe(8);
     // A lost completion can consume both the completion write and a fenced
     // release, so the true worst-case harvest is one above the happy path.
-    expect(MAX_SCHEDULED_HARVEST_SUBREQUESTS).toBe(28);
+    expect(MAX_SCHEDULED_HARVEST_SUBREQUESTS).toBe(24);
     expect(MAX_SCHEDULED_HARVEST_SUBREQUESTS).toBeLessThanOrEqual(
       WORKER_QUERY_BUDGET,
     );
@@ -26,12 +27,12 @@ describe("expired-domain Worker query budget", () => {
   // relationship, not just the number, keeps that trade-off from drifting when
   // someone retunes a batch size.
   it("never harvests more in a day than grading can resolve in a day", () => {
-    const CRON_TICKS_PER_DAY = 96;
+    const HARVEST_TICKS_PER_DAY = HARVEST_TICKS_PER_HOUR * 24;
     const PROJECTS = 3;
     // One feed date exists per day and a tick harvests one project, so
     // harvesting costs one tick per project and the rest are free for grading.
     const gradedPerDay =
-      (CRON_TICKS_PER_DAY - PROJECTS) * MAX_DOMAIN_RATING_LOOKUPS;
+      (HARVEST_TICKS_PER_DAY - PROJECTS) * MAX_DOMAIN_RATING_LOOKUPS;
     const harvestedPerDay = PROJECTS * MAX_MATCHES_PER_DAY;
 
     expect(harvestedPerDay).toBeLessThanOrEqual(gradedPerDay);

@@ -95,7 +95,7 @@ describe("harvestDroppedDomains", () => {
       }),
     );
 
-    expect(MAX_MATCHES_PER_DAY).toBe(248);
+    expect(MAX_MATCHES_PER_DAY).toBe(184);
     expect(inserted).toHaveLength(MAX_MATCHES_PER_DAY);
     expect(streamed).toBe(MAX_MATCHES_PER_DAY);
   });
