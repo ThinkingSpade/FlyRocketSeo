@@ -13,7 +13,7 @@ import {
   datesToHarvest,
   harvestDroppedDomains,
 } from "@/server/features/expired-domains/domainHarvest";
-import { deriveSeedTerms } from "@/shared/domainNameCandidates";
+import { resolveHarvestVocabulary } from "@/server/features/expired-domains/harvestVocabulary";
 
 /**
  * Cron body for the deleted-domain harvest.
@@ -82,6 +82,12 @@ async function listHarvestProjects(): Promise<HarvestProject[]> {
     .map((row) => ({ id: row.id, domain: row.domain }));
 }
 
+const vocabularyCache = {
+  get: (key: string) => env.KV.get(key),
+  put: (key: string, value: string, options: { expirationTtl: number }) =>
+    env.KV.put(key, value, options),
+};
+
 async function harvestForProject(project: HarvestProject): Promise<void> {
   const [keywordRows, profile, competitorRows, already] = await Promise.all([
     collectTrackedKeywords(project.id),
@@ -90,7 +96,14 @@ async function harvestForProject(project: HarvestProject): Promise<void> {
     HarvestedDomainRepository.listHarvestedDates(project.id),
   ]);
 
-  const terms = deriveSeedTerms(keywordRows, profile?.offer ?? "");
+  // Seed terms PLUS the industries around this business -- schools, gyms,
+  // hotels for a vending operator. Cached, so this is one model call a month.
+  const { all: terms } = await resolveHarvestVocabulary({
+    projectId: project.id,
+    keywords: keywordRows,
+    profileText: profile?.offer ?? "",
+    cache: vocabularyCache,
+  });
   if (terms.length === 0) return;
 
   const dates = datesToHarvest({
