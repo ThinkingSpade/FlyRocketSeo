@@ -2,10 +2,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { env } from "cloudflare:workers";
 import { z } from "zod";
 import { ProjectCompetitorRepository } from "@/server/features/competitors/repositories/ProjectCompetitorRepository";
-import {
-  datesToHarvest,
-  harvestDroppedDomains,
-} from "@/server/features/expired-domains/domainHarvest";
+import { harvestDroppedDomains } from "@/server/features/expired-domains/domainHarvest";
+import { runManualDomainHarvest } from "@/server/features/expired-domains/manualDomainHarvest";
 import { HarvestedDomainRepository } from "@/server/features/expired-domains/repositories/HarvestedDomainRepository";
 import { ProjectProfileRepository } from "@/server/features/profiles/repositories/ProjectProfileRepository";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
@@ -84,57 +82,39 @@ export const runHarvestNow = createServerFn({ method: "POST" })
       collectTrackedKeywords(context.projectId),
     ]);
 
-    const { all: terms } = await resolveHarvestVocabulary({
+    return runManualDomainHarvest({
       projectId: context.projectId,
-      keywords,
-      profileText: profile?.offer ?? "",
-      cache: {
-        get: (key) => env.KV.get(key),
-        put: (key, value, options) => env.KV.put(key, value, options),
-      },
-    });
-    if (terms.length === 0) {
-      return { matched: 0, harvestedDates: [], failedDates: [], terms };
-    }
-
-    const dates = datesToHarvest({
+      projectDomain,
+      competitorDomains: competitors.map((row) => row.domain),
       today: new Date().toISOString().slice(0, 10),
       already,
-      maxDays: 7,
-    });
-
-    const [droppedOn] = dates;
-    if (!droppedOn) {
-      return { matched: 0, harvestedDates: [], failedDates: [], terms };
-    }
-
-    const result = await harvestDroppedDomains({
-      projects: [
-        {
+      resolveTerms: async () => {
+        const { all } = await resolveHarvestVocabulary({
           projectId: context.projectId,
-          droppedOn,
-          terms,
-          exclude: [
-            projectDomain.toLowerCase(),
-            ...competitors.map((row) => row.domain.toLowerCase()),
-          ],
-        },
-      ],
-      now: () => new Date(),
-      streamDropped: (date, onDomain) =>
-        streamDroppedDomains({ date, tlds: ["com"], onDomain }),
-      insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
-      claimRun: (run) => HarvestedDomainRepository.claimRun(run),
-      completeRun: (run) => HarvestedDomainRepository.completeRun(run),
-      releaseRun: (claimId) => HarvestedDomainRepository.releaseRun(claimId),
+          keywords,
+          profileText: profile?.offer ?? "",
+          cache: {
+            get: (key) => env.KV.get(key),
+            put: (key, value, options) => env.KV.put(key, value, options),
+          },
+        });
+        return all;
+      },
+      harvest: (project) =>
+        harvestDroppedDomains({
+          projects: [project],
+          now: () => new Date(),
+          streamDropped: (date, onDomain) =>
+            streamDroppedDomains({ date, tlds: ["com"], onDomain }),
+          insertMatches: (rows) =>
+            HarvestedDomainRepository.insertMatches(rows),
+          claimRun: (run) => HarvestedDomainRepository.claimRun(run),
+          ownsRun: (run) => HarvestedDomainRepository.ownsRun(run),
+          completeRun: (run) => HarvestedDomainRepository.completeRun(run),
+          releaseRun: (claimId) =>
+            HarvestedDomainRepository.releaseRun(claimId),
+        }),
     });
-
-    return {
-      matched: result.matched,
-      harvestedDates: result.harvestedRuns.map((run) => run.droppedOn),
-      failedDates: result.failedRuns.map((run) => run.droppedOn),
-      terms,
-    };
   });
 
 const availabilityInput = z.object({

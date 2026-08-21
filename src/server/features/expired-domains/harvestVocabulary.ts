@@ -45,11 +45,7 @@ export async function resolveHarvestVocabulary(input: {
   const seed = deriveSeedTerms(input.keywords, input.profileText);
   if (seed.length === 0) return { seed: [], adjacent: [], all: [] };
 
-  const cacheKey = await vocabularyCacheKey(
-    input.projectId,
-    seed,
-    input.profileText,
-  );
+  const cacheKey = await vocabularyCacheKey(input.projectId, seed);
   const cached = await input.cache.get(cacheKey);
   if (cached) {
     const adjacent = parseCachedTerms(cached);
@@ -64,9 +60,14 @@ export async function resolveHarvestVocabulary(input: {
   // Only a non-empty answer is cached; caching an empty one would lock the
   // harvest into the narrow vocabulary for a month over a transient failure.
   if (adjacent.length > 0) {
-    await input.cache.put(cacheKey, JSON.stringify(adjacent), {
-      expirationTtl: VOCABULARY_TTL_SECONDS,
-    });
+    try {
+      await input.cache.put(cacheKey, JSON.stringify(adjacent), {
+        expirationTtl: VOCABULARY_TTL_SECONDS,
+      });
+    } catch {
+      // The model answer has already been paid for. A cache outage must not
+      // discard it and force the next harvest to buy the same answer again.
+    }
   }
 
   return { seed, adjacent, all: merge(seed, adjacent) };
@@ -76,14 +77,9 @@ export async function resolveHarvestVocabulary(input: {
 async function vocabularyCacheKey(
   projectId: string,
   seed: string[],
-  profileText: string,
 ): Promise<string> {
   const normalizedSeed = [...new Set(seed.map(normalizeCacheInput))].toSorted();
-  const normalizedProfile = normalizeCacheInput(profileText);
-  const material = JSON.stringify({
-    seed: normalizedSeed,
-    profileText: normalizedProfile,
-  });
+  const material = JSON.stringify({ seed: normalizedSeed });
   const digest = await crypto.subtle.digest(
     "SHA-256",
     new TextEncoder().encode(material),

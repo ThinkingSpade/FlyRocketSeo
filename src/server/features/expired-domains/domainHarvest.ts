@@ -41,7 +41,7 @@ export function datesToHarvest(input: {
 type ProjectHarvest = {
   projectId: string;
   droppedOn: string;
-  terms: string[];
+  terms: () => Promise<string[]>;
   exclude: string[];
 };
 
@@ -78,6 +78,11 @@ export async function harvestDroppedDomains(input: {
   }) => Promise<boolean>;
   /** Releases only the row still owned by this fencing token. */
   releaseRun: (claimId: string) => Promise<void>;
+  /** Checks that an unexpired claim is still owned by this fencing token. */
+  ownsRun: (input: {
+    claimId: string;
+    checkedAtIso: string;
+  }) => Promise<boolean>;
   /** Streams a date once; false cancels only when every matcher is full. */
   streamDropped: (
     date: string,
@@ -99,7 +104,6 @@ export async function harvestDroppedDomains(input: {
 
   const projectsByDate = new Map<string, ProjectHarvest[]>();
   for (const project of input.projects) {
-    if (project.terms.length === 0) continue;
     const projects = projectsByDate.get(project.droppedOn) ?? [];
     projects.push(project);
     projectsByDate.set(project.droppedOn, projects);
@@ -143,11 +147,13 @@ export async function harvestDroppedDomains(input: {
       if (!claimId) continue;
 
       try {
+        const terms = await project.terms();
+        if (terms.length === 0) throw new Error("HARVEST_VOCABULARY_EMPTY");
         claimed.push({
           project,
           claimId,
           matcher: createVocabularyMatcher({
-            terms: project.terms,
+            terms,
             exclude: project.exclude,
             limit: MAX_MATCHES_PER_DAY,
           }),
@@ -191,15 +197,19 @@ export async function harvestDroppedDomains(input: {
       };
       const matches = run.matcher.matches;
       try {
-        await input.insertMatches(
-          matches.map((match) => ({
-            id: crypto.randomUUID(),
-            projectId: run.project.projectId,
-            domain: match.domain,
-            matchedTerm: match.matchedTerm,
-            droppedOn: date,
-          })),
-        );
+        const rows = matches.map((match) => ({
+          id: crypto.randomUUID(),
+          projectId: run.project.projectId,
+          domain: match.domain,
+          matchedTerm: match.matchedTerm,
+          droppedOn: date,
+        }));
+        const stillOwned = await input.ownsRun({
+          claimId: run.claimId,
+          checkedAtIso: input.now().toISOString(),
+        });
+        if (!stillOwned) throw new Error("HARVEST_CLAIM_LOST");
+        await input.insertMatches(rows);
         const completed = await input.completeRun({
           claimId: run.claimId,
           matched: matches.length,

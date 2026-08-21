@@ -100,7 +100,7 @@ describe("resolveHarvestVocabulary", () => {
     expect(cache.store.size).toBe(2);
   });
 
-  it("includes profile text even when it derives the same seed terms", async () => {
+  it("reuses the cache when profile text derives the same seed terms", async () => {
     const cache = fakeCache();
     const derive = vi.fn().mockResolvedValue(["school"]);
 
@@ -119,8 +119,8 @@ describe("resolveHarvestVocabulary", () => {
       deriveAdjacent: derive,
     });
 
-    expect(derive).toHaveBeenCalledTimes(2);
-    expect(cache.store.size).toBe(2);
+    expect(derive).toHaveBeenCalledTimes(1);
+    expect(cache.store.size).toBe(1);
   });
 
   it("normalizes seed ordering, casing, and whitespace for a stable key", async () => {
@@ -159,6 +159,24 @@ describe("resolveHarvestVocabulary", () => {
     expect(put).toHaveBeenCalledWith(expect.any(String), expect.any(String), {
       expirationTtl: VOCABULARY_TTL_SECONDS,
     });
+  });
+
+  it("returns a paid answer when the cache write fails", async () => {
+    const adjacent = ["school", "hospital"];
+
+    const result = await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "",
+      cache: {
+        get: () => Promise.resolve(null),
+        put: () => Promise.reject(new Error("KV unavailable")),
+      },
+      deriveAdjacent: () => Promise.resolve(adjacent),
+    });
+
+    expect(result.adjacent).toEqual(adjacent);
+    expect(result.all).toEqual(expect.arrayContaining(adjacent));
   });
 
   // Caching an empty answer would lock the harvest into the narrow vocabulary

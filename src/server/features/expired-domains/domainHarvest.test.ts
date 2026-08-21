@@ -8,17 +8,21 @@ import {
 type HarvestInput = Parameters<typeof harvestDroppedDomains>[0];
 type ProjectInput = HarvestInput["projects"][number];
 type StoredMatch = Parameters<HarvestInput["insertMatches"]>[0][number];
+type ProjectOverrides = Omit<Partial<ProjectInput>, "terms"> & {
+  terms?: string[] | ProjectInput["terms"];
+};
 
 const NOW = new Date("2026-08-21T12:00:00.000Z");
 const DATE = "2026-08-19";
 
-function project(overrides: Partial<ProjectInput> = {}): ProjectInput {
+function project(overrides: ProjectOverrides = {}): ProjectInput {
+  const { terms = ["vending", "coffee", "snack"], ...rest } = overrides;
   return {
     projectId: "p1",
     droppedOn: DATE,
-    terms: ["vending", "coffee", "snack"],
+    terms: typeof terms === "function" ? terms : () => Promise.resolve(terms),
     exclude: ["deliotx.com"],
-    ...overrides,
+    ...rest,
   };
 }
 
@@ -33,6 +37,7 @@ function buildInput(
       Promise.resolve(`${projectId}:${droppedOn}`),
     completeRun: () => Promise.resolve(true),
     releaseRun: () => Promise.resolve(),
+    ownsRun: () => Promise.resolve(true),
     streamDropped: () => Promise.resolve(),
     insertMatches: () => Promise.resolve(),
     ...overrides,
@@ -223,45 +228,113 @@ describe("harvestDroppedDomains", () => {
     });
   });
 
-  it("lets only one of two overlapping ticks process a project and date", async () => {
-    let claimed = false;
-    const claimRun = vi.fn(() => {
-      if (claimed) return Promise.resolve(null);
-      claimed = true;
-      return Promise.resolve("owner");
-    });
-    const streamDropped = vi.fn(
-      (_date: string, onDomain: (domain: string) => boolean) => {
-        onDomain("a-vending.com");
-        return Promise.resolve();
-      },
-    );
+  it("does not resolve vocabulary or stream after losing an overlapping claim", async () => {
+    const terms = vi.fn(() => Promise.resolve(["vending"]));
+    const claimRun = vi.fn(() => Promise.resolve(null));
+    const streamDropped = vi.fn(() => Promise.resolve());
     const insertMatches = vi.fn(() => Promise.resolve());
     const completeRun = vi.fn(() => Promise.resolve(true));
 
-    await Promise.all([
-      harvestDroppedDomains(
-        buildInput([project()], {
-          claimRun,
-          streamDropped,
-          insertMatches,
-          completeRun,
-        }),
-      ),
-      harvestDroppedDomains(
-        buildInput([project()], {
-          claimRun,
-          streamDropped,
-          insertMatches,
-          completeRun,
-        }),
-      ),
-    ]);
+    await harvestDroppedDomains(
+      buildInput([project({ terms })], {
+        claimRun,
+        streamDropped,
+        insertMatches,
+        completeRun,
+      }),
+    );
 
-    expect(claimRun).toHaveBeenCalledTimes(2);
-    expect(streamDropped).toHaveBeenCalledTimes(1);
-    expect(insertMatches).toHaveBeenCalledTimes(1);
-    expect(completeRun).toHaveBeenCalledTimes(1);
+    expect(claimRun).toHaveBeenCalledTimes(1);
+    expect(terms).not.toHaveBeenCalled();
+    expect(streamDropped).not.toHaveBeenCalled();
+    expect(insertMatches).not.toHaveBeenCalled();
+    expect(completeRun).not.toHaveBeenCalled();
+  });
+
+  it("releases an empty-vocabulary claim and records it as failed", async () => {
+    const releaseRun = vi.fn(() => Promise.resolve());
+    const completeRun = vi.fn(() => Promise.resolve(true));
+    const streamDropped = vi.fn(() => Promise.resolve());
+
+    const result = await harvestDroppedDomains(
+      buildInput([project({ terms: [] })], {
+        releaseRun,
+        completeRun,
+        streamDropped,
+      }),
+    );
+
+    expect(releaseRun).toHaveBeenCalledWith(`p1:${DATE}`);
+    expect(completeRun).not.toHaveBeenCalled();
+    expect(streamDropped).not.toHaveBeenCalled();
+    expect(result.failedRuns).toEqual([{ projectId: "p1", droppedOn: DATE }]);
+  });
+
+  it("isolates a vocabulary failure and continues another project", async () => {
+    const releaseRun = vi.fn(() => Promise.resolve());
+    const inserted: StoredMatch[] = [];
+
+    const result = await harvestDroppedDomains(
+      buildInput(
+        [
+          project({
+            terms: () => Promise.reject(new Error("model failed")),
+          }),
+          project({ projectId: "p2", terms: ["coffee"] }),
+        ],
+        {
+          releaseRun,
+          streamDropped: (_date, onDomain) => {
+            onDomain("good-coffee.com");
+            return Promise.resolve();
+          },
+          insertMatches: (rows) => {
+            inserted.push(...rows);
+            return Promise.resolve();
+          },
+        },
+      ),
+    );
+
+    expect(releaseRun).toHaveBeenCalledWith(`p1:${DATE}`);
+    expect(result.failedRuns).toEqual([{ projectId: "p1", droppedOn: DATE }]);
+    expect(result.harvestedRuns).toEqual([
+      { projectId: "p2", droppedOn: DATE },
+    ]);
+    expect(inserted.map((row) => row.projectId)).toEqual(["p2"]);
+  });
+
+  it("does not insert rows after losing claim ownership", async () => {
+    const ownsRun = vi.fn(() => Promise.resolve(false));
+    const insertMatches = vi.fn(() => Promise.resolve());
+    const completeRun = vi.fn(() => Promise.resolve(true));
+    const releaseRun = vi.fn(() => Promise.resolve());
+
+    const result = await harvestDroppedDomains(
+      buildInput([project()], {
+        streamDropped: (_date, onDomain) => {
+          onDomain("a-vending.com");
+          return Promise.resolve();
+        },
+        ownsRun,
+        insertMatches,
+        completeRun,
+        releaseRun,
+      }),
+    );
+
+    expect(ownsRun).toHaveBeenCalledWith({
+      claimId: `p1:${DATE}`,
+      checkedAtIso: NOW.toISOString(),
+    });
+    expect(insertMatches).not.toHaveBeenCalled();
+    expect(completeRun).not.toHaveBeenCalled();
+    expect(releaseRun).toHaveBeenCalledWith(`p1:${DATE}`);
+    expect(result).toEqual({
+      harvestedRuns: [],
+      failedRuns: [{ projectId: "p1", droppedOn: DATE }],
+      matched: 0,
+    });
   });
 
   it("releases a failed claim so a later tick retries it", async () => {

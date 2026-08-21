@@ -1,4 +1,4 @@
-import { and, desc, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { harvestedDomains, harvestRuns } from "@/db/schema";
 
@@ -160,6 +160,24 @@ async function claimRun(input: {
   return claimed?.id === claimId ? claimId : null;
 }
 
+/** Verify the fencing token immediately before its harvested rows are stored. */
+async function ownsRun(input: {
+  claimId: string;
+  checkedAtIso: string;
+}): Promise<boolean> {
+  const [owned] = await db
+    .select({ id: harvestRuns.id })
+    .from(harvestRuns)
+    .where(
+      and(
+        eq(harvestRuns.id, input.claimId),
+        gt(harvestRuns.leaseExpiresAt, input.checkedAtIso),
+      ),
+    )
+    .limit(1);
+  return Boolean(owned);
+}
+
 /** Mark a claim complete only after every insert chunk succeeded. */
 async function completeRun(input: {
   claimId: string;
@@ -200,6 +218,7 @@ export const HarvestedDomainRepository = {
   listForProject,
   listHarvestedDates,
   claimRun,
+  ownsRun,
   completeRun,
   releaseRun,
 } as const;

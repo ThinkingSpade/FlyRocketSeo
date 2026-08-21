@@ -73,6 +73,7 @@ export async function runScheduledDomainHarvest(): Promise<void> {
           streamDroppedDomains({ date, tlds: TLDS, onDomain }),
         insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
         claimRun: (run) => HarvestedDomainRepository.claimRun(run),
+        ownsRun: (run) => HarvestedDomainRepository.ownsRun(run),
         completeRun: (run) => HarvestedDomainRepository.completeRun(run),
         releaseRun: (claimId) => HarvestedDomainRepository.releaseRun(claimId),
       });
@@ -95,7 +96,7 @@ type HarvestProject = { id: string; domain: string };
 type PreparedHarvest = {
   projectId: string;
   droppedOn: string;
-  terms: string[];
+  terms: () => Promise<string[]>;
   exclude: string[];
 };
 
@@ -162,20 +163,21 @@ async function prepareHarvestForProject(
   });
   if (!droppedOn) return null;
 
-  // Seed terms PLUS the industries around this business -- schools, gyms,
-  // hotels for a vending operator. Cached, so this is one model call a month.
-  const { all: terms } = await resolveHarvestVocabulary({
-    projectId: project.id,
-    keywords: keywordRows,
-    profileText: profile?.offer ?? "",
-    cache: vocabularyCache,
-  });
-  if (terms.length === 0) return null;
-
   return {
     projectId: project.id,
     droppedOn,
-    terms,
+    // Seed terms PLUS the industries around this business -- schools, gyms,
+    // hotels for a vending operator. Only the claim owner may pay for a cache
+    // miss; harvestDroppedDomains releases the claim if resolution fails.
+    terms: async () => {
+      const { all } = await resolveHarvestVocabulary({
+        projectId: project.id,
+        keywords: keywordRows,
+        profileText: profile?.offer ?? "",
+        cache: vocabularyCache,
+      });
+      return all;
+    },
     exclude: [
       project.domain.toLowerCase(),
       ...competitorRows.map((row) => row.domain.toLowerCase()),

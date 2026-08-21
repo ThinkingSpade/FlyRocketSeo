@@ -134,26 +134,26 @@ describe("createVocabularyMatcher", () => {
 
   it("finds a later boundary occurrence after an earlier weak hit", () => {
     const matcher = createVocabularyMatcher({
-      terms: ["rent"],
+      terms: ["rent", "hire"],
       exclude: [],
       limit: 1,
     });
-    expect(matcher.accept("current0-rentals.com")).toBe(false);
+    expect(matcher.accept("current0-hire.com")).toBe(false);
     expect(matcher.matches).toEqual([
-      { domain: "current0-rentals.com", matchedTerm: "rent" },
+      { domain: "current0-hire.com", matchedTerm: "hire" },
     ]);
   });
 
   it("finds a boundary occurrence that overlaps an earlier weak hit", () => {
     const matcher = createVocabularyMatcher({
-      terms: ["aaaa"],
+      terms: ["aaaa", "aaab"],
       exclude: [],
       limit: 1,
     });
 
-    expect(matcher.accept("xaaaaa-b.com")).toBe(false);
+    expect(matcher.accept("xaaaab.com")).toBe(false);
     expect(matcher.matches).toEqual([
-      { domain: "xaaaaa-b.com", matchedTerm: "aaaa" },
+      { domain: "xaaaab.com", matchedTerm: "aaab" },
     ]);
   });
 
@@ -179,6 +179,10 @@ describe("createVocabularyMatcher", () => {
       exclude: [],
       limit: 3,
     });
+
+    expect(matcher.accept("current0.com")).toBe(true);
+    expect(matcher.accept("current1.com")).toBe(true);
+    expect(matcher.accept("current2.com")).toBe(true);
     expect(matcher.accept("rentals.com")).toBe(true);
     expect(matcher.accept("parent.com")).toBe(true);
     expect(matcher.accept("best-rent-deals.com")).toBe(false);
