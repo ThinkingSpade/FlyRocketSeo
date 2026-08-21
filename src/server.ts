@@ -206,13 +206,21 @@ export default {
     _ctx: ExecutionContext,
   ) {
     const scheduledTime = new Date(controller.scheduledTime);
+    const unit = scheduledUnitForTick(scheduledTime);
+    // One line per tick, permanently. Three separate failures in this cron
+    // (a model call, a feed date, and DR grading) each hid behind a
+    // catch-and-continue for days while the tick itself reported "Ok", and a
+    // trigger that silently stopped firing was indistinguishable from work
+    // that ran and found nothing to do. Naming the tick and the unit it chose
+    // is what tells those two apart.
+    console.log(`[cron] ${scheduledTime.toISOString()} -> ${unit}`);
     // Scope a per-request Postgres client for the cron run (no-op in D1 mode).
     await withPgClient(async () => {
       // One unit of work per tick. These two jobs cannot share an invocation
       // without risking the Free-plan 50-query budget, and they are split by
       // TICK rather than by a second cron trigger because Workers Builds
       // deploys via the versions API, which never registers new triggers.
-      if (scheduledUnitForTick(scheduledTime) === "rank-checks") {
+      if (unit === "rank-checks") {
         await runScheduledRankChecks(env);
         return;
       }
