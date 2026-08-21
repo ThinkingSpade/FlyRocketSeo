@@ -55,9 +55,14 @@ export async function runScheduledDomainHarvest(
     {
       listProjectStates: () => listHarvestProjectStates(publishedDate),
       harvestProject: async (candidate) => {
+        // A completed-but-empty result (claimed nothing, matched nothing) is
+        // not an exception, so it needs its own log line -- otherwise a tick
+        // that silently accomplishes nothing is indistinguishable from one
+        // that never ran at all, which is exactly the failure mode this whole
+        // fix was for.
         try {
           const job = await prepareHarvestForProject(candidate);
-          await harvestDroppedDomains({
+          const result = await harvestDroppedDomains({
             projects: [job],
             now: () => new Date(),
             streamDropped: (date, onDomain) =>
@@ -71,6 +76,13 @@ export async function runScheduledDomainHarvest(
             releaseRun: (claimId) =>
               HarvestedDomainRepository.releaseRun(claimId),
           });
+          console.log(
+            `[cron] harvest ${candidate.projectId}/${candidate.droppedOn}` +
+              ` matched=${result.matched}` +
+              ` harvested=${result.harvestedRuns.length}` +
+              ` skipped=${result.skippedRuns.length}` +
+              ` failed=${result.failedRuns.length}`,
+          );
         } catch (error) {
           // A failed harvest attempt still consumes this tick's one work unit.
           console.error(
@@ -81,7 +93,13 @@ export async function runScheduledDomainHarvest(
       },
       grade: async () => {
         try {
-          await gradeStoredDomainRatings(null, cache);
+          const result = await gradeStoredDomainRatings(null, cache);
+          console.log(
+            `[cron] grade attempted=${result.attempted}` +
+              ` graded=${result.graded}` +
+              ` failed=${result.failed}` +
+              ` remaining=${result.remaining}`,
+          );
         } catch (error) {
           console.error("expired-domains.grading batch failed:", error);
         }
