@@ -69,6 +69,8 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
     "The deleted-domain feed needs a WHOISFREAKS_API_KEY on the deployment. Everything else on this tab works without it.",
   WHOISFREAKS_AUTH_FAILED:
     "WhoisFreaks rejected the API key. Check that WHOISFREAKS_API_KEY is valid and the subscription is still active.",
+  WHOISFREAKS_SUBSCRIPTION_WINDOW:
+    "That deleted-domain file predates the active WhoisFreaks subscription window.",
 };
 
 export function getStandardErrorMessage(

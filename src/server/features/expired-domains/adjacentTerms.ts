@@ -1,5 +1,5 @@
 import { generateText } from "ai";
-import { getChatAgentModel } from "@/server/lib/openrouter";
+import { buildChatAgentModel } from "@/server/lib/openrouter";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 
 /**
@@ -22,8 +22,9 @@ import { getOptionalEnvValue } from "@/server/lib/runtime-env";
  * The parser is deliberately strict and separately tested: a model that decides
  * to explain itself must not turn a sentence into a domain name.
  */
-const MAX_TERMS = 30;
-const MAX_OUTPUT_TOKENS = 400;
+const MAX_TERMS = 50;
+const MAX_OUTPUT_TOKENS = 1_500;
+const ADJACENT_TERMS_MODEL = "minimax/minimax-m3";
 
 const SYSTEM_PROMPT = `You list industry words for a domain-name search, for a business.
 Reply with ONLY a comma-separated list of single lowercase words. No sentences, no numbering, no explanation.
@@ -44,6 +45,11 @@ Be generous and wide-ranging. A word only needs to be plausibly connected to the
  * unpredictable model and a list that decides what we spend money checking.
  */
 export function parseAdjacentTerms(raw: string): string[] {
+  // Reject the reply atomically when it contains an explanation or leaked
+  // reasoning trace. Filtering individual fragments is unsafe here: commas in
+  // prose can leave ordinary words that also happen to be valid domain terms.
+  if (looksLikeProseReply(raw)) return [];
+
   const seen = new Set<string>();
   for (const piece of raw.split(/[,\n]/)) {
     const token = (piece.split(":").pop() ?? "")
@@ -63,6 +69,19 @@ export function parseAdjacentTerms(raw: string): string[] {
   return [...seen];
 }
 
+function looksLikeProseReply(raw: string): boolean {
+  if (/<\/?think\b/i.test(raw)) return true;
+
+  return raw.split(/[,\n]/).some((piece) => {
+    const unmarked = piece
+      .trim()
+      .replace(/^[-*•]\s*/, "")
+      .replace(/^\d+[.)]\s*/, "")
+      .trim();
+    return unmarked.includes(":") || /[a-z]\s+[a-z]/i.test(unmarked);
+  });
+}
+
 /**
  * Ask for adjacent terms. Returns `[]` when no model is configured or the call
  * fails -- the acquirable search then runs on the client's own vocabulary only,
@@ -73,17 +92,29 @@ export async function deriveAdjacentTerms(
   industryTerms: string[],
 ): Promise<string[]> {
   if (industryTerms.length === 0) return [];
-  if (!(await getOptionalEnvValue("OPENROUTER_API_KEY"))) return [];
+  const apiKey = await getOptionalEnvValue("OPENROUTER_API_KEY");
+  if (!apiKey) return [];
 
   try {
-    const model = await getChatAgentModel();
-    const { text } = await generateText({
+    // This task is intentionally pinned: the generic chat-agent override can
+    // select a provider that does not satisfy the account's ZDR policy. The
+    // shared builder retains usage accounting, reasoning separation and the
+    // established ZDR provider order.
+    const model = buildChatAgentModel(apiKey, ADJACENT_TERMS_MODEL);
+    const { finishReason, text } = await generateText({
       model,
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       system: SYSTEM_PROMPT,
       prompt: `The business works in: ${industryTerms.slice(0, 10).join(", ")}.
 List every industry, venue type, product category and content topic connected to it -- including the industries of its likely CUSTOMERS, not only its own trade.`,
     });
+    if (!text.trim()) {
+      console.error("expired-domains.adjacentTerms empty response", {
+        finishReason,
+        textLength: text.length,
+      });
+      return [];
+    }
     return parseAdjacentTerms(text);
   } catch (error) {
     console.error("expired-domains.adjacentTerms failed:", error);

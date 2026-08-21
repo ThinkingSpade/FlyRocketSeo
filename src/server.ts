@@ -197,23 +197,28 @@ export { OnboardingChatAgent } from "./server/features/onboarding/OnboardingChat
 // Durable Object class for the SAM in-app agent (Agents SDK).
 export { SamChatAgent } from "./server/features/sam/SamChatAgent";
 
+const RANK_CHECK_CRON = "*/15 * * * *";
+const DOMAIN_HARVEST_CRON = "7,22,37,52 * * * *";
+
 export default {
   fetch,
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     _ctx: ExecutionContext,
   ) {
     // Scope a per-request Postgres client for the cron run (no-op in D1 mode).
     await withPgClient(async () => {
-      await runScheduledRankChecks(env);
-      // Self-limiting: it does real work about once a day per project and is
-      // otherwise two cheap reads, so it is safe on the 15-minute tick. Its
-      // failure must never take the rank checks down with it.
-      try {
-        await runScheduledDomainHarvest();
-      } catch (error) {
-        console.error("scheduled.domainHarvest failed:", error);
+      if (controller.cron === RANK_CHECK_CRON) {
+        await runScheduledRankChecks(env);
+        return;
+      }
+      if (controller.cron === DOMAIN_HARVEST_CRON) {
+        try {
+          await runScheduledDomainHarvest(new Date(controller.scheduledTime));
+        } catch (error) {
+          console.error("scheduled.domainHarvest failed:", error);
+        }
       }
     });
   },

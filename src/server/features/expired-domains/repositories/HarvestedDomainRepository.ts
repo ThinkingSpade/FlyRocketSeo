@@ -1,6 +1,8 @@
 import { and, desc, eq, gt, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { harvestedDomains, harvestRuns } from "@/db/schema";
+import { partitionHarvestRunDates } from "@/server/features/expired-domains/harvestRunDates";
+import { HARVEST_INSERT_ROWS_PER_QUERY } from "@/shared/workerQueryBudget";
 
 type HarvestedDomainRow = typeof harvestedDomains.$inferSelect;
 
@@ -28,35 +30,20 @@ async function insertMatches(
   }>,
 ): Promise<void> {
   if (rows.length === 0) return;
-  // D1 allows at most 100 BOUND PARAMETERS per statement and drizzle binds
-  // every column, so the ceiling is 100/5 = 20 rows. 15 leaves headroom if a
-  // column is ever added -- at 50 the very first insert of any day with 21+
-  // matches failed outright and the day saved nothing.
-  const CHUNK = 15;
-  for (let index = 0; index < rows.length; index += CHUNK) {
+  // D1 allows at most 100 BOUND PARAMETERS per statement. These five supplied
+  // values plus Drizzle's bound domain_rating_attempts default make six per
+  // row, so 15 rows use 90. At 50, the first insert with 21+ matches failed
+  // outright and the day saved nothing.
+  for (
+    let index = 0;
+    index < rows.length;
+    index += HARVEST_INSERT_ROWS_PER_QUERY
+  ) {
     await db
       .insert(harvestedDomains)
-      .values(rows.slice(index, index + CHUNK))
+      .values(rows.slice(index, index + HARVEST_INSERT_ROWS_PER_QUERY))
       .onConflictDoNothing();
   }
-}
-
-/** Rows still awaiting a DR grade, oldest first so nothing starves. */
-async function listUngraded(
-  projectId: string,
-  limit: number,
-): Promise<HarvestedDomainRow[]> {
-  return db
-    .select()
-    .from(harvestedDomains)
-    .where(
-      and(
-        eq(harvestedDomains.projectId, projectId),
-        isNull(harvestedDomains.domainRating),
-      ),
-    )
-    .orderBy(harvestedDomains.createdAt)
-    .limit(limit);
 }
 
 /**
@@ -111,9 +98,14 @@ async function listForProject(
  * completion from matches made the scheduler re-download that day's 2 MB file
  * on every 15-minute tick for as long as it stayed newest.
  */
-async function listHarvestedDates(projectId: string): Promise<string[]> {
+async function listHarvestRunDates(
+  projectId: string,
+): Promise<{ harvestedDates: string[]; skippedDates: string[] }> {
   const rows = await db
-    .select({ droppedOn: harvestRuns.droppedOn })
+    .select({
+      droppedOn: harvestRuns.droppedOn,
+      skipReason: harvestRuns.skipReason,
+    })
     .from(harvestRuns)
     .where(
       and(
@@ -122,7 +114,7 @@ async function listHarvestedDates(projectId: string): Promise<string[]> {
         isNull(harvestRuns.leaseExpiresAt),
       ),
     );
-  return rows.map((row) => row.droppedOn);
+  return partitionHarvestRunDates(rows);
 }
 
 /**
@@ -188,6 +180,7 @@ async function completeRun(input: {
     .update(harvestRuns)
     .set({
       matched: input.matched,
+      skipReason: null,
       leaseExpiresAt: null,
       completedAt: input.completedAtIso,
     })
@@ -201,6 +194,30 @@ async function completeRun(input: {
   return Boolean(completed);
 }
 
+/** Permanently skip a proven subscription-window miss under the same fence. */
+async function skipRun(input: {
+  claimId: string;
+  reason: string;
+  completedAtIso: string;
+}): Promise<boolean> {
+  const [skipped] = await db
+    .update(harvestRuns)
+    .set({
+      matched: 0,
+      skipReason: input.reason,
+      leaseExpiresAt: null,
+      completedAt: input.completedAtIso,
+    })
+    .where(
+      and(
+        eq(harvestRuns.id, input.claimId),
+        isNotNull(harvestRuns.leaseExpiresAt),
+      ),
+    )
+    .returning({ id: harvestRuns.id });
+  return Boolean(skipped);
+}
+
 /** Release a known failure; a crash instead becomes retryable on lease expiry. */
 async function releaseRun(claimId: string): Promise<void> {
   await db
@@ -212,13 +229,13 @@ async function releaseRun(claimId: string): Promise<void> {
 
 export const HarvestedDomainRepository = {
   insertMatches,
-  listUngraded,
   setDomainRating,
   setAvailability,
   listForProject,
-  listHarvestedDates,
+  listHarvestRunDates,
   claimRun,
   ownsRun,
   completeRun,
+  skipRun,
   releaseRun,
 } as const;

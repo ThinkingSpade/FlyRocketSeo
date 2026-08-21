@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import {
@@ -6,8 +6,16 @@ import {
   getHarvestedDomains,
   runHarvestNow,
 } from "@/serverFunctions/domainHarvest";
+import { gradeHarvestedDomainsNow } from "@/serverFunctions/domainRatingGrading";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { describeGradingResult } from "@/client/features/expired-domains/gradingResultNotice";
+import {
+  maxVisibleGradeRequests,
+  runVisibleDomainGrading,
+  type VisibleGradingProgress,
+} from "@/client/features/expired-domains/gradeVisibleDomains";
+import { describeHarvestResult } from "@/client/features/expired-domains/harvestResultNotices";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import {
@@ -45,6 +53,10 @@ function availabilityLabel(
 export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
   const queryClient = useQueryClient();
   const [minRating, setMinRating] = useState(0);
+  const [gradingProgress, setGradingProgress] =
+    useState<VisibleGradingProgress | null>(null);
+  const [gradingStopping, setGradingStopping] = useState(false);
+  const gradingControllerRef = useRef<AbortController | null>(null);
 
   const harvestQuery = useQuery({
     queryKey: ["harvested-domains", projectId],
@@ -54,21 +66,10 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
   const harvestNow = useMutation({
     mutationFn: () => runHarvestNow({ data: { projectId } }),
     onSuccess: async (result) => {
-      if (result.terms.length === 0) {
-        toast.error(
-          "No industry vocabulary yet — add rank-tracked keywords or a business profile first.",
-        );
-        return;
-      }
-      if (result.failedDates.length > 0) {
-        toast.error(`Could not pull ${result.failedDates.join(", ")}.`);
-      }
-      if (result.harvestedDates.length === 0) {
-        toast.success("Already up to date — every recent day is harvested.");
-      } else {
-        toast.success(
-          `Harvested ${result.harvestedDates.join(", ")} — ${result.matched} matches.`,
-        );
+      for (const notice of describeHarvestResult(result)) {
+        if (notice.kind === "error") toast.error(notice.message);
+        else if (notice.kind === "info") toast.info(notice.message);
+        else toast.success(notice.message);
       }
       await queryClient.invalidateQueries({
         queryKey: ["harvested-domains", projectId],
@@ -89,6 +90,96 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
       ),
     [rows, minRating],
   );
+  const loadedUngradedDomains = useMemo(
+    () =>
+      (rows ?? [])
+        .filter((row) => row.domainRating === null)
+        .map((row) => row.domain),
+    [rows],
+  );
+
+  const gradeNow = useMutation({
+    mutationFn: ({
+      domains,
+      controller,
+    }: {
+      domains: string[];
+      controller: AbortController;
+    }) =>
+      runVisibleDomainGrading({
+        domains,
+        signal: controller.signal,
+        gradeBatch: ({ domains: batch, signal }) =>
+          gradeHarvestedDomainsNow({
+            data: { projectId, domains: batch },
+            signal,
+          }),
+        onProgress: async (progress) => {
+          setGradingProgress(progress);
+          await queryClient.invalidateQueries({
+            queryKey: ["harvested-domains", projectId],
+          });
+        },
+      }),
+    onSuccess: async (result) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["harvested-domains", projectId],
+      });
+      const notice = describeGradingResult(result);
+      if (notice.kind === "error") toast.error(notice.message);
+      else if (notice.kind === "info") toast.info(notice.message);
+      else toast.success(notice.message);
+    },
+    onError: (
+      error: unknown,
+      variables: { domains: string[]; controller: AbortController },
+    ) => {
+      if (!variables.controller.signal.aborted) {
+        toast.error(getStandardErrorMessage(error, "Domain grading failed."));
+      }
+    },
+    onSettled: (
+      _data,
+      _error,
+      variables: { domains: string[]; controller: AbortController },
+    ) => {
+      if (gradingControllerRef.current === variables.controller) {
+        gradingControllerRef.current = null;
+      }
+      setGradingProgress(null);
+      setGradingStopping(false);
+    },
+  });
+
+  useEffect(
+    () => () => {
+      gradingControllerRef.current?.abort();
+    },
+    [projectId],
+  );
+
+  function toggleGrading(): void {
+    const activeController = gradingControllerRef.current;
+    if (activeController) {
+      setGradingStopping(true);
+      activeController.abort();
+      return;
+    }
+    if (loadedUngradedDomains.length === 0) return;
+
+    const controller = new AbortController();
+    gradingControllerRef.current = controller;
+    setGradingStopping(false);
+    setGradingProgress({
+      attempted: 0,
+      graded: 0,
+      failed: 0,
+      remaining: loadedUngradedDomains.length,
+      requests: 0,
+      maxRequests: maxVisibleGradeRequests(loadedUngradedDomains.length),
+    });
+    gradeNow.mutate({ domains: loadedUngradedDomains, controller });
+  }
 
   // At most 200 rows are displayed. A direct capped loop is cheaper and clearer
   // than memoizing against a clock value that necessarily changes over time.
@@ -120,15 +211,34 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
           <p className="text-xs uppercase tracking-wide text-base-content/60">
             Dropped domains in your industry
           </p>
-          <Button
-            type="button"
-            variant="secondary"
-            size="sm"
-            disabled={harvestNow.isPending}
-            onClick={() => harvestNow.mutate()}
-          >
-            {harvestNow.isPending ? "Harvesting…" : "Harvest next day"}
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={
+                gradingStopping ||
+                (!gradeNow.isPending &&
+                  (harvestNow.isPending || loadedUngradedDomains.length === 0))
+              }
+              onClick={toggleGrading}
+            >
+              {gradingStopping
+                ? "Stopping…"
+                : gradeNow.isPending
+                  ? "Stop grading"
+                  : "Grade now"}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              size="sm"
+              disabled={harvestNow.isPending || gradeNow.isPending}
+              onClick={() => harvestNow.mutate()}
+            >
+              {harvestNow.isPending ? "Harvesting…" : "Harvest next day"}
+            </Button>
+          </div>
         </div>
 
         <p className="text-xs text-base-content/60">
@@ -136,6 +246,18 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
           industry vocabulary. These already dropped — they are registerable at
           normal price unless someone has taken them since.
         </p>
+
+        {gradingProgress ? (
+          <p
+            role="status"
+            aria-live="polite"
+            className="text-xs text-base-content/70"
+          >
+            Grading request {gradingProgress.requests} of{" "}
+            {gradingProgress.maxRequests} · {gradingProgress.graded} graded ·{" "}
+            {gradingProgress.remaining} loaded rows still ungraded.
+          </p>
+        ) : null}
 
         {harvestQuery.isLoading ? (
           <div className="flex justify-center py-6">
@@ -256,7 +378,8 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
               {rows?.length ?? 0} harvested from{" "}
               {harvestQuery.data?.harvestedDates.length ?? 0} day
               {harvestQuery.data?.harvestedDates.length === 1 ? "" : "s"} ·{" "}
-              {visible.length} shown · DR fills in automatically as grading runs
+              {visible.length} shown · DR fills in on schedule or when you click
+              Grade now
             </p>
           </>
         )}

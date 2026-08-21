@@ -1,9 +1,21 @@
 import { describe, expect, it, vi } from "vitest";
 import {
-  resolveHarvestVocabulary,
-  VOCABULARY_CACHE_PREFIX,
+  resolveHarvestVocabulary as resolveHarvestVocabularyProduction,
   VOCABULARY_TTL_SECONDS,
 } from "@/server/features/expired-domains/harvestVocabulary";
+
+type VocabularyInput = Parameters<typeof resolveHarvestVocabularyProduction>[0];
+
+function resolveHarvestVocabulary(
+  input: Omit<VocabularyInput, "allowModelDerivation"> & {
+    allowModelDerivation?: boolean;
+  },
+) {
+  return resolveHarvestVocabularyProduction({
+    allowModelDerivation: true,
+    ...input,
+  });
+}
 
 function fakeCache() {
   const store = new Map<string, string>();
@@ -15,6 +27,19 @@ function fakeCache() {
       return Promise.resolve();
     },
   };
+}
+
+async function warmCacheKey(cache: ReturnType<typeof fakeCache>) {
+  await resolveHarvestVocabulary({
+    projectId: "p1",
+    keywords: KEYWORDS,
+    profileText: "",
+    cache,
+    deriveAdjacent: () => Promise.resolve(["school"]),
+  });
+  const [key] = cache.store.keys();
+  if (!key) throw new Error("expected vocabulary cache write");
+  return key;
 }
 
 const KEYWORDS = ["vending machines dallas", "breakroom services"];
@@ -36,6 +61,11 @@ describe("resolveHarvestVocabulary", () => {
     expect(result.all).toEqual(
       expect.arrayContaining(["vending", "breakroom", "school", "hospital"]),
     );
+    expect(result.categoryByTerm).toMatchObject({
+      vending: "uncategorised",
+      school: "uncategorised",
+      hospital: "uncategorised",
+    });
   });
 
   it("dedupes a term the model repeats back from the seed", async () => {
@@ -71,10 +101,84 @@ describe("resolveHarvestVocabulary", () => {
 
     expect(derive).toHaveBeenCalledTimes(1);
     expect([...cache.store.keys()]).toEqual([
-      expect.stringMatching(
-        new RegExp(`^${VOCABULARY_CACHE_PREFIX}p1:[a-f0-9]{64}$`),
-      ),
+      expect.stringMatching(/^harvest-vocab:v2:p1:[a-f0-9]{64}$/),
     ]);
+  });
+
+  it("writes adjacent terms in the v2 structured cache shape", async () => {
+    const cache = fakeCache();
+
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "",
+      cache,
+      deriveAdjacent: () => Promise.resolve(["school", "hospital"]),
+    });
+
+    expect(JSON.parse([...cache.store.values()][0] ?? "null")).toEqual({
+      terms: ["school", "hospital"],
+      categoryByTerm: {
+        school: "uncategorised",
+        hospital: "uncategorised",
+      },
+    });
+  });
+
+  it("reads a deployed v1 array and defaults its categories", async () => {
+    const cache = fakeCache();
+    const currentKey = await warmCacheKey(cache);
+    const legacyKey = currentKey.replace(
+      /^harvest-vocab:v2:/,
+      "harvest-vocab:v1:",
+    );
+    cache.store.clear();
+    cache.store.set(legacyKey, JSON.stringify(["school", "hospital"]));
+    const derive = vi.fn().mockResolvedValue(["should-not-run"]);
+
+    const result = await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "",
+      cache,
+      deriveAdjacent: derive,
+    });
+
+    expect(result.adjacent).toEqual(["school", "hospital"]);
+    expect(result.categoryByTerm).toMatchObject({
+      school: "uncategorised",
+      hospital: "uncategorised",
+    });
+    expect(derive).not.toHaveBeenCalled();
+  });
+
+  it("defaults null and missing v2 categories without losing known ones", async () => {
+    const cache = fakeCache();
+    const currentKey = await warmCacheKey(cache);
+    cache.store.set(
+      currentKey,
+      JSON.stringify({
+        terms: ["school", "hospital", "gym"],
+        categoryByTerm: { school: "education", hospital: null },
+      }),
+    );
+    const derive = vi.fn().mockResolvedValue(["should-not-run"]);
+
+    const result = await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "",
+      cache,
+      deriveAdjacent: derive,
+    });
+
+    expect(result.categoryByTerm).toMatchObject({
+      school: "education",
+      hospital: "uncategorised",
+      gym: "uncategorised",
+      vending: "uncategorised",
+    });
+    expect(derive).not.toHaveBeenCalled();
   });
 
   it("misses the cache when the normalized keyword vocabulary changes", async () => {
@@ -191,6 +295,25 @@ describe("resolveHarvestVocabulary", () => {
       deriveAdjacent: () => Promise.resolve([]),
     });
 
+    expect(cache.store.size).toBe(0);
+  });
+
+  it("does not start paid adjacent derivation outside an explicit action", async () => {
+    const cache = fakeCache();
+    const derive = vi.fn().mockResolvedValue(["school"]);
+
+    const result = await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "",
+      cache,
+      allowModelDerivation: false,
+      deriveAdjacent: derive,
+    });
+
+    expect(result.adjacent).toEqual([]);
+    expect(result.all).toEqual(result.seed);
+    expect(derive).not.toHaveBeenCalled();
     expect(cache.store.size).toBe(0);
   });
 
