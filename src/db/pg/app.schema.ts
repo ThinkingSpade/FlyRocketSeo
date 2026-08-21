@@ -405,6 +405,13 @@ export const harvestedDomains = pgTable(
     matchedTerm: text("matched_term").notNull(),
     droppedOn: text("dropped_on").notNull(),
     domainRating: integer("domain_rating"),
+    domainRatingAttempts: integer("domain_rating_attempts")
+      .notNull()
+      .default(0),
+    domainRatingClaimId: text("domain_rating_claim_id"),
+    domainRatingLeaseExpiresAt: timestampColumn(
+      "domain_rating_lease_expires_at",
+    ),
     isAvailable: boolean("is_available"),
     availabilityCheckedAt: timestampColumn("availability_checked_at"),
     createdAt: timestampColumn("created_at").notNull().default(isoNow),
@@ -429,6 +436,7 @@ export const harvestRuns = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     droppedOn: text("dropped_on").notNull(),
     matched: integer("matched").notNull().default(0),
+    skipReason: text("skip_reason"),
     // Non-null is an active expiring claim; null is a completed run.
     leaseExpiresAt: timestampColumn("lease_expires_at"),
     completedAt: timestampColumn("completed_at").notNull().default(isoNow),

@@ -427,6 +427,14 @@ export const harvestedDomains = sqliteTable(
     droppedOn: text("dropped_on").notNull(),
     /** Ahrefs DR: null = ungraded/unknown, 0 = genuinely rated zero. */
     domainRating: integer("domain_rating"),
+    /** Failed/unknown DR lookups stop retrying after three atomic claims. */
+    domainRatingAttempts: integer("domain_rating_attempts")
+      .notNull()
+      .default(0),
+    /** Fencing token for the invocation currently resolving this row. */
+    domainRatingClaimId: text("domain_rating_claim_id"),
+    /** Expiring lease; null means no grading invocation owns the row. */
+    domainRatingLeaseExpiresAt: text("domain_rating_lease_expires_at"),
     /** null until checked; deleted domains get registered by other people. */
     isAvailable: integer("is_available", { mode: "boolean" }),
     availabilityCheckedAt: text("availability_checked_at"),
@@ -466,6 +474,8 @@ export const harvestRuns = sqliteTable(
     /** Feed date (yyyy-MM-dd). */
     droppedOn: text("dropped_on").notNull(),
     matched: integer("matched").notNull().default(0),
+    /** Null for a read feed; otherwise why this date is permanently skipped. */
+    skipReason: text("skip_reason"),
     /** Non-null is an active expiring claim; null is a completed run. */
     leaseExpiresAt: text("lease_expires_at"),
     completedAt: text("completed_at")

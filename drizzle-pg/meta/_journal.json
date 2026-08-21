@@ -127,6 +127,27 @@
       "when": 1787289927125,
       "tag": "0017_overconfident_human_torch",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1787305268858,
+      "tag": "0018_worried_omega_red",
+      "breakpoints": true
+    },
+    {
+      "idx": 19,
+      "version": "7",
+      "when": 1787305669849,
+      "tag": "0019_eager_wraith",
+      "breakpoints": true
+    },
+    {
+      "idx": 20,
+      "version": "7",
+      "when": 1787307633059,
+      "tag": "0020_solid_robbie_robertson",
+      "breakpoints": true
     }
   ]
 }

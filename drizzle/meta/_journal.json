@@ -309,6 +309,27 @@
       "when": 1787289924202,
       "tag": "0043_hot_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1787305261948,
+      "tag": "0044_ambitious_scarlet_witch",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1787305662633,
+      "tag": "0045_wealthy_phantom_reporter",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1787307630938,
+      "tag": "0046_unknown_maximus",
+      "breakpoints": true
     }
   ]
 }

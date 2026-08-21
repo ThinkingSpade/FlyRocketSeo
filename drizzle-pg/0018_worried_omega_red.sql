@@ -1,0 +1,1 @@
+ALTER TABLE "harvested_domains" ADD COLUMN "domain_rating_attempts" integer DEFAULT 0 NOT NULL;

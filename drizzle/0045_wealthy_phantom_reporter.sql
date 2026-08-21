@@ -1,0 +1,1 @@
+ALTER TABLE `harvest_runs` ADD `skip_reason` text;

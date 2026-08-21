@@ -13,6 +13,7 @@ type ManualHarvestProject = HarvestRun & {
 type ManualHarvestExecution = {
   matched: number;
   harvestedRuns: HarvestRun[];
+  skippedRuns: HarvestRun[];
   failedRuns: HarvestRun[];
 };
 
@@ -27,6 +28,7 @@ export async function runManualDomainHarvest(input: {
 }): Promise<{
   matched: number;
   harvestedDates: string[];
+  skippedDates: string[];
   failedDates: string[];
   terms: string[];
 }> {
@@ -37,7 +39,13 @@ export async function runManualDomainHarvest(input: {
   });
 
   if (!droppedOn) {
-    return { matched: 0, harvestedDates: [], failedDates: [], terms: [] };
+    return {
+      matched: 0,
+      harvestedDates: [],
+      skippedDates: [],
+      failedDates: [],
+      terms: [],
+    };
   }
 
   let resolvedTerms: string[] = [];
@@ -57,6 +65,7 @@ export async function runManualDomainHarvest(input: {
   return {
     matched: result.matched,
     harvestedDates: result.harvestedRuns.map((run) => run.droppedOn),
+    skippedDates: result.skippedRuns.map((run) => run.droppedOn),
     failedDates: result.failedRuns.map((run) => run.droppedOn),
     terms: resolvedTerms,
   };

@@ -4,6 +4,7 @@ import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve"
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { SamSessionRepository } from "@/server/features/sam/SamSessionRepository";
 import { runScheduledRankChecks } from "@/server/features/rank-tracking/services/scheduledRankChecks";
+import { scheduledUnitForTick } from "@/shared/cronDispatch";
 import { runScheduledDomainHarvest } from "@/server/features/expired-domains/services/scheduledDomainHarvest";
 import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
@@ -200,18 +201,31 @@ export { SamChatAgent } from "./server/features/sam/SamChatAgent";
 export default {
   fetch,
   async scheduled(
-    _controller: ScheduledController,
+    controller: ScheduledController,
     env: Env,
     _ctx: ExecutionContext,
   ) {
+    const scheduledTime = new Date(controller.scheduledTime);
+    const unit = scheduledUnitForTick(scheduledTime);
+    // One line per tick, permanently. Three separate failures in this cron
+    // (a model call, a feed date, and DR grading) each hid behind a
+    // catch-and-continue for days while the tick itself reported "Ok", and a
+    // trigger that silently stopped firing was indistinguishable from work
+    // that ran and found nothing to do. Naming the tick and the unit it chose
+    // is what tells those two apart.
+    console.log(`[cron] ${scheduledTime.toISOString()} -> ${unit}`);
     // Scope a per-request Postgres client for the cron run (no-op in D1 mode).
     await withPgClient(async () => {
-      await runScheduledRankChecks(env);
-      // Self-limiting: it does real work about once a day per project and is
-      // otherwise two cheap reads, so it is safe on the 15-minute tick. Its
-      // failure must never take the rank checks down with it.
+      // One unit of work per tick. These two jobs cannot share an invocation
+      // without risking the Free-plan 50-query budget, and they are split by
+      // TICK rather than by a second cron trigger because Workers Builds
+      // deploys via the versions API, which never registers new triggers.
+      if (unit === "rank-checks") {
+        await runScheduledRankChecks(env);
+        return;
+      }
       try {
-        await runScheduledDomainHarvest();
+        await runScheduledDomainHarvest(scheduledTime);
       } catch (error) {
         console.error("scheduled.domainHarvest failed:", error);
       }

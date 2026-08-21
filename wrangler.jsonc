@@ -92,6 +92,10 @@
     },
   ],
   "triggers": {
+    // ONE trigger. Rank checks and the deleted-domain harvest are separated by
+    // tick inside the handler (see src/shared/cronDispatch.ts), not by a second
+    // cron: Workers Builds deploys through the versions API, which does not
+    // apply this block, so a newly declared trigger never actually registers.
     "crons": ["*/15 * * * *"],
   },
   "kv_namespaces": [

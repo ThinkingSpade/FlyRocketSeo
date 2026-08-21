@@ -25,6 +25,8 @@ import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 const ENDPOINT = "https://files.whoisfreaks.com/v3.1/download/domainer/dropped";
 /** A day is ~2 MB gzipped / ~240k rows, so allow for a slow transfer. */
 const FETCH_TIMEOUT_MS = 90_000;
+const MAX_ERROR_BODY_BYTES = 1_024;
+const DEFAULT_HARVEST_TLDS = ["com", "net", "org", "co"] as const;
 
 /**
  * Stream one day of dropped domains, filtered to the given TLDs.
@@ -41,7 +43,7 @@ export async function streamDroppedDomains(input: {
   /** yyyy-MM-dd. Files for a day publish at 03:00 UTC the following day. */
   date: string;
   /** Filtered here: the download is a whole-day file across every TLD. */
-  tlds: string[];
+  tlds?: readonly string[];
   /**
    * Called for each matching domain, in file order. Return `false` to stop --
    * the stream is cancelled immediately, which is what keeps a capped harvest
@@ -76,7 +78,10 @@ export async function streamDroppedDomains(input: {
     );
   }
 
-  if (!response.ok) throw errorForStatus(response.status);
+  if (!response.ok) {
+    const responseText = (await readBoundedErrorText(response)) ?? "";
+    throw errorForResponse(response.status, responseText);
+  }
 
   const body = response.body;
   if (!body) {
@@ -88,7 +93,9 @@ export async function streamDroppedDomains(input: {
     .pipeThrough(new TextDecoderStream())
     .getReader();
 
-  const wanted = new Set(input.tlds.map((tld) => tld.toLowerCase()));
+  const wanted = new Set(
+    (input.tlds ?? DEFAULT_HARVEST_TLDS).map((tld) => tld.toLowerCase()),
+  );
   let carry = "";
 
   try {
@@ -160,4 +167,63 @@ function errorForStatus(status: number): AppError {
         `WhoisFreaks failed with status ${status}`,
       );
   }
+}
+
+function errorForResponse(status: number, responseText: string): AppError {
+  if (
+    status === 401 &&
+    parseErrorMessage(responseText) === "You cannot download file."
+  ) {
+    return new AppError(
+      "WHOISFREAKS_SUBSCRIPTION_WINDOW",
+      "WhoisFreaks cannot provide a file outside the subscription window",
+    );
+  }
+  return errorForStatus(status);
+}
+
+async function readBoundedErrorText(
+  response: Response,
+): Promise<string | null> {
+  const body = response.body;
+  if (!body) return "";
+
+  const reader = body.getReader();
+  const decoder = new TextDecoder();
+  let bytesRead = 0;
+  let text = "";
+
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) return text + decoder.decode();
+
+      bytesRead += value.byteLength;
+      if (bytesRead > MAX_ERROR_BODY_BYTES) {
+        await reader.cancel().catch(() => undefined);
+        return null;
+      }
+      text += decoder.decode(value, { stream: true });
+    }
+  } catch {
+    await reader.cancel().catch(() => undefined);
+    return null;
+  }
+}
+
+function parseErrorMessage(responseText: string): string | null {
+  try {
+    const parsed: unknown = JSON.parse(responseText);
+    if (
+      parsed !== null &&
+      typeof parsed === "object" &&
+      "message" in parsed &&
+      typeof parsed.message === "string"
+    ) {
+      return parsed.message;
+    }
+  } catch {
+    // Non-JSON errors do not carry the exact permanent-skip discriminator.
+  }
+  return null;
 }
