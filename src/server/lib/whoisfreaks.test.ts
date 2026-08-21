@@ -14,7 +14,7 @@ function jsonResponse(body: unknown, status: number): Response {
 }
 
 async function collect(
-  input: { date: string; tlds: string[] },
+  input: { date: string; tlds?: string[] },
   limit = Infinity,
 ): Promise<string[]> {
   const seen: string[] = [];
@@ -103,6 +103,31 @@ describe("streamDroppedDomains", () => {
     );
   });
 
+  it("defaults the harvest to com, net, org, and co", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          feedResponse([
+            "a.com",
+            "b.net",
+            "c.org",
+            "d.co",
+            "e.shop",
+            "f.com.au",
+          ]),
+        ),
+    );
+
+    expect(await collect({ date: "2026-08-19" })).toEqual([
+      "a.com",
+      "b.net",
+      "c.org",
+      "d.co",
+    ]);
+  });
+
   it("handles CRLF line endings without corrupting names", async () => {
     const body = gzipSync(Buffer.from("a.com\r\nb.com\r\n", "utf-8"));
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
@@ -164,6 +189,43 @@ describe("streamDroppedDomains", () => {
         expected,
       );
     }
+  });
+
+  it("distinguishes an inaccessible subscription-window file from a bad API key", async () => {
+    const cases: ReadonlyArray<readonly [unknown, string]> = [
+      [
+        { message: "You cannot download file." },
+        "WHOISFREAKS_SUBSCRIPTION_WINDOW",
+      ],
+      [{ message: "Provided API key is invalid." }, "WHOISFREAKS_AUTH_FAILED"],
+    ];
+
+    for (const [body, expected] of cases) {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(jsonResponse(body, 401)),
+      );
+      expect(await codeOf(collect({ date: "2026-08-19" }))).toBe(expected);
+    }
+  });
+
+  it("does not permanently skip from an oversized 401 body", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse(
+          {
+            message: "You cannot download file.",
+            padding: "x".repeat(8_000),
+          },
+          401,
+        ),
+      ),
+    );
+
+    expect(await codeOf(collect({ date: "2026-08-19" }))).toBe(
+      "WHOISFREAKS_AUTH_FAILED",
+    );
   });
 
   it("treats an undecompressable body as an upstream failure", async () => {

@@ -1,13 +1,14 @@
 import { createVocabularyMatcher } from "@/shared/domainVocabularyMatch";
+import { asAppError } from "@/server/lib/errors";
+import { MAX_MATCHES_PER_DAY } from "@/shared/workerQueryBudget";
+
+export { MAX_MATCHES_PER_DAY } from "@/shared/workerQueryBudget";
 
 /**
  * Pulls daily dropped-domain feeds and fans each date out to every interested
  * project without materializing the feed. All I/O is injected so Node tests do
  * not import the Worker runtime.
  */
-
-/** Per-project ceiling on rows one day may add. */
-export const MAX_MATCHES_PER_DAY = 300;
 
 /**
  * Longer than the 15-minute cron interval so a legitimate overlapping tick
@@ -49,6 +50,7 @@ type HarvestRunRef = Pick<ProjectHarvest, "projectId" | "droppedOn">;
 
 type HarvestResult = {
   harvestedRuns: HarvestRunRef[];
+  skippedRuns: HarvestRunRef[];
   failedRuns: HarvestRunRef[];
   matched: number;
 };
@@ -76,6 +78,12 @@ export async function harvestDroppedDomains(input: {
     matched: number;
     completedAtIso: string;
   }) => Promise<boolean>;
+  /** Permanently skips only a date proven outside the subscription window. */
+  skipRun: (input: {
+    claimId: string;
+    reason: string;
+    completedAtIso: string;
+  }) => Promise<boolean>;
   /** Releases only the row still owned by this fencing token. */
   releaseRun: (claimId: string) => Promise<void>;
   /** Checks that an unexpired claim is still owned by this fencing token. */
@@ -99,6 +107,7 @@ export async function harvestDroppedDomains(input: {
   ) => Promise<void>;
 }): Promise<HarvestResult> {
   const harvestedRuns: HarvestRunRef[] = [];
+  const skippedRuns: HarvestRunRef[] = [];
   const failedRuns: HarvestRunRef[] = [];
   let matched = 0;
 
@@ -115,6 +124,24 @@ export async function harvestDroppedDomains(input: {
     } catch {
       // A failed release leaves an expiring lease, never a permanently wedged row.
     }
+  };
+
+  const persistPermanentSkip = async (
+    run: ClaimedHarvest,
+    reason: string,
+  ): Promise<boolean> => {
+    try {
+      const skipped = await input.skipRun({
+        claimId: run.claimId,
+        reason,
+        completedAtIso: input.now().toISOString(),
+      });
+      if (skipped) return true;
+    } catch {
+      // The fallback release below keeps a failed skip retryable.
+    }
+    await releaseQuietly(run.claimId);
+    return false;
   };
 
   for (const [date, projects] of projectsByDate) {
@@ -177,7 +204,19 @@ export async function harvestDroppedDomains(input: {
         }
         return anyActive;
       });
-    } catch {
+    } catch (error) {
+      const appError = asAppError(error);
+      if (appError?.code === "WHOISFREAKS_SUBSCRIPTION_WINDOW") {
+        for (const run of claimed) {
+          const runRef = {
+            projectId: run.project.projectId,
+            droppedOn: run.project.droppedOn,
+          };
+          const skipped = await persistPermanentSkip(run, appError.code);
+          (skipped ? skippedRuns : failedRuns).push(runRef);
+        }
+        continue;
+      }
       await Promise.allSettled(
         claimed.map((run) => input.releaseRun(run.claimId)),
       );
@@ -227,5 +266,5 @@ export async function harvestDroppedDomains(input: {
     }
   }
 
-  return { harvestedRuns, failedRuns, matched };
+  return { harvestedRuns, skippedRuns, failedRuns, matched };
 }

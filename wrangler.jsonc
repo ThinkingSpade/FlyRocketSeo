@@ -92,7 +92,9 @@
     },
   ],
   "triggers": {
-    "crons": ["*/15 * * * *"],
+    // Separate invocations keep rank-check work outside the deleted-domain
+    // feature's Free-plan 50-query budget.
+    "crons": ["*/15 * * * *", "7,22,37,52 * * * *"],
   },
   "kv_namespaces": [
     {

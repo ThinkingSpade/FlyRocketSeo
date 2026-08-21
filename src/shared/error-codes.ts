@@ -62,6 +62,10 @@ const ERROR_CODES = [
   // this is a flat subscription -- there are no per-call credits to exhaust.
   "WHOISFREAKS_NOT_CONFIGURED",
   "WHOISFREAKS_AUTH_FAILED",
+  // Internal control-flow signal for a feed date that predates the active
+  // WhoisFreaks subscription window. The harvest records that date as skipped
+  // instead of retrying it forever.
+  "WHOISFREAKS_SUBSCRIPTION_WINDOW",
 ] as const;
 
 export const errorCodeSchema = z.enum(ERROR_CODES);
@@ -99,6 +103,7 @@ const NON_REPORTABLE_ERROR_CODES = new Set<ErrorCode>([
   // Operator configuration, not a bug. WHOISFREAKS_AUTH_FAILED stays
   // reportable for the same reason DATAFORSEO_AUTH_FAILED does.
   "WHOISFREAKS_NOT_CONFIGURED",
+  "WHOISFREAKS_SUBSCRIPTION_WINDOW",
 ]);
 
 export function isErrorCode(value: string): value is ErrorCode {

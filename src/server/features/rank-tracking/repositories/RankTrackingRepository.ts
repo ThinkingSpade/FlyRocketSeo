@@ -238,6 +238,24 @@ async function getKeywordsForConfig(configId: string) {
     .orderBy(rankTrackingKeywords.createdAt);
 }
 
+/** All active tracked keywords for one project in one bounded query. */
+async function getKeywordsForProject(projectId: string) {
+  return db
+    .select({ keyword: rankTrackingKeywords.keyword })
+    .from(rankTrackingKeywords)
+    .innerJoin(
+      rankTrackingConfigs,
+      eq(rankTrackingKeywords.configId, rankTrackingConfigs.id),
+    )
+    .where(
+      and(
+        eq(rankTrackingConfigs.projectId, projectId),
+        eq(rankTrackingConfigs.isActive, true),
+      ),
+    )
+    .orderBy(rankTrackingKeywords.createdAt);
+}
+
 async function addKeywordsToConfig(
   keywords: Array<{ id: string; configId: string; keyword: string }>,
 ) {
@@ -377,6 +395,7 @@ export const RankTrackingRepository = {
   insertSnapshots,
   getSnapshotsForRun,
   getKeywordsForConfig,
+  getKeywordsForProject,
   addKeywordsToConfig,
   removeKeywordsFromConfig,
   updateKeywordMetrics,

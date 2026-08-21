@@ -36,13 +36,10 @@ export const getHarvestedDomains = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(projectInput)
   .handler(async ({ context }) => {
-    const rows = await HarvestedDomainRepository.listForProject(
-      context.projectId,
-      MAX_ROWS,
-    );
-    const dates = await HarvestedDomainRepository.listHarvestedDates(
-      context.projectId,
-    );
+    const [rows, dates] = await Promise.all([
+      HarvestedDomainRepository.listForProject(context.projectId, MAX_ROWS),
+      HarvestedDomainRepository.listHarvestRunDates(context.projectId),
+    ]);
     return {
       rows: rows.map((row) => ({
         domain: row.domain,
@@ -53,7 +50,8 @@ export const getHarvestedDomains = createServerFn({ method: "POST" })
         isAvailable: row.isAvailable,
         availabilityCheckedAt: row.availabilityCheckedAt,
       })),
-      harvestedDates: dates.toSorted().toReversed(),
+      harvestedDates: dates.harvestedDates.toSorted().toReversed(),
+      skippedDates: dates.skippedDates.toSorted().toReversed(),
     };
   });
 
@@ -75,10 +73,10 @@ export const runHarvestNow = createServerFn({ method: "POST" })
       );
     }
 
-    const [profile, competitors, already, keywords] = await Promise.all([
+    const [profile, competitors, runDates, keywords] = await Promise.all([
       ProjectProfileRepository.getByProject(context.projectId),
       ProjectCompetitorRepository.listByProject(context.projectId),
-      HarvestedDomainRepository.listHarvestedDates(context.projectId),
+      HarvestedDomainRepository.listHarvestRunDates(context.projectId),
       collectTrackedKeywords(context.projectId),
     ]);
 
@@ -87,12 +85,14 @@ export const runHarvestNow = createServerFn({ method: "POST" })
       projectDomain,
       competitorDomains: competitors.map((row) => row.domain),
       today: new Date().toISOString().slice(0, 10),
-      already,
+      already: [...runDates.harvestedDates, ...runDates.skippedDates],
       resolveTerms: async () => {
         const { all } = await resolveHarvestVocabulary({
           projectId: context.projectId,
           keywords,
           profileText: profile?.offer ?? "",
+          // This server function is reached only by the explicit harvest click.
+          allowModelDerivation: true,
           cache: {
             get: (key) => env.KV.get(key),
             put: (key, value, options) => env.KV.put(key, value, options),
@@ -105,12 +105,13 @@ export const runHarvestNow = createServerFn({ method: "POST" })
           projects: [project],
           now: () => new Date(),
           streamDropped: (date, onDomain) =>
-            streamDroppedDomains({ date, tlds: ["com"], onDomain }),
+            streamDroppedDomains({ date, onDomain }),
           insertMatches: (rows) =>
             HarvestedDomainRepository.insertMatches(rows),
           claimRun: (run) => HarvestedDomainRepository.claimRun(run),
           ownsRun: (run) => HarvestedDomainRepository.ownsRun(run),
           completeRun: (run) => HarvestedDomainRepository.completeRun(run),
+          skipRun: (run) => HarvestedDomainRepository.skipRun(run),
           releaseRun: (claimId) =>
             HarvestedDomainRepository.releaseRun(claimId),
         }),
@@ -162,21 +163,8 @@ export const checkHarvestedAvailability = createServerFn({ method: "POST" })
 
 async function collectTrackedKeywords(projectId: string): Promise<string[]> {
   try {
-    const configs =
-      await RankTrackingRepository.getConfigsForProject(projectId);
-    const perConfig = await Promise.all(
-      configs.map((config) =>
-        RankTrackingRepository.getKeywordsForConfig(config.id),
-      ),
-    );
-    return [
-      ...new Set(
-        perConfig
-          .flat()
-          .map((row) => row.keyword.trim())
-          .filter(Boolean),
-      ),
-    ];
+    const rows = await RankTrackingRepository.getKeywordsForProject(projectId);
+    return [...new Set(rows.map((row) => row.keyword.trim()).filter(Boolean))];
   } catch {
     return [];
   }
