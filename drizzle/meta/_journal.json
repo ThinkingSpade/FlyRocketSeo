@@ -302,6 +302,13 @@
       "when": 1787283469882,
       "tag": "0042_bouncy_steve_rogers",
       "breakpoints": true
+    },
+    {
+      "idx": 43,
+      "version": "6",
+      "when": 1787289924202,
+      "tag": "0043_hot_riptide",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,1 @@
+ALTER TABLE "harvest_runs" ADD COLUMN "lease_expires_at" text;

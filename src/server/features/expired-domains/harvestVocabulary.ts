@@ -45,7 +45,11 @@ export async function resolveHarvestVocabulary(input: {
   const seed = deriveSeedTerms(input.keywords, input.profileText);
   if (seed.length === 0) return { seed: [], adjacent: [], all: [] };
 
-  const cacheKey = `${VOCABULARY_CACHE_PREFIX}${input.projectId}`;
+  const cacheKey = await vocabularyCacheKey(
+    input.projectId,
+    seed,
+    input.profileText,
+  );
   const cached = await input.cache.get(cacheKey);
   if (cached) {
     const adjacent = parseCachedTerms(cached);
@@ -66,6 +70,32 @@ export async function resolveHarvestVocabulary(input: {
   }
 
   return { seed, adjacent, all: merge(seed, adjacent) };
+}
+
+/** Content-addresses the model answer so old project inputs cannot be reused. */
+async function vocabularyCacheKey(
+  projectId: string,
+  seed: string[],
+  profileText: string,
+): Promise<string> {
+  const normalizedSeed = [...new Set(seed.map(normalizeCacheInput))].toSorted();
+  const normalizedProfile = normalizeCacheInput(profileText);
+  const material = JSON.stringify({
+    seed: normalizedSeed,
+    profileText: normalizedProfile,
+  });
+  const digest = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(material),
+  );
+  const hash = Array.from(new Uint8Array(digest), (byte) =>
+    byte.toString(16).padStart(2, "0"),
+  ).join("");
+  return `${VOCABULARY_CACHE_PREFIX}${projectId}:${hash}`;
+}
+
+function normalizeCacheInput(value: string): string {
+  return value.normalize("NFKC").trim().toLowerCase().replace(/\s+/g, " ");
 }
 
 function merge(seed: string[], adjacent: string[]): string[] {

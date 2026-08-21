@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { matchDomainsToVocabulary } from "@/shared/domainVocabularyMatch";
+import {
+  createVocabularyMatcher,
+  matchDomainsToVocabulary,
+} from "@/shared/domainVocabularyMatch";
 
 const TERMS = ["vending", "breakroom", "coffee", "snack", "nutrition"];
 
@@ -110,5 +113,79 @@ describe("matchDomainsToVocabulary", () => {
         limit: 100,
       }),
     ).toEqual([]);
+  });
+});
+
+describe("createVocabularyMatcher", () => {
+  it("lets a later boundary hit replace weak substring collisions at the cap", () => {
+    const matcher = createVocabularyMatcher({
+      terms: ["rent"],
+      exclude: [],
+      limit: 1,
+    });
+    for (let index = 0; index < 5; index += 1) {
+      expect(matcher.accept(`current${index}.com`)).toBe(true);
+    }
+    expect(matcher.accept("rentals.com")).toBe(false);
+    expect(matcher.matches).toEqual([
+      { domain: "rentals.com", matchedTerm: "rent" },
+    ]);
+  });
+
+  it("finds a later boundary occurrence after an earlier weak hit", () => {
+    const matcher = createVocabularyMatcher({
+      terms: ["rent"],
+      exclude: [],
+      limit: 1,
+    });
+    expect(matcher.accept("current0-rentals.com")).toBe(false);
+    expect(matcher.matches).toEqual([
+      { domain: "current0-rentals.com", matchedTerm: "rent" },
+    ]);
+  });
+
+  it("finds a boundary occurrence that overlaps an earlier weak hit", () => {
+    const matcher = createVocabularyMatcher({
+      terms: ["aaaa"],
+      exclude: [],
+      limit: 1,
+    });
+
+    expect(matcher.accept("xaaaaa-b.com")).toBe(false);
+    expect(matcher.matches).toEqual([
+      { domain: "xaaaaa-b.com", matchedTerm: "aaaa" },
+    ]);
+  });
+
+  it("keeps only the capped weak fallbacks while consuming the full stream", () => {
+    const matcher = createVocabularyMatcher({
+      terms: ["rent"],
+      exclude: [],
+      limit: 2,
+    });
+    const decisions = Array.from({ length: 5 }, (_, index) =>
+      matcher.accept(`current${index}.com`),
+    );
+    expect(decisions).toEqual([true, true, true, true, true]);
+    expect(matcher.matches.map((match) => match.domain)).toEqual([
+      "current0.com",
+      "current1.com",
+    ]);
+  });
+
+  it("prioritizes hits at the stem start, end, and a word separator", () => {
+    const matcher = createVocabularyMatcher({
+      terms: ["rent"],
+      exclude: [],
+      limit: 3,
+    });
+    expect(matcher.accept("rentals.com")).toBe(true);
+    expect(matcher.accept("parent.com")).toBe(true);
+    expect(matcher.accept("best-rent-deals.com")).toBe(false);
+    expect(matcher.matches.map((match) => match.domain)).toEqual([
+      "rentals.com",
+      "parent.com",
+      "best-rent-deals.com",
+    ]);
   });
 });

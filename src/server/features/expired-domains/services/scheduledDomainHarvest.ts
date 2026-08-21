@@ -47,19 +47,57 @@ export async function runScheduledDomainHarvest(): Promise<void> {
     get: (key) => env.KV.get(key),
     put: (key, value, options) => env.KV.put(key, value, options),
   };
+  const projects = await listHarvestProjects();
 
-  for (const project of await listHarvestProjects()) {
+  if (canHarvest) {
+    const publishedDate = newestPublishedDate(new Date());
+    const jobs: PreparedHarvest[] = [];
+    for (const project of projects) {
+      try {
+        const job = await prepareHarvestForProject(project, publishedDate);
+        if (job) jobs.push(job);
+      } catch (error) {
+        // One project's preparation failure must not stop the shared feed.
+        console.error(
+          `expired-domains.harvest preparation failed for ${project.id}:`,
+          error,
+        );
+      }
+    }
+
     try {
-      if (canHarvest) await harvestForProject(project);
+      await harvestDroppedDomains({
+        projects: jobs,
+        now: () => new Date(),
+        streamDropped: (date, onDomain) =>
+          streamDroppedDomains({ date, tlds: TLDS, onDomain }),
+        insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
+        claimRun: (run) => HarvestedDomainRepository.claimRun(run),
+        completeRun: (run) => HarvestedDomainRepository.completeRun(run),
+        releaseRun: (claimId) => HarvestedDomainRepository.releaseRun(claimId),
+      });
+    } catch (error) {
+      console.error("expired-domains.shared-harvest failed:", error);
+    }
+  }
+
+  // Ahrefs DR is free and keyless, so grading continues without the feed key.
+  for (const project of projects) {
+    try {
       await gradeForProject(project.id, cache);
     } catch (error) {
-      // One project's failure must not stop the others.
-      console.error(`expired-domains.harvest failed for ${project.id}:`, error);
+      console.error(`expired-domains.grading failed for ${project.id}:`, error);
     }
   }
 }
 
 type HarvestProject = { id: string; domain: string };
+type PreparedHarvest = {
+  projectId: string;
+  droppedOn: string;
+  terms: string[];
+  exclude: string[];
+};
 
 /**
  * Projects worth harvesting for: those with a domain set.
@@ -103,7 +141,10 @@ const vocabularyCache = {
     env.KV.put(key, value, options),
 };
 
-async function harvestForProject(project: HarvestProject): Promise<void> {
+async function prepareHarvestForProject(
+  project: HarvestProject,
+  publishedDate: string,
+): Promise<PreparedHarvest | null> {
   const [keywordRows, profile, competitorRows, already] = await Promise.all([
     collectTrackedKeywords(project.id),
     ProjectProfileRepository.getByProject(project.id),
@@ -114,12 +155,12 @@ async function harvestForProject(project: HarvestProject): Promise<void> {
   // Check for work BEFORE resolving vocabulary. Vocabulary can cost a model
   // call on a cache miss, and doing it first meant a fully-harvested project
   // paid for one on every 15-minute tick -- 96 a day, with no user action.
-  const dates = datesToHarvest({
-    today: newestPublishedDate(new Date()),
+  const [droppedOn] = datesToHarvest({
+    today: publishedDate,
     already,
     maxDays: BACKFILL_DAYS,
   });
-  if (dates.length === 0) return;
+  if (!droppedOn) return null;
 
   // Seed terms PLUS the industries around this business -- schools, gyms,
   // hotels for a vending operator. Cached, so this is one model call a month.
@@ -129,24 +170,17 @@ async function harvestForProject(project: HarvestProject): Promise<void> {
     profileText: profile?.offer ?? "",
     cache: vocabularyCache,
   });
-  if (terms.length === 0) return;
+  if (terms.length === 0) return null;
 
-  await harvestDroppedDomains({
+  return {
     projectId: project.id,
+    droppedOn,
     terms,
     exclude: [
       project.domain.toLowerCase(),
       ...competitorRows.map((row) => row.domain.toLowerCase()),
     ],
-    // Only ONE date per tick: a day's download is large, and the next tick is
-    // fifteen minutes away, so a backfill drains steadily without ever holding
-    // several files in memory at once.
-    dates: dates.slice(0, 1),
-    streamDropped: (date, onDomain) =>
-      streamDroppedDomains({ date, tlds: TLDS, onDomain }),
-    insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
-    recordRun: (run) => HarvestedDomainRepository.recordRun(run),
-  });
+  };
 }
 
 /** Grade a slice of ungraded rows. Free, but rate-limited by politeness. */

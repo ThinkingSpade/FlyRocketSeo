@@ -10,18 +10,27 @@ import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import {
+  formatHarvestAvailabilityAge,
+  HARVEST_AVAILABILITY_RECHECK_MS,
+  MAX_HARVEST_AVAILABILITY_BATCH,
+  selectDueHarvestAvailabilityDomains,
+} from "@/shared/harvestAvailability";
 
 /** Availability bills 5 APIVerve credits per domain. */
 const CREDITS_PER_CHECK = 5;
-const MAX_AVAILABILITY_BATCH = 25;
+const RECHECK_HOURS = HARVEST_AVAILABILITY_RECHECK_MS / (60 * 60 * 1_000);
 
 function ratingLabel(rating: number | null): string {
   // null is NOT YET GRADED, not "no authority" -- a real 0 shows as 0.
   return rating === null ? "—" : String(rating);
 }
 
-function availabilityLabel(value: boolean | null): string {
-  if (value === null) return "—";
+function availabilityLabel(
+  value: boolean | null,
+  checkedAtIso: string | null,
+): string {
+  if (value === null) return checkedAtIso === null ? "Not checked" : "Unknown";
   return value ? "Available" : "Taken";
 }
 
@@ -81,19 +90,15 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
     [rows, minRating],
   );
 
-  const uncheckedTop = useMemo(
-    () =>
-      visible
-        .filter((row) => row.isAvailable === null)
-        .slice(0, MAX_AVAILABILITY_BATCH)
-        .map((row) => row.domain),
-    [visible],
-  );
+  // At most 200 rows are displayed. A direct capped loop is cheaper and clearer
+  // than memoizing against a clock value that necessarily changes over time.
+  const nowMs = Date.now();
+  const availabilityDue = selectDueHarvestAvailabilityDomains(visible, nowMs);
 
   const checkAvailability = useMutation({
     mutationFn: () =>
       checkHarvestedAvailability({
-        data: { projectId, domains: uncheckedTop },
+        data: { projectId, domains: availabilityDue },
       }),
     onSuccess: async () => {
       await queryClient.invalidateQueries({
@@ -167,7 +172,7 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
                   {value === 0 ? "All" : `DR ${value}+`}
                 </Button>
               ))}
-              {uncheckedTop.length > 0 ? (
+              {availabilityDue.length > 0 ? (
                 <Button
                   type="button"
                   size="sm"
@@ -178,10 +183,17 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
                 >
                   {checkAvailability.isPending
                     ? "Checking…"
-                    : `Check availability (${uncheckedTop.length} × ${CREDITS_PER_CHECK} credits)`}
+                    : `Check or re-check availability (${availabilityDue.length} × ${CREDITS_PER_CHECK} credits)`}
                 </Button>
               ) : null}
             </div>
+
+            <p className="text-xs text-base-content/60">
+              Availability checks run only when you click. Each domain costs{" "}
+              {CREDITS_PER_CHECK} APIVerve credits, with at most{" "}
+              {MAX_HARVEST_AVAILABILITY_BATCH} checked per click. Answered rows
+              can be re-checked after {RECHECK_HOURS} hours.
+            </p>
 
             <div className="overflow-x-auto">
               <table className="table table-sm">
@@ -195,19 +207,47 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {visible.map((row) => (
-                    <tr key={row.domain}>
-                      <td className="font-medium">{row.domain}</td>
-                      <td className="tabular-nums">
-                        {ratingLabel(row.domainRating)}
-                      </td>
-                      <td>{availabilityLabel(row.isAvailable)}</td>
-                      <td className="text-base-content/70">
-                        {row.matchedTerm}
-                      </td>
-                      <td className="text-base-content/70">{row.droppedOn}</td>
-                    </tr>
-                  ))}
+                  {visible.map((row) => {
+                    const checkedAge = formatHarvestAvailabilityAge(
+                      row.availabilityCheckedAt,
+                      nowMs,
+                    );
+                    return (
+                      <tr key={row.domain}>
+                        <td className="font-medium">{row.domain}</td>
+                        <td className="tabular-nums">
+                          {ratingLabel(row.domainRating)}
+                        </td>
+                        <td>
+                          <div className="flex flex-col">
+                            <span>
+                              {availabilityLabel(
+                                row.isAvailable,
+                                row.availabilityCheckedAt,
+                              )}
+                            </span>
+                            {checkedAge ? (
+                              <time
+                                dateTime={
+                                  row.availabilityCheckedAt ?? undefined
+                                }
+                                title={row.availabilityCheckedAt ?? undefined}
+                                className="text-xs text-base-content/60"
+                              >
+                                Checked {checkedAge}
+                              </time>
+                            ) : null}
+                          </div>
+                        </td>
+                        <td className="text-base-content/70">
+                          {row.matchedTerm}
+                        </td>
+                        <td className="text-base-content/70">
+                          {row.droppedOn}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

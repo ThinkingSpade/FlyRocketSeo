@@ -84,8 +84,10 @@ function canonicalHost(value: string): string {
  * domain, which is where most of the remaining time goes: 84,000 domains times
  * 30 terms is 2.5 million string scans, and a single regex does it in one.
  *
- * `accept` returns false once the cap is reached, which is the caller's signal
- * to cancel the stream rather than decompress the rest of the file.
+ * Weak substring hits cannot stop the stream when they fill the cap: a stronger
+ * boundary hit may still arrive later and replace one. `accept` returns false
+ * only when boundary hits fill the cap, because no later match can outrank
+ * those and the caller may then stop decompressing the file for this matcher.
  */
 export function createVocabularyMatcher(input: {
   terms: string[];
@@ -106,26 +108,82 @@ export function createVocabularyMatcher(input: {
   const excluded = new Set(input.exclude.map(canonicalHost));
   const seen = new Set<string>();
   // Longest-first alternation, so the most specific term is the one reported.
-  const pattern = new RegExp(terms.join("|"));
+  // Global iteration lets one domain's later boundary hit outrank an earlier
+  // mid-word collision without reintroducing a loop over every term.
+  const pattern = new RegExp(terms.join("|"), "g");
+  let boundaryMatches = 0;
 
   return {
     accept(raw: string): boolean {
-      if (matches.length >= input.limit) return false;
+      if (boundaryMatches >= input.limit) return false;
 
       const domain = canonicalHost(raw);
       if (!domain || seen.has(domain) || excluded.has(domain)) return true;
 
       const dot = domain.lastIndexOf(".");
       const stem = dot === -1 ? domain : domain.slice(0, dot);
-      const hit = pattern.exec(stem);
-      if (!hit) return true;
+      pattern.lastIndex = 0;
 
-      seen.add(domain);
-      matches.push({ domain, matchedTerm: hit[0] });
-      return matches.length < input.limit;
+      let firstHit: RegExpExecArray | null = null;
+      let boundaryHit: RegExpExecArray | null = null;
+      let hit: RegExpExecArray | null;
+      while ((hit = pattern.exec(stem)) !== null) {
+        firstHit ??= hit;
+        if (touchesBoundary(stem, hit.index, hit[0].length)) {
+          boundaryHit = hit;
+          break;
+        }
+        // A later occurrence may overlap this weak one and touch a boundary.
+        // Advance one character, not the full match, so it is still considered.
+        pattern.lastIndex = hit.index + 1;
+      }
+
+      const bestHit = boundaryHit ?? firstHit;
+      if (!bestHit) return true;
+
+      const match = { domain, matchedTerm: bestHit[0] };
+      if (boundaryHit) {
+        seen.add(domain);
+        // Keep the public array stable while ranking boundary hits before weak
+        // ones. At most `limit` items move, never the 84k-row feed.
+        matches.splice(boundaryMatches, 0, match);
+        boundaryMatches += 1;
+        if (matches.length > input.limit) matches.pop();
+        return boundaryMatches < input.limit;
+      }
+
+      // Once weak hits fill the cap, later weak hits cannot improve it. They are
+      // ignored without ending the stream so a later boundary hit can replace
+      // one of the retained fallbacks.
+      if (matches.length < input.limit) {
+        seen.add(domain);
+        matches.push(match);
+      }
+      return true;
     },
     matches,
   };
+}
+
+/** Whether a term touches either edge of the stem or a non-word separator. */
+function touchesBoundary(stem: string, start: number, length: number): boolean {
+  const end = start + length;
+  return (
+    start === 0 ||
+    end === stem.length ||
+    !isAsciiAlphanumericAt(stem, start - 1) ||
+    !isAsciiAlphanumericAt(stem, end)
+  );
+}
+
+function isAsciiAlphanumericAt(value: string, index: number): boolean {
+  if (index < 0 || index >= value.length) return false;
+  const code = value.charCodeAt(index);
+  return (
+    (code >= 48 && code <= 57) ||
+    (code >= 97 && code <= 122) ||
+    (code >= 65 && code <= 90)
+  );
 }
 
 /**

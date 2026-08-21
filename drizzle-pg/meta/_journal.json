@@ -120,6 +120,13 @@
       "when": 1787283473359,
       "tag": "0016_worried_king_cobra",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1787289927125,
+      "tag": "0017_overconfident_human_torch",
+      "breakpoints": true
     }
   ]
 }

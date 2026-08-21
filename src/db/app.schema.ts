@@ -452,8 +452,9 @@ export const harvestedDomains = sqliteTable(
  * and the scheduler would re-download that 2 MB file on every 15-minute tick
  * for as long as it stayed the newest date -- 84 downloads a day.
  *
- * Written only after every insert chunk succeeds, so a partial write is retried
- * rather than silently skipped.
+ * A row is claimed before the feed is read. `leaseExpiresAt` stays non-null
+ * until every insert chunk succeeds; caught failures release it and crashes
+ * become retryable after expiry.
  */
 export const harvestRuns = sqliteTable(
   "harvest_runs",
@@ -465,6 +466,8 @@ export const harvestRuns = sqliteTable(
     /** Feed date (yyyy-MM-dd). */
     droppedOn: text("dropped_on").notNull(),
     matched: integer("matched").notNull().default(0),
+    /** Non-null is an active expiring claim; null is a completed run. */
+    leaseExpiresAt: text("lease_expires_at"),
     completedAt: text("completed_at")
       .notNull()
       .default(sql`(current_timestamp)`),

@@ -1,37 +1,26 @@
 import { createVocabularyMatcher } from "@/shared/domainVocabularyMatch";
 
 /**
- * Pulls days of dropped domains and keeps the ones matching a project's
- * vocabulary.
- *
- * Dependencies are injected so the two rules that matter -- which days get
- * downloaded, and how much a single day may contribute -- are testable without
- * a subscription or a database. A day's file is roughly 2 MB gzipped and
- * 240,000 rows, so neither is a detail.
+ * Pulls daily dropped-domain feeds and fans each date out to every interested
+ * project without materializing the feed. All I/O is injected so Node tests do
+ * not import the Worker runtime.
  */
 
-/**
- * Ceiling on rows one day may add.
- *
- * A broad vocabulary can match many hundreds of names in a single day, and
- * every stored row later costs a DR lookup. The cap keeps a runaway day from
- * flooding the shortlist; `MIN_TERM_LENGTH` in the matcher is the other half
- * of that guard.
- */
+/** Per-project ceiling on rows one day may add. */
 export const MAX_MATCHES_PER_DAY = 300;
+
+/**
+ * Longer than the 15-minute cron interval so a legitimate overlapping tick
+ * cannot steal an in-flight run. Known failures release immediately; this
+ * expiry is only the crash recovery path.
+ */
+const HARVEST_LEASE_MS = 30 * 60 * 1000;
 
 function toIsoDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
-/**
- * Which dates still need pulling, newest first.
- *
- * Today is always excluded: a day's file publishes at 03:00 UTC the FOLLOWING
- * day, so asking for today is a guaranteed miss. Dates already harvested are
- * skipped because the unique index would reject every row anyway -- re-pulling
- * spends a 2 MB download to insert nothing.
- */
+/** Which dates still need pulling, newest first. */
 export function datesToHarvest(input: {
   today: string;
   already: string[];
@@ -49,22 +38,47 @@ export function datesToHarvest(input: {
   return dates;
 }
 
+type ProjectHarvest = {
+  projectId: string;
+  droppedOn: string;
+  terms: string[];
+  exclude: string[];
+};
+
+type HarvestRunRef = Pick<ProjectHarvest, "projectId" | "droppedOn">;
+
 type HarvestResult = {
-  harvestedDates: string[];
-  failedDates: string[];
+  harvestedRuns: HarvestRunRef[];
+  failedRuns: HarvestRunRef[];
   matched: number;
 };
 
+type ClaimedHarvest = {
+  project: ProjectHarvest;
+  claimId: string;
+  matcher: ReturnType<typeof createVocabularyMatcher>;
+  active: boolean;
+};
+
 export async function harvestDroppedDomains(input: {
-  projectId: string;
-  terms: string[];
-  exclude: string[];
-  dates: string[];
-  /**
-   * Streams one date's domains through `onDomain`, stopping when it returns
-   * false. Streamed rather than returning an array because a day is ~240,000
-   * names and buffering them measured 70 ms of CPU against 6 ms streamed.
-   */
+  projects: ProjectHarvest[];
+  now: () => Date;
+  /** Atomically claims a project/date, returning its fencing token. */
+  claimRun: (input: {
+    projectId: string;
+    droppedOn: string;
+    claimedAtIso: string;
+    leaseExpiresAtIso: string;
+  }) => Promise<string | null>;
+  /** Completes only when `claimId` still owns the row. */
+  completeRun: (input: {
+    claimId: string;
+    matched: number;
+    completedAtIso: string;
+  }) => Promise<boolean>;
+  /** Releases only the row still owned by this fencing token. */
+  releaseRun: (claimId: string) => Promise<void>;
+  /** Streams a date once; false cancels only when every matcher is full. */
   streamDropped: (
     date: string,
     onDomain: (domain: string) => boolean,
@@ -78,67 +92,130 @@ export async function harvestDroppedDomains(input: {
       droppedOn: string;
     }>,
   ) => Promise<void>;
-  /**
-   * Marks a date processed. Called only after inserts succeed, and called even
-   * for a ZERO-match day -- otherwise that day looks unprocessed forever and is
-   * re-downloaded on every tick.
-   */
-  recordRun: (input: {
-    projectId: string;
-    droppedOn: string;
-    matched: number;
-  }) => Promise<void>;
 }): Promise<HarvestResult> {
-  const harvestedDates: string[] = [];
-  const failedDates: string[] = [];
+  const harvestedRuns: HarvestRunRef[] = [];
+  const failedRuns: HarvestRunRef[] = [];
   let matched = 0;
 
-  // No vocabulary means every download would be wasted: nothing could match.
-  if (input.terms.length === 0 || input.dates.length === 0) {
-    return { harvestedDates, failedDates, matched };
+  const projectsByDate = new Map<string, ProjectHarvest[]>();
+  for (const project of input.projects) {
+    if (project.terms.length === 0) continue;
+    const projects = projectsByDate.get(project.droppedOn) ?? [];
+    projects.push(project);
+    projectsByDate.set(project.droppedOn, projects);
   }
 
-  for (const date of input.dates) {
-    // The WHOLE day is inside one try: a failed download, a failed insert and a
-    // failed record all mean the same thing -- this date is not done, and the
-    // next tick must retry it. An escaping insert error used to abort the
-    // entire backfill instead of failing one date.
-    let dayMatches = 0;
+  const releaseQuietly = async (claimId: string): Promise<void> => {
     try {
-      const matcher = createVocabularyMatcher({
-        terms: input.terms,
-        exclude: input.exclude,
-        limit: MAX_MATCHES_PER_DAY,
-      });
-      await input.streamDropped(date, matcher.accept);
-      const matches = matcher.matches;
+      await input.releaseRun(claimId);
+    } catch {
+      // A failed release leaves an expiring lease, never a permanently wedged row.
+    }
+  };
 
-      await input.insertMatches(
-        matches.map((match) => ({
-          id: crypto.randomUUID(),
-          projectId: input.projectId,
-          domain: match.domain,
-          matchedTerm: match.matchedTerm,
-          droppedOn: date,
+  for (const [date, projects] of projectsByDate) {
+    // Claim immediately before this date's stream. Claiming every backlog date
+    // up front could let later claims expire while earlier files download.
+    const claimedAt = input.now();
+    const claimedAtIso = claimedAt.toISOString();
+    const leaseExpiresAtIso = new Date(
+      claimedAt.getTime() + HARVEST_LEASE_MS,
+    ).toISOString();
+    const claimed: ClaimedHarvest[] = [];
+
+    for (const project of projects) {
+      const runRef = {
+        projectId: project.projectId,
+        droppedOn: project.droppedOn,
+      };
+      let claimId: string | null;
+      try {
+        claimId = await input.claimRun({
+          ...runRef,
+          claimedAtIso,
+          leaseExpiresAtIso,
+        });
+      } catch {
+        failedRuns.push(runRef);
+        continue;
+      }
+      // Another tick owns it, or it completed after this tick's earlier read.
+      if (!claimId) continue;
+
+      try {
+        claimed.push({
+          project,
+          claimId,
+          matcher: createVocabularyMatcher({
+            terms: project.terms,
+            exclude: project.exclude,
+            limit: MAX_MATCHES_PER_DAY,
+          }),
+          active: true,
+        });
+      } catch {
+        await releaseQuietly(claimId);
+        failedRuns.push(runRef);
+      }
+    }
+
+    if (claimed.length === 0) continue;
+
+    try {
+      await input.streamDropped(date, (domain) => {
+        let anyActive = false;
+        for (const run of claimed) {
+          if (!run.active) continue;
+          run.active = run.matcher.accept(domain);
+          if (run.active) anyActive = true;
+        }
+        return anyActive;
+      });
+    } catch {
+      await Promise.allSettled(
+        claimed.map((run) => input.releaseRun(run.claimId)),
+      );
+      failedRuns.push(
+        ...claimed.map(({ project }) => ({
+          projectId: project.projectId,
+          droppedOn: project.droppedOn,
         })),
       );
-
-      // Only after every insert succeeded. Recorded even at zero matches --
-      // otherwise the day looks unprocessed and is re-downloaded every tick.
-      await input.recordRun({
-        projectId: input.projectId,
-        droppedOn: date,
-        matched: matches.length,
-      });
-      dayMatches = matches.length;
-    } catch {
-      failedDates.push(date);
       continue;
     }
 
-    harvestedDates.push(date);
-    matched += dayMatches;
+    for (const run of claimed) {
+      const runRef = {
+        projectId: run.project.projectId,
+        droppedOn: run.project.droppedOn,
+      };
+      const matches = run.matcher.matches;
+      try {
+        await input.insertMatches(
+          matches.map((match) => ({
+            id: crypto.randomUUID(),
+            projectId: run.project.projectId,
+            domain: match.domain,
+            matchedTerm: match.matchedTerm,
+            droppedOn: date,
+          })),
+        );
+        const completed = await input.completeRun({
+          claimId: run.claimId,
+          matched: matches.length,
+          completedAtIso: input.now().toISOString(),
+        });
+        if (!completed) throw new Error("HARVEST_CLAIM_LOST");
+      } catch {
+        await releaseQuietly(run.claimId);
+        failedRuns.push(runRef);
+        continue;
+      }
+
+      harvestedRuns.push(runRef);
+      matched += matches.length;
+    }
   }
 
-  return { harvestedDates, failedDates, matched };
+  return { harvestedRuns, failedRuns, matched };
 }

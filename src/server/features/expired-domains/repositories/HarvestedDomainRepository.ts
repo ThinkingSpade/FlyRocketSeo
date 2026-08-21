@@ -1,4 +1,4 @@
-import { and, desc, eq, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, isNotNull, isNull, lte, sql } from "drizzle-orm";
 import { db } from "@/db";
 import { harvestedDomains, harvestRuns } from "@/db/schema";
 
@@ -115,29 +115,81 @@ async function listHarvestedDates(projectId: string): Promise<string[]> {
   const rows = await db
     .select({ droppedOn: harvestRuns.droppedOn })
     .from(harvestRuns)
-    .where(eq(harvestRuns.projectId, projectId));
+    .where(
+      and(
+        eq(harvestRuns.projectId, projectId),
+        // A non-null lease is an in-flight/crashed claim, not completion.
+        isNull(harvestRuns.leaseExpiresAt),
+      ),
+    );
   return rows.map((row) => row.droppedOn);
 }
 
 /**
- * Mark a date done. Called ONLY after every insert chunk succeeded, so a
- * partially written day is retried on the next tick instead of being skipped
- * forever -- the unique index makes replaying its rows harmless.
+ * Atomically claim a project/date. The unique index is the mutex; an upsert may
+ * replace only an expired non-null lease. Completed rows have a null lease, so
+ * even a caller with a stale `already` read cannot reclaim them.
  */
-async function recordRun(input: {
+async function claimRun(input: {
   projectId: string;
   droppedOn: string;
-  matched: number;
-}): Promise<void> {
-  await db
+  claimedAtIso: string;
+  leaseExpiresAtIso: string;
+}): Promise<string | null> {
+  const claimId = crypto.randomUUID();
+  const [claimed] = await db
     .insert(harvestRuns)
     .values({
-      id: crypto.randomUUID(),
+      id: claimId,
       projectId: input.projectId,
       droppedOn: input.droppedOn,
-      matched: input.matched,
+      leaseExpiresAt: input.leaseExpiresAtIso,
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: [harvestRuns.projectId, harvestRuns.droppedOn],
+      set: {
+        // Replacing the token fences the expired owner: its later complete or
+        // release is constrained by the old id and cannot touch this claim.
+        id: claimId,
+        leaseExpiresAt: input.leaseExpiresAtIso,
+      },
+      setWhere: lte(harvestRuns.leaseExpiresAt, input.claimedAtIso),
+    })
+    .returning({ id: harvestRuns.id });
+
+  return claimed?.id === claimId ? claimId : null;
+}
+
+/** Mark a claim complete only after every insert chunk succeeded. */
+async function completeRun(input: {
+  claimId: string;
+  matched: number;
+  completedAtIso: string;
+}): Promise<boolean> {
+  const [completed] = await db
+    .update(harvestRuns)
+    .set({
+      matched: input.matched,
+      leaseExpiresAt: null,
+      completedAt: input.completedAtIso,
+    })
+    .where(
+      and(
+        eq(harvestRuns.id, input.claimId),
+        isNotNull(harvestRuns.leaseExpiresAt),
+      ),
+    )
+    .returning({ id: harvestRuns.id });
+  return Boolean(completed);
+}
+
+/** Release a known failure; a crash instead becomes retryable on lease expiry. */
+async function releaseRun(claimId: string): Promise<void> {
+  await db
+    .delete(harvestRuns)
+    .where(
+      and(eq(harvestRuns.id, claimId), isNotNull(harvestRuns.leaseExpiresAt)),
+    );
 }
 
 export const HarvestedDomainRepository = {
@@ -147,5 +199,7 @@ export const HarvestedDomainRepository = {
   setAvailability,
   listForProject,
   listHarvestedDates,
-  recordRun,
+  claimRun,
+  completeRun,
+  releaseRun,
 } as const;

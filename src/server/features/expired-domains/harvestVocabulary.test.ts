@@ -70,7 +70,80 @@ describe("resolveHarvestVocabulary", () => {
     });
 
     expect(derive).toHaveBeenCalledTimes(1);
-    expect(cache.store.has(`${VOCABULARY_CACHE_PREFIX}p1`)).toBe(true);
+    expect([...cache.store.keys()]).toEqual([
+      expect.stringMatching(
+        new RegExp(`^${VOCABULARY_CACHE_PREFIX}p1:[a-f0-9]{64}$`),
+      ),
+    ]);
+  });
+
+  it("misses the cache when the normalized keyword vocabulary changes", async () => {
+    const cache = fakeCache();
+    const derive = vi.fn().mockResolvedValue(["school"]);
+
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "",
+      cache,
+      deriveAdjacent: derive,
+    });
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: [...KEYWORDS, "micro markets"],
+      profileText: "",
+      cache,
+      deriveAdjacent: derive,
+    });
+
+    expect(derive).toHaveBeenCalledTimes(2);
+    expect(cache.store.size).toBe(2);
+  });
+
+  it("includes profile text even when it derives the same seed terms", async () => {
+    const cache = fakeCache();
+    const derive = vi.fn().mockResolvedValue(["school"]);
+
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "services for vending",
+      cache,
+      deriveAdjacent: derive,
+    });
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: KEYWORDS,
+      profileText: "vending services",
+      cache,
+      deriveAdjacent: derive,
+    });
+
+    expect(derive).toHaveBeenCalledTimes(2);
+    expect(cache.store.size).toBe(2);
+  });
+
+  it("normalizes seed ordering, casing, and whitespace for a stable key", async () => {
+    const cache = fakeCache();
+    const derive = vi.fn().mockResolvedValue(["school"]);
+
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: ["vending dallas", "breakroom"],
+      profileText: "Office operator",
+      cache,
+      deriveAdjacent: derive,
+    });
+    await resolveHarvestVocabulary({
+      projectId: "p1",
+      keywords: ["  BREAKROOM  ", "VENDING   DALLAS"],
+      profileText: "  office   OPERATOR ",
+      cache,
+      deriveAdjacent: derive,
+    });
+
+    expect(derive).toHaveBeenCalledTimes(1);
+    expect(cache.store.size).toBe(1);
   });
 
   it("writes with the long TTL", async () => {

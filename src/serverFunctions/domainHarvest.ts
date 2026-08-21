@@ -14,7 +14,9 @@ import type { ExpirationCache } from "@/server/lib/apiverve/domainExpiration";
 import { AppError } from "@/server/lib/errors";
 import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 import { resolveHarvestVocabulary } from "@/server/features/expired-domains/harvestVocabulary";
+import { refreshHarvestedAvailability } from "@/server/features/expired-domains/harvestAvailability";
 import { requireProjectContext } from "@/serverFunctions/middleware";
+import { MAX_HARVEST_AVAILABILITY_BATCH } from "@/shared/harvestAvailability";
 
 /**
  * Reading and running the deleted-domain harvest.
@@ -51,6 +53,7 @@ export const getHarvestedDomains = createServerFn({ method: "POST" })
         // null means NOT YET GRADED, never "no authority". A real 0 is a 0.
         domainRating: row.domainRating,
         isAvailable: row.isAvailable,
+        availabilityCheckedAt: row.availabilityCheckedAt,
       })),
       harvestedDates: dates.toSorted().toReversed(),
     };
@@ -100,26 +103,46 @@ export const runHarvestNow = createServerFn({ method: "POST" })
       maxDays: 7,
     });
 
+    const [droppedOn] = dates;
+    if (!droppedOn) {
+      return { matched: 0, harvestedDates: [], failedDates: [], terms };
+    }
+
     const result = await harvestDroppedDomains({
-      projectId: context.projectId,
-      terms,
-      exclude: [
-        projectDomain.toLowerCase(),
-        ...competitors.map((row) => row.domain.toLowerCase()),
+      projects: [
+        {
+          projectId: context.projectId,
+          droppedOn,
+          terms,
+          exclude: [
+            projectDomain.toLowerCase(),
+            ...competitors.map((row) => row.domain.toLowerCase()),
+          ],
+        },
       ],
-      dates: dates.slice(0, 1),
+      now: () => new Date(),
       streamDropped: (date, onDomain) =>
         streamDroppedDomains({ date, tlds: ["com"], onDomain }),
       insertMatches: (rows) => HarvestedDomainRepository.insertMatches(rows),
-      recordRun: (run) => HarvestedDomainRepository.recordRun(run),
+      claimRun: (run) => HarvestedDomainRepository.claimRun(run),
+      completeRun: (run) => HarvestedDomainRepository.completeRun(run),
+      releaseRun: (claimId) => HarvestedDomainRepository.releaseRun(claimId),
     });
 
-    return { ...result, terms };
+    return {
+      matched: result.matched,
+      harvestedDates: result.harvestedRuns.map((run) => run.droppedOn),
+      failedDates: result.failedRuns.map((run) => run.droppedOn),
+      terms,
+    };
   });
 
 const availabilityInput = z.object({
   projectId: z.string().min(1),
-  domains: z.array(z.string().trim().min(1)).min(1).max(25),
+  domains: z
+    .array(z.string().trim().min(1))
+    .min(1)
+    .max(MAX_HARVEST_AVAILABILITY_BATCH),
 });
 
 /**
@@ -139,34 +162,22 @@ export const checkHarvestedAvailability = createServerFn({ method: "POST" })
       put: (key, value, options) => env.KV.put(key, value, options),
     };
 
-    const stored = await HarvestedDomainRepository.listForProject(
-      context.projectId,
-      MAX_ROWS,
+    return refreshHarvestedAvailability(
+      { projectId: context.projectId, domains: data.domains },
+      {
+        listForProject: (projectId) =>
+          HarvestedDomainRepository.listForProject(projectId, MAX_ROWS),
+        resolveAvailability: (domain) =>
+          resolveDomainAvailability(domain, cache),
+        setAvailability: (id, isAvailable, checkedAtIso) =>
+          HarvestedDomainRepository.setAvailability(
+            id,
+            isAvailable,
+            checkedAtIso,
+          ),
+        now: () => new Date(),
+      },
     );
-    const byDomain = new Map(stored.map((row) => [row.domain, row.id]));
-    const checkedAt = new Date().toISOString();
-    const result: Record<string, boolean | null> = {};
-
-    // Deduplicate: 25 copies of one domain used to bill 25 times whenever the
-    // post-fetch cache write failed, because each duplicate re-missed the cache.
-    for (const domain of new Set(
-      data.domains.map((d) => d.trim().toLowerCase()),
-    )) {
-      const id = byDomain.get(domain);
-      // Only ever check domains this project actually harvested -- otherwise
-      // the endpoint becomes an arbitrary billed availability oracle.
-      if (!id) continue;
-      let available: boolean | null = null;
-      try {
-        available = await resolveDomainAvailability(domain, cache);
-      } catch {
-        available = null;
-      }
-      result[domain] = available;
-      await HarvestedDomainRepository.setAvailability(id, available, checkedAt);
-    }
-
-    return result;
   });
 
 async function collectTrackedKeywords(projectId: string): Promise<string[]> {

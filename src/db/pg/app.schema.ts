@@ -429,6 +429,8 @@ export const harvestRuns = pgTable(
       .references(() => projects.id, { onDelete: "cascade" }),
     droppedOn: text("dropped_on").notNull(),
     matched: integer("matched").notNull().default(0),
+    // Non-null is an active expiring claim; null is a completed run.
+    leaseExpiresAt: timestampColumn("lease_expires_at"),
     completedAt: timestampColumn("completed_at").notNull().default(isoNow),
   },
   (table) => [
