@@ -65,6 +65,10 @@ const STANDARD_MESSAGES: Record<ErrorCode, string> = {
     "APIVerve rejected the API key. Check that APIVERVE_API_KEY is a valid key from apiverve.com.",
   APIVERVE_CREDITS_EXHAUSTED:
     "The APIVerve account is out of credits. Top it up to run more domain expiry lookups — nothing else on this tab needs it.",
+  WHOISFREAKS_NOT_CONFIGURED:
+    "The deleted-domain feed needs a WHOISFREAKS_API_KEY on the deployment. Everything else on this tab works without it.",
+  WHOISFREAKS_AUTH_FAILED:
+    "WhoisFreaks rejected the API key. Check that WHOISFREAKS_API_KEY is valid and the subscription is still active.",
 };
 
 export function getStandardErrorMessage(

@@ -1,6 +1,7 @@
 import { CalendarX } from "@phosphor-icons/react";
 import { AppPageShell } from "@/client/components/AppPageShell";
 import { ExpiredDomainsPanel } from "@/client/features/expired-domains/ExpiredDomainsPanel";
+import { HarvestedDomainsPanel } from "@/client/features/expired-domains/HarvestedDomainsPanel";
 import { useProjectDomain } from "@/client/hooks/useProjectDomain";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
@@ -31,7 +32,13 @@ export function ExpiredDomainsPage({ projectId }: { projectId: string }) {
       </p>
 
       {domain ? (
-        <ExpiredDomainsPanel projectId={projectId} domain={domain} />
+        <>
+          {/* The feed-driven shortlist first: it is the widest source and the
+              only one that reaches domains with no connection to this
+              project's existing link graph. */}
+          <HarvestedDomainsPanel projectId={projectId} />
+          <ExpiredDomainsPanel projectId={projectId} domain={domain} />
+        </>
       ) : (
         <Banner variant="default">
           Set this project&apos;s domain in Settings to search for expired

@@ -58,7 +58,7 @@ describe("parseAdjacentTerms", () => {
   });
 
   it("caps the list, since each term multiplies generated names", () => {
-    const many = Array.from({ length: 40 }, (_, i) => `term${i}`).join(", ");
-    expect(parseAdjacentTerms(many).length).toBeLessThanOrEqual(12);
+    const many = Array.from({ length: 60 }, (_, i) => `term${i}`).join(", ");
+    expect(parseAdjacentTerms(many).length).toBeLessThanOrEqual(30);
   });
 });

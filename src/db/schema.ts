@@ -53,6 +53,8 @@ export const {
   rankSnapshots,
   audits,
   auditPages,
+  harvestedDomains,
+  harvestRuns,
   auditLighthouseResults,
   pageOptimizations,
   brandVisibilitySnapshots,

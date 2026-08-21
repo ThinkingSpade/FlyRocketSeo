@@ -7,21 +7,35 @@ import { getOptionalEnvValue } from "@/server/lib/runtime-env";
  *
  * This is the step that answers "all vending, nothing vending-adjacent". The
  * client's own keywords can only ever describe the client's own vertical, so
- * reaching food, nutrition or break-room supply needs outside knowledge, and a
- * model is the cheapest source of it -- one small call per run.
+ * reaching the industries AROUND it needs outside knowledge, and a model is the
+ * cheapest source of it -- one small call, cached per project.
+ *
+ * The prompt deliberately reaches past neighbouring product categories to the
+ * industries of the client's own CUSTOMERS. A vending operator serves schools,
+ * so an education domain is a legitimate target: it is somewhere the operator
+ * could publish credibly, even though education is not its trade. Narrowing to
+ * "things like vending" is what made an earlier run return five vending
+ * companies and nothing else.
  *
  * Terms are a strictly bounded, sanitised list because each one multiplies the
  * generated names, and every surviving name can cost an availability credit.
  * The parser is deliberately strict and separately tested: a model that decides
  * to explain itself must not turn a sentence into a domain name.
  */
-const MAX_TERMS = 12;
-const MAX_OUTPUT_TOKENS = 200;
+const MAX_TERMS = 30;
+const MAX_OUTPUT_TOKENS = 400;
 
-const SYSTEM_PROMPT = `You list neighbouring industries for a business, for a domain-name search.
+const SYSTEM_PROMPT = `You list industry words for a domain-name search, for a business.
 Reply with ONLY a comma-separated list of single lowercase words. No sentences, no numbering, no explanation.
 Each word must be usable inside a domain name: letters only, no spaces, no punctuation.
-Give words from ADJACENT industries and product categories, not synonyms of the business itself.`;
+
+Include words from ALL of these, not just the business's own trade:
+1. Industries whose businesses would BUY from it or HOST it (a vending operator serves schools, hospitals, gyms, hotels, factories, offices).
+2. The PLACES it operates in (campus, breakroom, cafeteria, lobby, warehouse, clinic).
+3. Adjacent product and service categories (snacks, nutrition, coffee, water, catering, facilities, janitorial).
+4. Topics its customers care about that it could credibly publish about (wellness, hydration, workplace, productivity, hospitality, education).
+
+Be generous and wide-ranging. A word only needs to be plausibly connected to the business or its customers.`;
 
 /**
  * Extracts usable terms from a model reply.
@@ -68,7 +82,7 @@ export async function deriveAdjacentTerms(
       maxOutputTokens: MAX_OUTPUT_TOKENS,
       system: SYSTEM_PROMPT,
       prompt: `The business works in: ${industryTerms.slice(0, 10).join(", ")}.
-List neighbouring industries and product categories a customer of that business also buys.`,
+List every industry, venue type, product category and content topic connected to it -- including the industries of its likely CUSTOMERS, not only its own trade.`,
     });
     return parseAdjacentTerms(text);
   } catch (error) {

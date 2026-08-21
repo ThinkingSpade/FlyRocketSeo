@@ -400,6 +400,86 @@ export const audits = sqliteTable(
   ],
 );
 
+/**
+ * Domains harvested from the daily deleted-domains feed that matched a
+ * project's industry vocabulary.
+ *
+ * Rows persist deliberately: the feed subscription is a tap that gets turned
+ * off after a month, but the shortlist it produced is the thing of value and
+ * has to outlive it. Nothing here is derived from the subscription being live.
+ *
+ * `domainRating` is Ahrefs' free DR -- `null` means NOT YET GRADED or the
+ * lookup did not answer, never "no authority". A real 0 is stored as 0, which
+ * is the distinction that once silently broke a ranking verdict in this repo.
+ */
+export const harvestedDomains = sqliteTable(
+  "harvested_domains",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** Registrable domain, lowercased. */
+    domain: text("domain").notNull(),
+    /** Which vocabulary term matched, so a row can explain itself. */
+    matchedTerm: text("matched_term").notNull(),
+    /** The feed date this domain appeared in (yyyy-MM-dd). */
+    droppedOn: text("dropped_on").notNull(),
+    /** Ahrefs DR: null = ungraded/unknown, 0 = genuinely rated zero. */
+    domainRating: integer("domain_rating"),
+    /** null until checked; deleted domains get registered by other people. */
+    isAvailable: integer("is_available", { mode: "boolean" }),
+    availabilityCheckedAt: text("availability_checked_at"),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    index("harvested_domains_project_id_idx").on(table.projectId),
+    // One row per domain per project, so re-running a day is idempotent.
+    uniqueIndex("harvested_domains_project_domain_idx").on(
+      table.projectId,
+      table.domain,
+    ),
+  ],
+);
+
+/**
+ * One row per (project, feed date) actually processed.
+ *
+ * Separate from `harvested_domains` because completion cannot be inferred from
+ * matches: a day that legitimately yields ZERO matches would leave no trace,
+ * and the scheduler would re-download that 2 MB file on every 15-minute tick
+ * for as long as it stayed the newest date -- 84 downloads a day.
+ *
+ * A row is claimed before the feed is read. `leaseExpiresAt` stays non-null
+ * until every insert chunk succeeds; caught failures release it and crashes
+ * become retryable after expiry.
+ */
+export const harvestRuns = sqliteTable(
+  "harvest_runs",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    /** Feed date (yyyy-MM-dd). */
+    droppedOn: text("dropped_on").notNull(),
+    matched: integer("matched").notNull().default(0),
+    /** Non-null is an active expiring claim; null is a completed run. */
+    leaseExpiresAt: text("lease_expires_at"),
+    completedAt: text("completed_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("harvest_runs_project_date_idx").on(
+      table.projectId,
+      table.droppedOn,
+    ),
+  ],
+);
+
 // One row per crawled page
 export const auditPages = sqliteTable(
   "audit_pages",
