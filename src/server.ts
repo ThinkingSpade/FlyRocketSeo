@@ -4,6 +4,7 @@ import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve"
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { SamSessionRepository } from "@/server/features/sam/SamSessionRepository";
 import { runScheduledRankChecks } from "@/server/features/rank-tracking/services/scheduledRankChecks";
+import { runScheduledDomainHarvest } from "@/server/features/expired-domains/services/scheduledDomainHarvest";
 import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
 import { getAuthMode, isHostedAuthMode } from "@/lib/auth-mode";
@@ -204,6 +205,16 @@ export default {
     _ctx: ExecutionContext,
   ) {
     // Scope a per-request Postgres client for the cron run (no-op in D1 mode).
-    await withPgClient(() => runScheduledRankChecks(env));
+    await withPgClient(async () => {
+      await runScheduledRankChecks(env);
+      // Self-limiting: it does real work about once a day per project and is
+      // otherwise two cheap reads, so it is safe on the 15-minute tick. Its
+      // failure must never take the rank checks down with it.
+      try {
+        await runScheduledDomainHarvest();
+      } catch (error) {
+        console.error("scheduled.domainHarvest failed:", error);
+      }
+    });
   },
 };

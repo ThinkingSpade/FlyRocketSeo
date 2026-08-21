@@ -1,12 +1,16 @@
+import { gzipSync } from "node:zlib";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AppError } from "@/server/lib/errors";
 import { fetchDroppedDomains } from "@/server/lib/whoisfreaks";
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "content-type": "application/json" },
-  });
+/** The real feed is gzipped, newline-delimited names with no header. */
+function feedResponse(lines: string[], status = 200): Response {
+  const body = gzipSync(Buffer.from(lines.join("\n"), "utf-8"));
+  return new Response(body, { status });
+}
+
+function jsonResponse(body: unknown, status: number): Response {
+  return new Response(JSON.stringify(body), { status });
 }
 
 async function codeOf(promise: Promise<unknown>): Promise<string> {
@@ -28,46 +32,36 @@ describe("fetchDroppedDomains", () => {
     vi.unstubAllGlobals();
   });
 
-  it("requests one day, filtered to the given TLDs", async () => {
+  // Pinned deliberately: the documented endpoint on the marketing host does not
+  // exist and answers with a Next.js 404 PAGE, which parses as a failure only by
+  // luck. This asserts the host/path verified against the live API.
+  it("calls the verified files host, not the marketing host", async () => {
     let requested = "";
     vi.stubGlobal(
       "fetch",
       vi.fn((url: unknown) => {
         requested = String(url);
-        return Promise.resolve(jsonResponse(["a.com", "b.com"]));
+        return Promise.resolve(feedResponse(["a.com"]));
       }),
     );
 
     await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] });
 
     expect(requested).toContain(
-      "https://whoisfreaks.com/api/v3/dropped-domains",
+      "https://files.whoisfreaks.com/v3.1/download/domainer/dropped",
     );
     expect(requested).toContain("date=2026-08-19");
-    expect(requested).toContain("tlds=com");
-    // The plan is names-only; asking for WHOIS would be a different product.
+    expect(requested).toContain("apiKey=test-key");
+    // Asking for WHOIS on this subscription returns 413 "upgrade your plans".
     expect(requested).toContain("whois=false");
   });
 
-  it("never puts the key anywhere but the query string the API requires", async () => {
-    let requested = "";
+  it("decompresses the gzipped feed and normalizes names", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn((url: unknown) => {
-        requested = String(url);
-        return Promise.resolve(jsonResponse([]));
-      }),
-    );
-
-    await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] });
-
-    expect(requested).toContain("apiKey=test-key");
-  });
-
-  it("normalizes and lowercases the returned names", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValue(jsonResponse(["A.COM", " b.com ", "c.com"])),
+      vi
+        .fn()
+        .mockResolvedValue(feedResponse(["A.COM", " b.com ", "", "c.com"])),
     );
 
     expect(
@@ -75,17 +69,30 @@ describe("fetchDroppedDomains", () => {
     ).toEqual(["a.com", "b.com", "c.com"]);
   });
 
-  // The API is documented as returning a bare array, but a wrapped shape is a
-  // common drift; accept both rather than fail a whole day's harvest over it.
-  it("accepts a wrapped payload as well as a bare array", async () => {
+  // There is no server-side TLD filter on this endpoint -- the download is the
+  // whole day across every TLD, so narrowing has to happen client-side.
+  it("filters to the requested TLDs", async () => {
     vi.stubGlobal(
       "fetch",
-      vi.fn().mockResolvedValue(jsonResponse({ domains: ["a.com"] })),
+      vi
+        .fn()
+        .mockResolvedValue(
+          feedResponse(["a.com", "b.shop", "c.net", "d.xyz", "e.com"]),
+        ),
     );
 
     expect(
+      await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com", "net"] }),
+    ).toEqual(["a.com", "c.net", "e.com"]);
+  });
+
+  it("handles CRLF line endings without corrupting names", async () => {
+    const body = gzipSync(Buffer.from("a.com\r\nb.com\r\n", "utf-8"));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(body)));
+
+    expect(
       await fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] }),
-    ).toEqual(["a.com"]);
+    ).toEqual(["a.com", "b.com"]);
   });
 
   it("refuses to call out when no key is configured", async () => {
@@ -103,6 +110,8 @@ describe("fetchDroppedDomains", () => {
     const cases: ReadonlyArray<readonly [number, string]> = [
       [401, "WHOISFREAKS_AUTH_FAILED"],
       [403, "WHOISFREAKS_AUTH_FAILED"],
+      // Observed live when asking for a tier the subscription does not include.
+      [413, "UPSTREAM_UNAVAILABLE"],
       [429, "RATE_LIMITED"],
       [500, "UPSTREAM_UNAVAILABLE"],
     ];
@@ -110,7 +119,7 @@ describe("fetchDroppedDomains", () => {
     for (const [status, expected] of cases) {
       vi.stubGlobal(
         "fetch",
-        vi.fn().mockResolvedValue(jsonResponse({}, status)),
+        vi.fn().mockResolvedValue(jsonResponse({ status }, status)),
       );
       expect(
         await codeOf(
@@ -120,8 +129,12 @@ describe("fetchDroppedDomains", () => {
     }
   });
 
-  it("treats an unusable body as an upstream failure", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response("<html>")));
+  it("treats an undecompressable body as an upstream failure", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(new Response("not gzip at all")),
+    );
+
     expect(
       await codeOf(fetchDroppedDomains({ date: "2026-08-19", tlds: ["com"] })),
     ).toBe("UPSTREAM_UNAVAILABLE");

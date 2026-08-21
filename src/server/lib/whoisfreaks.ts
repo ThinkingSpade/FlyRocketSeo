@@ -1,4 +1,3 @@
-import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 
@@ -15,25 +14,22 @@ import { getOptionalEnvValue } from "@/server/lib/runtime-env";
  *
  * No `cloudflare:workers` import, so the transport and its error mapping stay
  * reachable from the node-environment test suite.
+ *
+ * The endpoint below was VERIFIED against the live API, not read off a docs
+ * summary. The published documentation renders its example URLs via
+ * JavaScript, and fetching that page yields an "inferred" endpoint on the
+ * marketing host which answers every request with a Next.js 404 PAGE -- HTML,
+ * not an API error, which is what makes the mistake easy to miss. The real
+ * feed lives on a separate `files.` host under a different version segment.
  */
-const ENDPOINT = "https://whoisfreaks.com/api/v3/dropped-domains";
-const FETCH_TIMEOUT_MS = 30_000;
-
-/**
- * The documented shape is a bare array of names. A wrapped object is a common
- * drift for feeds like this, so both are accepted -- failing a whole day's
- * harvest over an envelope would be a poor trade.
- */
-const payloadSchema = z.union([
-  z.array(z.string()),
-  z.object({ domains: z.array(z.string()) }),
-  z.object({ domain_names: z.array(z.string()) }),
-]);
+const ENDPOINT = "https://files.whoisfreaks.com/v3.1/download/domainer/dropped";
+/** A day is ~2 MB gzipped / ~240k rows, so allow for a slow transfer. */
+const FETCH_TIMEOUT_MS = 90_000;
 
 export async function fetchDroppedDomains(input: {
   /** yyyy-MM-dd. Files for a day publish at 03:00 UTC the following day. */
   date: string;
-  /** Restricts the payload server-side; we only ever want a couple of TLDs. */
+  /** Kept client-side: the download is a whole-day file, not a filtered query. */
   tlds: string[];
 }): Promise<string[]> {
   const key = await getOptionalEnvValue("WHOISFREAKS_API_KEY");
@@ -47,9 +43,8 @@ export async function fetchDroppedDomains(input: {
   const url = new URL(ENDPOINT);
   url.searchParams.set("apiKey", key);
   url.searchParams.set("date", input.date);
-  url.searchParams.set("tlds", input.tlds.join(","));
-  // Names-only: the subscribed plan carries no WHOIS, and asking for it would
-  // be a different (and more expensive) product.
+  // Names-only. Asking for WHOIS on this subscription returns 413 "Please
+  // upgrade your plans" -- the API enforces the tier, so this is not optional.
   url.searchParams.set("whois", "false");
 
   let response: Response;
@@ -66,30 +61,38 @@ export async function fetchDroppedDomains(input: {
 
   if (!response.ok) throw errorForStatus(response.status);
 
-  let parsed;
+  // The body is GZIPPED newline-delimited names, not JSON. DecompressionStream
+  // is available in Workers and in Node 18+, so this needs no dependency.
+  let text: string;
   try {
-    parsed = payloadSchema.safeParse(await response.json());
+    const stream = response.body?.pipeThrough(new DecompressionStream("gzip"));
+    if (!stream) throw new Error("empty body");
+    text = await new Response(stream).text();
   } catch {
     throw new AppError(
       "UPSTREAM_UNAVAILABLE",
-      "WhoisFreaks returned a body that is not JSON",
-    );
-  }
-  if (!parsed.success) {
-    throw new AppError(
-      "UPSTREAM_UNAVAILABLE",
-      "WhoisFreaks returned an unexpected payload shape",
+      "WhoisFreaks returned a body that could not be decompressed",
     );
   }
 
-  const names = Array.isArray(parsed.data)
-    ? parsed.data
-    : "domains" in parsed.data
-      ? parsed.data.domains
-      : parsed.data.domain_names;
+  // Split on either line ending: the file is generated on an unknown platform
+  // and a stray CR would otherwise ride along inside every domain name.
+  const names = text.split(NEWLINE);
 
-  return names.map((name) => name.trim().toLowerCase()).filter(Boolean);
+  // The download is a whole-day file across every TLD -- roughly 240k rows, of
+  // which about a third are .com. There is no server-side TLD filter on this
+  // endpoint, so narrowing happens here.
+  const wanted = new Set(input.tlds.map((tld) => tld.toLowerCase()));
+  return names
+    .map((name) => name.trim().toLowerCase())
+    .filter(Boolean)
+    .filter((name) => wanted.has(name.slice(name.lastIndexOf(".") + 1)));
 }
+
+/** `\r?\n`, built without an escape so it survives any tooling in between. */
+const NEWLINE = new RegExp(
+  String.fromCharCode(13) + "?" + String.fromCharCode(10),
+);
 
 function errorForStatus(status: number): AppError {
   switch (status) {
