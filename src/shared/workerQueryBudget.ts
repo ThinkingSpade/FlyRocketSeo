@@ -1,3 +1,4 @@
+import { HARVEST_TICKS_PER_HOUR } from "@/shared/cronDispatch";
 /**
  * Cloudflare D1 "Queries per Worker invocation (read subrequest limits)" is
  * 50 on Workers Free and 1,000 on Workers Paid. This deployment is Free.
@@ -55,11 +56,11 @@ export const MAX_GRADING_SUBREQUESTS =
  * harvesting costs one tick per project per day and every remaining tick is
  * available for grading.
  */
-const CRON_TICKS_PER_DAY = 96;
+const HARVEST_TICKS_PER_DAY = HARVEST_TICKS_PER_HOUR * 24;
 /** Harvest ticks per day = one per project, since there is one feed date. */
 const HARVESTABLE_PROJECTS = 3;
 const DAILY_GRADING_CAPACITY =
-  (CRON_TICKS_PER_DAY - HARVESTABLE_PROJECTS) * MAX_DOMAIN_RATING_LOOKUPS;
+  (HARVEST_TICKS_PER_DAY - HARVESTABLE_PROJECTS) * MAX_DOMAIN_RATING_LOOKUPS;
 /**
  * Exceeding this is not a correctness failure -- adding a fourth project simply
  * means grading lags -- but the ceiling is derived rather than guessed so the

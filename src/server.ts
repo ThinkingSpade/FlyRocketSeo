@@ -4,6 +4,7 @@ import { resolveUserContextFromHeaders } from "@/middleware/ensure-user/resolve"
 import { ProjectRepository } from "@/server/features/projects/repositories/ProjectRepository";
 import { SamSessionRepository } from "@/server/features/sam/SamSessionRepository";
 import { runScheduledRankChecks } from "@/server/features/rank-tracking/services/scheduledRankChecks";
+import { scheduledUnitForTick } from "@/shared/cronDispatch";
 import { runScheduledDomainHarvest } from "@/server/features/expired-domains/services/scheduledDomainHarvest";
 import { getOrCreateOrganizationCustomer } from "@/server/billing/subscription";
 import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
@@ -197,9 +198,6 @@ export { OnboardingChatAgent } from "./server/features/onboarding/OnboardingChat
 // Durable Object class for the SAM in-app agent (Agents SDK).
 export { SamChatAgent } from "./server/features/sam/SamChatAgent";
 
-const RANK_CHECK_CRON = "*/15 * * * *";
-const DOMAIN_HARVEST_CRON = "7,22,37,52 * * * *";
-
 export default {
   fetch,
   async scheduled(
@@ -207,18 +205,21 @@ export default {
     env: Env,
     _ctx: ExecutionContext,
   ) {
+    const scheduledTime = new Date(controller.scheduledTime);
     // Scope a per-request Postgres client for the cron run (no-op in D1 mode).
     await withPgClient(async () => {
-      if (controller.cron === RANK_CHECK_CRON) {
+      // One unit of work per tick. These two jobs cannot share an invocation
+      // without risking the Free-plan 50-query budget, and they are split by
+      // TICK rather than by a second cron trigger because Workers Builds
+      // deploys via the versions API, which never registers new triggers.
+      if (scheduledUnitForTick(scheduledTime) === "rank-checks") {
         await runScheduledRankChecks(env);
         return;
       }
-      if (controller.cron === DOMAIN_HARVEST_CRON) {
-        try {
-          await runScheduledDomainHarvest(new Date(controller.scheduledTime));
-        } catch (error) {
-          console.error("scheduled.domainHarvest failed:", error);
-        }
+      try {
+        await runScheduledDomainHarvest(scheduledTime);
+      } catch (error) {
+        console.error("scheduled.domainHarvest failed:", error);
       }
     });
   },
