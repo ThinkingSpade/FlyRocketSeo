@@ -43,6 +43,14 @@ migrations still require authorized release access. Conditional P3 intelligence
 requires verified datasets, demonstrated demand and explicit cost approval; no
 new dataset or invented observation will substitute for those prerequisites.
 
+Exact commit/build/version linkage confirms an automatic Cloudflare production
+deployment following audit-branch publication; the user was informed. Further
+source publication is held pending a safe publication path and production review.
+Verification-only GitHub jobs do not certify the external trigger's behavior.
+Local implementation, isolated tests and commits may continue; rollback,
+production repair or trigger/configuration changes require approval. See
+`../audits/publication-gate.md` for the confirmed event and release boundary.
+
 ## Execution ledger
 
 - Baseline: clean working tree; last source/test head `c2af177d`, documentation
@@ -61,11 +69,39 @@ new dataset or invented observation will substitute for those prerequisites.
   captured brief; Local SEO draft prefill and Backlinks in-flight guards preserve
   explicit user action. Meaningful REDs, focused GREENs and independent review
   evidence are retained in the verification ledger.
-- Verified local source: application head `1096bcf0`; complete native suite
-  3,780/396, real PostgreSQL 17/4 with all 24 migrations, global static checks,
-  production build/root prerender/SPA shell and startup guard pass. The final
-  fresh-state authenticated operation suite passes 82/82 cases in 21 files,
-  with zero unexpected failures, flaky cases or skips. Remote CI is pending.
+- Verified frozen source: `3ece2362`; complete native suite 3,780/396, real
+  PostgreSQL 17/4 with all 24 migrations, global static checks, production
+  build/root prerender/SPA shell and startup guard pass. The fresh-state
+  authenticated operation suite passes 82/82 cases in 21 files, with zero
+  unexpected failures, flaky cases or skips. Inspected exact-source Linux CI
+  confirms these outcomes in the
+  [audit workflow](https://github.com/ThinkingSpade/FlyRocketSeo/actions/runs/38443618376)
+  and [Docker PostgreSQL workflow](https://github.com/ThinkingSpade/FlyRocketSeo/actions/runs/38443618773).
+  Full logs/artifacts are retained in `.logs/evidence/ci-3ece2362/`; the native
+  portable PostgreSQL run remains independent local evidence. The Docker
+  artifact omitted hidden runtime metadata/logs; full job logs and runtime
+  summaries establish the engine/tests. The narrow selected-path hidden metadata
+  upload repair is committed locally in `a6e01540`; remote execution is held.
+- Verified separate visual check: settled desktop/mobile Page Investigation
+  controls, source/capture and action handoffs, zero browser/external/response
+  diagnostics and no mobile page overflow. Its evidence is in
+  `.logs/evidence/page-settled/`; it is not added to the 82-case suite count.
+- Latest local increment: `ff2e0530` includes documented `40102` successful-empty
+  SERP/Citation, canonical numeric request echoes, original capture display and
+  the cold GSC initialization repair. The causal browser RED proved the runner
+  returned uninitialized exports through a false circular import; deferring the
+  request helper inside its sole existing OAuth handler preserves authentication
+  and request origin. The same strict direct cold-route case passes, including
+  original Citation source/scope/capture, paid-cache reuse and free reload.
+  Complete native **3,825/398**, global static, production build/root prerender/
+  SPA/startup checks and fresh PostgreSQL **17/4/all 24 migrations** pass.
+  Independent final review found no blocking regression. The complete fresh-state
+  **83-case browser run passes in 21 files**, 539.25 seconds, with zero failures,
+  flaky cases or skips. Its complete archive is
+  `.logs/evidence/acceptance-final-83/`; frozen CI and focused cases are not
+  combined or relabelled as that run.
 - Remaining external gates: live integrations and approved release verification
-  remain blocked as described above. Conditional P3 datasets and later detector,
-  implementation-cycle and causal-analysis extensions are future work.
+  remain blocked as described above, and remote publication is held until the
+  Cloudflare trigger/deployment boundary is established. Conditional P3 datasets
+  and later detector, implementation-cycle and causal-analysis extensions are
+  future work rather than missing first-version implementation.

@@ -27,18 +27,34 @@ native, browser, PostgreSQL, static and build results are recorded in
 `verification-results.md`, not inferred from these focused counts.
 
 Citation cache/scope/query/corroboration verification passed **28 tests in four
-files** (`.logs/citation-cache-green.log`). The final integrated native run at
+files** (`.logs/citation-cache-green.log`). The previously verified native run at
 `1096bcf0` passes **3,780 tests in 396 files**; focused increments are subsets, not
 additional totals. Actual browser citation lookup/restoration, backlink operations
 and exports have their execution status recorded separately in
 `verification-results.md` and `tool-operation-coverage.md`.
 
+The later raw-SDK repair in `c1454376` accepts documented **40102** empty
+SERP metadata (`items: null`, zero item/search counts), including a canonical
+decimal-string location echo. Missing payloads, malformed counts, foreign scope
+and **40501 Invalid Field** failures retain billed errors and cannot create a
+saved empty capture. The two new raw HTTP/service suites pass **45 tests**;
+the broader affected run passes **87 tests in seven files**. Original capture,
+single paid POST, cache reuse and saved-run identity remain asserted. The
+corresponding new actual-browser case passes in the complete fresh-state
+**83-case** application run. Latest source `ff2e0530` passes **3,825 native tests
+in 398 files**; focused counts are included in that total, never added to a
+previous complete run.
+
 Field references: [AI search volume](https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/search/live/),
 [AI aggregate metrics](https://docs.dataforseo.com/v3/ai_optimization/llm_mentions/aggregated_metrics/live/),
 and [LLM response citation annotations](https://docs.dataforseo.com/v3/ai_optimization-chat_gpt-llm_responses-live/).
+Canonical empty/error references: [DataForSEO 40102 response shape](https://dataforseo.com/help-center/what-does-the-40102-error-mean)
+and [task status codes](https://docs.dataforseo.com/v3/appendix/errors/).
 The existing aggregate endpoint is retained; new datasets or paid services are
 not introduced by this work.
 
 Live provider entitlement, responses, OAuth, deployed jobs and production
 configuration remain **blocked** because staging access is unavailable. No
-merge, deployment, production-data change or real paid provider call was used.
+production data or real paid provider response was used for these tests. The
+external deployment observed after publication is recorded in
+`publication-gate.md`; further pushes and release remain held.

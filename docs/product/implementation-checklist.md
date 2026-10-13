@@ -9,35 +9,51 @@ Local browser fixtures never certify OAuth, live provider entitlement, or stagin
 
 ## Current remaining-roadmap continuation from `bb93af37`
 
+**Current external gate:** publishing more source is held after an observed
+automatic Cloudflare production deployment following audit-branch publication. Source
+`3ece2362` passed both GitHub verification workflows; that does not certify the
+Cloudflare trigger or production behavior. See `../audits/publication-gate.md`.
+Latest local source/test head: `ff2e0530`. Canonical empty Citation/SERP and cold
+GSC initialization repairs pass their strict browser regression and complete
+native/static/build/PostgreSQL checks. The complete fresh-state application run
+passes **83/83 cases in 21 files**, with zero failures, retries, flaky cases or skips.
+
 This section supersedes historical counts and remaining-provider statements below.
 The roadmap's first version remains decline/internal-link actions, dashboard/page
 investigation and persistent work/results. Extra detectors, controlled causal
 analysis and new P3 datasets are conditional future work.
 
-| Work                                                        | Implemented                 | Verified                                                                                                                                               | Blocked / remaining                                                                |
-| ----------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Keyword/Labs, competitor/gap and bulk consumed fields       | Yes                         | SDK envelopes through service/cache/legacy/React/CSV; included in complete 3,780-test native run                                                       | Live provider responses and entitlement                                            |
-| Captured rank scope and partial workflow outcomes           | Yes                         | All 50 D1 migrations; SDK task identity/scope; partial/all-failed configured workflow bodies; nullable chart/CSV/Sheets contracts                      | Deployed job execution/recovery                                                    |
-| Local grids, business profiles and review receipt ownership | Yes                         | SDK/service/R2/two-tenant fixtures, genuine empty reuse, malformed/mismatched captures and receipt failure recovery                                    | GBP OAuth/writes and live provider access                                          |
-| AI/Prompt samples and persisted history                     | Yes                         | Partial totals/shares stay unknown; original capture/market/competitor-set history; documented typeless citations; native rendering/cache/CSV          | Actual provider/model responses and entitlement                                    |
-| Backlink comparison/intersection/network claims             | Yes                         | Scope/exclusions/ordinal identities, partial universes, unknown net/counts, legacy normalization and metered malformed errors                          | Live provider dataset applicability                                                |
-| SEO host versus registration identity                       | Yes, `ff49bd50`             | 38 related regressions and complete native rerun; SEO host retained, registration uses registrable parent                                              | Live registration providers                                                        |
-| Page Explorer provider research                             | Yes, `ff7aedde`             | 29 focused tests/6 files; full query-URL cache, original capture, partial sample totals and durable saved-run ordering; focused actual browser restore | Live responses blocked                                                             |
-| Backlinks/audit/GSC export provenance                       | Yes, `22028811`, `1096bcf0` | 31 native tests/6 files; actual downloaded CSV assertions preserve precise observations and original source/scope/capture/paging/coverage              | Sheets OAuth blocked                                                               |
-| Content brief/outline consumed fields and consent           | Yes, `f082a53d`, `8e9144f2` | Ingredient/count/cache contracts; 12 consent identity tests; actual consent carryover RED then GREEN; complete native run                              | Live On-Page access blocked                                                        |
-| Citation persistence/owned history                          | Yes, `09959dce`             | Native SDK/service/cache contracts and actual thin-sample persistence/free restore increment; source capture and unknown coverage retained             | Live responses blocked                                                             |
-| Trends/Clickstream/global-volume contracts                  | Yes, `a9aa0222`             | 108 focused tests/8 files; actual source/window/capture/empty restoration increment; reported zero does not create unsupported comparisons             | Live responses blocked                                                             |
-| Existing onboarding/dashboard/investigation/lifecycle       | Yes                         | Authenticated journeys and real persistence/authorization contracts; prior and focused actual browser evidence retained                                | Live GSC/OAuth blocked                                                             |
-| Durable evidence/R2 cleanup and isolated PostgreSQL         | Yes                         | Real PostgreSQL 17.11: 17/17 in 4 files, all 24 migrations apply/replay; actual D1/R2 cleanup/race/retry evidence                                      | Local Docker unavailable; remote Docker CI pending; deployed storage/release gates |
-| Full native/static/build checks                             | Yes                         | 3,780/3,780 in 396 files; full Prettier/Knip/TSC/Oxlint with zero warnings/errors; final production build/root prerender/SPA/startup guard             | Remote exact-commit CI pending; existing chunk-size advisory                       |
-| Actual authenticated application operations                 | Yes, expanded runner        | Applicable operations mapped for all 24 destinations; real hosted auth/D1/R2 and raw SDK HTTP fixtures; focused GREENs retained                        | Live access blocked; deployed job execution unverified                             |
+| Work                                                        | Implemented                             | Verified                                                                                                                                               | Blocked / remaining                                        |
+| ----------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------- |
+| Keyword/Labs, competitor/gap and bulk consumed fields       | Yes                                     | SDK envelopes through service/cache/legacy/React/CSV; included in complete 3,825-test native run                                                       | Live provider responses and entitlement                    |
+| Captured rank scope and partial workflow outcomes           | Yes                                     | All 50 D1 migrations; SDK task identity/scope; partial/all-failed configured workflow bodies; nullable chart/CSV/Sheets contracts                      | Deployed job execution/recovery                            |
+| Local grids, business profiles and review receipt ownership | Yes                                     | SDK/service/R2/two-tenant fixtures, genuine empty reuse, malformed/mismatched captures and receipt failure recovery                                    | GBP OAuth/writes and live provider access                  |
+| AI/Prompt samples and persisted history                     | Yes                                     | Partial totals/shares stay unknown; original capture/market/competitor-set history; documented typeless citations; native rendering/cache/CSV          | Actual provider/model responses and entitlement            |
+| Backlink comparison/intersection/network claims             | Yes                                     | Scope/exclusions/ordinal identities, partial universes, unknown net/counts, legacy normalization and metered malformed errors                          | Live provider dataset applicability                        |
+| SEO host versus registration identity                       | Yes, `ff49bd50`                         | 38 related regressions and complete native rerun; SEO host retained, registration uses registrable parent                                              | Live registration providers                                |
+| Page Explorer provider research                             | Yes, `ff7aedde`                         | 29 focused tests/6 files; full query-URL cache, original capture, partial sample totals and durable saved-run ordering; focused actual browser restore | Live responses blocked                                     |
+| Backlinks/audit/GSC export provenance                       | Yes, `22028811`, `1096bcf0`             | 31 native tests/6 files; actual downloaded CSV assertions preserve precise observations and original source/scope/capture/paging/coverage              | Sheets OAuth blocked                                       |
+| Content brief/outline consumed fields and consent           | Yes, `f082a53d`, `8e9144f2`             | Ingredient/count/cache contracts; 12 consent identity tests; actual consent carryover RED then GREEN; complete native run                              | Live On-Page access blocked                                |
+| Citation persistence/owned history                          | Yes, `09959dce`, `c1454376`, `ff2e0530` | Canonical 40102 raw SDK, billed malformed/foreign scope guards; original source/capture/market/query; strict actual empty cache/free reload pass       | Live responses blocked                                     |
+| Cold GSC handler initialization                             | Yes, `85784a68`                         | Actual direct cold Local route RED/causal trace then strict GREEN; authenticated OAuth handler retains request origin; full native/static/build pass   | Live OAuth remains blocked                                 |
+| Trends/Clickstream/global-volume contracts                  | Yes, `a9aa0222`                         | 108 focused tests/8 files; actual source/window/capture/empty restoration increment; reported zero does not create unsupported comparisons             | Live responses blocked                                     |
+| Existing onboarding/dashboard/investigation/lifecycle       | Yes                                     | Authenticated journeys and real persistence/authorization contracts; prior and focused actual browser evidence retained                                | Live GSC/OAuth blocked                                     |
+| Durable evidence/R2 cleanup and isolated PostgreSQL         | Yes                                     | Fresh PostgreSQL 17.11: 17/17 in 4 files, all 24 migrations apply/replay; actual D1/R2 cleanup/race/retry; frozen-source Linux Docker CI pass          | Local Docker unavailable; deployed storage/release gates   |
+| Full native/static/build checks                             | Yes                                     | 3,825/3,825 in 398 files; full Prettier/Knip/TSC/Oxlint with zero warnings/errors; final production build/root prerender/SPA/startup guard             | Latest-source remote CI held; existing chunk-size advisory |
+| Actual authenticated application operations                 | Yes, expanded runner                    | Applicable operations mapped for all 24 destinations; real hosted auth/D1/R2 and raw SDK HTTP fixtures; focused GREENs retained                        | Live access blocked; deployed job execution unverified     |
 
-The final fresh-state application run passes **82/82 cases in 21 files**, with
+The latest fresh-state application run passes **83/83 cases in 21 files**, with
 zero unexpected failures, flaky cases, skips or top-level errors. It exercises
 the real hosted-auth application and isolated D1/R2/KV; SDK HTTP and GSC fixtures
 remain explicit. Its complete summary, server log, diagnostics and downloads are
-preserved under `.logs/evidence/acceptance-final-82/`. Earlier focused runs are
+preserved under `.logs/evidence/acceptance-final-83/`. The previous complete
+82-case run remains separate. Earlier focused runs are
 retained separately and are never added together as a passing complete suite.
+
+Frozen source `3ece2362` passes inspected Linux audit and Docker PostgreSQL CI,
+including the complete 82-case suite. Its artifacts remain separate from the
+latest local repairs. Live/deployed behavior and human task-based usability are
+not certified by fixtures. Latest-source remote publication remains held.
 
 Current coverage registers: `../audits/keyword-contract-coverage.md`,
 `../audits/rank-local-contract-coverage.md`,
@@ -70,7 +86,7 @@ Current coverage registers: `../audits/keyword-contract-coverage.md`,
 - Declines and results require matching complete windows; disappearing evidence is not a fix.
 - Navigation/restoring evidence must not trigger paid refreshes or website changes.
 
-## Evidence ledger
+## Earlier implementation ledger (historical)
 
 | Work                                                     | Implemented     | Verified                                                                                                                                             | Blocked / remaining                                                |
 | -------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
@@ -89,7 +105,7 @@ Current coverage registers: `../audits/keyword-contract-coverage.md`,
 | Full native/static/build verification                    | Yes             | 3,433/3,433 tests in 345 files; Prettier, Knip, TypeScript, Oxlint, production build/root prerender/SPA shell all pass                               | New branch CI not remotely executed; no deployment                 |
 | Authenticated application acceptance runner              | Yes, `59aa3f1f` | 50/50 actual app cases pass; 5/5 final five-object cleanup cases pass; 24 clean destination diagnostics; steady desktop/mobile screenshots inspected | User confirms no staging; fixtures never certify live integrations |
 
-## Storage/provider continuation from `317d915b`
+## Storage/provider continuation from `317d915b` (historical)
 
 | Work                                     | Implemented                                         | Verified                                                                                                                                                    | Blocked / remaining                                                                           |
 | ---------------------------------------- | --------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -104,7 +120,8 @@ Current coverage registers: `../audits/keyword-contract-coverage.md`,
 - **Blocked live integrations:** no staging access, test OAuth renewal/revocation, authorized provider responses/entitlement, GBP writes or deployed background-job recovery. Fixture navigation or a missing-key state is never an integration pass.
 - **Release gates:** review/apply migrations and deploy only after approval. Local PostgreSQL and R2 cleanup are verified; deployed Hyperdrive, R2 permissions/configuration, older writer quiescence and crash recovery remain separate release checks. No automatic task/history expiration or stranded-writer expiry is introduced. Local Docker is unavailable; remote CI status is recorded separately.
 - **First-version limitations:** one implementation baseline per saved action; repeated follow-up observations are retained. Multiple implementation cycles, prior-year/controlled causal analysis and broader detector families are future work. Legacy records retain useful observations while unrecorded original scope/provenance is explicitly unavailable; restoring cannot reconstruct that evidence.
-- **Preserved boundaries:** no website publishing, production mutations, merge/deployment, paid request or new paid service. Existing authorization, saved-run restoration and in-flight metered guards remain in use.
+- **Preserved application boundaries:** no automatic website publishing, paid request or new paid service. Existing authorization, saved-run restoration and in-flight metered guards remain in use. Merge, production migration and deployment require approval. The external automatic deployment after the audit push is disclosed in `../audits/publication-gate.md`; further pushes remain held.
+- **Human review:** desktop/mobile interactions and settled visual checks pass, but the brief task-based human usability review is not certified by automated tests.
 
 ## Incremental commits
 
@@ -138,7 +155,7 @@ and fixture/live boundaries below as each increment completes.
 - Generated evidence: `test-results/acceptance-summary.json`, `test-results/acceptance-final-server.log`, screenshots/diagnostic attachments under `test-results/acceptance/`; local native/build/static logs under `.logs/`. These are ignored and reproducible. The new CI archives browser evidence when run; this continuation did not push or trigger remote CI.
 - No production migration, deploy, merge, paid request, new service or website change occurred. Browser server stopped after acceptance.
 
-## Final storage/provider verification
+## Previous storage/provider verification (historical)
 
 - Source/test head: `c2af177d`; the final documentation commit follows these checks.
 - Native: 3,433/3,433 tests in 345 files, four workers, 172.05 seconds. The first full run exposed an outdated fixture-guard mock; its synchronous valid fixture was repaired without weakening production guards, and the complete suite was rerun.

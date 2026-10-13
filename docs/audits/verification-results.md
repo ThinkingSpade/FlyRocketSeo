@@ -7,13 +7,24 @@ Prior native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e
 
 ## Current remaining-roadmap verification
 
+**Publication gate:** source `3ece2362` passed both remote verification workflows,
+but its Cloudflare check and direct Worker metadata confirm an automatic
+production deployment after publication. The Builds API denies the existing
+profile; further pushes are held pending a safe publication path and production
+review. See `publication-gate.md`. The latest local source/test head is
+`ff2e0530`; its native, PostgreSQL, static, build and complete **83-case browser**
+checks pass. The browser result is one fresh-state run, not a union of earlier
+focused cases or the previous 82-case run.
+
 Continuation from `bb93af37`. This section supersedes historical suite counts and
 remaining-provider statements below. The current checklist separates implemented,
 verified and blocked work; consumed-field and tool-operation coverage registers
 describe the finite fixture boundaries.
 
-- Complete native run: **3,780/3,780 tests in 396 files**, 90.71 seconds,
-  `.logs/roadmap-native-complete-rerun.log`. The earlier intermediate run passed
+- Complete latest native run: **3,825/3,825 tests in 398 files**, 103.90 seconds,
+  `.logs/roadmap-native-final-3825.log`, CLI exit 0. The previous source passed
+  **3,780 tests in 396 files**, `.logs/roadmap-native-complete-rerun.log`.
+  The earlier intermediate run passed
   3,664 tests in 382 files. Its preceding full run found four real
   WHOIS/availability regressions and an outdated fixture-guard mock; explicit
   registrable-domain normalization and a valid synchronous mock repaired them.
@@ -23,15 +34,16 @@ describe the finite fixture boundaries.
   the updated metadata assertion and complete final suite both pass. The failed
   run remains in `.logs/roadmap-native-complete.log`.
 - Real isolated PostgreSQL **17/17 cases in four files**, PostgreSQL 17.11,
-  all **24 migrations** applied/replayed, 13.14 seconds,
-  `.logs/postgres-roadmap-final.log`. Captured rank scopes and actual aggregate
+  all **24 migrations** applied/replayed, 13.31 seconds,
+  `.logs/postgres-roadmap-final-source.log`, CLI exit 0. Captured rank scopes and actual aggregate
   query outputs extend the earlier 14-case coverage. SQLite applies all 50 D1
   migrations. The portable cluster shuts down; no production database is used.
 - Final production client/server build, root prerender (GET / 200), SPA shell,
   build TypeScript and startup bundle check pass. Global Prettier, Knip,
   TypeScript and type-aware Oxlint pass; Oxlint reports zero warnings and errors
-  across 1,584 files. Evidence: `.logs/roadmap-{format,knip,types,lint}-complete.log`,
-  `.logs/roadmap-build-complete.log`, `.logs/roadmap-startup-complete.log`.
+  across 1,586 files. Evidence: `.logs/roadmap-format-final-source.log`,
+  `.logs/roadmap-{knip,types,lint}-final.log`,
+  `.logs/roadmap-build-final-source.log`, `.logs/roadmap-startup-final-source.log`.
   The existing large-chunk advisory remains; loading performance is not certified.
 - Final review found and repaired Page Explorer partial/sample/cache contracts
   (29 focused tests), export provenance/precision (31 focused tests), and Content
@@ -48,39 +60,70 @@ describe the finite fixture boundaries.
   relative-interest comparison, and preserve original source/window/capture.
   Trends passes 108 focused cases in eight files; these are included in the
   complete native total, not additional tests.
-- The fresh-state authenticated application run passes **82/82 cases in 21
+- Final raw-SDK review found that the documented **40102** empty SERP shape
+  was rejected by the live adapter. `c1454376` accepts explicit null-items,
+  zero-count metadata and canonical numeric location/depth request echoes while
+  retaining malformed/missing/foreign-scope and Invalid Field billed failures.
+  The two new suites pass 45 cases; the affected run passes 87/7. Both are
+  included in the 3,825-test total. Citation now displays its original source,
+  capture, market/language/device and exact query (`ff2e0530`).
+- The direct cold Local route exposed a GSC handler 500. Diagnostic probes
+  proved a runner false circular import returning registered but uninitialized
+  exports. `85784a68` defers `getRequest` to its sole existing authenticated
+  OAuth handler, removing that import edge without retries or route warming.
+  The same strict cold browser regression passes **1/1** in 83.8 seconds;
+  original citation capture, cache reuse and free reload also pass with zero
+  recorded browser/external/failed-response diagnostics. Evidence:
+  `.logs/evidence/citation-empty-cold-clean-green/`; causal RED:
+  `.logs/evidence/citation-empty-cold-gsc-runner-red/`. Both instrumented
+  dependencies were restored byte-for-byte before all final checks.
+- The latest-source fresh-state authenticated run passes **83/83 cases in 21
   files**, with **zero unexpected failures, flaky cases, skips or top-level
-  errors**, in **535.64 seconds (8.9 minutes)**. It started at
-  **2026-10-13 17:46:52.660 UTC**. The suite exercises applicable operations
+  errors**, in **539.25 seconds (9.0 minutes)**. It started at
+  **2026-10-13 19:04:54.605 UTC**. The suite exercises applicable operations
   across all 24 destinations, hosted authentication, real isolated D1/R2/KV,
   explicit metered consent, captured evidence, actual downloaded exports,
   persistence and failure recovery. Provider HTTP transport and GSC fixtures
   remain explicit; this is not a live integration pass.
-  Evidence: `.logs/acceptance-final-82.log`, the preserved complete summary,
+  Evidence: `.logs/acceptance-final-83.log`, the preserved complete summary,
   server log, diagnostic attachments and downloads under
-  `.logs/evidence/acceptance-final-82/`. The first expanded attempt was
+  `.logs/evidence/acceptance-final-83/`. The previous complete 82-case run stays
+  preserved separately at `.logs/evidence/acceptance-final-82/`. The first expanded attempt was
   interrupted after 50 completed cases
   (45 passed, five timing failures); its traces showed a completed persisted
   lifecycle mutation followed by a pending list and transient provider loading
   probes. Explicit persisted-state waits and held real RPC requests correct those
   test timing assumptions without substituting handler responses. Startup-only
   timeouts ran zero cases and are recorded separately, never as app passes.
+  The final manifest confirms 83 single-attempt results, zero retries/case
+  errors, all 24 empty landing diagnostics, zero outbound guard blocks and zero
+  temporary diagnostic tags. Preserved outputs include 37 PNGs, six CSVs and
+  one PDF. The server stopped and port 3102 is free. Native/static/build/PG logs,
+  PostgreSQL metadata and facts are additionally archived in
+  `.logs/evidence/final-local-source/`.
 
 No staging access is available. Live OAuth renewal/revocation, provider/model
 entitlement and responses, GBP publishing, Sheets OAuth, deployed jobs/chat,
 Hyperdrive/R2 configuration and production migration/release remain blocked or
-approval-gated. Local fixtures never certify them. No merge, deployment,
-production data mutation, paid call or new paid service is used for this work.
+approval-gated. Local fixtures never certify them. No merge, production-data
+test, paid call or new paid service is used for this work. The external automatic
+deployment after publication is disclosed in `publication-gate.md`; production
+data/migration effects were not inspected and are not certified.
 
-Application source head: `1096bcf0`; expanded acceptance head: `3fc295f9`.
-The subsequent ledger update includes only documentation and Prettier wrapping
-of the private Trends helper signature, with no behavior change. A final
-repository formatting recheck follows that update. Generated logs/traces/
-screenshots remain ignored and reproducible.
-The complete browser summary supplies the counts above; earlier focused runs are
-never added together and labelled as a complete passing suite. Remote exact-commit
-CI is pending. The existing audit-branch workflow performs verification only;
-merge, production migrations and deployment remain unauthorized.
+Current application/test head: `ff2e0530`. Independent final review found no
+blocking regression in `3ece2362..ff2e0530` or the narrow PostgreSQL artifact flag.
+The complete browser summary supplies its own count; earlier focused runs are
+never combined into a complete passing suite. Generated evidence stays ignored.
+
+Frozen source `3ece2362` also passes the inspected
+[Linux audit workflow](https://github.com/ThinkingSpade/FlyRocketSeo/actions/runs/38443618376)
+and [Docker PostgreSQL workflow](https://github.com/ThinkingSpade/FlyRocketSeo/actions/runs/38443618773):
+3,780 native cases, 82 actual browser cases, 20 controlled contracts, all static/
+build checks and 17 PostgreSQL cases/all 24 migrations. Complete logs/artifacts
+are in `.logs/evidence/ci-3ece2362/`. That source's CI is not relabelled as a run
+of later local repairs. Latest-source remote CI/publication remains held by the
+external Cloudflare gate. Merge, production migrations and deployment remain
+unauthorized.
 
 ## Storage/provider continuation from `317d915b` (historical)
 

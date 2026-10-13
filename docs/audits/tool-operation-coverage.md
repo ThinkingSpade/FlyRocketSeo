@@ -56,6 +56,16 @@ recorded below after a fresh-state run, rather than inferred from their existenc
 | Prompt Explorer     | `local-ai-operations.spec.ts`                                                                 | Explicit selected models and web-search setting                            | Actual model adapter/cache; URL/history prefill only                             | N/A (no direct export control)                                | Native per-model error isolation; reload does not authorize a paid call                                       |
 | Local SEO           | `local-ai-operations.spec.ts`                                                                 | Explicit profile, review crawl and citation search                         | R2 review ownership receipt; scoped citation analysis restores without a new RPC | N/A                                                           | Thin citation sample stays unknown; review ownership denial; GBP OAuth/writes blocked                         |
 
+The committed Local SEO case in `ff2e0530` adds the provider's canonical `40102`
+successful-empty Citation response, original source/market/query/capture display,
+cache reuse and free reload. Its separate strict direct cold-route run passes
+**1/1** with zero browser/external/failed-response diagnostics. The run initially
+exposed uninitialized GSC handler exports through a traced false circular import;
+deferring the request helper into its sole existing authenticated OAuth handler
+repairs that initialization edge without retries, route warming or suppression.
+The causal RED and clean GREEN archives remain separate. This case is not added
+to the previous frozen 82-case total; the full fresh 83-case suite passes separately.
+
 ## Workflow and live integration boundaries
 
 - The local Vite/Cloudflare adapter reports that its Workflows and chat Durable
@@ -83,7 +93,7 @@ recorded below after a fresh-state run, rather than inferred from their existenc
   server log and downloaded CSVs are in
   `.logs/evidence/acceptance-focused-5-green`. These increments are not counted
   as one passing complete suite.
-- **Verified complete suite:** the fresh-state run started at
+- **Previously verified complete suite:** the frozen-source run started at
   `2026-10-13T17:46:52.660Z` and passed all **82 unique cases in 21 files** in
   **8.93 minutes**, with CLI exit 0, unexpected failures 0, flaky cases 0,
   skipped cases 0 and reporter/case errors 0. These comprise 27 destination
@@ -98,10 +108,37 @@ recorded below after a fresh-state run, rather than inferred from their existenc
 - **Visual evidence:** the final-run overview and mobile Page Investigation
   screenshots show populated controls and source/capture information. The
   desktop `page-evidence.png` caught a transient fade-in; it is retained as-is
-  and does not establish visual acceptance. A separate settled desktop capture
-  is being checked without changing application or acceptance source.
+  and does not establish visual acceptance. A separate settled visual-only case
+  passed with zero browser errors, unexpected external requests and failed
+  responses. Its desktop/mobile captures show populated scope controls, original
+  source/capture and action handoffs without horizontal mobile overflow. The
+  summary, captures and inspected details are in `.logs/evidence/page-settled/`.
+  This case is separate from, and is not added to, the 82-case count.
+- **Verified Linux CI:** the exact source `3ece2362` passes
+  [the audit workflow](https://github.com/ThinkingSpade/FlyRocketSeo/actions/runs/38443618376).
+  The inspected logs/artifacts confirm the same 82 unique application cases in
+  21 files, each with one attempt, no retries, failures, skips or flaky results.
+  The complete logs, JSON case inventory, downloads and source metadata are in
+  `.logs/evidence/ci-3ece2362/`. That CI run does not certify later local source.
+- **Latest verified complete suite:** application/test source `ff2e0530` passes
+  one fresh-state **83/83-case run in 21 files**, starting
+  `2026-10-13T19:04:54.605Z`, duration **539.25 seconds (9.0 minutes)**. Reporter
+  unexpected/flaky/skipped/top-level errors are zero. This includes the repaired
+  cold GSC path and canonical empty Citation original-capture/cache/free-reload
+  case. All 83 results are single-attempt passes with zero case errors. The 24
+  landing diagnostics are empty; server external guard blocks and temporary
+  diagnostic tags are zero. The archive retains 37 PNGs, six CSVs and one PDF;
+  port 3102 is free and the server stopped. Complete evidence and the per-case
+  manifest are in `.logs/evidence/acceptance-final-83/`; previous frozen and
+  focused runs are not combined into this count. There are 27 destination/mobile
+  checks and 56 functional/authentication/storage/recovery cases.
 - **Blocked:** real provider/OAuth/billing and deployed job acceptance remains
   blocked as listed above; absent credentials never count as an integration
-  pass.
+  pass. An automatic Cloudflare production deployment following the audit push
+  is confirmed by the exact commit/build/version linkage; the user was informed.
+  Further source publication is held pending a safe publication path and
+  production review in `publication-gate.md`. Rollback or trigger changes need
+  approval; verification-only GitHub jobs do not establish that an audit-branch
+  push cannot trigger deployment.
 - The inherited 51 unique verified browser cases remain historical evidence;
   landing diagnostics are not substituted for the operation rows above.
