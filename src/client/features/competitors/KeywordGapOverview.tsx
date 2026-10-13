@@ -151,7 +151,7 @@ export function KeywordGapOverview({
                 count.toLocaleString()
               ) : (
                 <span className="text-sm font-normal text-base-content/50">
-                  Select to run
+                  {query.data ? "Total unreported" : "Select to run"}
                 </span>
               )}
             </div>

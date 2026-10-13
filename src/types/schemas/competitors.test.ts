@@ -2,6 +2,36 @@ import { describe, expect, it } from "vitest";
 import { competitorsPageSchema, isCompetitorRow } from "./competitors";
 
 describe("competitorsPageSchema", () => {
+  it("preserves old useful rows while suppressing uncertified legacy comparisons", () => {
+    const result = competitorsPageSchema.parse({
+      rows: [
+        {
+          domain: "rival.com",
+          avgPosition: 3,
+          intersections: null,
+          organicKeywords: 0,
+          organicTraffic: 0,
+          source: "serp",
+          coverage: 0,
+          beatsYouCount: 0,
+          positionDelta: -2,
+          pinned: true,
+        },
+      ],
+      totalCount: 1,
+      fetchedAt: "2026-10-01T00:00:00.000Z",
+      discoveryMode: "serp",
+    });
+    expect(result.rows[0]).toMatchObject({
+      avgPosition: 3,
+      organicKeywords: 0,
+      organicTraffic: 0,
+      pinned: true,
+      coverage: null,
+      beatsYouCount: null,
+      positionDelta: null,
+    });
+  });
   it("still parses a run stored before the smart-discovery fields existed", () => {
     const legacy = {
       rows: [
@@ -33,6 +63,7 @@ describe("competitorsPageSchema", () => {
 
   it("parses a row produced by keyword-seeded discovery", () => {
     const parsed = competitorsPageSchema.safeParse({
+      contractVersion: 2,
       rows: [
         {
           domain: "avfusa.com",

@@ -13,6 +13,10 @@ import {
 import type { CompetitorRow } from "@/server/features/competitors/services/CompetitorsService";
 
 describe("formatCount", () => {
+  it("does not display positive sub-unit traffic estimates as observed zero", () => {
+    expect(formatCount(0.1234)).toBe("<1");
+    expect(formatCount(0)).toBe("0");
+  });
   it("renders a null metric as an em dash, never 0", () => {
     expect(formatCount(null)).toBe("—");
   });

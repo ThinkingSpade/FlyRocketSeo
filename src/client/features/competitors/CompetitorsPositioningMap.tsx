@@ -12,7 +12,11 @@ import {
   useChartBase,
   useChartTheme,
 } from "@/client/components/chart/useChartTheme";
-import type { CompetitorRow, DiscoveryMode } from "@/types/schemas/competitors";
+import type {
+  CompetitorsPage,
+  CompetitorRow,
+  DiscoveryMode,
+} from "@/types/schemas/competitors";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import { domainOverviewResultSchema } from "@/types/schemas/domain";
@@ -59,6 +63,7 @@ function diameterForArea(area: number): number {
 type Bubble = PositioningMapBubble & { fill: string };
 
 function formatCompact(value: number): string {
+  if (value > 0 && value < 1) return "<1";
   return new Intl.NumberFormat(undefined, {
     notation: "compact",
     maximumFractionDigits: 1,
@@ -91,11 +96,15 @@ export function CompetitorsPositioningMap({
   target,
   rows,
   discoveryMode,
+  scope,
+  fetchedAt,
 }: {
   projectId: string;
   target: string;
   rows: CompetitorRow[];
   discoveryMode: DiscoveryMode;
+  scope: CompetitorsPage["scope"];
+  fetchedAt: string | undefined;
 }) {
   const {
     restored: targetRun,
@@ -115,8 +124,15 @@ export function CompetitorsPositioningMap({
 
   const overview = useMemo(
     () =>
-      targetRun?.result.domain === target.trim() ? targetRun.result : null,
-    [targetRun, target],
+      targetRun &&
+      scope &&
+      targetRun.result.domain === scope.target &&
+      targetRun.result.scope?.locationCode === scope.locationCode &&
+      targetRun.result.scope.languageCode === scope.languageCode &&
+      targetRun.result.scope.includeSubdomains
+        ? targetRun.result
+        : null,
+    [targetRun, scope],
   );
 
   const result = useMemo(
@@ -191,10 +207,10 @@ export function CompetitorsPositioningMap({
           if (!bubble) return "";
           return [
             `<div style="font-size:12px;font-weight:500;padding-bottom:2px">${escapeHtml(bubble.domain)}</div>`,
-            `<div style="font-size:12px">${formatCompact(bubble.keywords)} keywords · ${formatCompact(bubble.traffic)} traffic</div>`,
+            `<div style="font-size:12px">${escapeHtml(formatCompact(bubble.keywords))} keywords · ${escapeHtml(formatCompact(bubble.traffic))} traffic</div>`,
             bubble.isTarget
               ? ""
-              : `<div style="font-size:12px;opacity:0.6">${formatCompact(bubble.overlap)} shared keywords</div>`,
+              : `<div style="font-size:12px;opacity:0.6">${escapeHtml(formatCompact(bubble.overlap))} shared keywords</div>`,
           ].join("");
         },
       },
@@ -267,7 +283,14 @@ export function CompetitorsPositioningMap({
         </h2>
         <p className="-mt-1 text-xs text-base-content/50">
           Organic keywords vs. estimated traffic — bubble size is keyword
-          overlap with {target || "the target"}.
+          overlap with {target || "the target"}. Only reported axes and overlap
+          are plotted; the target marker uses a reference size.
+        </p>
+        <p className="text-xs text-base-content/50">
+          Competitors captured {fetchedAt ?? "at an unrecorded time"}
+          {overview
+            ? ` · Target overview captured ${overview.fetchedAt}. These are separate observations in the same national market.`
+            : " · No matching captured target overview."}
         </p>
         <Chart
           echarts={echarts}

@@ -68,7 +68,7 @@ export function TabBody({
     if (competitorRows.length === 0) {
       if (competitorsState.isError) {
         return (
-          <EmptyState message="Couldn't load competitors. Nothing was charged for the failed request — press Analyze to try again." />
+          <EmptyState message="Couldn't load competitors. The request did not return a usable result. Check usage before running it again." />
         );
       }
       if (competitorsState.isFetching) {
@@ -121,8 +121,8 @@ export function TabBody({
       <EmptyState
         message={
           tab === "gap"
-            ? "Couldn't load the keyword gap. Nothing was charged for the failed request — press Analyze to try again."
-            : "Couldn't load the link gap. Nothing was charged for the failed request — press Analyze to try again."
+            ? "Couldn't load the keyword gap. The request did not return a usable result. Check usage before running it again."
+            : "Couldn't load the link gap. The request did not return a usable result. Check usage before running it again."
         }
       />
     );

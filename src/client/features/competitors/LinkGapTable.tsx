@@ -35,7 +35,7 @@ export function LinkGapTable({ rows }: { rows: LinkGapRow[] }) {
       },
       {
         id: "rank",
-        header: "Domain authority",
+        header: "DataForSEO domain rank",
         cell: ({ row }) => formatNumber(row.original.rank),
       },
       {
@@ -73,8 +73,7 @@ export function LinkGapTable({ rows }: { rows: LinkGapRow[] }) {
       table={table}
       empty={
         <div className="px-4 py-8 text-center text-sm text-base-content/60">
-          No link gap found — every domain linking to this competitor also links
-          to you.
+          No referring domains were returned for this provider comparison.
         </div>
       }
     />

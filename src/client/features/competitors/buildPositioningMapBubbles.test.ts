@@ -36,6 +36,18 @@ const overview = (
 });
 
 describe("buildPositioningMapBubbles", () => {
+  it("does not turn missing overlap into a zero-sized measured competitor point", () => {
+    expect(
+      buildPositioningMapBubbles({
+        rows: [
+          row("unknown.com", { intersections: null }),
+          row("reported.com"),
+        ],
+        discoveryMode: "domain",
+        overview: null,
+      }),
+    ).toEqual({ kind: "insufficient" });
+  });
   it("is unavailable in serp mode, even with plenty of comparable-looking rows and a real overview", () => {
     const result = buildPositioningMapBubbles({
       rows: [row("a.com"), row("b.com"), row("c.com")],
@@ -182,9 +194,9 @@ describe("buildPositioningMapBubbles", () => {
     expect(result.bubbles.some((b) => b.isTarget)).toBe(false);
   });
 
-  it("gives the target's bubble overlap 1, not 0, when every rival has a null/zero intersections", () => {
+  it("gives the target's bubble overlap 1, not 0, when every rival has reported zero intersections", () => {
     const result = buildPositioningMapBubbles({
-      rows: [row("a.com", { intersections: null })],
+      rows: [row("a.com", { intersections: 0 })],
       discoveryMode: "domain",
       overview: overview(),
     });

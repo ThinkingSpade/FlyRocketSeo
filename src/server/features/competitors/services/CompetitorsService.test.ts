@@ -167,6 +167,16 @@ function cachedRow(domain: string) {
  *  reapplyProjectCompetitors's own doc comment. */
 function cachedPage(domains: string[]) {
   return {
+    contractVersion: 2,
+    provider: "DataForSEO Labs",
+    scope: {
+      projectId: input.projectId,
+      target: input.target,
+      locationCode: input.locationCode,
+      languageCode: input.languageCode,
+      page: input.page,
+      pageSize: input.pageSize,
+    },
     rows: domains.map(cachedRow),
     totalCount: domains.length,
     fetchedAt: "2026-08-01T00:00:00.000Z",
@@ -434,7 +444,6 @@ describe("CompetitorsService.getCompetitors", () => {
       expect.objectContaining({ hasGscConnection: false }),
     );
   });
-
   describe("cache hit", () => {
     it("hides a domain excluded AFTER the page was cached, without calling the vendor again", async () => {
       mocks.getCached.mockResolvedValue(

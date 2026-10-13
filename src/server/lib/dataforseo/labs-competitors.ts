@@ -8,36 +8,38 @@ import {
   DataforseoLabsGoogleSearchIntentLiveRequestInfo,
   DataforseoLabsGoogleSerpCompetitorsLiveRequestInfo,
   DataforseoLabsGoogleSubdomainsLiveRequestInfo,
-  type DataforseoLabsBulkKeywordDifficultyLiveItem,
-  type DataforseoLabsCompetitorsDomainLiveItem,
-  type DataforseoLabsDomainIntersectionLiveItem,
-  type DataforseoLabsGoogleBulkTrafficEstimationLiveItem,
-  type DataforseoLabsGoogleHistoricalRankOverviewLiveItem,
-  type DataforseoLabsGoogleSearchIntentLiveItem,
-  type DataforseoLabsSerpCompetitorsLiveItem,
-  type DataforseoLabsSubdomainsLiveItem,
 } from "dataforseo-client";
+import type { z } from "zod";
+import { providerCount } from "@/shared/provider-observations";
+import {
+  competitorTaskItems,
+  competitorItemSchema,
+  serpCompetitorItemSchema,
+  intersectionItemSchema,
+  siteKeywordItemSchema,
+  difficultyItemSchema,
+  intentItemSchema,
+  trafficItemSchema,
+  subdomainItemSchema,
+  historicalItemSchema,
+} from "./labs-competitor-contract";
 import { labsApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
   buildTaskBilling,
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
-import type {
-  DataforseoLabsItemType,
-  LabsKeywordDataItem,
-} from "@/server/lib/dataforseo/labs";
+import type { DataforseoLabsItemType } from "@/server/lib/dataforseo/labs";
 
 // Competitor-research Labs endpoints, split from labs.ts to keep both modules
-// under the size ceiling. SDK item models are exposed directly like labs.ts.
-export type CompetitorDomainItem = DataforseoLabsCompetitorsDomainLiveItem;
-export type DomainIntersectionItem = DataforseoLabsDomainIntersectionLiveItem;
-type SubdomainItem = DataforseoLabsSubdomainsLiveItem;
-type KeywordDifficultyItem = DataforseoLabsBulkKeywordDifficultyLiveItem;
-type SearchIntentItem = DataforseoLabsGoogleSearchIntentLiveItem;
-type TrafficEstimationItem = DataforseoLabsGoogleBulkTrafficEstimationLiveItem;
-export type HistoricalRankOverviewItem =
-  DataforseoLabsGoogleHistoricalRankOverviewLiveItem;
+// under the size ceiling. Public consumed fields are normalized at the SDK seam.
+export type CompetitorDomainItem = z.infer<typeof competitorItemSchema>;
+export type DomainIntersectionItem = z.infer<typeof intersectionItemSchema>;
+type SubdomainItem = z.infer<typeof subdomainItemSchema>;
+type KeywordDifficultyItem = z.infer<typeof difficultyItemSchema>;
+type SearchIntentItem = z.infer<typeof intentItemSchema>;
+type TrafficEstimationItem = z.infer<typeof trafficItemSchema>;
+export type HistoricalRankOverviewItem = z.infer<typeof historicalItemSchema>;
 
 type CompetitorsDomainPage = {
   items: CompetitorDomainItem[];
@@ -71,16 +73,17 @@ export async function fetchCompetitorsDomain(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, competitorItemSchema);
   return {
     data: {
-      items: task.result?.[0]?.items ?? [],
-      totalCount: task.result?.[0]?.total_count ?? null,
+      items,
+      totalCount: providerCount(task.result?.[0]?.total_count),
     },
     billing: buildTaskBilling(task),
   };
 }
 
-type SerpCompetitorItem = DataforseoLabsSerpCompetitorsLiveItem;
+type SerpCompetitorItem = z.infer<typeof serpCompetitorItemSchema>;
 
 type SerpCompetitorsPage = {
   items: SerpCompetitorItem[];
@@ -127,10 +130,11 @@ export async function fetchSerpCompetitors(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, serpCompetitorItemSchema);
   return {
     data: {
-      items: task.result?.[0]?.items ?? [],
-      totalCount: task.result?.[0]?.total_count ?? null,
+      items,
+      totalCount: providerCount(task.result?.[0]?.total_count),
     },
     billing: buildTaskBilling(task),
   };
@@ -177,17 +181,18 @@ export async function fetchDomainIntersection(input: {
   request.target_2 = input.target2;
   const response = await labsApi().googleDomainIntersectionLive([request]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, intersectionItemSchema);
   return {
     data: {
-      items: task.result?.[0]?.items ?? [],
-      totalCount: task.result?.[0]?.total_count ?? null,
+      items,
+      totalCount: providerCount(task.result?.[0]?.total_count),
     },
     billing: buildTaskBilling(task),
   };
 }
 
 type KeywordsForSitePage = {
-  items: LabsKeywordDataItem[];
+  items: z.infer<typeof siteKeywordItemSchema>[];
   totalCount: number | null;
 };
 
@@ -216,10 +221,11 @@ export async function fetchKeywordsForSite(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, siteKeywordItemSchema);
   return {
     data: {
-      items: task.result?.[0]?.items ?? [],
-      totalCount: task.result?.[0]?.total_count ?? null,
+      items,
+      totalCount: providerCount(task.result?.[0]?.total_count),
     },
     billing: buildTaskBilling(task),
   };
@@ -237,9 +243,10 @@ export async function fetchBulkKeywordDifficulty(input: {
       language_code: input.languageCode,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, difficultyItemSchema);
   return {
-    data: task.result?.[0]?.items ?? [],
+    data: items,
     billing: buildTaskBilling(task),
   };
 }
@@ -254,9 +261,10 @@ export async function fetchSearchIntent(input: {
       language_code: input.languageCode,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, intentItemSchema);
   return {
-    data: task.result?.[0]?.items ?? [],
+    data: items,
     billing: buildTaskBilling(task),
   };
 }
@@ -276,8 +284,9 @@ export async function fetchBulkTrafficEstimation(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, trafficItemSchema);
   return {
-    data: task.result?.[0]?.items ?? [],
+    data: items,
     billing: buildTaskBilling(task),
   };
 }
@@ -299,8 +308,9 @@ export async function fetchHistoricalRankOverview(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, historicalItemSchema);
   return {
-    data: task.result?.[0]?.items ?? [],
+    data: items,
     billing: buildTaskBilling(task),
   };
 }
@@ -333,10 +343,11 @@ export async function fetchSubdomains(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const items = competitorTaskItems(task, input, subdomainItemSchema);
   return {
     data: {
-      items: task.result?.[0]?.items ?? [],
-      totalCount: task.result?.[0]?.total_count ?? null,
+      items,
+      totalCount: providerCount(task.result?.[0]?.total_count),
     },
     billing: buildTaskBilling(task),
   };

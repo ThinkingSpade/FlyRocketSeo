@@ -1,5 +1,7 @@
 import { z } from "zod";
 import { domainField } from "@/types/schemas/domain";
+import { providerCount } from "@/shared/provider-observations";
+import { keywordEstimate, keywordRatio } from "@/shared/keyword-observations";
 
 const COMPETITORS_PAGE_SIZES = [25, 50, 100] as const;
 export const DEFAULT_COMPETITORS_PAGE_SIZE = 25;
@@ -121,14 +123,19 @@ export type CompetitorCategory = (typeof competitorCategories)[number];
  */
 const competitorRowSchema = z.object({
   domain: z.string(),
-  avgPosition: z.number().nullable(),
-  intersections: z.number().nullable(),
-  organicKeywords: z.number().nullable(),
-  organicTraffic: z.number().nullable(),
+  avgPosition: z
+    .number()
+    .nullable()
+    .transform((value) =>
+      value !== null && Number.isFinite(value) && value > 0 ? value : null,
+    ),
+  intersections: z.number().nullable().transform(providerCount),
+  organicKeywords: z.number().nullable().transform(providerCount),
+  organicTraffic: z.number().nullable().transform(keywordEstimate),
   /** Share of the SEED keywords this domain ranks for, 0..1. */
-  coverage: z.number().nullable().default(null),
+  coverage: z.number().nullable().default(null).transform(keywordRatio),
   /** Seed keywords where this domain outranks the client. */
-  beatsYouCount: z.number().nullable().default(null),
+  beatsYouCount: z.number().nullable().default(null).transform(providerCount),
   /** median(their position) - median(client position); negative = ahead. */
   positionDelta: z.number().nullable().default(null),
   source: z.enum(["serp", "domain"]).default("domain"),
@@ -172,26 +179,53 @@ export function isCompetitorRow(
  * validate a stored payload against the same definition from the client, where
  * importing the service itself would drag DataForSEO code into the bundle.
  */
-export const competitorsPageSchema = z.object({
-  rows: z.array(competitorRowSchema),
-  totalCount: z.number().nullable(),
-  fetchedAt: z.string(),
-  /** How many seed keywords the answer was drawn from. 0 on the fallback path. */
-  seedSize: z.number().default(0),
-  /** Domains suppressed by this project's exclusions — never hide silently. */
-  hiddenCount: z.number().default(0),
-  discoveryMode: z.enum(["serp", "domain"]).default("domain"),
-  /**
-   * True when the GSC pull the seed was built from came back AT the row
-   * ceiling, meaning Google's clicks-descending ordering may have cut off
-   * queries the client ranks lower (and has fewer clicks) on -- exactly the
-   * queries this feature exists to find rivals for. Always `false` on the
-   * domain-overlap fallback path: that path never consults a seed, so there
-   * is no bias to report. Default `false` so a run recorded before this field
-   * existed reads as "not known to be biased" rather than failing to parse.
-   */
-  seedTruncated: z.boolean().default(false),
-});
+export const competitorsPageSchema = z
+  .object({
+    contractVersion: z.literal(2).optional(),
+    provider: z.literal("DataForSEO Labs").optional(),
+    scope: z
+      .object({
+        projectId: z.string(),
+        target: z.string(),
+        locationCode: z.number().int().positive(),
+        languageCode: z.string(),
+        page: z.number().int().positive(),
+        pageSize: z.number().int().positive(),
+      })
+      .optional(),
+    rows: z.array(competitorRowSchema),
+    hasMore: z.boolean().optional(),
+    totalCount: z.number().nullable().transform(providerCount),
+    fetchedAt: z.string(),
+    /** How many seed keywords the answer was drawn from. 0 on the fallback path. */
+    seedSize: z.number().default(0),
+    /** Domains suppressed by this project's exclusions — never hide silently. */
+    hiddenCount: z.number().default(0),
+    discoveryMode: z.enum(["serp", "domain"]).default("domain"),
+    /**
+     * True when the GSC pull the seed was built from came back AT the row
+     * ceiling, meaning Google's clicks-descending ordering may have cut off
+     * queries the client ranks lower (and has fewer clicks) on -- exactly the
+     * queries this feature exists to find rivals for. Always `false` on the
+     * domain-overlap fallback path: that path never consults a seed, so there
+     * is no bias to report. Default `false` so a run recorded before this field
+     * existed reads as "not known to be biased" rather than failing to parse.
+     */
+    seedTruncated: z.boolean().default(false),
+  })
+  .transform((page) =>
+    page.contractVersion === 2
+      ? page
+      : {
+          ...page,
+          rows: page.rows.map((row) => ({
+            ...row,
+            coverage: null,
+            beatsYouCount: null,
+            positionDelta: null,
+          })),
+        },
+  );
 
 export type CompetitorsPage = z.infer<typeof competitorsPageSchema>;
 

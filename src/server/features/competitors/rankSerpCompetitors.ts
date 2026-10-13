@@ -2,6 +2,11 @@ import type { CompetitorRow } from "@/types/schemas/competitors";
 import { normalizeDiscoveredDomain } from "@/server/lib/domainUtils";
 import { classifyCompetitorDomain } from "./classifyCompetitorDomain";
 import type { SeedQuery } from "./competitorSeed";
+import { providerCount } from "@/shared/provider-observations";
+import {
+  keywordEstimate,
+  keywordPosition,
+} from "@/shared/keyword-observations";
 
 /**
  * The slice of a `serp_competitors` item this ranking reads.
@@ -11,13 +16,13 @@ import type { SeedQuery } from "./competitorSeed";
  * alter what this function is asserted to do.
  */
 type RankableItem = {
-  domain?: string;
-  avg_position?: number;
-  median_position?: number;
-  etv?: number;
-  keywords_count?: number;
+  domain?: string | null;
+  avg_position?: number | null;
+  median_position?: number | null;
+  etv?: number | null;
+  keywords_count?: number | null;
   /** keyword -> that domain's rank(s) for it. */
-  keywords_positions?: Record<string, number[]>;
+  keywords_positions?: Record<string, Array<number | null> | null> | null;
 };
 
 function median(values: number[]): number | null {
@@ -30,9 +35,13 @@ function median(values: number[]): number | null {
 }
 
 /** Best (lowest) rank a domain holds for one keyword, or null if absent. */
-function bestPosition(positions: number[] | undefined): number | null {
+function bestPosition(
+  positions: Array<number | null> | null | undefined,
+): number | null {
   if (!positions || positions.length === 0) return null;
-  return Math.min(...positions);
+  const ranks = positions.map(keywordPosition);
+  if (ranks.some((rank) => rank === null)) return null;
+  return Math.min(...ranks.filter((rank): rank is number => rank !== null));
 }
 
 /**
@@ -68,8 +77,18 @@ export function rankSerpCompetitors(
     const clientPositions: number[] = [];
     let beatsYouCount = 0;
     let matched = 0;
+    let complete =
+      item.keywords_positions !== undefined && item.keywords_positions !== null;
 
     for (const entry of seed) {
+      const ranks = item.keywords_positions?.[entry.keyword];
+      if (
+        ranks === null ||
+        ranks?.some((rank) => keywordPosition(rank) === null) ||
+        !Number.isFinite(entry.selfPosition) ||
+        entry.selfPosition <= 0
+      )
+        complete = false;
       const theirs = bestPosition(item.keywords_positions?.[entry.keyword]);
       if (theirs == null) continue;
       matched += 1;
@@ -78,22 +97,33 @@ export function rankSerpCompetitors(
       if (theirs < entry.selfPosition) beatsYouCount += 1;
     }
 
+    const declaredCount = providerCount(item.keywords_count);
+    if (declaredCount !== null && declaredCount !== matched) complete = false;
+    if (
+      Object.keys(item.keywords_positions ?? {}).some(
+        (keyword) => !seed.some((entry) => entry.keyword === keyword),
+      )
+    )
+      complete = false;
     const theirMedian = median(theirPositions);
     const clientMedian = median(clientPositions);
 
     return [
       {
         domain,
-        avgPosition: item.avg_position ?? null,
+        avgPosition:
+          keywordEstimate(item.avg_position) !== null && item.avg_position! > 0
+            ? item.avg_position!
+            : null,
         // Only meaningful for the domain-overlap endpoint; this path has none
         // and says so rather than inventing a number.
         intersections: null,
-        organicKeywords: item.keywords_count ?? null,
-        organicTraffic: item.etv ?? null,
-        coverage: seed.length > 0 ? matched / seed.length : null,
-        beatsYouCount,
+        organicKeywords: providerCount(item.keywords_count),
+        organicTraffic: keywordEstimate(item.etv),
+        coverage: complete && seed.length > 0 ? matched / seed.length : null,
+        beatsYouCount: complete ? beatsYouCount : null,
         positionDelta:
-          theirMedian != null && clientMedian != null
+          complete && theirMedian != null && clientMedian != null
             ? theirMedian - clientMedian
             : null,
         source: "serp",

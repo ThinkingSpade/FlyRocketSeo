@@ -13,6 +13,24 @@ const seed: SeedQuery[] = [
 ];
 
 describe("rankSerpCompetitors", () => {
+  it("does not report complete comparisons when declared coverage exceeds returned ranks", () => {
+    const [row] = rankSerpCompetitors(
+      [
+        {
+          domain: "rival.com",
+          keywords_count: 2,
+          keywords_positions: { "office coffee service": [3] },
+        },
+      ],
+      seed,
+      "example.com",
+    );
+    expect(row).toMatchObject({
+      coverage: null,
+      beatsYouCount: null,
+      positionDelta: null,
+    });
+  });
   it("counts the seed keywords a domain outranks the client on", () => {
     const [row] = rankSerpCompetitors(
       [
@@ -96,9 +114,51 @@ describe("rankSerpCompetitors", () => {
       "americavending.com",
     );
 
-    expect(row.beatsYouCount).toBe(0);
+    expect(row.beatsYouCount).toBeNull();
+    expect(row.coverage).toBeNull();
     expect(row.positionDelta).toBeNull();
     expect(row.source).toBe("serp");
+  });
+  it("does not invent coverage from invalid ranks or unsupported counts/estimates", () => {
+    const [row] = rankSerpCompetitors(
+      [
+        {
+          domain: "rival.com",
+          avg_position: -1,
+          etv: -1,
+          keywords_count: 1.5,
+          keywords_positions: { "office coffee service": [0] },
+        },
+      ],
+      seed,
+      "example.com",
+    );
+    expect(row).toMatchObject({
+      avgPosition: null,
+      organicTraffic: null,
+      organicKeywords: null,
+      coverage: null,
+      beatsYouCount: null,
+      positionDelta: null,
+    });
+    const [zero] = rankSerpCompetitors(
+      [
+        {
+          domain: "rival.com",
+          etv: 0,
+          keywords_count: 0,
+          keywords_positions: {},
+        },
+      ],
+      seed,
+      "example.com",
+    );
+    expect(zero).toMatchObject({
+      organicTraffic: 0,
+      organicKeywords: 0,
+      coverage: 0,
+      beatsYouCount: 0,
+    });
   });
 
   it("reports position delta against the client, negative when ahead", () => {

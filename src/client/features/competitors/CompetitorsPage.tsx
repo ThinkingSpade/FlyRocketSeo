@@ -17,6 +17,7 @@ import { RecentRunsList } from "@/client/features/analysis-runs/RecentRunsList";
 import { CompetitorsSearchForm } from "./CompetitorsSearchForm";
 import { TabBody } from "./CompetitorsTabBody";
 import { CompetitorsPageHeader } from "./CompetitorsPageHeader";
+import { CompetitorsResultEvidence } from "./CompetitorsResultEvidence";
 import { CompetitorsDiscoveryNotice } from "./CompetitorsDiscoveryNotice";
 import { CompetitorsOverviewExtras } from "./CompetitorsOverviewExtras";
 import { CompetitorsRestoreNotice } from "./CompetitorsRestoreNotice";
@@ -197,6 +198,7 @@ export function CompetitorsPage({
       rows: unknown[];
       totalCount: number | null;
       fetchedAt: string;
+      hasMore?: boolean;
     }>
   > = {
     competitors: competitorsQuery,
@@ -338,6 +340,14 @@ export function CompetitorsPage({
         />
       ) : null}
 
+      <CompetitorsResultEvidence
+        tab={tab}
+        competitors={competitorsQuery.data}
+        restored={restoredRun?.result}
+        rows={competitorRows}
+        gap={gapQuery.data}
+        links={linkGapQuery.data}
+      />
       {tab === "competitors" && hasResult ? (
         <CompetitorsDiscoveryNotice
           projectId={projectId}
@@ -353,6 +363,8 @@ export function CompetitorsPage({
           projectId={projectId}
           target={target}
           rows={competitorRows}
+          livePage={competitorsQuery.data}
+          restoredPage={restoredRun}
           discoveryMode={discoveryMode}
           seedSize={seedSize}
         />
@@ -428,13 +440,13 @@ export function CompetitorsPage({
           }}
         />
 
-        {rowsOnPage > 0 || page > 1 ? (
+        {rowsOnPage > 0 || page > 1 || activeQuery.data?.hasMore ? (
           <TablePagination
             page={page}
             pageSize={pageSize}
             pageSizes={[pageSize]}
             totalCount={totalCount}
-            hasNextPage={rowsOnPage === pageSize}
+            hasNextPage={activeQuery.data?.hasMore ?? rowsOnPage === pageSize}
             isLoading={activeQuery.isFetching}
             onPageChange={(nextPage) => updateSearch({ page: nextPage })}
             onPageSizeChange={() => {}}

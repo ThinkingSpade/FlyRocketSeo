@@ -1,4 +1,5 @@
-import { z } from "zod";
+import { providerCount } from "@/shared/provider-observations";
+import { keywordEstimate } from "@/shared/keyword-observations";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
@@ -8,17 +9,19 @@ import {
   normalizeDiscoveredDomain,
   normalizeDomainInput,
 } from "@/server/lib/domainUtils";
+import { getKeywordGap, getLinkGap } from "./CompetitorGapsService";
+export type {
+  KeywordGapRow,
+  KeywordGapPage,
+  LinkGapRow,
+  LinkGapPage,
+} from "./CompetitorGapsService";
 import { isRecord } from "@/server/lib/dataforseo/envelope";
-import type {
-  CompetitorDomainItem,
-  DomainIntersectionItem,
-} from "@/server/lib/dataforseo/labs-competitors";
-import type { BacklinksIntersectionItem } from "@/server/lib/dataforseo/backlinks-insights";
+import type { CompetitorDomainItem } from "@/server/lib/dataforseo/labs-competitors";
 import {
   competitorsPageSchema,
   type CompetitorRow,
   type CompetitorsPage,
-  type KeywordGapMode,
 } from "@/types/schemas/competitors";
 import { GscService } from "@/server/features/gsc/services/GscService";
 import { GSC_ANALYTICS_ROW_CEILING } from "@/server/features/gsc/searchAnalytics";
@@ -39,32 +42,12 @@ const COMPETITORS_TTL_SECONDS = 12 * 60 * 60;
 // from the service they came from.
 export type { CompetitorRow };
 
-const keywordGapRowSchema = z.object({
-  keyword: z.string(),
-  searchVolume: z.number().nullable(),
-  cpc: z.number().nullable(),
-  keywordDifficulty: z.number().nullable(),
-  competition: z.number().nullable(),
-  targetRank: z.number().nullable(),
-  competitorRank: z.number().nullable(),
-});
-
-export type KeywordGapRow = z.infer<typeof keywordGapRowSchema>;
-
-const keywordGapPageSchema = z.object({
-  rows: z.array(keywordGapRowSchema),
-  totalCount: z.number().nullable(),
-  fetchedAt: z.string(),
-});
-
-type KeywordGapPage = z.infer<typeof keywordGapPageSchema>;
-
 function readMetric(container: unknown, key: string): number | null {
   if (!isRecord(container)) return null;
   const organic = container.organic;
   if (!isRecord(organic)) return null;
   const value = organic[key];
-  return typeof value === "number" ? value : null;
+  return key === "count" ? providerCount(value) : keywordEstimate(value);
 }
 
 function mapCompetitorItem(item: CompetitorDomainItem): CompetitorRow | null {
@@ -79,8 +62,11 @@ function mapCompetitorItem(item: CompetitorDomainItem): CompetitorRow | null {
   const domain = normalizeDiscoveredDomain(item.domain);
   return {
     domain,
-    avgPosition: item.avg_position ?? null,
-    intersections: item.intersections ?? null,
+    avgPosition:
+      keywordEstimate(item.avg_position) !== null && item.avg_position! > 0
+        ? item.avg_position!
+        : null,
+    intersections: providerCount(item.intersections),
     organicKeywords: readMetric(item.full_domain_metrics, "count"),
     organicTraffic: readMetric(item.full_domain_metrics, "etv"),
     // These rows come from the domain-overlap fallback path, which has no
@@ -122,7 +108,7 @@ async function getCompetitors(
   // no signal that a better answer was now possible.
   //
   // This does not close every staleness gap the connection state can create
-  // -- only whether a connection row exists at all. "Connected, but the seed
+  // -- the connection identity is captured, but grant validity still needs I/O. "Connected, but the seed
   // is below MIN_COMPETITOR_SEED" and "connected, but the grant is revoked"
   // both still share a cache key with "connected with a good seed", since
   // neither is knowable without the full (non-free) performance pull this
@@ -131,6 +117,7 @@ async function getCompetitors(
   const hasGscConnection = gscConnection != null;
 
   const cacheKey = await buildCacheKey("competitors:list", {
+    contractVersion: 2,
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     target,
@@ -140,6 +127,13 @@ async function getCompetitors(
     page: input.page,
     pageSize: input.pageSize,
     hasGscConnection,
+    gscIdentity: gscConnection
+      ? {
+          id: gscConnection.id,
+          siteUrl: gscConnection.siteUrl,
+          connectedByUserId: gscConnection.connectedByUserId,
+        }
+      : null,
   });
 
   // Records this analysis for the tab's history / auto-restore. Free and best
@@ -166,7 +160,16 @@ async function getCompetitors(
   };
 
   const cached = competitorsPageSchema.safeParse(await getCached(cacheKey));
-  if (cached.success && cached.data.rows.length > 0) {
+  if (
+    cached.success &&
+    cached.data.contractVersion === 2 &&
+    cached.data.scope?.projectId === input.projectId &&
+    cached.data.scope.target === target &&
+    cached.data.scope.locationCode === input.locationCode &&
+    cached.data.scope.languageCode === input.languageCode &&
+    cached.data.scope.page === input.page &&
+    cached.data.scope.pageSize === input.pageSize
+  ) {
     await recordRun();
     // Free D1 read. `cached.data.rows` is the PRISTINE discovery result (see
     // reapplyProjectCompetitors's own doc comment for why that invariant
@@ -303,8 +306,22 @@ async function getCompetitors(
     // application. `hiddenCount: 0` is honest here, not a placeholder: zero
     // rows have been hidden from a page nothing has been applied to yet.
     const stored: CompetitorsPage = {
+      contractVersion: 2,
+      provider: "DataForSEO Labs",
+      scope: {
+        projectId: input.projectId,
+        target,
+        locationCode: input.locationCode,
+        languageCode: input.languageCode,
+        page: input.page,
+        pageSize: input.pageSize,
+      },
       rows: ranked,
-      totalCount: response.totalCount,
+      hasMore:
+        providerCount(response.totalCount) !== null
+          ? input.page * input.pageSize < response.totalCount!
+          : response.items.length === input.pageSize,
+      totalCount: providerCount(response.totalCount),
       fetchedAt: new Date().toISOString(),
       seedSize: seedKeywords.length,
       hiddenCount: 0,
@@ -312,7 +329,7 @@ async function getCompetitors(
       seedTruncated,
     };
 
-    if (stored.rows.length > 0) {
+    {
       // AWAITED, not fire-and-forget: `recordRun` below makes the run's durable
       // copy by READING THIS OBJECT BACK (AnalysisRunService.record ->
       // getCachedRawIgnoringTtl -> putRunPayload). An un-awaited write races
@@ -320,12 +337,13 @@ async function getCompetitors(
       // so the run survives only as long as the 7-day `dataforseo-cache/`
       // lifecycle -- which is exactly the "expired" state users hit on runs far
       // younger than the retention they were promised.
-      await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
-        (error) => {
+      const written = await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS)
+        .then(() => true)
+        .catch((error) => {
           console.error("competitors.list.cache-write failed:", error);
-        },
-      );
-      await recordRun();
+          return false;
+        });
+      if (written) await recordRun();
     }
 
     return reapplyProjectCompetitors(stored, overrides);
@@ -350,8 +368,22 @@ async function getCompetitors(
 
   // PRISTINE, same reasoning as the serp branch above.
   const stored: CompetitorsPage = {
+    contractVersion: 2,
+    provider: "DataForSEO Labs",
+    scope: {
+      projectId: input.projectId,
+      target,
+      locationCode: input.locationCode,
+      languageCode: input.languageCode,
+      page: input.page,
+      pageSize: input.pageSize,
+    },
     rows,
-    totalCount: response.totalCount,
+    hasMore:
+      providerCount(response.totalCount) !== null
+        ? input.page * input.pageSize < response.totalCount!
+        : response.items.length === input.pageSize,
+    totalCount: providerCount(response.totalCount),
     fetchedAt: new Date().toISOString(),
     // This endpoint is the domain-overlap fallback path: no seed keywords,
     // and domain-based ranking (not SERP-seeded) -- but pin/exclude still
@@ -364,229 +396,19 @@ async function getCompetitors(
     seedTruncated: false,
   };
 
-  if (stored.rows.length > 0) {
+  {
     // Awaited for the same reason as the serp branch above: `recordRun` reads
     // this object back to make the run's durable copy.
-    await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS).catch(
-      (error) => {
+    const written = await setCached(cacheKey, stored, COMPETITORS_TTL_SECONDS)
+      .then(() => true)
+      .catch((error) => {
         console.error("competitors.list.cache-write failed:", error);
-      },
-    );
-    await recordRun();
+        return false;
+      });
+    if (written) await recordRun();
   }
 
   return reapplyProjectCompetitors(stored, overrides);
-}
-
-function readKeywordInfoNumber(item: DomainIntersectionItem, key: string) {
-  // Typed as unknown so the index read below yields unknown, not the SDK's any.
-  const info: unknown = item.keyword_data?.keyword_info;
-  if (!isRecord(info)) return null;
-  const value = info[key];
-  return typeof value === "number" ? value : null;
-}
-
-function readRank(element: unknown): number | null {
-  if (!isRecord(element)) return null;
-  return typeof element.rank_absolute === "number"
-    ? element.rank_absolute
-    : null;
-}
-
-function mapGapItem(
-  item: DomainIntersectionItem,
-  mode: KeywordGapMode,
-): KeywordGapRow | null {
-  const keyword = item.keyword_data?.keyword;
-  if (!keyword) return null;
-
-  const firstRank = readRank(item.first_domain_serp_element);
-  const secondRank = readRank(item.second_domain_serp_element);
-  const difficulty = item.keyword_data?.keyword_properties?.keyword_difficulty;
-
-  return {
-    keyword,
-    searchVolume: readKeywordInfoNumber(item, "search_volume"),
-    cpc: readKeywordInfoNumber(item, "cpc"),
-    keywordDifficulty: typeof difficulty === "number" ? difficulty : null,
-    competition: readKeywordInfoNumber(item, "competition"),
-    // In "missing" mode the request swaps targets (competitor first), so map
-    // the SERP elements back to stable target/competitor columns.
-    targetRank: mode === "missing" ? secondRank : firstRank,
-    competitorRank: mode === "missing" ? firstRank : secondRank,
-  };
-}
-
-async function getKeywordGap(
-  input: {
-    projectId: string;
-    target: string;
-    competitor: string;
-    mode: KeywordGapMode;
-    locationCode: number;
-    languageCode: string;
-    minSearchVolume?: number;
-    page: number;
-    pageSize: number;
-  },
-  billingCustomer: BillingCustomerContext,
-): Promise<KeywordGapPage> {
-  const target = normalizeDomainInput(input.target, true);
-  const competitor = normalizeDomainInput(input.competitor, true);
-
-  const cacheKey = await buildCacheKey("competitors:keyword-gap", {
-    organizationId: billingCustomer.organizationId,
-    projectId: input.projectId,
-    target,
-    competitor,
-    mode: input.mode,
-    locationCode: input.locationCode,
-    languageCode: input.languageCode,
-    minSearchVolume: input.minSearchVolume ?? null,
-    page: input.page,
-    pageSize: input.pageSize,
-  });
-
-  const cached = keywordGapPageSchema.safeParse(await getCached(cacheKey));
-  if (cached.success && cached.data.rows.length > 0) {
-    return cached.data;
-  }
-
-  // DataForSEO's intersections=false returns keywords where target1 ranks and
-  // target2 does not, so "missing" (competitor-only keywords) puts the
-  // competitor first.
-  const [target1, target2] =
-    input.mode === "missing" ? [competitor, target] : [target, competitor];
-
-  const filters =
-    input.minSearchVolume != null
-      ? [
-          [
-            "keyword_data.keyword_info.search_volume",
-            ">=",
-            input.minSearchVolume,
-          ],
-        ]
-      : undefined;
-
-  const dataforseo = createDataforseoClient(billingCustomer);
-  const response = await dataforseo.competitors.keywordGap({
-    target1,
-    target2,
-    intersections: input.mode === "shared",
-    locationCode: input.locationCode,
-    languageCode: input.languageCode,
-    limit: input.pageSize,
-    offset: (input.page - 1) * input.pageSize,
-    filters,
-    orderBy: ["keyword_data.keyword_info.search_volume,desc"],
-  });
-
-  const rows = response.items
-    .map((item) => mapGapItem(item, input.mode))
-    .filter((row): row is KeywordGapRow => row != null);
-
-  const result: KeywordGapPage = {
-    rows,
-    totalCount: response.totalCount,
-    fetchedAt: new Date().toISOString(),
-  };
-
-  if (rows.length > 0) {
-    void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
-      console.error("competitors.keyword-gap.cache-write failed:", error);
-    });
-  }
-
-  return result;
-}
-
-const linkGapRowSchema = z.object({
-  referringDomain: z.string(),
-  rank: z.number().nullable(),
-  backlinksToCompetitor: z.number().nullable(),
-  spamScore: z.number().nullable(),
-  firstSeen: z.string().nullable(),
-});
-
-export type LinkGapRow = z.infer<typeof linkGapRowSchema>;
-
-const linkGapPageSchema = z.object({
-  rows: z.array(linkGapRowSchema),
-  totalCount: z.number().nullable(),
-  fetchedAt: z.string(),
-});
-
-type LinkGapPage = z.infer<typeof linkGapPageSchema>;
-
-function mapLinkGapItem(item: BacklinksIntersectionItem): LinkGapRow | null {
-  // Single-competitor lookups have exactly one intersection entry ("1"); its
-  // `target` is the referring domain that links to the competitor.
-  const entry = Object.values(item.domain_intersection ?? {})[0];
-  if (!entry?.target) return null;
-  return {
-    referringDomain: entry.target,
-    rank: entry.rank ?? null,
-    backlinksToCompetitor: entry.backlinks ?? null,
-    spamScore: entry.backlinks_spam_score ?? null,
-    firstSeen: entry.first_seen ?? null,
-  };
-}
-
-async function getLinkGap(
-  input: {
-    projectId: string;
-    target: string;
-    competitor: string;
-    page: number;
-    pageSize: number;
-  },
-  billingCustomer: BillingCustomerContext,
-): Promise<LinkGapPage> {
-  const target = normalizeDomainInput(input.target, true);
-  const competitor = normalizeDomainInput(input.competitor, true);
-
-  const cacheKey = await buildCacheKey("competitors:link-gap", {
-    organizationId: billingCustomer.organizationId,
-    projectId: input.projectId,
-    target,
-    competitor,
-    page: input.page,
-    pageSize: input.pageSize,
-  });
-
-  const cached = linkGapPageSchema.safeParse(await getCached(cacheKey));
-  if (cached.success && cached.data.rows.length > 0) {
-    return cached.data;
-  }
-
-  const dataforseo = createDataforseoClient(billingCustomer);
-  // Referring domains that link to the competitor but not to the target.
-  const response = await dataforseo.backlinks.domainIntersection({
-    targets: [competitor],
-    excludeTargets: [target],
-    limit: input.pageSize,
-    offset: (input.page - 1) * input.pageSize,
-    orderBy: ["1.rank,desc"],
-  });
-
-  const rows = response.items
-    .map(mapLinkGapItem)
-    .filter((row): row is LinkGapRow => row != null);
-
-  const result: LinkGapPage = {
-    rows,
-    totalCount: response.totalCount,
-    fetchedAt: new Date().toISOString(),
-  };
-
-  if (rows.length > 0) {
-    void setCached(cacheKey, result, COMPETITORS_TTL_SECONDS).catch((error) => {
-      console.error("competitors.link-gap.cache-write failed:", error);
-    });
-  }
-
-  return result;
 }
 
 export const CompetitorsService = {

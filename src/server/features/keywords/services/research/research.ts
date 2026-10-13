@@ -377,9 +377,20 @@ export async function research(
       clickstream: effectiveInput.clickstream,
     },
   });
-  await setCached(cacheKey, captured, CACHE_TTL.researchResult);
+  // The paid observation remains usable if R2 fails. Recording a run reads
+  // R2 back, so never point a new run at an older object under the same key.
+  const cacheWritten = await setCached(
+    cacheKey,
+    captured,
+    CACHE_TTL.researchResult,
+  )
+    .then(() => true)
+    .catch((error) => {
+      console.error("keywords.research.cache-write failed:", error);
+      return false;
+    });
   persistRows(effectiveInput, result.rows, captured.fetchedAt!);
-  await recordRun();
+  if (cacheWritten) await recordRun();
 
   return captured;
 }

@@ -19,6 +19,7 @@ import type { DiscoveryMode } from "@/types/schemas/competitors";
  * it, and "0" would assert something false ("beats you on nothing").
  */
 export function formatCount(value: number | null): string {
+  if (value !== null && value > 0 && value < 1) return "<1";
   return value == null ? "—" : Math.round(value).toLocaleString();
 }
 

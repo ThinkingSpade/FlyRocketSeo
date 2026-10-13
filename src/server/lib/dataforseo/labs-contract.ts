@@ -53,7 +53,7 @@ export function assertKeywordScope(
     rejectLabsContract(task, "unrequested keyword");
 }
 
-export function labsResult(task: DataforseoTaskLike, scope: Scope) {
+function labsResult(task: DataforseoTaskLike, scope: Scope) {
   if (isNoResultsTask(task)) return { items: [], total_count: 0 };
   const result = task.result?.[0];
   if (!isRecord(result)) rejectLabsContract(task, "missing result");

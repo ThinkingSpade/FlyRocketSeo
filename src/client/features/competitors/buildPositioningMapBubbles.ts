@@ -62,7 +62,12 @@ export function buildPositioningMapBubbles(input: {
   }
 
   const competitors: PositioningMapBubble[] = input.rows
-    .filter((row) => row.organicKeywords != null && row.organicTraffic != null)
+    .filter(
+      (row) =>
+        row.organicKeywords != null &&
+        row.organicTraffic != null &&
+        row.intersections != null,
+    )
     .toSorted((a, b) => (b.intersections ?? 0) - (a.intersections ?? 0))
     .slice(0, MAX_BUBBLES)
     .map((row) => ({

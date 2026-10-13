@@ -62,6 +62,14 @@ export function CompetitorsDiscoveryNotice({
           </div>
         ) : null}
       </div>
+      {discoveryMode === "serp" ? (
+        <p>
+          Comparisons with your Search Console position are heuristics: its
+          28-day average spans visitors and devices; provider ranks are a
+          national snapshot for this seed. They do not measure current local
+          rankings or every query.
+        </p>
+      ) : null}
       {seedTruncated ? (
         <p className="flex items-center gap-1.5 text-amber-600 dark:text-amber-500">
           <Warning className="size-3.5 shrink-0" aria-hidden="true" />

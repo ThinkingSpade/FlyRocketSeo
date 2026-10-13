@@ -4,6 +4,7 @@ const state = vi.hoisted(() => ({
   upsert: vi.fn(),
   record: vi.fn(),
   cache: new Map<string, unknown>(),
+  writeFails: false,
 }));
 vi.mock("./research-data", () => ({
   RELATED_KEYWORDS_DEPTH: 1,
@@ -23,6 +24,7 @@ vi.mock("@/server/lib/r2-cache", () => ({
     `${prefix}:${JSON.stringify(params)}`,
   getCached: async (key: string) => state.cache.get(key),
   setCached: async (key: string, value: unknown) => {
+    if (state.writeFails) throw new Error("fixture cache write failure");
     state.cache.set(key, value);
   },
 }));
@@ -57,9 +59,23 @@ const row = {
 beforeEach(() => {
   vi.clearAllMocks();
   state.cache.clear();
+  state.writeFails = false;
   state.fetchRows.mockResolvedValue([row]);
 });
 describe("Keyword research capture and cache contracts", () => {
+  it("returns successful paid observations without retrying or recording stale R2 when cache persistence fails", async () => {
+    state.writeFails = true;
+    const result = await research(input, billing);
+    expect(result).toMatchObject({
+      contractVersion: 2,
+      dataSource: "DataForSEO Labs",
+      rows: [row],
+      scope: { projectId: "p1", locationCode: 2840, languageCode: "en" },
+    });
+    expect(Number.isFinite(Date.parse(result.fetchedAt!))).toBe(true);
+    expect(state.fetchRows).toHaveBeenCalledOnce();
+    expect(state.record).not.toHaveBeenCalled();
+  });
   it("persists full captured provider/market provenance and original capture date", async () => {
     const result = await research(input, billing);
     expect(result).toMatchObject({
