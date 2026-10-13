@@ -57,16 +57,17 @@ export function RankTrackingScoreboard({
   // The Visibility tile states one number; this is the shape behind it. Same
   // series the Visibility trend chart draws further down the page, from the
   // same two inputs, so the tile and the chart cannot disagree.
-  const visibilityTrend = useMemo(
-    () =>
-      computeVisibilityTrend(
-        cells,
-        new Map(rows.map((r) => [r.trackingKeywordId, r.searchVolume])),
-      )
-        .map((point) => point.visibility)
-        .filter((visibility): visibility is number => visibility != null),
-    [cells, rows],
-  );
+  const visibilityTrend = useMemo(() => {
+    const values = computeVisibilityTrend(
+      cells,
+      new Map(rows.map((r) => [r.trackingKeywordId, r.searchVolume])),
+    ).map((point) => point.visibility);
+    // This compact tile accepts a continuous sparkline. Suppress it when
+    // any check is unknown; the detailed chart retains dated gaps.
+    return values.every((value): value is number => value !== null)
+      ? values
+      : undefined;
+  }, [cells, rows]);
 
   if (rows.length === 0) return null;
 
@@ -167,14 +168,7 @@ export function RankTrackingScoreboard({
 }
 
 function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
-  const points = useMemo(
-    () =>
-      computeAveragePositionTrend(cells).filter(
-        (point): point is typeof point & { averagePosition: number } =>
-          point.averagePosition != null,
-      ),
-    [cells],
-  );
+  const points = useMemo(() => computeAveragePositionTrend(cells), [cells]);
   const theme = useChartTheme();
   const base = useChartBase(theme);
   const height = 150;
@@ -185,7 +179,10 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
     () =>
       points.map((point) => ({
         label: formatDate(point.checkedAt),
-        averagePosition: Math.round(point.averagePosition * 100) / 100,
+        averagePosition:
+          point.averagePosition === null
+            ? null
+            : Math.round(point.averagePosition * 100) / 100,
       })),
     [points],
   );
@@ -200,7 +197,7 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
           if (!first) return "";
           return [
             `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
-            `<div style="font-size:13px;font-weight:500">avg #${(first.value ?? 0).toFixed(1)}</div>`,
+            `<div style="font-size:13px;font-weight:500">${first.value == null ? "Unknown average position" : `avg #${first.value.toFixed(1)}`}</div>`,
           ].join("");
         },
       },
@@ -233,6 +230,7 @@ function AveragePositionCard({ cells }: { cells: RankPositionMatrixCell[] }) {
           type: "line" as const,
           name: "Average position",
           data: rows.map((row) => row.averagePosition),
+          connectNulls: false,
           smooth: true,
           // Hollow ring on the hovered point — surface fill, series colour on
           // the border — the marker the Recharts charts drew on hover.

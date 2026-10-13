@@ -221,7 +221,7 @@ function MentionTrendCard({ result }: { result: BrandLookupResult }) {
     <section className="overflow-hidden rounded-xl border border-base-300 bg-base-100">
       <div className="border-b border-base-300 px-4 py-3">
         <h3 className="text-sm font-semibold">
-          Mention trend (last 12 months)
+          Sampled AI search volume (last 12 months)
         </h3>
       </div>
       <div className="p-4">

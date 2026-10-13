@@ -33,11 +33,7 @@ export function VisibilityTrendChart({
   volumeByKeywordId: Map<string, number | null>;
 }) {
   const points = useMemo(
-    () =>
-      computeVisibilityTrend(cells, volumeByKeywordId).filter(
-        (point): point is typeof point & { visibility: number } =>
-          point.visibility != null,
-      ),
+    () => computeVisibilityTrend(cells, volumeByKeywordId),
     [cells, volumeByKeywordId],
   );
 
@@ -49,7 +45,10 @@ export function VisibilityTrendChart({
     () =>
       points.map((point) => ({
         label: formatDate(point.checkedAt),
-        visibility: Math.round(point.visibility * 10) / 10,
+        visibility:
+          point.visibility === null
+            ? null
+            : Math.round(point.visibility * 10) / 10,
       })),
     [points],
   );
@@ -64,7 +63,7 @@ export function VisibilityTrendChart({
           if (!first) return "";
           return [
             `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
-            `<div style="font-size:13px;font-weight:500">${first.value ?? 0}% visibility</div>`,
+            `<div style="font-size:13px;font-weight:500">${first.value == null ? "Unknown visibility" : `${first.value}% visibility`}</div>`,
           ].join("");
         },
       },
@@ -98,6 +97,7 @@ export function VisibilityTrendChart({
           type: "line" as const,
           name: "Visibility",
           data: rows.map((row) => row.visibility),
+          connectNulls: false,
           smooth: true,
           // Hollow ring on the hovered point — surface fill, series colour on
           // the border — the marker the Recharts charts drew on hover.
@@ -123,7 +123,10 @@ export function VisibilityTrendChart({
 
   const first = rows[0].visibility;
   const last = rows[rows.length - 1].visibility;
-  const delta = Math.round((last - first) * 10) / 10;
+  const delta =
+    last !== null && first !== null
+      ? Math.round((last - first) * 10) / 10
+      : null;
 
   return (
     <div className="mb-3 rounded-lg border border-base-300 bg-base-100 p-4">
@@ -133,20 +136,22 @@ export function VisibilityTrendChart({
           Visibility trend
         </h3>
         <span className="text-xs text-base-content/60 tabular-nums">
-          {last}% now
-          <span
-            className={
-              delta > 0
-                ? "text-success"
-                : delta < 0
-                  ? "text-error"
-                  : "text-base-content/50"
-            }
-          >
-            {" "}
-            ({delta > 0 ? "+" : ""}
-            {delta} pts over {rows.length} checks)
-          </span>
+          Latest check: {last === null ? "Unknown" : `${last}%`}
+          {delta !== null ? (
+            <span
+              className={
+                delta > 0
+                  ? "text-success"
+                  : delta < 0
+                    ? "text-error"
+                    : "text-base-content/50"
+              }
+            >
+              {" "}
+              ({delta > 0 ? "+" : ""}
+              {delta} pts over {rows.length} checks)
+            </span>
+          ) : null}
         </span>
       </div>
       <p className="mt-0.5 text-xs text-base-content/50">
