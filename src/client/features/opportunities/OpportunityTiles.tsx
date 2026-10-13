@@ -6,6 +6,15 @@ import {
 } from "@phosphor-icons/react";
 import { InsightTile } from "@/client/components/InsightTile";
 import { quickWinHint, type Opportunity } from "./opportunityModel";
+import type { TechnicalAuditState } from "./technicalAuditState";
+
+const AUDIT_HINT: Record<TechnicalAuditState, string> = {
+  loading: "Loading audit evidence",
+  "not-run": "No completed site audit",
+  unavailable: "Audit evidence unavailable — retry below",
+  empty: "No page evidence in the completed audit",
+  ready: "Unique URLs in the last completed audit",
+};
 
 /**
  * The four headline tiles above the ranked action list.
@@ -23,19 +32,20 @@ export function OpportunityTiles({
   opportunities,
   sourcesUnavailable,
   sampled,
-  technicalSourcesFailed,
+  technicalState,
   technicalIssueCount,
   affectedPages,
-  totalClicksAtStake,
+  largestClickScenario,
 }: {
   opportunities: Opportunity[];
   sourcesUnavailable: boolean;
   sampled: boolean;
-  technicalSourcesFailed: boolean;
+  technicalState: TechnicalAuditState;
   technicalIssueCount: number;
   affectedPages: number;
-  totalClicksAtStake: number;
+  largestClickScenario: number;
 }) {
+  const technicalSourcesUnavailable = technicalState !== "ready";
   return (
     <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
       <InsightTile
@@ -49,26 +59,39 @@ export function OpportunityTiles({
       />
       <InsightTile
         icon={ArrowUpRight}
-        label="Clicks at stake"
-        value={sourcesUnavailable ? "—" : totalClicksAtStake.toLocaleString()}
+        label="Largest click scenario"
+        value={sourcesUnavailable ? "—" : largestClickScenario.toLocaleString()}
         hint={
-          sampled
-            ? "Estimated monthly, if everything listed here is fixed"
-            : "Estimated monthly, if all are fixed"
+          sourcesUnavailable
+            ? "Search Console evidence unavailable"
+            : sampled
+              ? "Partial rows; hypothetical 28-day gain, not a forecast"
+              : "Hypothetical 28-day gain, not a forecast"
         }
         tone="success"
       />
       <InsightTile
         icon={Wrench}
-        label="Technical issues"
-        value={technicalSourcesFailed ? "—" : technicalIssueCount}
-        tone={technicalIssueCount > 0 ? "warning" : "neutral"}
+        label="Technical checks"
+        value={technicalSourcesUnavailable ? "—" : technicalIssueCount}
+        hint={
+          technicalSourcesUnavailable
+            ? AUDIT_HINT[technicalState]
+            : "Categories needing review"
+        }
+        tone={
+          !technicalSourcesUnavailable && technicalIssueCount > 0
+            ? "warning"
+            : "neutral"
+        }
       />
       <InsightTile
         icon={ClipboardText}
         label="Pages affected"
-        value={technicalSourcesFailed ? "—" : affectedPages.toLocaleString()}
-        hint="Across the last audit"
+        value={
+          technicalSourcesUnavailable ? "—" : affectedPages.toLocaleString()
+        }
+        hint={AUDIT_HINT[technicalState]}
       />
     </div>
   );

@@ -16,7 +16,6 @@ import { useLinkInsights } from "@/client/features/link-insights/useLinkInsights
 import { toPath } from "@/client/features/link-insights/useLinkInsights";
 import {
   buildOpportunities,
-  buildTechnicalIssues,
   excludeWrongCustomer,
   isSourceUnavailable,
 } from "./opportunityModel";
@@ -26,6 +25,8 @@ import {
   useKeywordFit,
   useProjectProfile,
 } from "@/client/features/profiles/useProjectProfile";
+import { summarizeTechnicalIssues } from "./technicalIssues";
+import { getTechnicalAuditState } from "./technicalAuditState";
 import { OpportunityTiles } from "./OpportunityTiles";
 import { OpportunityRow } from "./OpportunityRow";
 import { Badge } from "@cloudflare/kumo/components/badge";
@@ -98,8 +99,8 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     [opportunities, fit],
   );
 
-  const technicalIssues = useMemo(
-    () => buildTechnicalIssues(auditQuery.data?.pages ?? []),
+  const { issues: technicalIssues, affectedPages } = useMemo(
+    () => summarizeTechnicalIssues(auditQuery.data?.pages ?? []),
     [auditQuery.data],
   );
 
@@ -109,21 +110,20 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
     (report?.connected ? report.sampling.queryPages.truncated : false) ||
     (linkInsights?.connected ? linkInsights.truncated : false);
 
-  // Over `ranked`, never `opportunities`: the headline promises the traffic a
-  // full sweep of this list would earn, and rows nobody should act on are not
-  // part of that sweep.
-  const totalClicksAtStake = ranked.reduce(
-    (sum, item) => sum + item.clicksAtStake,
-    0,
-  );
-  const affectedPages = technicalIssues.reduce(
-    (sum, issue) => sum + issue.pageCount,
+  // Keep separate tasks, but do not add scenarios that can share impressions.
+  const largestClickScenario = ranked.reduce(
+    (largest, item) => Math.max(largest, item.clicksAtStake),
     0,
   );
   const sourcesUnavailable =
     isSourceUnavailable(reportQuery, report) ||
     isSourceUnavailable(linkInsightsQuery, linkInsights);
-  const technicalSourcesFailed = historyQuery.isError || auditQuery.isError;
+  const technicalState = getTechnicalAuditState(
+    historyQuery,
+    auditQuery,
+    latestAuditId,
+    auditQuery.data?.pages,
+  );
 
   return (
     <AppPageShell>
@@ -133,9 +133,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           SEO Opportunities
         </h1>
         <p className="text-sm text-base-content/60">
-          What to fix next, ranked by the traffic at stake — built from your
-          Search Console data and your latest site audit. Nothing here costs a
-          credit.
+          Find your next SEO action using Search Console evidence and your
+          latest stored site audit. Opening this page does not run a paid
+          lookup.
         </p>
       </div>
 
@@ -145,11 +145,31 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
         opportunities={ranked}
         sourcesUnavailable={sourcesUnavailable}
         sampled={sampled}
-        technicalSourcesFailed={technicalSourcesFailed}
+        technicalState={technicalState}
         technicalIssueCount={technicalIssues.length}
         affectedPages={affectedPages}
-        totalClicksAtStake={totalClicksAtStake}
+        largestClickScenario={largestClickScenario}
       />
+
+      <details className="rounded-lg border border-base-300 p-3 text-sm">
+        <summary className="cursor-pointer font-medium">
+          How priorities are estimated
+        </summary>
+        <p className="mt-2 text-base-content/60">
+          Search Console supplies observed impressions and average position, not
+          predicted traffic. Ranking scenarios assume an uncalibrated 11% CTR at
+          a top-three position; overlap scenarios also assume 30% recovery of
+          the split share. CTR opportunities use a separate fixed CTR model.
+          These assumptions may not fit your site. Inspect search intent and
+          page evidence before changing or consolidating content.
+        </p>
+        {report?.connected ? (
+          <p className="mt-2 text-base-content/60">
+            Search Console evidence: {report.range.startDate} to{" "}
+            {report.range.endDate}.
+          </p>
+        ) : null}
+      </details>
 
       <AppCard>
         <SectionHeader
@@ -158,8 +178,9 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           title="Ranked action list"
           description={
             <>
-              Each row estimates the extra monthly clicks a successful fix would
-              earn, so the highest-value work sits at the top.
+              Ranked by hypothetical click scenarios from the last 28 days of
+              available Search Console data. These are not forecasts or promised
+              gains, and overlapping scenarios must not be added together.
               {sampled
                 ? " Search Console caps how many rows it returns, ordered by clicks, so this ranks what we could read rather than everything you rank for."
                 : ""}
@@ -201,7 +222,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <p className="text-sm font-medium">Connect Search Console</p>
             <p className="mx-auto max-w-md text-sm text-base-content/60">
               Keyword opportunities are built from your own Search Console data
-              — free, no credits.
+              — no paid SEO-provider lookup.
             </p>
             <Link
               to="/p/$projectId/search-performance"
@@ -220,7 +241,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
               ? `Every keyword opportunity we found is for somebody else's customer, going by your profile above (${wrongCustomer} left out). Loosen an exclusion line if that looks wrong.`
               : sampled
                 ? "No keyword opportunities in the rows Search Console returned. It sends them ordered by clicks and caps the pull, so something off page one with real demand could be outside it."
-                : "No keyword opportunities right now — nothing is sitting just off page one with meaningful demand."}
+                : "No opportunities matched these checks in the available Search Console rows. This does not establish that the site has no other opportunities."}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -231,9 +252,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
                   <Table.Head>Keyword</Table.Head>
                   <Table.Head>Page</Table.Head>
                   <Table.Head className="text-right">Impressions</Table.Head>
-                  <Table.Head className="text-right">
-                    Clicks at stake
-                  </Table.Head>
+                  <Table.Head className="text-right">Click scenario</Table.Head>
                   <Table.Head />
                 </Table.Row>
               </Table.Header>
@@ -262,7 +281,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
         <SectionHeader
           headingLevel={2}
           icon={Wrench}
-          title={<>What&rsquo;s missing on your pages</>}
+          title="Technical checks to review"
           actions={
             <Link
               to="/p/$projectId/audit"
@@ -274,33 +293,34 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
           }
         />
 
-        {historyQuery.isError || auditQuery.isError ? (
-          <div className="space-y-2">
-            {historyQuery.isError ? (
-              <InlineQueryError
-                message="Site audit history could not be loaded."
-                retrying={historyQuery.isFetching}
-                onRetry={() => void historyQuery.refetch()}
-              />
-            ) : null}
-            {auditQuery.isError ? (
-              <InlineQueryError
-                message="The latest site audit results could not be loaded."
-                retrying={auditQuery.isFetching}
-                onRetry={() => void auditQuery.refetch()}
-              />
-            ) : null}
-          </div>
-        ) : historyQuery.isPending || auditQuery.isPending ? (
+        {technicalState === "unavailable" ? (
+          <InlineQueryError
+            message={
+              historyQuery.isError
+                ? "Site audit history could not be loaded."
+                : "The latest site audit results could not be loaded."
+            }
+            retrying={
+              historyQuery.isError
+                ? historyQuery.isFetching
+                : auditQuery.isFetching
+            }
+            onRetry={() =>
+              void (historyQuery.isError
+                ? historyQuery.refetch()
+                : auditQuery.refetch())
+            }
+          />
+        ) : technicalState === "loading" ? (
           <div className="flex items-center justify-center py-10">
             <Loader size="base" />
           </div>
-        ) : latestAuditId == null ? (
+        ) : technicalState === "not-run" ? (
           <div className="rounded-lg border border-dashed border-base-300 p-6 text-center">
             <p className="text-sm font-medium">No site audit yet</p>
             <p className="mx-auto max-w-md text-sm text-base-content/60">
-              Run one to see missing titles, thin content, broken pages and more
-              — the crawl is free.
+              No completed crawl is available. Open Site Audit to check any
+              running or failed crawl, or review the options for starting one.
             </p>
             <Link
               to="/p/$projectId/audit"
@@ -310,9 +330,15 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
               Run a site audit
             </Link>
           </div>
+        ) : technicalState === "empty" ? (
+          <div className="rounded-lg border border-dashed border-base-300 p-6 text-center text-sm text-base-content/60">
+            No page evidence was stored by the completed crawl. Open Site Audit
+            to investigate coverage before drawing conclusions.
+          </div>
         ) : technicalIssues.length === 0 ? (
           <div className="rounded-lg border border-dashed border-base-300 p-6 text-center text-sm text-base-content/60">
-            No on-page issues found in the last crawl — clean sweep.
+            No findings from these checks on the stored crawl pages. This is not
+            a complete assessment of indexing, content quality, or site health.
           </div>
         ) : (
           <ul className="space-y-2">

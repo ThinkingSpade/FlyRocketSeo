@@ -12,13 +12,13 @@ export type Opportunity = {
   page: string;
   position: number;
   impressions: number;
-  /** Estimated extra monthly clicks if the fix works. */
+  /** Hypothetical click gain over the input evidence window, not a forecast. */
   clicksAtStake: number;
   /** Extra context for the row, e.g. "3 pages competing". */
   detail?: string;
 };
 
-// Same blended CTR curve the SERP tools use; only relative weights matter.
+// Fixed, uncalibrated CTR assumptions for scenario ordering, not measurements.
 const CTR_BY_POSITION: Record<number, number> = {
   1: 0.27,
   2: 0.15,
@@ -31,7 +31,7 @@ const CTR_BY_POSITION: Record<number, number> = {
   9: 0.025,
   10: 0.02,
 };
-/** What a page realistically earns once it reaches the top 3. */
+/** Assumed top-three CTR for the scenario; not a promised outcome. */
 const TARGET_CTR = CTR_BY_POSITION[3];
 
 function ctrFor(position: number): number {
@@ -69,8 +69,15 @@ type CannibalizationRow = {
   pages: Array<{ page: string; isWinner: boolean }>;
 };
 
-/** Clicks unlocked by lifting a page from where it sits into the top 3. */
+/** Hypothetical change under a top-three scenario over the input window. */
 export function quickWinClicks(impressions: number, position: number): number {
+  if (
+    !Number.isFinite(impressions) ||
+    impressions < 0 ||
+    !Number.isFinite(position) ||
+    position < 1
+  )
+    return 0;
   const gain = TARGET_CTR - ctrFor(position);
   return gain <= 0 ? 0 : Math.round(impressions * gain);
 }
@@ -81,7 +88,7 @@ const MIN_IMPRESSIONS = 10;
 
 /**
  * Merge every click-denominated signal into one list ranked by estimated
- * monthly clicks at stake. Rows below the demand floor or worth less than a
+ * click scenarios for the input window. Rows below the demand floor or worth less than a
  * click are dropped — a "do this next" list should not be padded with noise.
  */
 export function buildOpportunities(input: {
@@ -171,7 +178,7 @@ export function buildOpportunities(input: {
           CONSOLIDATION_RECOVERY *
           TARGET_CTR,
       ),
-      detail: `${row.pages.length} pages competing — consolidate into one`,
+      detail: `${row.pages.length} pages competing — verify intent before considering consolidation`,
     });
   }
 
@@ -179,7 +186,13 @@ export function buildOpportunities(input: {
 
   return [...byTarget.values(), ...standalone]
     .filter(
-      (item) => item.clicksAtStake >= 1 && item.impressions >= MIN_IMPRESSIONS,
+      (item) =>
+        Number.isFinite(item.clicksAtStake) &&
+        Number.isFinite(item.impressions) &&
+        (item.kind === "consolidate" ||
+          (Number.isFinite(item.position) && item.position >= 1)) &&
+        item.clicksAtStake >= 1 &&
+        item.impressions >= MIN_IMPRESSIONS,
     )
     .toSorted(
       (a, b) =>
@@ -250,106 +263,7 @@ export function quickWinHint(opportunities: Opportunity[]): string | undefined {
   return `${quickWins} quick win${quickWins === 1 ? "" : "s"}`;
 }
 
-type TechnicalIssueKey = "status" | "title" | "meta" | "h1" | "thin" | "alt";
-
-type TechnicalIssue = {
-  key: TechnicalIssueKey;
-  label: string;
-  description: string;
-  severity: "high" | "medium" | "low";
-  pageCount: number;
-  /** A few affected URLs, for the "show me" case. */
-  examples: string[];
-};
-
-type AuditPageRow = {
-  url: string;
-  statusCode: number | null;
-  title: string | null;
-  metaDescription: string | null;
-  h1Count: number;
-  wordCount: number;
-  imagesMissingAlt: number;
-};
-
-const THIN_CONTENT_WORDS = 300;
-const EXAMPLE_LIMIT = 3;
-
-/**
- * Group crawled pages into the classic on-page problems. Counts come from
- * pages already stored by the last audit, so this costs nothing to show.
- */
-export function buildTechnicalIssues(pages: AuditPageRow[]): TechnicalIssue[] {
-  const definitions: Array<{
-    key: TechnicalIssueKey;
-    label: string;
-    description: string;
-    severity: TechnicalIssue["severity"];
-    matches: (page: AuditPageRow) => boolean;
-  }> = [
-    {
-      key: "status",
-      label: "Pages not returning 200",
-      description: "Broken or redirecting URLs Google may drop from the index",
-      severity: "high",
-      matches: (page) => page.statusCode != null && page.statusCode >= 300,
-    },
-    {
-      key: "title",
-      label: "Missing page title",
-      description: "The single strongest on-page signal, absent",
-      severity: "high",
-      matches: (page) => (page.title ?? "").trim() === "",
-    },
-    {
-      key: "meta",
-      label: "Missing meta description",
-      description: "Google writes its own snippet — you lose the pitch",
-      severity: "medium",
-      matches: (page) => (page.metaDescription ?? "").trim() === "",
-    },
-    {
-      key: "h1",
-      label: "Missing or duplicate H1",
-      description: "Each page should state its topic once, clearly",
-      severity: "medium",
-      matches: (page) => page.h1Count !== 1,
-    },
-    {
-      key: "thin",
-      label: "Thin content",
-      description: `Under ${THIN_CONTENT_WORDS} words — usually too little to rank`,
-      severity: "medium",
-      matches: (page) =>
-        page.wordCount > 0 && page.wordCount < THIN_CONTENT_WORDS,
-    },
-    {
-      key: "alt",
-      label: "Images without alt text",
-      description: "Accessibility and image-search misses",
-      severity: "low",
-      matches: (page) => page.imagesMissingAlt > 0,
-    },
-  ];
-
-  return definitions
-    .map((definition) => {
-      const affected = pages.filter(definition.matches);
-      return {
-        key: definition.key,
-        label: definition.label,
-        description: definition.description,
-        severity: definition.severity,
-        pageCount: affected.length,
-        examples: affected.slice(0, EXAMPLE_LIMIT).map((page) => page.url),
-      };
-    })
-    .filter((issue) => issue.pageCount > 0)
-    .toSorted((a, b) => {
-      const rank = { high: 0, medium: 1, low: 2 } as const;
-      return rank[a.severity] - rank[b.severity] || b.pageCount - a.pageCount;
-    });
-}
+export { buildTechnicalIssues } from "./technicalIssues";
 
 /**
  * Is a GSC-derived source MISSING rather than empty?
@@ -366,5 +280,5 @@ export function isSourceUnavailable(
   query: { isError: boolean; isPending: boolean },
   data: { connected: boolean } | undefined,
 ): boolean {
-  return query.isError || query.isPending || data?.connected === false;
+  return query.isError || query.isPending || data?.connected !== true;
 }
