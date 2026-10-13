@@ -1,6 +1,7 @@
 # Isolated PostgreSQL runtime verification
 
-Date: 2026-10-13. This is local PostgreSQL execution, not a claim about live
+Date: 2026-10-13. Current local result: **17 runtime cases in four files**, with
+all **24 PostgreSQL migrations** applied and replayed. This is local PostgreSQL execution, not a claim about live
 Hyperdrive, production migrations, OAuth, or provider entitlement. No staging
 access is available and live integrations remain blocked.
 
@@ -17,7 +18,7 @@ tmpfs storage on a read-only container root. The official image manifest is
 pinned; each run records the server version. It supplies no production environment variables, mounts no host
 data, and removes its own labelled container after verification. An unavailable
 engine or failed test exits unsuccessfully. The CI workflow uses this route;
-remote CI execution has not been claimed by this local continuation.
+the exact remote execution status is recorded in `verification-results.md`.
 
 The dedicated Vite/Vitest configuration disables env-file loading, and the
 runner whitelists ordinary operating-system variables before starting tests.
@@ -59,16 +60,32 @@ status filtering before work-list paging; bounded per-task history and cursors;
 organization/project/target scoping; absent versus incomplete observations;
 actual project cascades; relational auth/project queries and archive/restore;
 and durable evidence ownership fences and cleanup-ledger survival after deletion.
+Rank cases exercise the production repository/service mapping, captured run and
+keyword-metric scope, genuine zero, current versus previous observations and
+exclusion after target/market/depth changes. Unknown-scope legacy rows remain
+stored but cannot become certified current evidence.
 
-Local verification passed 14 runtime tests on PostgreSQL 17.11 and applied all 22
-committed migrations, including the new evidence-object ledger. Nine ordinary
+Current local verification passed 17 runtime tests in four files on PostgreSQL
+17.11 and applied/replayed all 24 committed migrations, including the evidence
+ledger and additive rank scopes. The final run took 13.14 seconds; its log is
+`.logs/postgres-roadmap-final.log`. Nine ordinary
 native tests separately verify isolation guards. The runner exited successfully
-and the native server log confirms shutdown. No production code change was
-needed to pass this runtime coverage. Three cleanup cases execute real PostgreSQL
+and the native server log confirms shutdown. The rank extension exposed PostgreSQL
+`SUM` values returned as strings. Explicit numeric aggregate mapping repaired
+the production query outputs and passed both PostgreSQL and SQLite regressions.
+The earlier 14-case/22-migration increment remains historical evidence. Three cleanup cases execute real PostgreSQL
 claim/delete SQL with explicitly in-memory R2 fixtures: an aged unreferenced
 snapshot, legacy evidence belonging to a deleted project, and interrupted SQL
 bookkeeping after the R2 object is already gone. These tests do not
 certify live R2; the application acceptance suite verifies isolated local R2.
+
+The final broader source `1096bcf0` passes 3,780 ordinary native tests in 396
+files, static checks and production build; these checks remain distinct from
+the PostgreSQL runtime cases and the application browser suite. Current browser
+and remote Docker/CI execution outcomes are recorded in `verification-results.md`.
+The local Docker engine remains unavailable. Live Hyperdrive/socket behavior,
+deployed R2 configuration, older writer quiescence and crash recovery require
+authorized release access; production migrations or deployment were not run.
 
 Machine-readable results and setup notices are written under
 `test-results/postgres-runtime/`. PostgreSQL emits expected migration identifier

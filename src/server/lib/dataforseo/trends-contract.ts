@@ -16,10 +16,7 @@ type TrendsRequestScope = {
   useClickstream?: boolean;
 };
 const keyword = (value: string) => value.trim().toLowerCase();
-function rejectTrendsContract(
-  task: DataforseoTaskLike,
-  detail: string,
-): never {
+function rejectTrendsContract(task: DataforseoTaskLike, detail: string): never {
   throw new DataforseoChargedTaskError(
     `DataForSEO returned invalid trend/volume evidence (${detail})`,
     buildTaskBilling(task),

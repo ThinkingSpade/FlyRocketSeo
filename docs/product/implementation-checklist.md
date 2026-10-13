@@ -7,6 +7,45 @@ Implemented means application code exists. Verified means the named test execute
 successfully. Blocked means required external access or evidence is missing.
 Local browser fixtures never certify OAuth, live provider entitlement, or staging.
 
+## Current remaining-roadmap continuation from `bb93af37`
+
+This section supersedes historical counts and remaining-provider statements below.
+The roadmap's first version remains decline/internal-link actions, dashboard/page
+investigation and persistent work/results. Extra detectors, controlled causal
+analysis and new P3 datasets are conditional future work.
+
+| Work                                                        | Implemented                 | Verified                                                                                                                                               | Blocked / remaining                                                                |
+| ----------------------------------------------------------- | --------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
+| Keyword/Labs, competitor/gap and bulk consumed fields       | Yes                         | SDK envelopes through service/cache/legacy/React/CSV; included in complete 3,780-test native run                                                       | Live provider responses and entitlement                                            |
+| Captured rank scope and partial workflow outcomes           | Yes                         | All 50 D1 migrations; SDK task identity/scope; partial/all-failed configured workflow bodies; nullable chart/CSV/Sheets contracts                      | Deployed job execution/recovery                                                    |
+| Local grids, business profiles and review receipt ownership | Yes                         | SDK/service/R2/two-tenant fixtures, genuine empty reuse, malformed/mismatched captures and receipt failure recovery                                    | GBP OAuth/writes and live provider access                                          |
+| AI/Prompt samples and persisted history                     | Yes                         | Partial totals/shares stay unknown; original capture/market/competitor-set history; documented typeless citations; native rendering/cache/CSV          | Actual provider/model responses and entitlement                                    |
+| Backlink comparison/intersection/network claims             | Yes                         | Scope/exclusions/ordinal identities, partial universes, unknown net/counts, legacy normalization and metered malformed errors                          | Live provider dataset applicability                                                |
+| SEO host versus registration identity                       | Yes, `ff49bd50`             | 38 related regressions and complete native rerun; SEO host retained, registration uses registrable parent                                              | Live registration providers                                                        |
+| Page Explorer provider research                             | Yes, `ff7aedde`             | 29 focused tests/6 files; full query-URL cache, original capture, partial sample totals and durable saved-run ordering; focused actual browser restore | Live responses blocked                                                             |
+| Backlinks/audit/GSC export provenance                       | Yes, `22028811`, `1096bcf0` | 31 native tests/6 files; actual downloaded CSV assertions preserve precise observations and original source/scope/capture/paging/coverage              | Sheets OAuth blocked                                                               |
+| Content brief/outline consumed fields and consent           | Yes, `f082a53d`, `8e9144f2` | Ingredient/count/cache contracts; 12 consent identity tests; actual consent carryover RED then GREEN; complete native run                              | Live On-Page access blocked                                                        |
+| Citation persistence/owned history                          | Yes, `09959dce`             | Native SDK/service/cache contracts and actual thin-sample persistence/free restore increment; source capture and unknown coverage retained             | Live responses blocked                                                             |
+| Trends/Clickstream/global-volume contracts                  | Yes, `a9aa0222`             | 108 focused tests/8 files; actual source/window/capture/empty restoration increment; reported zero does not create unsupported comparisons             | Live responses blocked                                                             |
+| Existing onboarding/dashboard/investigation/lifecycle       | Yes                         | Authenticated journeys and real persistence/authorization contracts; prior and focused actual browser evidence retained                                | Live GSC/OAuth blocked                                                             |
+| Durable evidence/R2 cleanup and isolated PostgreSQL         | Yes                         | Real PostgreSQL 17.11: 17/17 in 4 files, all 24 migrations apply/replay; actual D1/R2 cleanup/race/retry evidence                                      | Local Docker unavailable; remote Docker CI pending; deployed storage/release gates |
+| Full native/static/build checks                             | Yes                         | 3,780/3,780 in 396 files; full Prettier/Knip/TSC/Oxlint with zero warnings/errors; final production build/root prerender/SPA/startup guard             | Remote exact-commit CI pending; existing chunk-size advisory                       |
+| Actual authenticated application operations                 | Yes, expanded runner        | Applicable operations mapped for all 24 destinations; real hosted auth/D1/R2 and raw SDK HTTP fixtures; focused GREENs retained                        | Live access blocked; deployed job execution unverified                             |
+
+The final fresh-state application run passes **82/82 cases in 21 files**, with
+zero unexpected failures, flaky cases, skips or top-level errors. It exercises
+the real hosted-auth application and isolated D1/R2/KV; SDK HTTP and GSC fixtures
+remain explicit. Its complete summary, server log, diagnostics and downloads are
+preserved under `.logs/evidence/acceptance-final-82/`. Earlier focused runs are
+retained separately and are never added together as a passing complete suite.
+
+Current coverage registers: `../audits/keyword-contract-coverage.md`,
+`../audits/rank-local-contract-coverage.md`,
+`../audits/ai-backlinks-contract-coverage.md`,
+`../audits/page-content-contract-coverage.md`, and
+`../audits/tool-operation-coverage.md`. Exact final counts and artifacts belong in
+`../audits/verification-results.md`; test definitions alone are not a pass.
+
 ## Constraints
 
 - Preserve project authorization, keyed project reset, saved-run reuse, and metered-request consent.
@@ -63,8 +102,8 @@ Local browser fixtures never certify OAuth, live provider entitlement, or stagin
 ## Explicit remaining gates
 
 - **Blocked live integrations:** no staging access, test OAuth renewal/revocation, authorized provider responses/entitlement, GBP writes or deployed background-job recovery. Fixture navigation or a missing-key state is never an integration pass.
-- **Release gates:** review/apply migrations and deploy only after approval. Local PostgreSQL and R2 cleanup are verified; deployed Hyperdrive, R2 permissions/configuration, older writer quiescence and crash recovery remain separate release checks. No automatic task/history expiration or stranded-writer expiry is introduced. Docker/remote CI execution remains unverified on this host.
-- **First-version limitations:** one implementation baseline per saved action; repeated follow-up observations are retained. Multiple implementation cycles, prior-year/controlled causal analysis, broader detector families and field-level provenance across every legacy export are further work.
+- **Release gates:** review/apply migrations and deploy only after approval. Local PostgreSQL and R2 cleanup are verified; deployed Hyperdrive, R2 permissions/configuration, older writer quiescence and crash recovery remain separate release checks. No automatic task/history expiration or stranded-writer expiry is introduced. Local Docker is unavailable; remote CI status is recorded separately.
+- **First-version limitations:** one implementation baseline per saved action; repeated follow-up observations are retained. Multiple implementation cycles, prior-year/controlled causal analysis and broader detector families are future work. Legacy records retain useful observations while unrecorded original scope/provenance is explicitly unavailable; restoring cannot reconstruct that evidence.
 - **Preserved boundaries:** no website publishing, production mutations, merge/deployment, paid request or new paid service. Existing authorization, saved-run restoration and in-flight metered guards remain in use.
 
 ## Incremental commits

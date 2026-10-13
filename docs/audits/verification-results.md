@@ -5,7 +5,84 @@ Branch: `audit/flyrocketseo-reliability-2026-10-13`.
 Original baseline: `49096606273eaeaeff7b82e49b1a767a48e65eca`.
 Prior native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e141c9`.
 
-## Storage/provider continuation from `317d915b`
+## Current remaining-roadmap verification
+
+Continuation from `bb93af37`. This section supersedes historical suite counts and
+remaining-provider statements below. The current checklist separates implemented,
+verified and blocked work; consumed-field and tool-operation coverage registers
+describe the finite fixture boundaries.
+
+- Complete native run: **3,780/3,780 tests in 396 files**, 90.71 seconds,
+  `.logs/roadmap-native-complete-rerun.log`. The earlier intermediate run passed
+  3,664 tests in 382 files. Its preceding full run found four real
+  WHOIS/availability regressions and an outdated fixture-guard mock; explicit
+  registrable-domain normalization and a valid synchronous mock repaired them.
+  Thirty-eight related checks and the complete suite were rerun successfully.
+  The first final 3,780-test run found one outdated CSV assertion after adding
+  nine provenance columns. Its original unknown/zero cells remain asserted;
+  the updated metadata assertion and complete final suite both pass. The failed
+  run remains in `.logs/roadmap-native-complete.log`.
+- Real isolated PostgreSQL **17/17 cases in four files**, PostgreSQL 17.11,
+  all **24 migrations** applied/replayed, 13.14 seconds,
+  `.logs/postgres-roadmap-final.log`. Captured rank scopes and actual aggregate
+  query outputs extend the earlier 14-case coverage. SQLite applies all 50 D1
+  migrations. The portable cluster shuts down; no production database is used.
+- Final production client/server build, root prerender (GET / 200), SPA shell,
+  build TypeScript and startup bundle check pass. Global Prettier, Knip,
+  TypeScript and type-aware Oxlint pass; Oxlint reports zero warnings and errors
+  across 1,584 files. Evidence: `.logs/roadmap-{format,knip,types,lint}-complete.log`,
+  `.logs/roadmap-build-complete.log`, `.logs/roadmap-startup-complete.log`.
+  The existing large-chunk advisory remains; loading performance is not certified.
+- Final review found and repaired Page Explorer partial/sample/cache contracts
+  (29 focused tests), export provenance/precision (31 focused tests), and Content
+  ingredient/count/cache contracts. Actual-browser consent carryover was
+  reproduced with two persisted briefs and different competitor URLs, then
+  repaired in `8e9144f2`: consent belongs to the selected captured brief and
+  cannot authorize another saved brief's outlines. Twelve native identity cases
+  and the actual browser regression pass. The original RED and subsequent GREEN
+  artifacts remain under `.logs/evidence/`.
+- Citation cache/history preserves project ownership and original capture;
+  successful empty observations restore without another metered request.
+  Trends/Clickstream/global-volume contracts reject malformed or mismatched
+  billed responses, retain reported zero without deriving an unsupported
+  relative-interest comparison, and preserve original source/window/capture.
+  Trends passes 108 focused cases in eight files; these are included in the
+  complete native total, not additional tests.
+- The fresh-state authenticated application run passes **82/82 cases in 21
+  files**, with **zero unexpected failures, flaky cases, skips or top-level
+  errors**, in **535.64 seconds (8.9 minutes)**. It started at
+  **2026-10-13 17:46:52.660 UTC**. The suite exercises applicable operations
+  across all 24 destinations, hosted authentication, real isolated D1/R2/KV,
+  explicit metered consent, captured evidence, actual downloaded exports,
+  persistence and failure recovery. Provider HTTP transport and GSC fixtures
+  remain explicit; this is not a live integration pass.
+  Evidence: `.logs/acceptance-final-82.log`, the preserved complete summary,
+  server log, diagnostic attachments and downloads under
+  `.logs/evidence/acceptance-final-82/`. The first expanded attempt was
+  interrupted after 50 completed cases
+  (45 passed, five timing failures); its traces showed a completed persisted
+  lifecycle mutation followed by a pending list and transient provider loading
+  probes. Explicit persisted-state waits and held real RPC requests correct those
+  test timing assumptions without substituting handler responses. Startup-only
+  timeouts ran zero cases and are recorded separately, never as app passes.
+
+No staging access is available. Live OAuth renewal/revocation, provider/model
+entitlement and responses, GBP publishing, Sheets OAuth, deployed jobs/chat,
+Hyperdrive/R2 configuration and production migration/release remain blocked or
+approval-gated. Local fixtures never certify them. No merge, deployment,
+production data mutation, paid call or new paid service is used for this work.
+
+Application source head: `1096bcf0`; expanded acceptance head: `3fc295f9`.
+The subsequent ledger update includes only documentation and Prettier wrapping
+of the private Trends helper signature, with no behavior change. A final
+repository formatting recheck follows that update. Generated logs/traces/
+screenshots remain ignored and reproducible.
+The complete browser summary supplies the counts above; earlier focused runs are
+never added together and labelled as a complete passing suite. Remote exact-commit
+CI is pending. The existing audit-branch workflow performs verification only;
+merge, production migrations and deployment remain unauthorized.
+
+## Storage/provider continuation from `317d915b` (historical)
 
 Tested source/test head: `c2af177d`, on the same audit branch. Seven tested code/infrastructure increments implement durable evidence-object fencing, manual Settings cleanup and retry, broader Domain/Backlinks contracts, saved-capture/billed-error repairs and a disposable PostgreSQL runner. Commit identities and implemented/verified/blocked rows are in `../product/implementation-checklist.md`.
 

@@ -9,6 +9,16 @@ Preserve the existing React/TanStack/Cloudflare architecture, project-scoped aut
 
 The continuation implements the first-party dashboard, page investigation and persisted opportunity lifecycle described below. It does not certify live integrations or authorize release. The current execution ledger is `implementation-checklist.md`; exact verification outcomes are in `../audits/verification-results.md`.
 
+## Remaining-roadmap continuation on 2026-10-13
+
+The continuation from `bb93af37` repairs the remaining consumed-field contracts for keyword/Labs research, competitor/gap/bulk comparisons, SERP/rank tracking, local profiles/reviews/grids, AI visibility, Prompt Explorer and page/content research. Contracts cover SDK envelopes, billed failures, missing versus zero, partial observations, declared scope, cache identity, original capture, restored data, chart gaps, defensible derived claims and exported precision/provenance. See the family coverage registers in `../audits/` for concrete boundaries and primary field definitions.
+
+Rank runs and keyword estimates now persist their captured scope in additive D1/PostgreSQL migrations. Real PostgreSQL exposed numeric `SUM` results arriving as strings; production query mapping now preserves numeric outputs. All 24 PostgreSQL migrations apply/replay and 17 isolated runtime cases pass on PostgreSQL 17.11. The complete native suite passes 3,780 tests in 396 files. Final formatting, unused-code, TypeScript, type-aware lint, production build, root prerender, SPA shell and startup bundle checks pass. The fresh-state authenticated application suite passes all 82 cases in 21 files, with zero unexpected failures, flaky cases or skips; its exact artifacts and finite fixture boundaries are recorded in the execution ledger.
+
+Actual browser reproductions also repaired late Local SEO prefill overwriting a user's draft, restored Content Optimizer briefs losing their explicitly authorized outline action, and Backlinks Search accepting another submission while its real request was pending. The restored outline action now binds consent to its specific captured brief/run/URLs; selecting another saved brief cannot carry that approval forward. Paid requests still require explicit action; restoration remains free. No new paid dataset or provider was introduced.
+
+The earlier continuation counts below are historical. Current provider scope is the fields consumed by existing application paths, including useful legacy restoration; unused SDK fields and future dataset-dependent intelligence are not certified. Live OAuth/provider access, deployed jobs/storage and approved production migration/release remain external gates.
+
 ## Continuation implemented on 2026-10-13
 
 - Provider history preserves unknown fields, partial buckets and unsupported event periods, with versioned scoped caches and original capture dates (`b775587e`).
@@ -18,7 +28,7 @@ The continuation implements the first-party dashboard, page investigation and pe
 - Tenant/target-scoped D1/PG schemas, immutable evidence, assignment, notes, revision checks, stable dedupe and append-only work history support decline investigations and contextual internal links (`fbb1dfa0`). Result observations require aligned complete periods, Pacific calendar boundaries, and a seven-day lag. Insufficient outcomes remain pending; measured outcomes describe association.
 - A separate hosted-auth application acceptance runner uses isolated local D1/R2/KV, two accounts/organizations and provider fixtures. It never loads the developer's provider credentials or calls production. The branch CI now includes this application suite.
 
-Live OAuth/provider access and deployed workflow recovery remain blocked: the user confirms no staging access is available. SQL migrations were reviewed and exercised locally, not applied to production. Local PostgreSQL 17.11 now passes all 22 migrations and 14 runtime cases. Manual R2 orphan/deleted-project cleanup, durable writer fencing and retry recovery are implemented and tested with isolated data. Production migration and deployed storage/runtime behavior still require approved release verification; bounded history pagination is implemented. There is no claim that every provider field/export or every advanced detector is certified.
+Live OAuth/provider access and deployed workflow recovery remain blocked: the user confirms no staging access is available. SQL migrations were reviewed and exercised locally, not applied to production. This earlier increment passed 22 PostgreSQL migrations and 14 runtime cases; the current continuation above adds scope migrations and coverage. Manual R2 orphan/deleted-project cleanup, durable writer fencing and retry recovery are implemented and tested with isolated data. Production migration and deployed storage/runtime behavior still require approved release verification; bounded history pagination is implemented.
 
 ## Inherited implemented increment
 
@@ -36,7 +46,7 @@ Impact: high. Complexity: medium per provider family. Dependencies: representati
 
 Start with `backlinksTimeline.ts` new/lost events defaulting absent values to zero and `domainRankHistory.ts` partial top-three buckets. Establish documented semantics before changing types. Then extend the metric register field by field, including exports, saved runs, cache identity, and captured dates. Acceptance: unknown stays unknown; genuine zero remains zero; no synthetic history; project, account, target, market, device, and time window remain consistent.
 
-Status: the named history contracts and first-party page scope are implemented and fixture verified. Wider field-level certification and live entitlement remain outstanding.
+Status: the named history, first-party page and remaining consumed-field contracts are implemented and fixture verified. The keyword/Labs, rank/local, AI/backlink and page/content coverage registers describe the SDK/service/cache/render/export evidence. Downloaded export checks assert original source, capture, target, market, window, paging and coverage values as well as precision and unknown-versus-zero cells. Live entitlement and actual provider responses remain blocked; unused provider fields are outside the application contract.
 
 ### P0: Authenticated workflow acceptance
 
@@ -44,7 +54,7 @@ Impact: high. Complexity: large across the product. Dependencies: an existing is
 
 Exercise every inventoried tool through navigation, search, filters, sorting, loading, errors, empty states, restored results, and exports. Test two organizations and two projects, revoked access, expired sessions, project switching, paid-request confirmation, and background-job recovery. Acceptance: no cross-project leakage, duplicate paid requests, silent redirects on transient errors, or successful-looking missing data.
 
-Status: real local hosted authentication, application navigation, core investigation/work/results, research interactions, consent and authorization failures are exercised with isolated fixtures. Tool navigation coverage is separate from live tool operation. Real OAuth renewal, provider responses and deployed job recovery are blocked without staging access.
+Status: real local hosted authentication, investigation/work/results, research, applicable tool operations, exports, consent and authorization failures are exercised with isolated fixtures. `../audits/tool-operation-coverage.md` distinguishes all 24 destinations' operation evidence from navigation checks and explicitly marks controls that do not exist. Final integrated execution counts are in the ledger. Real OAuth renewal, provider responses and deployed job recovery are blocked without staging access.
 
 ### P1: Nonblocking onboarding and progressive navigation
 
@@ -78,8 +88,8 @@ Evaluate competitor gaps, wider historical analysis, and AI/local visibility exp
 
 ## Reproduction and release gate
 
-The complete source was obtained through a GitHub Actions artifact after direct local downloads failed. Local controlled tests and Chromium checks are supplemental; native dependency-backed verification runs in the branch workflow.
+The initial complete source was obtained through a GitHub Actions artifact after direct local downloads failed. The current checkout runs native dependency-backed verification, a real disposable PostgreSQL engine and the actual authenticated application locally. Branch workflows provide an additional Linux/browser and Docker PostgreSQL gate when executed.
 
 From a complete checkout: `pnpm install --frozen-lockfile`, `pnpm run ci:check`, `pnpm test`, `pnpm run build`, `node --test scripts/audit/verify-opportunities.mjs`, and `node scripts/audit/verify-project-access.mjs`. Run the existing authenticated Playwright suites only against isolated test data with authorized credentials. No deployment command is necessary merely to inspect or test this branch.
 
-Next implementer: read the seven audit/product documents, verify the current branch and commit, reproduce the remaining P0 cases, and proceed in small tested commits. Do not merge or deploy on the strength of unit tests alone.
+Release review: use the current checklist and exact verified commit, arrange isolated staging/OAuth/provider access for the blocked live checks, and review the additive migrations and storage/runtime configuration before requesting deployment approval. Do not merge or deploy on the strength of fixture tests alone.

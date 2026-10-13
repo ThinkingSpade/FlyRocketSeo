@@ -18,27 +18,53 @@ Continuation on `audit/flyrocketseo-reliability-2026-10-13`, 2026-10-13. This re
 
 Primary field definitions: [Labs keyword overview](https://docs.dataforseo.com/v3/dataforseo_labs/google/keyword_overview/live/), [ranked keywords](https://docs.dataforseo.com/v3/dataforseo_labs/google/ranked_keywords/live/), [relevant pages](https://docs.dataforseo.com/v3/dataforseo_labs/google/relevant_pages/live/). Live entitlement/responses remain **blocked** because no staging/provider test access is available. No paid call, production data write or deployment was used for this verification.
 
-The parent execution ledger records integrated suite counts and commit boundaries. Browser fixtures prove the rendered/authenticated application and isolated persistence; they are not a passing live integration. Keyword SERP enrichment is covered by the separate SERP-family continuation. Wider Labs competitor/bulk fields are tracked separately.
+The parent execution ledger records integrated suite counts and commit boundaries. Browser fixtures prove the rendered/authenticated application and isolated persistence; they are not a passing live integration. Keyword SERP enrichment is covered by the separate SERP-family continuation. Consumed Labs competitor/bulk fields are recorded below.
 
-
-## Remaining competitor/Labs contracts — isolated verification
+## Competitor/Labs contracts — isolated verification
 
 Implemented on the audit branch; live account integrations remain **blocked** (no staging credentials/OAuth/provider grant). Adapter tests use the real installed DataForSEO SDK with intercepted HTTP responses and a fake key. They prove envelope and consumed-field behavior, not live provider authorization or completeness.
 
-| Public read / consumer | Validated contract |
-| --- | --- |
-| Labs domain and SERP competitors | Required item identities; result/items presence; declared target/market; safe intersections, organic counts and keyword counts; finite nonnegative traffic estimates without rounding; positive average/ranks; missing rank maps and invalid or inconsistent declared coverage keep all comparisons unknown. |
-| Labs keyword intersection | Both target identities, market, safe volume, CPC precision, ratio competition, bounded integer difficulty and positive integer rank. Missing mode deliberately swaps request targets, then restores target/competitor columns. |
-| Labs site keywords, bulk difficulty, intent | Required keywords, exact requested keyword identity for bulk/intent, declared market/language, safe volume, CPC, competition, difficulty and intent probability. Passthrough SDK fields not read by the current public tool remain uninterpreted. |
-| Labs bulk traffic and subdomains | Exact requested traffic targets; required target/subdomain identity, declared market/language, safe organic counts and nonnegative estimated traffic. |
-| Labs historic ranks | Successful no-results kept separate from malformed result/items; declared target/market; rank-bucket counts and estimated traffic normalized. Existing domain-history service still checks the actual calendar and rejects invalid month rows. |
-| Competitor result/cache/restore | Contract v2, project/requested hostname/national market/page metadata; organization and GSC connection/property/connector cache identities. Empty successes reused. Original capture timestamp survives cache reads. Legacy useful rows/pins retained, uncertified old comparison values hidden. Awaited cache writes preserve paid results on failure and do not record a saved run pointing at stale R2. |
-| Keyword and link gap cache | Contract v2 scope checked against exact project/domain pair/mode/market/filter/page, numeric/date observations revalidated. No current form scope is assigned to an older capture. Raw full-page continuation survives skipped rows; total count remains unknown if unreported or invalid. |
-| Link gap mapping/UI | Provider 0–100 rank/spam scores, safe backlink counts, strict observed first-seen timestamp, actual zero retained. Empty provider sample makes no universal claim about all backlinks. |
-| Comparison UI/CSV | Provider, original capture, captured domains and national market disclosed; missing values remain blank in CSV and unknown in UI, numeric precision and formula safeguards retained. Export scope is this provider page with current project overrides, rather than an invented complete dataset. GSC 28-day-average versus national provider rank comparisons explicitly labeled heuristics with seed/sample limits. |
+| Public read / consumer                      | Validated contract                                                                                                                                                                                                                                                                                                                                                                                                    |
+| ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Labs domain and SERP competitors            | Required item identities; result/items presence; declared target/market; safe intersections, organic counts and keyword counts; finite nonnegative traffic estimates without rounding; positive average/ranks; missing rank maps and invalid or inconsistent declared coverage keep all comparisons unknown.                                                                                                          |
+| Labs keyword intersection                   | Both target identities, market, safe volume, CPC precision, ratio competition, bounded integer difficulty and positive integer rank. Missing mode deliberately swaps request targets, then restores target/competitor columns.                                                                                                                                                                                        |
+| Labs site keywords, bulk difficulty, intent | Required keywords, exact requested keyword identity for bulk/intent, declared market/language, safe volume, CPC, competition, difficulty and intent probability. Passthrough SDK fields not read by the current public tool remain uninterpreted.                                                                                                                                                                     |
+| Labs bulk traffic and subdomains            | Exact requested traffic targets; required target/subdomain identity, declared market/language, safe organic counts and nonnegative estimated traffic.                                                                                                                                                                                                                                                                 |
+| Labs historic ranks                         | Successful no-results kept separate from malformed result/items; declared target/market; rank-bucket counts and estimated traffic normalized. Existing domain-history service still checks the actual calendar and rejects invalid month rows.                                                                                                                                                                        |
+| Competitor result/cache/restore             | Contract v2, project/requested hostname/national market/page metadata; organization and GSC connection/property/connector cache identities. Empty successes reused. Original capture timestamp survives cache reads. Legacy useful rows/pins retained, uncertified old comparison values hidden. Awaited cache writes preserve paid results on failure and do not record a saved run pointing at stale R2.            |
+| Keyword and link gap cache                  | Contract v2 scope checked against exact project/domain pair/mode/market/filter/page, numeric/date observations revalidated. No current form scope is assigned to an older capture. Raw full-page continuation survives skipped rows; total count remains unknown if unreported or invalid.                                                                                                                            |
+| Link gap mapping/UI                         | Provider 0–100 rank/spam scores, safe backlink counts, strict observed first-seen timestamp, actual zero retained. Empty provider sample makes no universal claim about all backlinks.                                                                                                                                                                                                                                |
+| Comparison UI/CSV                           | Provider, original capture, captured domains and national market disclosed; missing values remain blank in CSV and unknown in UI, numeric precision and formula safeguards retained. Export scope is this provider page with current project overrides, rather than an invented complete dataset. GSC 28-day-average versus national provider rank comparisons explicitly labeled heuristics with seed/sample limits. |
 
-Verification: focused competitor/domain-history/client native run covers 249 tests across 23 files; focused typed lint covers 28 source/test files with zero warnings/errors. Meaningful failing fixtures preceded the missing-vs-zero rank fixes, inconsistent coverage, foreign cached scope, legacy restore suppression, full raw-page continuation and stale saved-run recording repairs. The actual browser competitor discovery/pin/exclude/R2 restore case is maintained by the acceptance suite; the newly added Keyword Gap operation must be reported from its completed browser run before marking it verified.
+Verification: focused competitor/domain-history/client native run covers 249 tests across 23 files; focused typed lint covers 28 source/test files with zero warnings/errors. Meaningful failing fixtures preceded the missing-vs-zero rank fixes, inconsistent coverage, foreign cached scope, legacy restore suppression, full raw-page continuation and stale saved-run recording repairs. Acceptance cases exercise competitor discovery/pin/exclude/R2 restoration and Keyword/Link Gap operations; their execution status belongs in `verification-results.md` and `tool-operation-coverage.md`.
 
 Keyword research also has an explicit cache-write failure regression: a paid result retains its rows and original source/capture/scope if R2 persistence fails, performs no retry, and does not record a saved run pointing at stale R2. Focused research contract tests: 4 passed; both changed files pass typed lint.
 
 The competitor chart also refuses unknown-overlap points and mismatched-market target overviews, preserves genuine zero coordinates, and discloses both distinct capture times. Positive sub-unit traffic is rendered as <1 in table cells and escaped chart tooltips rather than rounded to an observed zero. Actual chart-consumer rendering tests exercise the production component and generated chart options with only the restore/renderer boundaries stubbed; browser rendering remains acceptance-suite evidence.
+
+## Trends contracts — isolated verification
+
+The Trends adapter checks successful result/items shape, requested keyword-column
+identity and reported market/language/date scope while retaining billed-task
+metadata on malformed or mismatched observations. Calendar buckets must be valid
+and match their UTC timestamps. Relative interest is 0–100 rather than a search
+count: provider zero means insufficient data, and explicit missing values remain
+gaps. Missing current observations do not produce momentum, opportunity scores or
+confirmed verdicts; historical valid observations remain visible.
+
+Scoped v2 cache identity includes organization/project, ordered keyword set,
+market/language and exact date window. Default annual windows are resolved once
+before the request and stored. Empty successful observations are reusable. Cache
+writes settle before a durable saved-run copy; failed puts retain the result and
+skip stale history. New captures show DataForSEO Google Trends, original capture
+and returned scope. Useful legacy curves remain readable with source/market
+unverified and capture unknown when not retained. Navigation, discovery and
+restoration retain the existing explicit paid-consent guard.
+
+Focused verification passed **108 tests in eight files**, including actual SDK,
+service/cache, restored schema, chart gaps, derived-state and React metadata
+consumers (`.logs/trends-contract-final.log`). Meaningful failing cases preceded
+the repairs. Final native source `1096bcf0` passes **3,780 tests in 396 files**;
+these focused counts are included, not additive. Browser execution remains in
+`verification-results.md`. Live Trends/provider entitlement is blocked without
+staging access; unused SDK fields and future datasets remain outside this scope.
