@@ -97,9 +97,17 @@ export async function getConfigTrend(
       runId: rankSnapshots.runId,
       checkedAt: rankCheckRuns.startedAt,
       total: count(),
-      top3: sql<number>`sum(case when ${rankSnapshots.position} between 1 and 3 then 1 else 0 end)`,
-      top4to10: sql<number>`sum(case when ${rankSnapshots.position} between 4 and 10 then 1 else 0 end)`,
-      top11to20: sql<number>`sum(case when ${rankSnapshots.position} between 11 and 20 then 1 else 0 end)`,
+      top3: sql<number>`sum(case when ${rankSnapshots.position} between 1 and 3 then 1 else 0 end)`.mapWith(
+        Number,
+      ),
+      top4to10:
+        sql<number>`sum(case when ${rankSnapshots.position} between 4 and 10 then 1 else 0 end)`.mapWith(
+          Number,
+        ),
+      top11to20:
+        sql<number>`sum(case when ${rankSnapshots.position} between 11 and 20 then 1 else 0 end)`.mapWith(
+          Number,
+        ),
     })
     .from(rankSnapshots)
     .innerJoin(rankCheckRuns, eq(rankSnapshots.runId, rankCheckRuns.id))
