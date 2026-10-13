@@ -18,6 +18,120 @@ describe("DataForSEO on-page instant audit", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
   });
+  it.each([undefined, { items: {} }, { items: [42] }])(
+    "rejects malformed successful observations with their billed evidence: %j",
+    async (result) => {
+      vi.stubGlobal(
+        "fetch",
+        vi.fn().mockResolvedValue(
+          Response.json({
+            status_code: 20000,
+            tasks: [
+              {
+                status_code: 20000,
+                path: ["v3", "on_page", "instant_pages"],
+                cost: 0.00125,
+                result: result ? [result] : [],
+              },
+            ],
+          }),
+        ),
+      );
+      await expect(
+        fetchInstantPageAudit({ url: "https://example.com/" }),
+      ).rejects.toMatchObject({
+        billing: { costUsd: 0.00125 },
+      });
+    },
+  );
+  it("rejects another requested URL before assigning its analysis to this page", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          status_code: 20000,
+          tasks: [
+            {
+              status_code: 20000,
+              path: ["v3", "on_page", "instant_pages"],
+              cost: 0.00125,
+              data: { url: "https://foreign.example/" },
+              result: [{ items: [{ url: "https://example.com/", meta: {} }] }],
+            },
+          ],
+        }),
+      ),
+    );
+    await expect(
+      fetchInstantPageAudit({ url: "https://example.com/" }),
+    ).rejects.toMatchObject({ billing: { costUsd: 0.00125 } });
+  });
+  it("retains a successful explicit empty observation", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          status_code: 20000,
+          tasks: [
+            {
+              status_code: 20000,
+              path: ["v3", "on_page", "instant_pages"],
+              cost: 0.00125,
+              data: { url: "https://example.com/" },
+              result: [{ items: [] }],
+            },
+          ],
+        }),
+      ),
+    );
+    expect(
+      await fetchInstantPageAudit({ url: "https://example.com/" }),
+    ).toMatchObject({ data: null, billing: { costUsd: 0.00125 } });
+  });
+  it("selects the requested page when browser rendering also returns resources", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          status_code: 20000,
+          tasks: [
+            {
+              status_code: 20000,
+              path: ["v3", "on_page", "instant_pages"],
+              cost: 0.00125,
+              data: { url: "https://example.com/", enable_javascript: true },
+              result: [
+                {
+                  items: [
+                    {
+                      url: "https://example.com/style.css",
+                      resource_type: "stylesheet",
+                    },
+                    {
+                      url: "https://example.com/",
+                      resource_type: "html",
+                      meta: { content: { plain_text_word_count: 10 } },
+                    },
+                  ],
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+    expect(
+      (
+        await fetchInstantPageAudit({
+          url: "https://example.com/",
+          enableJavascript: true,
+        })
+      ).data,
+    ).toMatchObject({
+      url: "https://example.com/",
+      meta: { content: { plain_text_word_count: 10 } },
+    });
+  });
 
   it("audits a single URL and parses score, meta, and checks", async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(

@@ -5,6 +5,8 @@ import {
   assertOk,
   buildTaskBilling,
   isRecord,
+  isNoResultsTask,
+  DataforseoChargedTaskError,
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
 
@@ -76,12 +78,45 @@ export async function fetchInstantPageAudit(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const billing = buildTaskBilling(task);
+  const rejectContract = () => {
+    throw new DataforseoChargedTaskError(
+      "Invalid DataForSEO on-page observation or request scope",
+      billing,
+    );
+  };
+  if (
+    isRecord(task.data) &&
+    ((task.data.url != null && task.data.url !== input.url) ||
+      (task.data.enable_javascript != null &&
+        task.data.enable_javascript !== (input.enableJavascript ?? false)) ||
+      (task.data.enable_browser_rendering != null &&
+        task.data.enable_browser_rendering !==
+          (input.enableJavascript ?? false)))
+  ) {
+    rejectContract();
+  }
+  if (isNoResultsTask(task)) return { data: null, billing };
   const first: unknown = task.result?.[0];
-  const items = isRecord(first) ? first.items : undefined;
-  const item: unknown = Array.isArray(items) ? items[0] : undefined;
+  if (!isRecord(first) || !Array.isArray(first.items)) rejectContract();
+  const items =
+    isRecord(first) && Array.isArray(first.items) ? first.items : [];
+  // Browser rendering can also return resources. Select the requested page
+  // instead of mistaking a stylesheet/image for its content analysis.
+  const item: unknown =
+    items.length > 1
+      ? items.find((entry) => isRecord(entry) && entry.url === input.url)
+      : items[0];
+  if (items.length > 1 && item === undefined) rejectContract();
+  if (item === undefined) return { data: null, billing };
+  // The SDK turns primitive array entries into empty model objects. A real
+  // captured page has its URL; an empty model is malformed, not a no-data page.
+  if (!isRecord(item) || typeof item.url !== "string" || !item.url.trim())
+    rejectContract();
   const parsed = instantPageItemSchema.safeParse(item ?? {});
+  if (!parsed.success) rejectContract();
   return {
     data: item != null && parsed.success ? parsed.data : null,
-    billing: buildTaskBilling(task),
+    billing,
   };
 }

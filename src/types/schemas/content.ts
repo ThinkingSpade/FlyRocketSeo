@@ -51,7 +51,7 @@ export const contentSearchSchema = z.object({
 });
 
 const briefCompetitorSchema = z.object({
-  rank: z.number().nullable(),
+  rank: z.number().int().safe().positive().nullable().catch(null),
   title: z.string().nullable(),
   url: z.string().nullable(),
   domain: z.string().nullable(),
@@ -59,17 +59,70 @@ const briefCompetitorSchema = z.object({
 
 const briefTermSchema = z.object({
   keyword: z.string(),
-  searchVolume: z.number().nullable(),
+  searchVolume: z.number().int().safe().nonnegative().nullable().catch(null),
 });
 
 /** The content brief exactly as it is cached — shared so auto-restore
  *  validates against the same definition that wrote it. */
-export const contentBriefSchema = z.object({
-  keyword: z.string(),
-  locationCode: z.number(),
-  languageCode: z.string(),
-  competitors: z.array(briefCompetitorSchema),
-  terms: z.array(briefTermSchema),
-  paaQuestions: z.array(z.string()),
-  fetchedAt: z.string(),
-});
+export const contentBriefSchema = z
+  .object({
+    keyword: z.string(),
+    locationCode: z.number(),
+    languageCode: z.string(),
+    competitors: z.array(briefCompetitorSchema),
+    terms: z.array(briefTermSchema),
+    paaQuestions: z.array(z.string()),
+    fetchedAt: z.string(),
+    contractVersion: z.literal(2).optional(),
+    source: z.string().optional(),
+    scope: z
+      .object({
+        organizationId: z.string(),
+        projectId: z.string(),
+        keyword: z.string(),
+        locationCode: z.number().int().positive(),
+        languageCode: z.string(),
+        serpLocationCode: z.number().int().positive(),
+        serpLanguageCode: z.string(),
+      })
+      .optional(),
+    components: z
+      .object({
+        serp: z.object({
+          source: z.string(),
+          fetchedAt: z.string().nullable(),
+          locationCode: z.number().int().positive(),
+          languageCode: z.string(),
+        }),
+        terms: z.object({
+          source: z.string(),
+          fetchedAt: z.string().nullable(),
+          availability: z.enum(["observed", "unavailable"]),
+          locationCode: z.number().int().positive(),
+          languageCode: z.string(),
+        }),
+      })
+      .optional(),
+  })
+  .superRefine((result, context) => {
+    if (result.contractVersion !== 2) return;
+    const { scope, components } = result;
+    if (
+      !scope ||
+      !components ||
+      !result.source ||
+      scope.keyword !== result.keyword ||
+      scope.locationCode !== result.locationCode ||
+      scope.languageCode !== result.languageCode ||
+      components.serp.locationCode !== scope.serpLocationCode ||
+      components.serp.languageCode !== scope.serpLanguageCode ||
+      components.terms.locationCode !== scope.locationCode ||
+      components.terms.languageCode !== scope.languageCode
+    ) {
+      context.addIssue({
+        code: "custom",
+        message:
+          "Captured brief scope disagrees with its ingredients or result.",
+      });
+    }
+  });

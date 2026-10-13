@@ -6,6 +6,24 @@ import {
 } from "./contentBriefMapping";
 
 describe("extractBriefTerms", () => {
+  it("retains reported zero while invalid count estimates stay unknown", () => {
+    const invalid = [-1, 1.5, Number.MAX_SAFE_INTEGER + 1];
+    const terms = extractBriefTerms(
+      [0, ...invalid].map((volume, index) => ({
+        keyword_data: {
+          keyword: `term ${index}`,
+          keyword_info: { search_volume: volume },
+        },
+      })),
+    );
+    expect(terms).toEqual([
+      { keyword: "term 0", searchVolume: 0 },
+      ...invalid.map((_, index) => ({
+        keyword: `term ${index + 1}`,
+        searchVolume: null,
+      })),
+    ]);
+  });
   it("dedupes, sorts by volume, and tolerates junk items", () => {
     const terms = extractBriefTerms([
       {
@@ -41,6 +59,26 @@ describe("extractBriefTerms", () => {
 });
 
 describe("extractCompetitorPage", () => {
+  it("distinguishes unreported heading evidence from reported empty heading lists", () => {
+    expect(
+      extractCompetitorPage("https://example.com/", { meta: {} }),
+    ).toMatchObject({ h2Available: false });
+    expect(
+      extractCompetitorPage("https://example.com/", {
+        meta: { htags: { h2: [] } },
+      }),
+    ).toMatchObject({ h2Available: true });
+  });
+  it.each([-1, 2.5, Number.MAX_SAFE_INTEGER + 1])(
+    "does not create a word-count target from invalid count %s",
+    (value) => {
+      expect(
+        extractCompetitorPage("https://example.com/", {
+          meta: { content: { plain_text_word_count: value } },
+        }),
+      ).toMatchObject({ wordCount: null });
+    },
+  );
   it("pulls title, word count, and heading texts", () => {
     const item: InstantPageAuditItem = {
       url: "https://example.com/final",
@@ -61,6 +99,7 @@ describe("extractCompetitorPage", () => {
       wordCount: 1200,
       h2: ["Pricing", "Machines"],
       h3: ["FAQ"],
+      h2Available: true,
     });
   });
 
@@ -76,6 +115,7 @@ describe("extractCompetitorPage", () => {
       wordCount: null,
       h2: [],
       h3: [],
+      h2Available: false,
     });
   });
 });

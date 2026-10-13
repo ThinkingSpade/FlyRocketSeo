@@ -6,6 +6,7 @@ export function BriefTargets({
   paaCount,
   analysesPending,
   analysesFailed,
+  headingCountsUnavailable = 0,
 }: {
   wordCounts: number[];
   h2Counts: number[];
@@ -17,6 +18,7 @@ export function BriefTargets({
    *  where every analysis failed reported "No data", which reads as "the top
    *  pages have nothing to measure" rather than "we could not measure them". */
   analysesFailed?: number;
+  headingCountsUnavailable?: number;
 }) {
   const pendingLabel = analysesPending
     ? "Analyzing top pages…"
@@ -60,8 +62,18 @@ export function BriefTargets({
               </span>
             </>
           ) : (
-            <span className="text-sm text-base-content/50">{pendingLabel}</span>
+            <span className="text-sm text-base-content/50">
+              {headingCountsUnavailable > 0
+                ? "Heading count unavailable"
+                : pendingLabel}
+            </span>
           )}
+          {h2Counts.length > 0 && headingCountsUnavailable > 0 ? (
+            <span className="text-xs text-base-content/60">
+              Heading counts unavailable for {headingCountsUnavailable} other
+              page{headingCountsUnavailable === 1 ? "" : "s"}
+            </span>
+          ) : null}
         </div>
       </div>
       <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">

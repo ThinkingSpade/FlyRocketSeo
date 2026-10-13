@@ -1,5 +1,6 @@
 import { z } from "zod";
 import type { InstantPageAuditItem } from "@/server/lib/dataforseo/onpage";
+import { providerCount } from "@/shared/provider-observations";
 
 // Pure mapping (no I/O), split from the service so it's unit-testable without
 // the DataForSEO client's `cloudflare:workers` env dependency.
@@ -15,6 +16,7 @@ type CompetitorPage = {
   wordCount: number | null;
   h2: string[];
   h3: string[];
+  h2Available: boolean;
 };
 
 const MAX_TERMS = 25;
@@ -49,8 +51,9 @@ export function extractBriefTerms(items: unknown[]): BriefTerm[] {
     if (!keyword || byKeyword.has(keyword)) continue;
     byKeyword.set(keyword, {
       keyword,
-      searchVolume:
-        parsed.data.keyword_data?.keyword_info?.search_volume ?? null,
+      searchVolume: providerCount(
+        parsed.data.keyword_data?.keyword_info?.search_volume,
+      ),
     });
   }
   return [...byKeyword.values()]
@@ -78,8 +81,9 @@ export function extractCompetitorPage(
   return {
     url: item.url ?? url,
     title: meta.title ?? "",
-    wordCount: meta.content?.plain_text_word_count ?? null,
+    wordCount: providerCount(meta.content?.plain_text_word_count),
     h2: headingStrings(htags["h2"]),
     h3: headingStrings(htags["h3"]),
+    h2Available: Array.isArray(htags["h2"]),
   };
 }
