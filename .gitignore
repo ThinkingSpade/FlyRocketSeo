@@ -41,3 +41,8 @@ dist-sourcemaps/
 
 # Superpowers SDD scratch (briefs, reports, review packages, ledger)
 .superpowers/
+
+# Isolated UX verification artifacts
+.ux-bulk-review-*/
+ux-evidence/
+ux-bulk-evidence/
