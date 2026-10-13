@@ -55,14 +55,12 @@ describe("Local SEO cache and reviews ownership", () => {
     state.failWrite = false;
     state.profile.mockReset();
     state.post.mockReset().mockResolvedValue({ taskId: "reviews-1" });
-    state.collect
-      .mockReset()
-      .mockResolvedValue({
-        status: "completed",
-        rating: 4.4,
-        reviewsCount: 2,
-        items: [],
-      });
+    state.collect.mockReset().mockResolvedValue({
+      status: "completed",
+      rating: 4.4,
+      reviewsCount: 2,
+      items: [],
+    });
   });
   it("caches a genuine not-found observation without spending again", async () => {
     state.profile.mockResolvedValue(null);

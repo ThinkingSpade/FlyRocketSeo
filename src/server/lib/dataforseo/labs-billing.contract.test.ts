@@ -18,27 +18,25 @@ beforeAll(async () => {
 }, 30_000);
 describe("Malformed Labs observation billing", () => {
   it("meters the actual rejected SDK task once and never replays its POST", async () => {
-    const fetch = vi
-      .fn()
-      .mockResolvedValue(
-        Response.json({
-          status_code: 20000,
-          tasks: [
-            {
-              status_code: 20000,
-              cost: 0.012,
-              path: [
-                "v3",
-                "dataforseo_labs",
-                "google",
-                "keyword_overview",
-                "live",
-              ],
-              result: [{ location_code: 2826, items: [] }],
-            },
-          ],
-        }),
-      );
+    const fetch = vi.fn().mockResolvedValue(
+      Response.json({
+        status_code: 20000,
+        tasks: [
+          {
+            status_code: 20000,
+            cost: 0.012,
+            path: [
+              "v3",
+              "dataforseo_labs",
+              "google",
+              "keyword_overview",
+              "live",
+            ],
+            result: [{ location_code: 2826, items: [] }],
+          },
+        ],
+      }),
+    );
     vi.stubGlobal("fetch", fetch);
     try {
       const client = createDataforseoClient({

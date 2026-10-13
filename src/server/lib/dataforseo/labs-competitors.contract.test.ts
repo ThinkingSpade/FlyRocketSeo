@@ -33,25 +33,23 @@ describe("Remaining Labs SDK contracts", () => {
   it("normalizes consumed SDK observations while keeping estimates precise and zeros reported", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response([
-            {
-              items: [
-                {
-                  domain: "rival.com",
-                  avg_position: 0,
-                  intersections: 1.5,
-                  full_domain_metrics: {
-                    organic: { count: 0, etv: 0.1234, pos_1: -1 },
-                  },
+      vi.fn().mockResolvedValue(
+        response([
+          {
+            items: [
+              {
+                domain: "rival.com",
+                avg_position: 0,
+                intersections: 1.5,
+                full_domain_metrics: {
+                  organic: { count: 0, etv: 0.1234, pos_1: -1 },
                 },
-              ],
-              total_count: 1,
-            },
-          ]),
-        ),
+              },
+            ],
+            total_count: 1,
+          },
+        ]),
+      ),
     );
     expect(
       (
@@ -68,20 +66,18 @@ describe("Remaining Labs SDK contracts", () => {
     });
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response([
-            {
-              items: [
-                {
-                  keyword: "seo",
-                  keyword_intent: { label: "commercial", probability: 2 },
-                },
-              ],
-            },
-          ]),
-        ),
+      vi.fn().mockResolvedValue(
+        response([
+          {
+            items: [
+              {
+                keyword: "seo",
+                keyword_intent: { label: "commercial", probability: 2 },
+              },
+            ],
+          },
+        ]),
+      ),
     );
     expect(
       (await fetchSearchIntent({ languageCode: "en", keywords: ["seo"] }))
@@ -89,29 +85,27 @@ describe("Remaining Labs SDK contracts", () => {
     ).toMatchObject({ keyword_intent: { probability: null } });
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response([
-            {
-              items: [
-                {
-                  keyword_data: {
-                    keyword: "seo",
-                    keyword_info: {
-                      search_volume: 0,
-                      cpc: 0.1234,
-                      competition: -1,
-                    },
-                    keyword_properties: { keyword_difficulty: 101 },
+      vi.fn().mockResolvedValue(
+        response([
+          {
+            items: [
+              {
+                keyword_data: {
+                  keyword: "seo",
+                  keyword_info: {
+                    search_volume: 0,
+                    cpc: 0.1234,
+                    competition: -1,
                   },
-                  first_domain_serp_element: { rank_absolute: 0 },
-                  second_domain_serp_element: { rank_absolute: 1.5 },
+                  keyword_properties: { keyword_difficulty: 101 },
                 },
-              ],
-            },
-          ]),
-        ),
+                first_domain_serp_element: { rank_absolute: 0 },
+                second_domain_serp_element: { rank_absolute: 1.5 },
+              },
+            ],
+          },
+        ]),
+      ),
     );
     expect(
       (
@@ -206,18 +200,16 @@ describe("Remaining Labs SDK contracts", () => {
   it.each(reads)("rejects %s mismatched language evidence", async (_, read) => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response([
-            {
-              language_code: "fr",
-              location_code: 2840,
-              items: [],
-              total_count: 0,
-            },
-          ]),
-        ),
+      vi.fn().mockResolvedValue(
+        response([
+          {
+            language_code: "fr",
+            location_code: 2840,
+            items: [],
+            total_count: 0,
+          },
+        ]),
+      ),
     );
     await expect(read()).rejects.toMatchObject({ billing: { costUsd: 0.012 } });
   });
@@ -249,18 +241,16 @@ describe("Remaining Labs SDK contracts", () => {
   it("checks both intersection targets and exact bulk keyword/target sets", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response([
-            {
-              target1: "foreign.com",
-              target2: "rival.com",
-              items: [],
-              total_count: 0,
-            },
-          ]),
-        ),
+      vi.fn().mockResolvedValue(
+        response([
+          {
+            target1: "foreign.com",
+            target2: "rival.com",
+            items: [],
+            total_count: 0,
+          },
+        ]),
+      ),
     );
     await expect(
       fetchDomainIntersection({

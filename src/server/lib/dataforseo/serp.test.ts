@@ -205,21 +205,19 @@ describe("SERP observation contracts", () => {
   it("preserves estimate precision and actual count zero while invalid SERP enrichment fields remain unknown", async () => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          liveResponse([
-            {
-              type: "organic",
-              domain: "example.com",
-              rank_absolute: 1,
-              etv: -1,
-              estimated_paid_traffic_cost: 1.25,
-              backlinks_info: { referring_domains: 0, backlinks: 0.5 },
-              rank_changes: { previous_rank_absolute: 0 },
-            },
-          ]),
-        ),
+      vi.fn().mockResolvedValue(
+        liveResponse([
+          {
+            type: "organic",
+            domain: "example.com",
+            rank_absolute: 1,
+            etv: -1,
+            estimated_paid_traffic_cost: 1.25,
+            backlinks_info: { referring_domains: 0, backlinks: 0.5 },
+            rank_changes: { previous_rank_absolute: 0 },
+          },
+        ]),
+      ),
     );
     expect(
       (

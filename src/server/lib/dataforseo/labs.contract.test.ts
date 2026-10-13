@@ -57,18 +57,16 @@ describe("Labs and Ads actual SDK response contracts", () => {
   it.each(reads)("rejects %s mismatched market", async (_, read) => {
     vi.stubGlobal(
       "fetch",
-      vi
-        .fn()
-        .mockResolvedValue(
-          response([
-            {
-              location_code: 2826,
-              language_code: "en",
-              items: [],
-              total_count: 0,
-            },
-          ]),
-        ),
+      vi.fn().mockResolvedValue(
+        response([
+          {
+            location_code: 2826,
+            language_code: "en",
+            items: [],
+            total_count: 0,
+          },
+        ]),
+      ),
     );
     await expect(read()).rejects.toBeInstanceOf(DataforseoChargedTaskError);
   });
@@ -77,18 +75,16 @@ describe("Labs and Ads actual SDK response contracts", () => {
     async (_, read) => {
       vi.stubGlobal(
         "fetch",
-        vi
-          .fn()
-          .mockResolvedValue(
-            response([
-              {
-                location_code: 2840,
-                language_code: "en",
-                items: [],
-                total_count: 0,
-              },
-            ]),
-          ),
+        vi.fn().mockResolvedValue(
+          response([
+            {
+              location_code: 2840,
+              language_code: "en",
+              items: [],
+              total_count: 0,
+            },
+          ]),
+        ),
       );
       const result = await read();
       expect(result.billing.costUsd).toBe(0.012);

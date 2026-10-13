@@ -13,11 +13,11 @@ import {
   keywordMetricsScopeJson,
   rankScopeJson,
 } from "@/server/features/rank-tracking/rankObservationScope";
-import "./runtime.fixture";
+import { scope } from "./runtime.fixture";
 
 const config = {
   id: "rank-config-a",
-  projectId: "project-a",
+  projectId: scope.projectId,
   domain: "example.com",
   locationCode: 2840,
   languageCode: "en",
@@ -26,17 +26,15 @@ const config = {
 };
 async function seedRank() {
   await db.insert(rankTrackingConfigs).values(config);
-  await db
-    .insert(rankTrackingKeywords)
-    .values({
-      id: "rank-kw-a",
-      configId: config.id,
-      keyword: "alpha",
-      searchVolume: 0,
-      cpc: 0,
-      metricsScopeJson: keywordMetricsScopeJson(config),
-      metricsFetchedAt: "2026-10-01T00:00:00.000Z",
-    });
+  await db.insert(rankTrackingKeywords).values({
+    id: "rank-kw-a",
+    configId: config.id,
+    keyword: "alpha",
+    searchVolume: 0,
+    cpc: 0,
+    metricsScopeJson: keywordMetricsScopeJson(config),
+    metricsFetchedAt: "2026-10-01T00:00:00.000Z",
+  });
   await RankTrackingRepository.tryCreateRun({
     id: "rank-run-a",
     configId: config.id,
