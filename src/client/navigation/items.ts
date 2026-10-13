@@ -80,7 +80,7 @@ const projectNavItems = [
   },
   {
     to: "/p/$projectId/search-performance" as const,
-    label: "GSC Insights",
+    label: "Search Performance",
     icon: GoogleGlyphMuted,
   },
   {
@@ -172,8 +172,8 @@ function getProjectNavItems(projectId: string) {
   );
 }
 
-// Grouped by scope: "My Site" is the project's own domain (tracked data),
-// "Research" is point-at-anything lookup tools.
+// Group by the user's task while preserving every existing deep link.
+// Consolidating pages is a separate change: regrouping must not hide tools.
 export function getProjectNavGroups(projectId: string) {
   const all = getProjectNavItems(projectId);
   const byPath = (path: (typeof projectNavItems)[number]["to"]) =>
@@ -181,38 +181,48 @@ export function getProjectNavGroups(projectId: string) {
 
   return [
     {
+      label: "Overview",
+      items: [byPath("/p/$projectId"), byPath("/p/$projectId/opportunities")],
+    },
+    {
       label: "Research",
       items: [
-        byPath("/p/$projectId"),
         byPath("/p/$projectId/keywords"),
+        byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/trends"),
         byPath("/p/$projectId/serp"),
-        byPath("/p/$projectId/content"),
-        byPath("/p/$projectId/page"),
-        byPath("/p/$projectId/clusters"),
         byPath("/p/$projectId/domain"),
         byPath("/p/$projectId/competitors"),
         byPath("/p/$projectId/backlinks"),
         byPath("/p/$projectId/expired-domains"),
-        byPath("/p/$projectId/brand-lookup"),
-        byPath("/p/$projectId/prompt-explorer"),
-        byPath("/p/$projectId/local"),
       ],
     },
     {
-      label: "My Site",
+      label: "Optimize",
       items: [
-        byPath("/p/$projectId/opportunities"),
-        byPath("/p/$projectId/search-performance"),
-        byPath("/p/$projectId/links"),
-        byPath("/p/$projectId/cannibalization"),
-        byPath("/p/$projectId/local-grid"),
-        byPath("/p/$projectId/rank-tracking"),
-        byPath("/p/$projectId/saved"),
         byPath("/p/$projectId/audit"),
         byPath("/p/$projectId/on-page"),
-        byPath("/p/$projectId/report"),
+        byPath("/p/$projectId/content"),
+        byPath("/p/$projectId/page"),
+        byPath("/p/$projectId/clusters"),
+        byPath("/p/$projectId/links"),
+        byPath("/p/$projectId/cannibalization"),
       ],
+    },
+    {
+      label: "Track",
+      items: [
+        byPath("/p/$projectId/search-performance"),
+        byPath("/p/$projectId/rank-tracking"),
+        byPath("/p/$projectId/brand-lookup"),
+        byPath("/p/$projectId/prompt-explorer"),
+        byPath("/p/$projectId/local"),
+        byPath("/p/$projectId/local-grid"),
+      ],
+    },
+    {
+      label: "Manage",
+      items: [byPath("/p/$projectId/report")],
     },
   ];
 }
