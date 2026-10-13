@@ -37,7 +37,7 @@ it("persists normalized request provenance through tab cache reuse without repla
     scope: "domain" as const,
     page: 1,
     pageSize: 25,
-    sortField: "rank",
+    sortField: "rank" as const,
     sortOrder: "desc" as const,
     filters: {},
     mode: "as_is" as const,

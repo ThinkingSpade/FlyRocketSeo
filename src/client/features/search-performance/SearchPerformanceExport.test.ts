@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import Papa from "papaparse";
-import { exportDimensionRows, exportStriking } from "./SearchPerformanceParts";
+import { exportDimensionRows, exportStriking } from "./export";
 import type { Report } from "./SearchPerformanceColumns";
 
-vi.mock("@/serverFunctions/keywords", () => ({ saveKeywords: vi.fn() }));
 vi.mock("@/client/lib/posthog", () => ({ captureClientEvent: vi.fn() }));
 vi.mock("@/client/lib/exportToSheets", () => ({
   exportTableToSheets: vi.fn(),

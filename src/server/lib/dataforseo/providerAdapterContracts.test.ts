@@ -280,7 +280,10 @@ it("runs a real list envelope into nullable table values and blank CSV cells", a
   expect(result.totalCount).toBe(1);
   expect(result.hasMore).toBe(false);
   expect(buildCsv(table.headers, table.rows).split("\n")[1]).toBe(
-    '"https://example.com/page","","0","",""',
+    [
+      '"https://example.com/page","","0","",""',
+      ...Array<string>(9).fill('"unknown"'),
+    ].join(","),
   );
   expect(requests).toHaveLength(1);
 });

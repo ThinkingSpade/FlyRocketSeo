@@ -16,7 +16,7 @@ type TrendsRequestScope = {
   useClickstream?: boolean;
 };
 const keyword = (value: string) => value.trim().toLowerCase();
-export function rejectTrendsContract(
+function rejectTrendsContract(
   task: DataforseoTaskLike,
   detail: string,
 ): never {

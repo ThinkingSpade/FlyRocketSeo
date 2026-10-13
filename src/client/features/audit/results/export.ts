@@ -14,20 +14,49 @@ const PAGES_HEADERS = [
   "Response Time (ms)",
 ];
 
-const RUN_HEADERS = ["Source", "Audit ID", "Start URL", "Capture Started At", "Capture Completed At", "Run Status", "Max Pages", "Lighthouse Strategy", "Pages Crawled", "Pages Discovered"];
+const RUN_HEADERS = [
+  "Source",
+  "Audit ID",
+  "Start URL",
+  "Capture Started At",
+  "Capture Completed At",
+  "Run Status",
+  "Max Pages",
+  "Lighthouse Strategy",
+  "Pages Crawled",
+  "Pages Discovered",
+];
 
-function runMetadata(source: string, audit?: AuditResultsData["audit"]): CsvValue[] {
-  return [source, audit?.id ?? "unknown", audit?.startUrl ?? "unknown",
-    audit?.startedAt ?? "unknown", audit?.completedAt ?? "unknown", audit?.status ?? "unknown",
-    audit?.config?.maxPages ?? "unknown", audit?.config?.lighthouseStrategy ?? "unknown",
-    audit?.pagesCrawled ?? "unknown", audit?.pagesTotal ?? "unknown"];
+function runMetadata(
+  source: string,
+  audit?: AuditResultsData["audit"],
+): CsvValue[] {
+  return [
+    source,
+    audit?.id ?? "unknown",
+    audit?.startUrl ?? "unknown",
+    audit?.startedAt ?? "unknown",
+    audit?.completedAt ?? "unknown",
+    audit?.status ?? "unknown",
+    audit?.config?.maxPages ?? "unknown",
+    audit?.config?.lighthouseStrategy ?? "unknown",
+    audit?.pagesCrawled ?? "unknown",
+    audit?.pagesTotal ?? "unknown",
+  ];
 }
 
 function runJsonMetadata(source: string, audit?: AuditResultsData["audit"]) {
-  return { source, auditId: audit?.id ?? null, startUrl: audit?.startUrl ?? null,
-    captureStartedAt: audit?.startedAt ?? null, captureCompletedAt: audit?.completedAt ?? null,
-    runStatus: audit?.status ?? null, config: audit?.config ?? null,
-    pagesCrawled: audit?.pagesCrawled ?? null, pagesDiscovered: audit?.pagesTotal ?? null };
+  return {
+    source,
+    auditId: audit?.id ?? null,
+    startUrl: audit?.startUrl ?? null,
+    captureStartedAt: audit?.startedAt ?? null,
+    captureCompletedAt: audit?.completedAt ?? null,
+    runStatus: audit?.status ?? null,
+    config: audit?.config ?? null,
+    pagesCrawled: audit?.pagesCrawled ?? null,
+    pagesDiscovered: audit?.pagesTotal ?? null,
+  };
 }
 
 function pagesRows(pages: AuditResultsData["pages"]): CsvValue[][] {
@@ -101,7 +130,10 @@ export function exportPages(
   }
 
   const headers = [...PAGES_HEADERS, ...RUN_HEADERS];
-  const rows = pagesRows(pages).map((row) => [...row, ...runMetadata("FlyRocketSEO crawl", audit)]);
+  const rows = pagesRows(pages).map((row) => [
+    ...row,
+    ...runMetadata("FlyRocketSEO crawl", audit),
+  ]);
   if (format === "sheets") {
     void exportTableToSheets({
       headers,
@@ -112,7 +144,10 @@ export function exportPages(
     return;
   }
 
-  downloadCsv("audit-pages.csv", buildCsv(headers, rows, { preservePrecision: true }));
+  downloadCsv(
+    "audit-pages.csv",
+    buildCsv(headers, rows, { preservePrecision: true }),
+  );
 }
 
 export function exportPerformance(
@@ -146,7 +181,10 @@ export function exportPerformance(
   }
 
   const headers = [...PERFORMANCE_HEADERS, ...RUN_HEADERS];
-  const rows = performanceRows(lighthouse, pages).map((row) => [...row, ...runMetadata("Lighthouse", audit)]);
+  const rows = performanceRows(lighthouse, pages).map((row) => [
+    ...row,
+    ...runMetadata("Lighthouse", audit),
+  ]);
 
   if (format === "sheets") {
     void exportTableToSheets({
@@ -158,5 +196,8 @@ export function exportPerformance(
     return;
   }
 
-  downloadCsv("audit-performance.csv", buildCsv(headers, rows, { preservePrecision: true }));
+  downloadCsv(
+    "audit-performance.csv",
+    buildCsv(headers, rows, { preservePrecision: true }),
+  );
 }

@@ -21,12 +21,14 @@ import {
 import { SearchPerformanceLoadingState } from "@/client/features/search-performance/SearchPerformanceLoadingState";
 import {
   DimensionTable,
-  exportDimensionRows,
-  exportStriking,
   StrikingDistanceTable,
   TotalsCards,
-  type ExportTarget,
 } from "@/client/features/search-performance/SearchPerformanceParts";
+import {
+  exportDimensionRows,
+  exportStriking,
+  type ExportTarget,
+} from "@/client/features/search-performance/export";
 import {
   SEARCH_PERFORMANCE_TAB_VALUES,
   tabSearchValue,

@@ -6,7 +6,7 @@ import {
   type SearchPerformanceDateRange,
   type SearchPerformanceDevice,
 } from "@/types/schemas/search-performance";
-import type { ExportTarget } from "@/client/features/search-performance/SearchPerformanceParts";
+import type { ExportTarget } from "@/client/features/search-performance/export";
 
 /** Sentinel for "no filter" in the selects; never sent to the server. */
 export const ALL = "ALL";

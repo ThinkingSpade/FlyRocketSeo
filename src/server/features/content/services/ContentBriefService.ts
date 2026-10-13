@@ -118,10 +118,7 @@ async function getContentBrief(
   if (
     cached.success &&
     cached.data.contractVersion === 2 &&
-    Object.entries(scope).every(
-      ([key, value]) =>
-        cached.data.scope?.[key as keyof typeof scope] === value,
-    )
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope)
   ) {
     await recordRun();
     return cached.data;
@@ -213,9 +210,7 @@ async function analyzeCompetitorPage(
   const cached = competitorCacheSchema.safeParse(await getCached(cacheKey));
   if (
     cached.success &&
-    Object.entries(scope).every(
-      ([key, value]) => cached.data.scope[key as keyof typeof scope] === value,
-    )
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope)
   ) {
     return cached.data.page;
   }
