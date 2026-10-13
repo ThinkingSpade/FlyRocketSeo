@@ -237,7 +237,7 @@ export function SearchPerformancePage({
       const data = await exportSearchPerformanceTable({
         data: { projectId, dimension, ...filterInput },
       });
-      exportDimensionRows(dimension, data.rows, report.range, target);
+      exportDimensionRows(dimension, data.rows, report.range, target, data);
       // The server knows the export was cut short; before this the client threw
       // that away and handed over a file that looked complete. A spreadsheet
       // outlives the screen it came from, so the warning has to reach the person

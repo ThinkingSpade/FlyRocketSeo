@@ -5,12 +5,60 @@ import type {
 } from "./backlinksPageTypes";
 import type { DomainRatings } from "./useAhrefsDomainRatings";
 
+export type BacklinksExportEvidence = {
+  source?: string;
+  target?: string;
+  scope?: "domain" | "page";
+  includeSubdomains?: boolean;
+  fetchedAt?: string;
+  page?: number;
+  pageSize?: number;
+  totalCount?: number | null;
+  hasMore?: boolean;
+};
+
+export function buildBacklinksTabExport(args: {
+  tab: BacklinksSearchState["tab"];
+  rows: BacklinksTabRows;
+  domainRatings?: DomainRatings | null;
+  evidence?: BacklinksExportEvidence;
+}): { headers: string[]; rows: CsvValue[][] } {
+  const table = buildBacklinksRowsExport(args);
+  const evidence = args.evidence;
+  const metadata: CsvValue[] = [
+    evidence?.source ?? "unknown",
+    evidence?.fetchedAt ?? "unknown",
+    evidence?.target ?? "unknown",
+    evidence?.scope ?? "unknown",
+    evidence?.includeSubdomains ?? "unknown",
+    evidence?.page ?? "unknown",
+    evidence?.pageSize ?? "unknown",
+    evidence?.totalCount ?? "unknown",
+    evidence?.hasMore ?? "unknown",
+  ];
+  return {
+    headers: [
+      ...table.headers,
+      "Source",
+      "Captured At",
+      "Target",
+      "Scope",
+      "Include Subdomains",
+      "Export Page",
+      "Page Size",
+      "Total Count",
+      "Has More",
+    ],
+    rows: table.rows.map((row) => [...row, ...metadata]),
+  };
+}
+
 /**
  * Builds the export table for the active tab. When `domainRatings` is loaded
  * (the user clicked "Ahrefs DR"), an Ahrefs DR column is included for the
  * Backlinks and Referring Domains tabs, matching the on-screen table.
  */
-export function buildBacklinksTabExport(args: {
+function buildBacklinksRowsExport(args: {
   tab: BacklinksSearchState["tab"];
   rows: BacklinksTabRows;
   domainRatings?: DomainRatings | null;
@@ -138,7 +186,7 @@ export function exportBacklinksTabCsv(args: {
 }) {
   downloadCsv(
     buildBacklinksTabCsvFilename(args.tab, args.target),
-    buildCsv(args.headers, args.rows),
+    buildCsv(args.headers, args.rows, { preservePrecision: true }),
   );
 }
 

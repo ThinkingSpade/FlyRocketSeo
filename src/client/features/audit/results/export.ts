@@ -14,6 +14,22 @@ const PAGES_HEADERS = [
   "Response Time (ms)",
 ];
 
+const RUN_HEADERS = ["Source", "Audit ID", "Start URL", "Capture Started At", "Capture Completed At", "Run Status", "Max Pages", "Lighthouse Strategy", "Pages Crawled", "Pages Discovered"];
+
+function runMetadata(source: string, audit?: AuditResultsData["audit"]): CsvValue[] {
+  return [source, audit?.id ?? "unknown", audit?.startUrl ?? "unknown",
+    audit?.startedAt ?? "unknown", audit?.completedAt ?? "unknown", audit?.status ?? "unknown",
+    audit?.config?.maxPages ?? "unknown", audit?.config?.lighthouseStrategy ?? "unknown",
+    audit?.pagesCrawled ?? "unknown", audit?.pagesTotal ?? "unknown"];
+}
+
+function runJsonMetadata(source: string, audit?: AuditResultsData["audit"]) {
+  return { source, auditId: audit?.id ?? null, startUrl: audit?.startUrl ?? null,
+    captureStartedAt: audit?.startedAt ?? null, captureCompletedAt: audit?.completedAt ?? null,
+    runStatus: audit?.status ?? null, config: audit?.config ?? null,
+    pagesCrawled: audit?.pagesCrawled ?? null, pagesDiscovered: audit?.pagesTotal ?? null };
+}
+
 function pagesRows(pages: AuditResultsData["pages"]): CsvValue[][] {
   return pages.map((page) => [
     page.url,
@@ -62,6 +78,7 @@ function performanceRows(
 export function exportPages(
   pages: AuditResultsData["pages"],
   format: "csv" | "json" | "sheets",
+  audit?: AuditResultsData["audit"],
 ) {
   if (format === "json") {
     const rows = pages.map((page) => ({
@@ -73,6 +90,7 @@ export function exportPages(
       imagesTotal: page.imagesTotal,
       imagesMissingAlt: page.imagesMissingAlt,
       responseTimeMs: page.responseTimeMs,
+      ...runJsonMetadata("FlyRocketSEO crawl", audit),
     }));
     downloadFile(
       JSON.stringify(rows, null, 2),
@@ -82,22 +100,26 @@ export function exportPages(
     return;
   }
 
+  const headers = [...PAGES_HEADERS, ...RUN_HEADERS];
+  const rows = pagesRows(pages).map((row) => [...row, ...runMetadata("FlyRocketSEO crawl", audit)]);
   if (format === "sheets") {
     void exportTableToSheets({
-      headers: PAGES_HEADERS,
-      rows: pagesRows(pages),
+      headers,
+      rows,
       feature: "audit_pages",
+      preservePrecision: true,
     });
     return;
   }
 
-  downloadCsv("audit-pages.csv", buildCsv(PAGES_HEADERS, pagesRows(pages)));
+  downloadCsv("audit-pages.csv", buildCsv(headers, rows, { preservePrecision: true }));
 }
 
 export function exportPerformance(
   lighthouse: AuditResultsData["lighthouse"],
   pages: AuditResultsData["pages"],
   format: "csv" | "json" | "sheets",
+  audit?: AuditResultsData["audit"],
 ) {
   if (format === "json") {
     const rows = lighthouse.map((result) => {
@@ -112,6 +134,7 @@ export function exportPerformance(
         cls: result.cls,
         inpMs: result.inpMs,
         ttfbMs: result.ttfbMs,
+        ...runJsonMetadata("Lighthouse", audit),
       };
     });
     downloadFile(
@@ -122,16 +145,18 @@ export function exportPerformance(
     return;
   }
 
-  const rows = performanceRows(lighthouse, pages);
+  const headers = [...PERFORMANCE_HEADERS, ...RUN_HEADERS];
+  const rows = performanceRows(lighthouse, pages).map((row) => [...row, ...runMetadata("Lighthouse", audit)]);
 
   if (format === "sheets") {
     void exportTableToSheets({
-      headers: PERFORMANCE_HEADERS,
+      headers,
       rows,
       feature: "audit_performance",
+      preservePrecision: true,
     });
     return;
   }
 
-  downloadCsv("audit-performance.csv", buildCsv(PERFORMANCE_HEADERS, rows));
+  downloadCsv("audit-performance.csv", buildCsv(headers, rows, { preservePrecision: true }));
 }

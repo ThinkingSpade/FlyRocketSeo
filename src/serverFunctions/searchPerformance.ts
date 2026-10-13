@@ -26,7 +26,31 @@ import {
   searchPerformanceInputSchema,
   searchPerformanceTableExportInputSchema,
   searchPerformanceTableInputSchema,
+  type SearchPerformanceProvenance,
 } from "@/types/schemas/search-performance";
+
+function pullProvenance(
+  pull: Awaited<ReturnType<typeof GscService.getAnalyticsPerformance>>,
+  capturedAt: string,
+): SearchPerformanceProvenance {
+  const filters =
+    pull.request.dimensionFilterGroups?.flatMap((group) => group.filters) ?? [];
+  return {
+    source: "Google Search Console",
+    property: pull.siteUrl,
+    country:
+      filters.find((filter) => filter.dimension === "country")?.expression ??
+      "all",
+    device:
+      filters.find((filter) => filter.dimension === "device")?.expression ??
+      "all",
+    startDate: pull.request.startDate,
+    endDate: pull.request.endDate,
+    searchType: pull.request.type ?? "unknown",
+    dataState: pull.request.dataState ?? "unknown",
+    capturedAt,
+  };
+}
 
 // query x page fan-out needs more rows to find the 5..20 band.
 const STRIKING_DISTANCE_FETCH_LIMIT = 1000;
@@ -144,7 +168,10 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
             dimensions: ["query", "page"],
             filters,
             rowLimit: STRIKING_DISTANCE_FETCH_LIMIT,
-          }),
+          }).then((pull) => ({
+            ...pull,
+            capturedAt: new Date().toISOString(),
+          })),
           // Query demand totals need their OWN property-aggregated pull. They
           // used to be summed out of the query x page rows above, which
           // double-counts: Google counts a property once per impression however
@@ -171,6 +198,7 @@ export const getSearchPerformanceReport = createServerFn({ method: "POST" })
 
       return {
         connected: true as const,
+        provenance: pullProvenance(queryPages, queryPages.capturedAt),
         range: {
           startDate,
           endDate,
@@ -265,9 +293,20 @@ export const exportSearchPerformanceTable = createServerFn({ method: "POST" })
     });
     const { filters } = buildGscFilters(data);
 
+    let provenance: SearchPerformanceProvenance | undefined;
     const pull = await fetchAllRows(
-      (request) =>
-        GscService.getAnalyticsPerformance(request).then((r) => r.rows),
+      async (request) => {
+        const result = await GscService.getAnalyticsPerformance(request);
+        // One pull at the current ceiling. If pagination is ever reintroduced,
+        // a changed connection must not combine two properties in one export.
+        if (provenance && provenance.property !== result.siteUrl) {
+          throw new Error(
+            "Search Console property changed during export. Retry the export.",
+          );
+        }
+        provenance ??= pullProvenance(result, new Date().toISOString());
+        return result.rows;
+      },
       {
         projectId: context.projectId,
         startDate,
@@ -278,9 +317,15 @@ export const exportSearchPerformanceTable = createServerFn({ method: "POST" })
       },
       EXPORT_ROW_CEILING,
     );
+    if (!provenance) {
+      throw new Error(
+        "Search Console did not return export provenance. Retry the export.",
+      );
+    }
 
     return {
       dimension: data.dimension,
+      provenance,
       rows: toDimensionRows(pull.rows),
       rowsExamined: pull.rowsExamined,
       truncated: pull.truncated,

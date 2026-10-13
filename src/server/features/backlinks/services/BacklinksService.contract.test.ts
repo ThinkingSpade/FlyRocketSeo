@@ -250,7 +250,7 @@ it("keeps invalid list observations out of tables and CSV without dropping the u
     },
   });
   expect(buildCsv(table.headers, table.rows).split("\n")[1]).toBe(
-    '"https://example.com/page","","0","",""',
+    '"https://example.com/page","","0","","","unknown","unknown","unknown","unknown","unknown","unknown","unknown","unknown","unknown"',
   );
 });
 

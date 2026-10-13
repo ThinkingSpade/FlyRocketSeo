@@ -142,10 +142,10 @@ export function ResultsView({
             onTabChange={onTabChange}
             onExport={(format) => {
               if (activeTab === "performance") {
-                exportPerformance(lighthouse, pages, format);
+                exportPerformance(lighthouse, pages, format, audit);
                 return;
               }
-              exportPages(pages, format);
+              exportPages(pages, format, audit);
             }}
           />
 

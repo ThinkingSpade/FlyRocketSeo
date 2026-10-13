@@ -279,7 +279,12 @@ export async function profileAnchorsPage(
 }
 
 function buildPageResult<TRow>(
-  input: { page: number; pageSize: number },
+  input: {
+    target: string;
+    scope?: "domain" | "page";
+    page: number;
+    pageSize: number;
+  },
   offset: number,
   data: { rows: TRow[]; totalCount: number | null },
 ) {
@@ -288,6 +293,9 @@ function buildPageResult<TRow>(
     totalCount != null
       ? offset + data.rows.length < totalCount
       : data.rows.length === input.pageSize;
+  const normalizedTarget = normalizeBacklinksTarget(input.target, {
+    scope: input.scope,
+  });
 
   return {
     contractVersion: 2 as const,
@@ -297,6 +305,14 @@ function buildPageResult<TRow>(
     page: input.page,
     pageSize: input.pageSize,
     fetchedAt: new Date().toISOString(),
+    provenance: {
+      source: "DataForSEO" as const,
+      target: normalizedTarget.apiTarget,
+      scope: normalizedTarget.scope,
+      // buildCommonPayload sends include_subdomains=true on each endpoint.
+      // The UI exposes domain/page scope, not a subdomain toggle.
+      includeSubdomains: true,
+    },
   };
 }
 

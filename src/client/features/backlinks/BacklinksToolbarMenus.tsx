@@ -37,6 +37,7 @@ export function BacklinksExportMenu({
         headers,
         rows,
         feature: `backlinks_${activeTab}`,
+        preservePrecision: true,
       });
     } finally {
       setIsExportingSheets(false);

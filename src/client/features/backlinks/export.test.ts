@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import Papa from "papaparse";
 import { buildCsv } from "@/client/lib/csv";
 import type {
   AnchorRow,
@@ -8,6 +9,7 @@ import type {
 import {
   buildBacklinksTabCsvFilename,
   buildBacklinksTabExport,
+  exportBacklinksTabCsv,
 } from "./export";
 
 function makeBacklinkRow(overrides: Partial<BacklinksRow> = {}): BacklinksRow {
@@ -85,6 +87,107 @@ describe("buildBacklinksTabCsvFilename", () => {
 });
 
 describe("buildBacklinksTabExport", () => {
+  it("downloads precise backlink measurements with original evidence and formula protection", async () => {
+    let downloaded: Blob | undefined;
+    vi.stubGlobal("document", {
+      createElement: () => ({ click() {}, href: "", download: "" }),
+    });
+    vi.spyOn(URL, "createObjectURL").mockImplementation((blob) => {
+      if (!(blob instanceof Blob)) throw new Error("Expected CSV Blob");
+      downloaded = blob;
+      return "blob:isolated-export";
+    });
+    vi.spyOn(URL, "revokeObjectURL").mockImplementation(() => {});
+    try {
+      const table = buildBacklinksTabExport({
+        tab: "anchors",
+        evidence: {
+          source: "DataForSEO",
+          fetchedAt: "2026-09-12T03:04:05.000Z",
+          target: "docs.example.com",
+          scope: "domain",
+          includeSubdomains: true,
+        },
+        rows: {
+          backlinks: [],
+          referringDomains: [],
+          topPages: [],
+          anchors: [makeAnchorRow({ anchor: "=risky", spamScore: 0.123456 })],
+        },
+      });
+      exportBacklinksTabCsv({
+        tab: "anchors",
+        target: "docs.example.com",
+        ...table,
+      });
+      const parsed = Papa.parse<Record<string, string>>(
+        (await downloaded?.text()) ?? "",
+        { header: true },
+      );
+      expect(parsed.data[0]).toMatchObject({
+        Anchor: "'=risky",
+        "Spam Score": "0.123456",
+        "Captured At": "2026-09-12T03:04:05.000Z",
+        Scope: "domain",
+      });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it.each(["backlinks", "domains", "pages", "anchors"] as const)(
+    "retains the original capture and immutable request scope in the %s CSV",
+    (tab) => {
+      const content = buildTabCsv({
+        tab,
+        evidence: {
+          source: "DataForSEO",
+          target: "docs.example.com",
+          scope: "domain",
+          includeSubdomains: true,
+          fetchedAt: "2026-09-12T03:04:05.000Z",
+          page: 2,
+          pageSize: 25,
+          totalCount: 87,
+          hasMore: true,
+        },
+        rows: {
+          backlinks: [makeBacklinkRow({ spamScore: 0.123456 })],
+          referringDomains: [makeReferringDomainRow()],
+          anchors: [makeAnchorRow()],
+          topPages: [
+            {
+              page: "https://docs.example.com/start",
+              backlinks: 1,
+              referringDomains: 0,
+              rank: null,
+              brokenBacklinks: 0,
+            },
+          ],
+        },
+      });
+      expect(content).toContain(
+        '"Source","Captured At","Target","Scope","Include Subdomains","Export Page","Page Size","Total Count","Has More"',
+      );
+      expect(content).toContain(
+        '"DataForSEO","2026-09-12T03:04:05.000Z","docs.example.com","domain","true","2","25","87","true"',
+      );
+    },
+  );
+
+  it("keeps legacy capture evidence unknown without substituting the export clock", () => {
+    const content = buildTabCsv({
+      tab: "anchors",
+      rows: {
+        backlinks: [],
+        referringDomains: [],
+        topPages: [],
+        anchors: [makeAnchorRow()],
+      },
+    });
+    expect(content).toContain('"unknown","unknown","unknown","unknown"');
+  });
+
   it("builds backlinks csv with backlink-specific columns", () => {
     const content = buildTabCsv({
       tab: "backlinks",

@@ -38,12 +38,34 @@ import { captureClientEvent } from "@/client/lib/posthog";
 import {
   SEARCH_PERFORMANCE_PAGE_SIZES,
   type SearchPerformanceTableDimension,
+  type SearchPerformanceProvenance,
 } from "@/types/schemas/search-performance";
 import { saveKeywords } from "@/serverFunctions/keywords";
 
 export type ExportTarget = "csv" | "sheets";
 
-type ExportTable = { filename: string; headers: string[]; rows: CsvValue[][] };
+type ExportTable = { filename: string; headers: string[]; rows: CsvValue[][]; resultCount?: number };
+
+type ExportEvidence = {
+  provenance?: SearchPerformanceProvenance;
+  rowsExamined: number;
+  truncated: boolean;
+};
+
+const EVIDENCE_HEADERS = ["Source", "Property", "Country", "Device", "Start Date", "End Date", "Search Type", "Data State", "Captured At", "Rows Examined", "Rows Exported", "Truncated", "Coverage"];
+
+function withExportEvidence(table: ExportTable, evidence?: ExportEvidence): ExportTable {
+  const p = evidence?.provenance;
+  const values: CsvValue[] = [p?.source ?? "unknown", p?.property ?? "unknown",
+    p?.country ?? "unknown", p?.device ?? "unknown", p?.startDate ?? "unknown", p?.endDate ?? "unknown",
+    p?.searchType ?? "unknown", p?.dataState ?? "unknown", p?.capturedAt ?? "unknown",
+    evidence?.rowsExamined ?? "unknown", table.rows.length, evidence?.truncated ?? "unknown",
+    "Search Console top rows; anonymized queries and other omitted detail are not included"];
+  // A metadata-only row retains the verified empty pull's scope and coverage.
+  // Its observation cells stay empty and Rows Exported explicitly says zero.
+  const rows = table.rows.length > 0 ? table.rows : [table.headers.map(() => "")];
+  return { ...table, resultCount: table.rows.length, headers: [...table.headers, ...EVIDENCE_HEADERS], rows: rows.map((row) => [...row, ...values]) };
+}
 
 function strikingExportTable(report: Report): ExportTable {
   const stamp = `${report.range.startDate}-to-${report.range.endDate}`;
@@ -87,10 +109,10 @@ function dimensionExportTable(
 
 function runExport(table: ExportTable, target: ExportTarget): void {
   if (target === "csv") {
-    downloadCsv(table.filename, buildCsv(table.headers, table.rows));
+    downloadCsv(table.filename, buildCsv(table.headers, table.rows, { preservePrecision: true }));
     captureClientEvent("data:export", {
       source_feature: "search_performance",
-      result_count: table.rows.length,
+      result_count: table.resultCount ?? table.rows.length,
     });
     return;
   }
@@ -98,11 +120,15 @@ function runExport(table: ExportTable, target: ExportTarget): void {
     headers: table.headers,
     rows: table.rows,
     feature: "search_performance",
+    preservePrecision: true,
   });
 }
 
 export function exportStriking(report: Report, target: ExportTarget): void {
-  runExport(strikingExportTable(report), target);
+  runExport(withExportEvidence(strikingExportTable(report), {
+    provenance: report.provenance,
+    ...report.sampling.queryPages,
+  }), target);
 }
 
 /** Export the full queries/pages dataset (fetched separately, not the visible
@@ -112,9 +138,11 @@ export function exportDimensionRows(
   rows: SearchPerformanceTableRow[],
   range: Report["range"],
   target: ExportTarget,
+  evidence?: ExportEvidence,
 ): void {
-  const stamp = `${range.startDate}-to-${range.endDate}`;
-  runExport(dimensionExportTable(dimension, rows, stamp), target);
+  const dates = evidence?.provenance ?? range;
+  const stamp = `${dates.startDate}-to-${dates.endDate}`;
+  runExport(withExportEvidence(dimensionExportTable(dimension, rows, stamp), evidence), target);
 }
 
 type Delta = { text: string; improved: boolean } | null;

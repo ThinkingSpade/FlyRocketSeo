@@ -24,7 +24,10 @@ import {
   BacklinksActionsMenu,
   BacklinksExportMenu,
 } from "./BacklinksToolbarMenus";
-import { buildBacklinksTabExport } from "./export";
+import {
+  buildBacklinksTabExport,
+  type BacklinksExportEvidence,
+} from "./export";
 import type { BacklinksDomainExpansion } from "./useBacklinksDomainExpansion";
 import type { BacklinksFiltersState } from "./useBacklinksFilters";
 import type { BreakdownOrigin } from "./useBacklinksRowsTransaction";
@@ -62,6 +65,7 @@ export function BacklinksResultsCard({
   isTabLoading,
   tabErrorMessage,
   exportTarget,
+  exportEvidence,
   pagination,
   onPageChange,
   onPageSizeChange,
@@ -83,6 +87,7 @@ export function BacklinksResultsCard({
   isTabLoading: boolean;
   tabErrorMessage: string | null;
   exportTarget: string;
+  exportEvidence?: BacklinksExportEvidence;
   pagination: {
     page: number;
     pageSize: number;
@@ -148,8 +153,13 @@ export function BacklinksResultsCard({
         : `Showing ${activeTabRows.length.toLocaleString()} ${activeTabRows.length === 1 ? "row" : "rows"}.`;
   const exportTable = useMemo(
     () =>
-      buildBacklinksTabExport({ tab: activeTab, rows: tabRows, domainRatings }),
-    [activeTab, domainRatings, tabRows],
+      buildBacklinksTabExport({
+        tab: activeTab,
+        rows: tabRows,
+        domainRatings,
+        evidence: exportEvidence,
+      }),
+    [activeTab, domainRatings, tabRows, exportEvidence],
   );
   // Domains keyed by both tables that the DR column can enrich. Each table
   // holds the currently loaded page, so this changes as the user paginates.

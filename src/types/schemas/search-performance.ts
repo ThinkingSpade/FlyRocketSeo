@@ -16,6 +16,19 @@ export type SearchPerformanceDateRange =
   (typeof SEARCH_PERFORMANCE_RANGES)[number];
 export type SearchPerformanceDevice = (typeof GSC_DEVICES)[number];
 
+/** Immutable identity of the GSC pull that supplied exported observations. */
+export type SearchPerformanceProvenance = {
+  source: "Google Search Console";
+  property: string;
+  country: string;
+  device: string;
+  startDate: string;
+  endDate: string;
+  searchType: string;
+  dataState: string;
+  capturedAt: string;
+};
+
 // Shared report/table filters. Spread into each request schema so the overview
 // and the paginated table calls always accept the exact same filter surface.
 const searchPerformanceFilterShape = {

@@ -226,6 +226,14 @@ export function BacklinksBody({
             isTabLoading={tabLoading}
             tabErrorMessage={tabErrorMessage}
             exportTarget={overviewData.displayTarget || searchState.target}
+            exportEvidence={activeTabPage ? {
+              ...activeTabPage.provenance,
+              fetchedAt: activeTabPage.fetchedAt,
+              page: activeTabPage.page,
+              pageSize: activeTabPage.pageSize,
+              totalCount: activeTabPage.totalCount,
+              hasMore: activeTabPage.hasMore,
+            } : undefined}
             pagination={{
               page: searchState.page,
               pageSize: searchState.pageSize,

@@ -181,6 +181,12 @@ function buildPageResultSchema<T extends z.ZodTypeAny>(rowSchema: T) {
     page: z.number(),
     pageSize: z.number(),
     fetchedAt: z.string(),
+    provenance: z.object({
+      source: z.literal("DataForSEO"),
+      target: z.string(),
+      scope: z.enum(["domain", "page"]),
+      includeSubdomains: z.boolean(),
+    }).optional(),
   });
 }
 
