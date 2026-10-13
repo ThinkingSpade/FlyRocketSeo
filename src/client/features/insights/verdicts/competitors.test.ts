@@ -52,6 +52,34 @@ function expectKeywordGapHandoff(action: Action, competitor: string) {
 }
 
 describe("buildCompetitorsVerdict", () => {
+  it.each(["domain", "serp"] as const)(
+    "qualifies the selected rival when %s candidate comparisons are missing",
+    (discoveryMode) => {
+      const verdict = buildCompetitorsVerdict({
+        target: "acme.com",
+        discoveryMode,
+        seedSize: 20,
+        competitors: [
+          {
+            domain: "measured.example",
+            intersections: 8,
+            organicKeywords: 20,
+            beatsYouCount: 8,
+          },
+          {
+            domain: "unknown.example",
+            intersections: null,
+            organicKeywords: null,
+            beatsYouCount: null,
+          },
+        ],
+      });
+      expect(verdict.read).toContain("reported");
+      expect(verdict.read).toContain("1 candidate");
+      expect(verdict.read).not.toContain("than any other competitor found");
+      expect(verdict.read).not.toContain("shares the most keywords");
+    },
+  );
   it("says so when no competitor data was found", () => {
     const verdict = buildCompetitorsVerdict({
       target: "acme.com",

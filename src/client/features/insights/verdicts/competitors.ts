@@ -160,13 +160,19 @@ function buildDomainModeVerdict(
   // the `organicKeywords != null` guard below narrows a plain variable --
   // no unsafe cast needed to use it as a number afterward.
   const { domain, intersections, organicKeywords } = top;
+  const partialRead =
+    rated.length < real.length
+      ? `${domain} has ${formatCount(intersections)} keywords shared with you in the reported observations. ${real.length - rated.length} candidate${real.length - rated.length === 1 ? "" : "s"} lack comparison data, so the closest rival cannot be established.`
+      : null;
 
   if (organicKeywords != null && organicKeywords > 0) {
     const share = intersections / organicKeywords;
-    if (share >= STRONG_OVERLAP_SHARE) {
+    if (share >= STRONG_OVERLAP_SHARE && share <= 1) {
       const pct = Math.round(share * 100);
       return {
-        read: `${domain} is your closest organic rival, sharing ${formatCount(intersections)} keywords -- ${pct}% of its own ${formatCount(organicKeywords)} ranked keywords overlap with yours.`,
+        read:
+          partialRead ??
+          `${domain} is your closest organic rival, sharing ${formatCount(intersections)} keywords -- ${pct}% of its own ${formatCount(organicKeywords)} ranked keywords overlap with yours.`,
         tone: "good",
         actions: [
           {
@@ -191,7 +197,9 @@ function buildDomainModeVerdict(
         ? `, a modest slice of its own ${formatCount(organicKeywords)} ranked keywords`
         : "";
     return {
-      read: `${domain} shares the most keywords with you among the competitors found (${formatCount(intersections)})${shareClause}.`,
+      read:
+        partialRead ??
+        `${domain} shares the most keywords with you among the competitors found (${formatCount(intersections)})${shareClause}.`,
       tone: "mixed",
       actions: [
         {
@@ -210,7 +218,9 @@ function buildDomainModeVerdict(
   }
 
   return {
-    read: `The closest match among the competitors found, ${domain}, shares only ${formatCount(intersections)} keyword${intersections === 1 ? "" : "s"} with you -- not enough overlap to call it a clear rival to chase.`,
+    read:
+      partialRead ??
+      `The closest match among the competitors found, ${domain}, shares only ${formatCount(intersections)} keyword${intersections === 1 ? "" : "s"} with you -- not enough overlap to call it a clear rival to chase.`,
     tone: "bad",
     actions: [
       {
@@ -241,14 +251,20 @@ function buildSerpModeVerdict(
     candidate.beatsYouCount > best.beatsYouCount ? candidate : best,
   );
   const { domain, beatsYouCount } = top;
+  const partialRead =
+    rated.length < real.length
+      ? `${domain} outranks you on ${formatCount(beatsYouCount)} keywords in the reported observations. ${real.length - rated.length} candidate${real.length - rated.length === 1 ? "" : "s"} lack comparison data, so the closest rival cannot be established.`
+      : null;
   const seedSize = input.seedSize ?? 0;
 
   if (seedSize > 0) {
     const share = beatsYouCount / seedSize;
-    if (share >= STRONG_OVERLAP_SHARE) {
+    if (share >= STRONG_OVERLAP_SHARE && share <= 1) {
       const pct = Math.round(share * 100);
       return {
-        read: `${domain} is your closest organic rival, outranking you on ${formatCount(beatsYouCount)} of your ${formatCount(seedSize)} tracked keywords -- ${pct}%.`,
+        read:
+          partialRead ??
+          `${domain} is your closest organic rival, outranking you on ${formatCount(beatsYouCount)} of your ${formatCount(seedSize)} tracked keywords -- ${pct}%.`,
         tone: "good",
         actions: [
           {
@@ -273,7 +289,9 @@ function buildSerpModeVerdict(
         ? `, out of ${formatCount(seedSize)} keywords tracked for this run`
         : "";
     return {
-      read: `${domain} outranks you on more of your keywords than any other competitor found (${formatCount(beatsYouCount)})${shareClause}.`,
+      read:
+        partialRead ??
+        `${domain} outranks you on more of your keywords than any other competitor found (${formatCount(beatsYouCount)})${shareClause}.`,
       tone: "mixed",
       actions: [
         {
@@ -292,7 +310,9 @@ function buildSerpModeVerdict(
   }
 
   return {
-    read: `The closest match among the competitors found, ${domain}, outranks you on only ${formatCount(beatsYouCount)} of your keywords -- not enough to call it a clear rival to chase.`,
+    read:
+      partialRead ??
+      `The closest match among the competitors found, ${domain}, outranks you on only ${formatCount(beatsYouCount)} of your keywords -- not enough to call it a clear rival to chase.`,
     tone: "bad",
     actions: [
       {
