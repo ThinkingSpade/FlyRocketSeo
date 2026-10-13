@@ -89,3 +89,31 @@ it("does not round invalid token counts or report an unconfirmed web search sett
     webSearch: null,
   });
 });
+it("reads the provider's typeless citation annotations while rejecting unsafe and unsupported annotations", async () => {
+  mocks.llmResponse.mockResolvedValue({
+    items: [
+      {
+        type: "message",
+        sections: [
+          {
+            text: "Answer",
+            annotations: [
+              {
+                url: "https://example.com/guide",
+                title: "Guide",
+                start_index: 0,
+                end_index: 6,
+              },
+              { url: "javascript:alert(1)", title: "Unsafe" },
+              { type: "tool_event", url: "https://unrelated.example" },
+            ],
+          },
+        ],
+      },
+    ],
+  });
+  const result = await explorePrompt(input, customer);
+  expect(result.results[0]).toMatchObject({
+    citations: [{ url: "https://example.com/guide", title: "Guide" }],
+  });
+});

@@ -235,7 +235,9 @@ function extractCitations(
     if (item.type !== "message") continue;
     for (const section of item.sections ?? []) {
       for (const annotation of section.annotations ?? []) {
-        if (annotation.type !== "citation") continue;
+        // DataForSEO's live response documents typeless URL annotations.
+        // Explicit unrelated annotation kinds still do not become links.
+        if (annotation.type != null && annotation.type !== "citation") continue;
         // Drop non-http(s) URLs — LLMs can be coaxed into emitting
         // `javascript:` payloads as "citations" and we render these as
         // <a href> in the UI.
