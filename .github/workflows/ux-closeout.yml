@@ -1,0 +1,105 @@
+name: UX closeout acceptance
+on:
+  create:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify:
+    if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'ux/closeout-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Record exact tested source
+        run: |
+          mkdir -p ux-checks
+          git rev-parse HEAD > ux-checks/code-commit.txt
+          git diff --stat cb43a397a7f3a337c238e2089d25d827a77a0fe6 HEAD > ux-checks/changed-files.txt
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Static checks
+        id: static
+        continue-on-error: true
+        run: pnpm run ci:check 2>&1 | tee ux-checks/static.log
+      - name: Unit tests
+        id: unit
+        continue-on-error: true
+        run: pnpm test 2>&1 | tee ux-checks/unit.log
+      - name: Build without deployment
+        id: build
+        continue-on-error: true
+        run: pnpm run build 2>&1 | tee ux-checks/build.log
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Mouse and touch export hit targets
+        id: component
+        continue-on-error: true
+        run: node scripts/ux/bulk-actions-browser.mjs 2>&1 | tee ux-checks/bulk-actions.log
+      - name: Prepare isolated application
+        run: |
+          mkdir -p ux-evidence
+          printf 'AUTH_MODE=local_noauth\nVITE_E2E_DOMAIN_FIXTURES=1\nVITE_E2E_KEYWORD_FIXTURES=1\nVITE_SHOW_DEVTOOLS=false\n' > .env.local
+          pnpm exec wrangler d1 migrations apply DB --local
+      - name: Real application browser checks
+        id: browser
+        continue-on-error: true
+        env:
+          AUTH_MODE: local_noauth
+          PORT: "3101"
+          WRANGLER_SEND_METRICS: "false"
+          NODE_OPTIONS: --max-old-space-size=3072
+        run: |
+          pnpm exec vite dev --host 127.0.0.1 --strictPort > ux-evidence/server.log 2>&1 &
+          for i in {1..80}; do if curl -s http://127.0.0.1:3101/ > /dev/null; then break; fi; sleep 2; done
+          node scripts/ux/browser-review.mjs 2>&1 | tee ux-checks/browser.log
+          node --input-type=module <<'JS'
+          import fs from 'node:fs';
+          const r = JSON.parse(fs.readFileSync('ux-evidence/results.json', 'utf8'));
+          const unexpected = r.failedRequests.filter(item => !(item.status === 404 && new URL(item.url).pathname === '/api/auth/get-session'));
+          fs.writeFileSync('ux-checks/network-summary.json', JSON.stringify({ totalFailed: r.failedRequests.length, knownLocalNoAuth404s: r.failedRequests.length - unexpected.length, unexpected }, null, 2));
+          if (r.fatal || r.consoleErrors.length || r.checks.length < 16 || r.checks.some(c => !c.pass) || r.screens.length < 43 || r.screens.some(s => s.error || s.documentOverflow) || unexpected.length) process.exit(1);
+          JS
+      - name: Record acceptance outcomes
+        if: always()
+        env:
+          STATIC: ${{ steps.static.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          COMPONENT: ${{ steps.component.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+        run: |
+          mkdir -p ux-checks
+          printf 'static=%s\nunit=%s\nbuild=%s\ncomponent=%s\nbrowser=%s\n' "$STATIC" "$UNIT" "$BUILD" "$COMPONENT" "$BROWSER" > ux-checks/outcomes.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ux-closeout-evidence
+          path: |
+            ux-evidence/
+            ux-bulk-evidence/
+            ux-checks/
+          retention-days: 14
+      - name: Enforce every acceptance gate
+        if: always()
+        env:
+          STATIC: ${{ steps.static.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          COMPONENT: ${{ steps.component.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+        run: |
+          test "$STATIC" = success
+          test "$UNIT" = success
+          test "$BUILD" = success
+          test "$COMPONENT" = success
+          test "$BROWSER" = success
