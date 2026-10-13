@@ -43,6 +43,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: isolated-postgresql-runtime
+          # Only the disposable runner's selected metadata/logs below are included.
+          include-hidden-files: true
           path: |
             test-results/postgres-runtime
             .tmp/postgres-runtime/runs/*/runtime.json
