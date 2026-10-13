@@ -1,0 +1,51 @@
+name: Isolated UX review environment
+
+# A branch-create event is intentional: commits carry [skip ci] to prevent
+# connected hosting services from deploying this development-only work.
+on:
+  create:
+
+permissions:
+  contents: read
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  prepare:
+    if: github.event.ref_type == 'branch' && github.event.ref == 'ux/product-quality-2026-10-13'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install the unchanged lockfile
+        run: pnpm install --frozen-lockfile
+      - name: Export a reproducible local review environment
+        run: |
+          mkdir -p /tmp/ux-review
+          git bundle create /tmp/ux-review/repository.bundle --all
+          git rev-parse HEAD > /tmp/ux-review/commit.txt
+          tar -czf /tmp/ux-review/dependencies.tar.gz node_modules
+          PNPM_ROOT=$(dirname "$(dirname "$(readlink -f "$(command -v pnpm)")")")
+          tar -czf /tmp/ux-review/pnpm.tar.gz -C "$PNPM_ROOT" .
+          sha256sum /tmp/ux-review/*.gz /tmp/ux-review/repository.bundle > /tmp/ux-review/SHA256SUMS
+      - uses: actions/upload-artifact@v4
+        with:
+          name: isolated-ux-review-environment
+          path: /tmp/ux-review/
+          retention-days: 1
+          compression-level: 0
+      - name: Baseline static checks
+        run: pnpm run ci:check
+      - name: Baseline tests
+        run: pnpm test
