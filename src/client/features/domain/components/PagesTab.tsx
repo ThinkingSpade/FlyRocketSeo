@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { Copy, Download, FileXls, Table } from "@phosphor-icons/react";
+import { Copy, Download, Table } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { DomainKeywordsPagination } from "@/client/features/domain/components/DomainKeywordsPagination";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
@@ -37,6 +37,8 @@ import {
   useAuthorizedRun,
 } from "@/client/lib/useMeteredQuery";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -176,8 +178,14 @@ export function PagesTab({
   const exportTable = useMemo(() => pagesToTable(rows), [rows]);
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
-    toast.success("Copied data");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
+      toast.success("Copied data");
+    } catch {
+      toast.error(
+        "Could not copy. Allow clipboard access or download CSV instead.",
+      );
+    }
   };
   const handleExportToSheets = () => {
     void exportTableToSheets({
@@ -186,17 +194,15 @@ export function PagesTab({
       feature: "domain_overview",
     });
   };
-  const handleDownload = (extension: "csv" | "xls") => {
+  const handleDownload = () => {
     downloadCsv(
-      `${domain}-pages.${extension}`,
+      `${domain}-pages.csv`,
       buildCsv(exportTable.headers, exportTable.rows),
     );
-    if (extension === "csv") {
-      captureClientEvent("data:export", {
-        source_feature: "domain_overview",
-        result_count: rows.length,
-      });
-    }
+    captureClientEvent("data:export", {
+      source_feature: "domain_overview",
+      result_count: rows.length,
+    });
   };
 
   return (
@@ -211,9 +217,14 @@ export function PagesTab({
           >
             Load pages
           </Button>
+          <p className="mt-2 text-xs text-base-content/70">
+            Uses research data from your provider. This may incur a charge.
+          </p>
         </div>
       ) : null}
-      {routeState.page === 1 ? <DomainPagesTreemap rows={rows} /> : null}
+      {run.authorized && !query.isError && routeState.page === 1 ? (
+        <DomainPagesTreemap rows={rows} />
+      ) : null}
       <DomainTableTabSurface
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((prev) => !prev)}
@@ -223,6 +234,17 @@ export function PagesTab({
         fallbackCount={rows.length}
         isLoading={isLoading}
         showTableLoading={showTableLoading}
+        awaitingRun={!run.authorized}
+        error={
+          query.isError ? (
+            <InlineQueryError
+              message={getStandardErrorMessage(query.error)}
+              onRetry={() => run.authorize()}
+              retrying={isLoading}
+              retryLabel="Retry · uses paid data"
+            />
+          ) : undefined
+        }
         exportActions={[
           {
             label: "Export to Sheets",
@@ -237,12 +259,7 @@ export function PagesTab({
           {
             label: "Download CSV",
             icon: <Download className="size-4" />,
-            onClick: () => handleDownload("csv"),
-          },
-          {
-            label: "Download Excel",
-            icon: <FileXls className="size-4" />,
-            onClick: () => handleDownload("xls"),
+            onClick: handleDownload,
           },
         ]}
         filterPanel={
@@ -262,6 +279,7 @@ export function PagesTab({
         }
         pagination={
           <DomainKeywordsPagination
+            rowCount={rows.length}
             page={routeState.page}
             pageSize={routeState.pageSize}
             totalCount={totalCount}

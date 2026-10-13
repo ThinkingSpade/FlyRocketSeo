@@ -132,7 +132,7 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
 
       <ul className="space-y-0.5">
         {steps.map((step) => (
-          <li key={step.key} className="flex items-center gap-2 py-1">
+          <li key={step.key} className="flex flex-wrap items-center gap-2 py-1">
             {step.done ? (
               <CheckCircle className="size-4 shrink-0 text-success" />
             ) : (
@@ -150,7 +150,7 @@ export function GettingStartedCard({ projectId }: { projectId: string }) {
             {step.done ? null : (
               <Link
                 {...step.linkProps}
-                className="ml-auto shrink-0 text-xs font-medium text-primary hover:underline"
+                className="app-touch-target ml-auto inline-flex shrink-0 items-center rounded text-xs font-medium text-primary hover:underline"
               >
                 {step.cta} →
               </Link>

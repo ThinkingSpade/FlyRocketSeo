@@ -1,4 +1,4 @@
-import { chromium } from "@playwright/test";
+import { chromium, expect } from "@playwright/test";
 import { mkdir, writeFile } from "node:fs/promises";
 
 // Real application + router + local D1; existing test-only keyword/domain
@@ -38,7 +38,19 @@ const check = async (name, test) => {
     const details = await test();
     result.checks.push({ name, pass: details !== false, details });
   } catch (error) {
-    result.checks.push({ name, pass: false, error: String(error) });
+    result.checks.push({
+      name,
+      pass: false,
+      error: String(error),
+      url: page.url(),
+      activeElement: await page
+        .evaluate(() => document.activeElement?.outerHTML)
+        .catch(() => null),
+      openDialogs: await page
+        .getByRole("dialog")
+        .allTextContents()
+        .catch(() => []),
+    });
   }
 };
 async function settle() {
@@ -111,6 +123,20 @@ try {
       (await page.getByRole("main").count()) === 1 &&
       (await page.getByRole("link", { name: "Skip to content" }).count()) === 1,
   );
+  await check(
+    "Dashboard leads with performance and exposes next actions",
+    async () => {
+      const main = page.getByRole("main");
+      const performance = main.getByText("Search performance · last 28 days", {
+        exact: true,
+      });
+      const actions = main.getByText("What to work on next", { exact: true });
+      await expect(actions).toBeVisible();
+      const p = await performance.first().boundingBox();
+      const a = await actions.boundingBox();
+      return !!p && !!a && p.y < a.y;
+    },
+  );
   const paths = [
     "",
     "opportunities",
@@ -175,30 +201,117 @@ try {
     },
   );
   await capture("domain-fixture");
-  await check("Sortable columns expose aria-sort", async () => {
-    const sort = page.getByRole("button", {
-      name: "Sort by Volume",
-      exact: true,
-    });
-    await sort.waitFor({ timeout: 20000 });
-    await sort.click();
-    await page.waitForTimeout(900);
-    return (
-      (await sort.locator("xpath=ancestor::th").getAttribute("aria-sort")) ===
-        "ascending" ||
-      (await sort.locator("xpath=ancestor::th").getAttribute("aria-sort")) ===
-        "descending"
-    );
-  });
+  await check(
+    "Keyboard help on sortable headers stays in the viewport",
+    async () => {
+      const sort = page.getByRole("button", {
+        name: "Sort by Volume",
+        exact: true,
+      });
+      await sort.focus();
+      const tooltip = page.getByRole("tooltip");
+      await expect(tooltip).toBeVisible();
+      await expect(sort).toHaveAttribute("aria-describedby", /.+/);
+      const box = await tooltip.boundingBox();
+      if (!box || box.x < 0 || box.y < 0 || box.x + box.width > 1440)
+        return false;
+      await page.keyboard.press("Escape");
+      await expect(tooltip).not.toBeVisible();
+      return true;
+    },
+  );
+  await check(
+    "Sorting requests new consent and exposes aria-sort after the authorized load",
+    async () => {
+      const sort = page.getByRole("button", {
+        name: "Sort by Volume",
+        exact: true,
+      });
+      await sort.click();
+      await expect(
+        page.getByText("Results not loaded", { exact: true }),
+      ).toBeVisible();
+      await expect(
+        page.getByRole("button", { name: "Export", exact: true }),
+      ).not.toBeVisible();
+      await page.getByRole("button", { name: /Load keywords/i }).click();
+      await expect(sort).toBeVisible({ timeout: 30000 });
+      await expect(sort.locator("xpath=ancestor::th")).toHaveAttribute(
+        "aria-sort",
+        /^(ascending|descending)$/,
+      );
+      return true;
+    },
+  );
+  await capture("domain-sorted");
+  await check(
+    "CSV export downloads the displayed fixture rows, not a mislabeled Excel file",
+    async () => {
+      await page.getByRole("button", { name: "Export", exact: true }).click();
+      await expect(page.getByRole("menuitem", { name: /Excel/i })).toHaveCount(
+        0,
+      );
+      const pendingDownload = page.waitForEvent("download");
+      await page
+        .getByRole("menuitem", { name: "Download CSV", exact: true })
+        .click();
+      const download = await pendingDownload;
+      const stream = await download.createReadStream();
+      if (!stream) return false;
+      const chunks = [];
+      for await (const chunk of stream) chunks.push(chunk);
+      const content = Buffer.concat(chunks).toString("utf8");
+      return (
+        download.suggestedFilename() === "example.com-keywords.csv" &&
+        content.includes("primary sample query") &&
+        content.split("\n").length === 7
+      );
+    },
+  );
+  await check(
+    "Clipboard denial produces useful feedback and leaves results usable",
+    async () => {
+      await page.evaluate(() => {
+        Object.defineProperty(navigator.clipboard, "writeText", {
+          configurable: true,
+          value: () =>
+            Promise.reject(
+              new DOMException("UX test clipboard denial", "NotAllowedError"),
+            ),
+        });
+      });
+      await page.getByRole("button", { name: "Export", exact: true }).click();
+      await page
+        .getByRole("menuitem", { name: "Copy data (JSON)", exact: true })
+        .click();
+      await expect(
+        page.getByText(
+          "Could not copy. Allow clipboard access or download CSV instead.",
+          { exact: true },
+        ),
+      ).toBeVisible();
+      return await page
+        .getByRole("button", { name: "Sort by Volume", exact: true })
+        .isVisible();
+    },
+  );
   await check(
     "Command search opens and supports keyboard navigation",
     async () => {
       await page.keyboard.press("Control+k");
       const input = page.getByRole("combobox", { name: "Search commands" });
       await input.waitFor();
+      await expect(input).toBeFocused();
       await input.fill("Site Audit");
-      await page.keyboard.press("Enter");
-      await page.waitForURL(/\/audit$/);
+      await expect(input).toHaveValue("Site Audit");
+      await expect(
+        page.getByRole("option", { name: "Site Audit", exact: true }),
+      ).toHaveAttribute("aria-selected", "true");
+      await input.press("Enter");
+      await page.waitForURL(
+        (url) => url.pathname.replace(/\/$/, "") === `/p/${projectId}/audit`,
+        { waitUntil: "domcontentloaded" },
+      );
       return page.url().includes(`/p/${projectId}/`);
     },
   );
@@ -217,23 +330,80 @@ try {
     `http://127.0.0.1:3101/p/${projectId}/domain?domain=example.com&loc=2840&lang=en&tab=keywords`,
   );
   await settle();
-  for (const width of [1280, 1024, 768, 390]) {
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await page.getByRole("button", { name: /Load keywords/i }).click();
+  await expect(
+    page.getByRole("button", { name: "Sort by Volume", exact: true }),
+  ).toBeVisible({ timeout: 30000 });
+  for (const width of [1440, 1280, 1024, 768, 390]) {
     await page.setViewportSize({ width, height: 900 });
     await settle();
     await capture(`domain-${width}`);
   }
+  await check(
+    "Mobile selection actions and their menu fit the viewport",
+    async () => {
+      await page
+        .getByRole("checkbox", { name: "Select row", exact: true })
+        .first()
+        .check();
+      const bar = page.getByRole("toolbar", {
+        name: "Bulk actions",
+        exact: true,
+      });
+      await expect(bar).toBeVisible();
+      const box = await bar.boundingBox();
+      if (
+        !box ||
+        box.x < 0 ||
+        box.x + box.width > 390 ||
+        box.y + box.height > 900
+      )
+        return false;
+      await bar.getByRole("button", { name: "Export", exact: true }).click();
+      const menu = page.getByRole("menu");
+      await expect(menu).toBeVisible();
+      const menuBox = await menu.boundingBox();
+      await capture("domain-mobile-selection");
+      const fits =
+        !!menuBox &&
+        menuBox.x >= 0 &&
+        menuBox.x + menuBox.width <= 390 &&
+        menuBox.y >= 0;
+      await page.keyboard.press("Escape");
+      await bar
+        .getByRole("button", { name: "Clear selection", exact: true })
+        .click();
+      await expect(bar).not.toBeVisible();
+      return fits;
+    },
+  );
   await check("Mobile navigation is a modal dialog", async () => {
     await page.getByRole("button", { name: "Toggle sidebar" }).click();
     return await page
       .getByRole("dialog", { name: "Navigation", exact: true })
       .isVisible();
   });
-  await check("Mobile navigation contains keyboard focus", async () => {
-    for (let i = 0; i < 38; i++) await page.keyboard.press("Tab");
-    return page.evaluate(
-      () => !!document.activeElement?.closest('[role="dialog"]'),
-    );
-  });
+  await check(
+    "Mobile navigation contains forward and reverse keyboard focus",
+    async () => {
+      for (const key of ["Tab", "Shift+Tab"]) {
+        for (let i = 0; i < 38; i++) {
+          await page.keyboard.press(key);
+          // Base UI uses a focus guard that forwards on the following frame.
+          // Assert the settled focus after EVERY step, not an arbitrary instant.
+          await expect
+            .poll(() =>
+              page.evaluate(
+                () => !!document.activeElement?.closest('[role="dialog"]'),
+              ),
+            )
+            .toBe(true);
+        }
+      }
+      return true;
+    },
+  );
   await capture("mobile-navigation");
   await check("Escape closes navigation and restores its trigger", async () => {
     await page.keyboard.press("Escape");
@@ -271,9 +441,21 @@ try {
   await page.goto(`http://127.0.0.1:3101/p/${projectId}/`);
   await settle();
   if (await dismiss.isVisible()) await dismiss.click();
-  await page.evaluate(() =>
-    document.documentElement.setAttribute("data-theme", "flyrocketseo-dark"),
-  );
+  await check("Theme preference changes through the command menu", async () => {
+    await page.keyboard.press("Control+k");
+    const input = page.getByRole("combobox", { name: "Search commands" });
+    await expect(input).toBeFocused();
+    await input.fill("Theme: Dark");
+    await expect(
+      page.getByRole("option", { name: "Theme: Dark", exact: true }),
+    ).toBeVisible();
+    await input.press("Enter");
+    await expect(page.locator("html")).toHaveAttribute(
+      "data-theme",
+      "flyrocketseo-dark",
+    );
+    return true;
+  });
   await capture("overview-dark-reduced-motion");
   await check(
     "Reduced motion keeps page content immediately visible",
@@ -301,6 +483,8 @@ try {
 }
 if (
   result.fatal ||
-  (process.env.UX_ASSERT === "1" && result.checks.some((check) => !check.pass))
+  result.consoleErrors.length > 0 ||
+  result.screens.some((screen) => screen.error || screen.documentOverflow) ||
+  result.checks.some((check) => !check.pass)
 )
   process.exitCode = 1;

@@ -22,7 +22,10 @@ type Props = {
   filterPanel?: ReactNode;
   isLoading: boolean;
   showTableLoading: boolean;
-  children: ReactNode;
+  /** An unapproved request is not an empty result. */
+  awaitingRun?: boolean;
+  error?: ReactNode;
+  children?: ReactNode;
   pagination: ReactNode;
 };
 
@@ -37,12 +40,15 @@ export function DomainTableTabSurface({
   filterPanel,
   isLoading,
   showTableLoading,
+  awaitingRun = false,
+  error,
   children,
   pagination,
 }: Props) {
+  const unavailable = awaitingRun || Boolean(error);
   return (
     <>
-      <div className="flex items-center gap-2 px-4 py-2 border-b border-base-300">
+      <div className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-base-300">
         <Button
           size="sm"
           variant={showFilters ? "secondary" : "ghost"}
@@ -60,15 +66,21 @@ export function DomainTableTabSurface({
           ) : null}
         </Button>
         <span className="text-sm text-base-content/60">
-          {(totalCount ?? fallbackCount).toLocaleString()} {countLabel}
+          {unavailable
+            ? "Results not loaded"
+            : isLoading
+              ? "Loading results…"
+              : `${(totalCount ?? fallbackCount).toLocaleString()} ${countLabel}`}
         </span>
         <div className="flex-1" />
-        <TableExportMenu actions={exportActions} />
+        {!unavailable && !isLoading && fallbackCount > 0 ? (
+          <TableExportMenu actions={exportActions} />
+        ) : null}
       </div>
 
       {filterPanel}
 
-      <div className="p-4">
+      <div className="min-h-32 p-4" aria-busy={isLoading}>
         <div
           className={
             isLoading && !showTableLoading
@@ -76,11 +88,26 @@ export function DomainTableTabSurface({
               : "transition-opacity"
           }
         >
-          {showTableLoading ? <TableLoadingRows /> : children}
+          {error ? (
+            error
+          ) : awaitingRun ? (
+            <div
+              role="status"
+              className="mx-auto max-w-md py-6 text-center text-sm text-base-content/70"
+            >
+              Choose your filters, then load results for these settings.
+              Changing sorting, filters or pages requires a new confirmation;
+              nothing runs automatically.
+            </div>
+          ) : showTableLoading ? (
+            <TableLoadingRows />
+          ) : (
+            children
+          )}
         </div>
       </div>
 
-      {pagination}
+      {!unavailable ? pagination : null}
     </>
   );
 }

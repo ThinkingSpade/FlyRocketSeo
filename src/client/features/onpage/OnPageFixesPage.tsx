@@ -271,7 +271,7 @@ export function OnPageFixesPage({
             }}
           />
         ) : rows.length === 0 && !hasCompletedAudit ? (
-          <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
+          <div className="flex flex-col items-center rounded-lg border border-dashed border-base-300 p-8 text-center">
             <p className="text-sm font-medium">Run a site audit first</p>
             <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/60">
               On-page fixes are generated from the project&apos;s latest
@@ -287,14 +287,14 @@ export function OnPageFixesPage({
             </Link>
           </div>
         ) : emptyResult ? (
-          <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
+          <div className="flex flex-col items-center rounded-lg border border-dashed border-base-300 p-8 text-center">
             <p className="text-sm font-medium">{emptyResult.title}</p>
             <p className="mx-auto mt-1 max-w-xl text-sm text-base-content/60">
               {emptyResult.body}
             </p>
           </div>
         ) : rows.length === 0 ? (
-          <div className="rounded-lg border border-dashed border-base-300 p-8 text-center">
+          <div className="flex flex-col items-center rounded-lg border border-dashed border-base-300 p-8 text-center">
             <p className="text-sm text-base-content/70">
               Your audit is ready. Generate fixes from its stored crawl data
               {gscConnectionQuery.data?.connected

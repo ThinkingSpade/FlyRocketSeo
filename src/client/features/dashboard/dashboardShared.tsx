@@ -58,9 +58,9 @@ export function DashboardCard({
   children: ReactNode;
 }) {
   return (
-    <section className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+    <section className="relative flex min-w-0 flex-col rounded-xl bg-base-100 border border-base-300">
       <div className="flex flex-auto flex-col gap-3 p-4 text-sm">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <h2 className="flex items-center gap-2 text-sm font-medium">
             <Icon className="size-4 text-base-content/60" />
             {title}
@@ -99,13 +99,13 @@ export function DeltaStatTile({
   deltaTitle?: string;
 }) {
   return (
-    <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
+    <div className="relative flex min-w-0 flex-col rounded-xl bg-base-100 border border-base-300">
       <div className="flex flex-auto flex-col p-4 gap-2 text-sm">
         <p className="text-xs uppercase tracking-wide text-base-content/60">
           {label}
         </p>
-        <div className="flex items-baseline gap-2">
-          <p className="text-2xl font-semibold">{value}</p>
+        <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+          <p className="text-2xl font-semibold tabular-nums">{value}</p>
           {delta ? (
             <span
               className={`text-xs font-medium ${delta.positive ? "text-success" : "text-error"}`}
@@ -134,7 +134,7 @@ export function CardError({ error }: { error: unknown }) {
 
 export function CardEmpty({ children }: { children: ReactNode }) {
   return (
-    <div className="px-4 py-8 text-center text-sm text-base-content/60">
+    <div className="flex min-h-24 flex-col items-center justify-center px-2 py-5 text-center text-sm text-base-content/70">
       {children}
     </div>
   );
@@ -147,7 +147,7 @@ export function CardTilesSkeleton({ count = 4 }: { count?: number }) {
       {Array.from({ length: count }).map((_, index) => (
         <div
           key={index}
-          className="relative flex flex-col rounded-xl bg-base-100 border border-base-300"
+          className="relative flex min-w-0 flex-col rounded-xl bg-base-100 border border-base-300"
         >
           <div className="flex flex-auto flex-col gap-2 p-4 text-sm">
             <div className="skeleton h-3 w-16" />

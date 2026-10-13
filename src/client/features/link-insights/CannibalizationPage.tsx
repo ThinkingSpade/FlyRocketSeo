@@ -121,7 +121,7 @@ export function CannibalizationPage({
               params={{ projectId }}
               className={`${buttonVariants({ variant: "primary", size: "sm" })} mt-2`}
             >
-              Go to GSC Insights
+              Go to Search Performance
             </Link>
           </div>
         </div>

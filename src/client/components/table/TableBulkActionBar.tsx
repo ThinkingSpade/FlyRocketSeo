@@ -20,12 +20,12 @@ export function TableBulkActionBar({
 
   const wrapperClass =
     placement === "fixed"
-      ? "pointer-events-none fixed inset-x-0 bottom-6 z-30 flex justify-center px-4"
+      ? "pointer-events-none fixed inset-x-0 bottom-[max(1rem,env(safe-area-inset-bottom))] z-30 flex justify-center px-4"
       : "flex justify-center";
   const toolbarClass =
     placement === "fixed"
-      ? "pointer-events-auto flex items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-300/85 shadow-2xl backdrop-blur"
-      : "flex items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-200";
+      ? "pointer-events-auto flex max-w-full flex-wrap items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-300/85 shadow-2xl backdrop-blur"
+      : "flex max-w-full flex-wrap items-stretch overflow-visible rounded-xl border border-base-content/15 bg-base-200";
 
   return (
     <div className={wrapperClass}>
@@ -34,12 +34,19 @@ export function TableBulkActionBar({
           <button
             type="button"
             aria-label="Clear selection"
-            className="-ml-1 rounded p-1 text-base-content/55 hover:bg-base-content/10 hover:text-base-content"
+            className="app-touch-target -ml-1 rounded p-1 text-base-content/55 hover:bg-base-content/10 hover:text-base-content"
             onClick={onClear}
           >
             <X className="size-3.5" />
           </button>
-          <span className="font-medium tabular-nums">{selectedCount}</span>
+          <span
+            role="status"
+            aria-live="polite"
+            aria-atomic="true"
+            className="font-medium tabular-nums"
+          >
+            {selectedCount}
+          </span>
           <span className="text-base-content/60">{selectedLabel}</span>
         </div>
         {actions}
@@ -71,7 +78,7 @@ export function TableBulkActionButton({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm disabled:opacity-50 ${color}`}
+      className={`app-touch-target inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm disabled:opacity-50 ${color}`}
     >
       {icon}
       {children}
@@ -98,7 +105,7 @@ export function TableBulkExportMenu({
           <button
             type="button"
             disabled={busy}
-            className="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-base-content/85 hover:bg-base-content/10 disabled:opacity-50"
+            className="app-touch-target inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm text-base-content/85 hover:bg-base-content/10 disabled:opacity-50"
           >
             {busy ? (
               <CircleNotch className="size-3.5 animate-spin" />

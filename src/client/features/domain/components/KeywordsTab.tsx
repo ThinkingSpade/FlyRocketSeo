@@ -1,12 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import {
-  Copy,
-  Download,
-  FileXls,
-  FloppyDisk,
-  Table,
-} from "@phosphor-icons/react";
+import { Copy, Download, FloppyDisk, Table } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import {
   TableBulkActionBar,
@@ -49,6 +43,8 @@ import {
   useAuthorizedRun,
 } from "@/client/lib/useMeteredQuery";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -181,6 +177,7 @@ export function KeywordsTab({
 
   const saveMutation = useSaveKeywordsMutation({ projectId, queryClient });
   const handleSaveKeywords = useCallback(() => {
+    if (saveMutation.isPending) return;
     saveSelectedKeywords({
       selectedKeywords,
       filteredKeywords: rows,
@@ -195,6 +192,7 @@ export function KeywordsTab({
     routeState.locationCode,
     rows,
     saveMutation.mutate,
+    saveMutation.isPending,
     selectedKeywords,
   ]);
 
@@ -234,8 +232,14 @@ export function KeywordsTab({
   );
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
-    toast.success("Copied data");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
+      toast.success("Copied data");
+    } catch {
+      toast.error(
+        "Could not copy. Allow clipboard access or download CSV instead.",
+      );
+    }
   };
   const handleExportToSheets = () => {
     void exportTableToSheets({
@@ -244,17 +248,15 @@ export function KeywordsTab({
       feature: "domain_overview",
     });
   };
-  const handleDownload = (extension: "csv" | "xls") => {
+  const handleDownload = () => {
     downloadCsv(
-      `${domain}-keywords.${extension}`,
+      `${domain}-keywords.csv`,
       buildCsv(exportTable.headers, exportTable.rows),
     );
-    if (extension === "csv") {
-      captureClientEvent("data:export", {
-        source_feature: "domain_overview",
-        result_count: rows.length,
-      });
-    }
+    captureClientEvent("data:export", {
+      source_feature: "domain_overview",
+      result_count: rows.length,
+    });
   };
   const handleExportSelectionToSheets = () => {
     void exportTableToSheets({
@@ -287,6 +289,9 @@ export function KeywordsTab({
           >
             Load keywords
           </Button>
+          <p className="mt-2 text-xs text-base-content/70">
+            Uses research data from your provider. This may incur a charge.
+          </p>
         </div>
       ) : null}
       <TableBulkActionBar
@@ -297,9 +302,9 @@ export function KeywordsTab({
             <TableBulkActionButton
               icon={<FloppyDisk className="size-3.5" />}
               onClick={handleSaveKeywords}
-              disabled={!canSaveKeywords}
+              disabled={!canSaveKeywords || saveMutation.isPending}
             >
-              Save Keywords
+              {saveMutation.isPending ? "Saving…" : "Save keywords"}
             </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
@@ -328,6 +333,17 @@ export function KeywordsTab({
         fallbackCount={rows.length}
         isLoading={isLoading}
         showTableLoading={showTableLoading}
+        awaitingRun={!run.authorized}
+        error={
+          query.isError ? (
+            <InlineQueryError
+              message={getStandardErrorMessage(query.error)}
+              onRetry={() => run.authorize()}
+              retrying={isLoading}
+              retryLabel="Retry · uses paid data"
+            />
+          ) : undefined
+        }
         exportActions={[
           {
             label: "Export to Sheets",
@@ -342,12 +358,7 @@ export function KeywordsTab({
           {
             label: "Download CSV",
             icon: <Download className="size-4" />,
-            onClick: () => handleDownload("csv"),
-          },
-          {
-            label: "Download Excel",
-            icon: <FileXls className="size-4" />,
-            onClick: () => handleDownload("xls"),
+            onClick: handleDownload,
           },
         ]}
         filterPanel={
@@ -367,6 +378,7 @@ export function KeywordsTab({
         }
         pagination={
           <DomainKeywordsPagination
+            rowCount={rows.length}
             page={routeState.page}
             pageSize={routeState.pageSize}
             totalCount={totalCount}

@@ -66,6 +66,7 @@ function DomainKeywordsTableComponent({
         header: () => (
           <SortableHeader
             label="Rank"
+            helpText="The domain’s position in the provider’s captured search results. Lower is better; a missing value is unknown."
             isActive={sortMode === "rank"}
             order={currentSortOrder}
             onClick={() => onSortClick("rank")}
@@ -77,6 +78,7 @@ function DomainKeywordsTableComponent({
         header: () => (
           <SortableHeader
             label="Volume"
+            helpText="Estimated average monthly searches in the selected market, not visits to this website."
             isActive={sortMode === "volume"}
             order={currentSortOrder}
             onClick={() => onSortClick("volume")}
@@ -88,6 +90,7 @@ function DomainKeywordsTableComponent({
         header: () => (
           <SortableHeader
             label="Traffic"
+            helpText="Estimated organic visits for this keyword from the research provider. This is not measured Search Console traffic."
             isActive={sortMode === "traffic"}
             order={currentSortOrder}
             onClick={() => onSortClick("traffic")}

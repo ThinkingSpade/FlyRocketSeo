@@ -1,3 +1,4 @@
+import { domainPaginationRange } from "./domainPaginationRange";
 import { CaretLeft, CaretRight } from "@phosphor-icons/react";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
@@ -6,6 +7,7 @@ import { Loader } from "@cloudflare/kumo/components/loader";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
 
 type Props = {
+  rowCount: number;
   page: number;
   pageSize: number;
   totalCount: number | null;
@@ -15,21 +17,8 @@ type Props = {
   onPageSizeChange: (nextPageSize: number) => void;
 };
 
-function formatRange(
-  page: number,
-  pageSize: number,
-  totalCount: number | null,
-) {
-  const start = (page - 1) * pageSize + 1;
-  if (totalCount == null) {
-    return `${start.toLocaleString()}–${(start + pageSize - 1).toLocaleString()}`;
-  }
-  if (totalCount === 0) return "0";
-  const end = Math.min(totalCount, start + pageSize - 1);
-  return `${start.toLocaleString()}–${end.toLocaleString()} of ${totalCount.toLocaleString()}`;
-}
-
 export function DomainKeywordsPagination({
+  rowCount,
   page,
   pageSize,
   totalCount,
@@ -47,7 +36,7 @@ export function DomainKeywordsPagination({
     <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2 text-sm text-base-content/70 tabular-nums">
         <span role="status" aria-live="polite" aria-atomic="true">
-          {formatRange(page, pageSize, totalCount)}
+          {domainPaginationRange(page, pageSize, totalCount, rowCount)}
         </span>
         {isLoading ? <Loader size="sm" /> : null}
       </div>
