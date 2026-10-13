@@ -50,7 +50,7 @@ test("keyword search filters, sorting, CSV and saving use the real page and proj
   expect(download.suggestedFilename()).toBe("keyword-research.csv");
   const csv = await readFile(await download.path(), "utf8");
   expect(csv.split(/\r?\n/)[0].replaceAll('"', "")).toBe(
-    "Keyword,Volume,CPC,Competition,Score,Intent",
+    "Keyword,Volume,CPC,Competition,Score,Intent,Source,Project ID,Location Code,Language,Clickstream,Fetched At",
   );
   expect(csv).toContain("acceptance keyword tools");
   await page

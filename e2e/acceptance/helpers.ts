@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { ACCEPTANCE_PASSWORD, ORG_A, ORG_B } from "./data";
 
 function isFixtureAsset(url: URL) {
@@ -88,4 +88,45 @@ export async function dismissOldSetupModal(page: Page) {
   const modal = page.getByRole("dialog", { name: "One quick setup step" });
   if (await modal.isVisible())
     await modal.getByRole("button", { name: "Dismiss", exact: true }).click();
+}
+
+/** Hold latency at the browser transport without replacing the real response. */
+export async function submitWithPendingCheck(
+  page: Page,
+  rpcPrefix: string,
+  submit: Locator,
+  pendingControl: Locator = submit,
+) {
+  // Loading icons change accessible button names; retain the actual DOM
+  // control while verifying its connected, disabled state under a held RPC.
+  const pendingElement = await pendingControl.elementHandle();
+  if (!pendingElement) throw new Error("Pending control was not found");
+  let requested = false;
+  let release!: () => void;
+  const ready = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const handler: Parameters<Page["route"]>[1] = async (route) => {
+    if (serverFunctionName(route.request().url())?.startsWith(rpcPrefix)) {
+      requested = true;
+      await ready;
+    }
+    await route.fallback();
+  };
+  await page.route("**/_serverFn/**", handler);
+  try {
+    await submit.click();
+    await expect.poll(() => requested).toBe(true);
+    await expect
+      .poll(() =>
+        pendingElement.evaluate(
+          (element) => element.isConnected && element.matches(":disabled"),
+        ),
+      )
+      .toBe(true);
+  } finally {
+    release();
+    await page.unroute("**/_serverFn/**", handler);
+    await pendingElement.dispose();
+  }
 }

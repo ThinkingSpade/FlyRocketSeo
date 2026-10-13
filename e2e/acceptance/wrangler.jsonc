@@ -12,7 +12,7 @@
     "GOOGLE_CLIENT_SECRET": "acceptance-not-a-real-oauth-secret",
     "BYPASS_EMAIL_VERIFICATION": "true",
     "HOSTED_ALLOWED_EMAILS": "acceptance-a@example.com,acceptance-b@example.com",
-    "DATAFORSEO_API_KEY": "",
+    "DATAFORSEO_API_KEY": "acceptance-fake-dataforseo-key",
     "OPENROUTER_API_KEY": "",
     "AUTUMN_SECRET_KEY": "",
     "POSTHOG_PUBLIC_KEY": "",

@@ -33,6 +33,8 @@ export default defineConfig({
     command: "node scripts/acceptance-server.mjs",
     url: "http://localhost:3102",
     reuseExistingServer: false,
-    timeout: 180_000,
+    // Fresh D1/R2 seeding and cold workerd startup can exceed three minutes
+    // on Windows; application action/assertion timeouts stay unchanged.
+    timeout: 300_000,
   },
 });

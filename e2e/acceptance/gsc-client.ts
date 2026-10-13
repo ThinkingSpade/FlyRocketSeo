@@ -27,6 +27,7 @@ export function createGscClient({ userId }: { userId: string }) {
         JSON.stringify({ userId, siteUrl, request }),
       );
       const dimensions = request.dimensions ?? [];
+      const operationScope = siteUrl === "sc-domain:operation.example";
       const page =
         request.dimensionFilterGroups
           ?.flatMap((group) => group.filters)
@@ -50,6 +51,29 @@ export function createGscClient({ userId }: { userId: string }) {
         ctr: 0.024,
         position: 8,
       };
+      if (operationScope && !request.startRow) {
+        const paths = ["guide", "healthy"];
+        return {
+          rows: paths.map((path, index) => ({
+            ...row,
+            keys: dimensions.map((dimension) =>
+              dimension === "page"
+                ? `https://operation.example/${path}`
+                : dimension === "query"
+                  ? "operation rocket guide"
+                  : dimension === "country"
+                    ? "usa"
+                    : dimension === "device"
+                      ? "DESKTOP"
+                      : request.endDate,
+            ),
+            clicks: index === 0 ? 24 : 20,
+            impressions: index === 0 ? 1000 : 300,
+            position: index === 0 ? 8 : 11,
+          })),
+          responseAggregationType: request.aggregationType ?? "byPage",
+        };
+      }
       return {
         rows: request.startRow
           ? []

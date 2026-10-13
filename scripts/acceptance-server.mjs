@@ -73,6 +73,7 @@ const seed = spawn(
 mirror(seed);
 seed.on("exit", (code) => {
   if (code !== 0) process.exit(code ?? 1);
+  console.log("Starting isolated acceptance Vite runtime.");
   const server = spawn(
     process.execPath,
     [

@@ -1,5 +1,6 @@
 import { seedEvidenceStorage } from "./seed-evidence-storage";
 import { seedProviderRuns } from "./seed-provider-runs";
+import { seedOperationData } from "./seed-operation-data";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { getPlatformProxy } from "wrangler";
@@ -263,6 +264,7 @@ try {
   }
   await seedEvidenceStorage(db, env.R2, historyFinding, env.DB);
   await seedProviderRuns(db, env.R2);
+  await seedOperationData(db, env.R2);
   const pagingEvidence: EvidenceSnapshot = {
     ...historyEvidence,
     scope: {
@@ -326,8 +328,9 @@ try {
       .values(pagingItems.slice(offset, offset + 5));
   }
   console.log(
-    "Seeded isolated acceptance D1: two credential users, two organizations, four projects, fixture GSC grant, audit and bounded work lists.",
+    "Seeded isolated acceptance D1: two credential users, two organizations, five projects, fixture GSC grants, audit, rank snapshots and bounded work lists.",
   );
 } finally {
   await dispose();
+  console.log("Disposed isolated acceptance seeding runtime.");
 }

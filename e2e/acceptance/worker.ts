@@ -1,6 +1,7 @@
 // Test-only entry point: delegates all inbound requests and authorization to
 // the actual app while rejecting every external server-side subrequest.
 import app from "../../src/server";
+import { providerFixtureResponse } from "./provider-transport";
 export {
   SiteAuditWorkflow,
   RankCheckWorkflow,
@@ -11,6 +12,17 @@ export {
 const nativeFetch = globalThis.fetch.bind(globalThis);
 globalThis.fetch = async (input, init) => {
   const url = new URL(input instanceof Request ? input.url : String(input));
+  const providerFixture = await providerFixtureResponse(url, init);
+  if (providerFixture) return providerFixture;
+  if (
+    url.origin === "https://operation.example" &&
+    ["/guide", "/healthy"].includes(url.pathname)
+  ) {
+    return new Response(
+      "<html><main><h1>Operation rocket guide</h1><p>Operation rocket guide explains choosing launch equipment.</p></main></html>",
+      { headers: { "Content-Type": "text/html" } },
+    );
+  }
   if (url.origin === "https://primary.example" && url.pathname === "/guide") {
     return new Response(
       '<html><body><main><h1>Rocket guide</h1><p>This rocket guide explains launch preparation and choosing useful rocket equipment for a small team.</p><a href="/existing">Existing destination</a></main></body></html>',
@@ -20,7 +32,9 @@ globalThis.fetch = async (input, init) => {
   if (
     url.origin === "https://cloudflare-dns.com" &&
     url.pathname === "/dns-query" &&
-    url.searchParams.get("name") === "primary.example"
+    ["primary.example", "operation.example"].includes(
+      url.searchParams.get("name") ?? "",
+    )
   ) {
     return Response.json({
       Status: 0,

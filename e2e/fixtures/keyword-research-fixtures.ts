@@ -53,8 +53,38 @@ export function getKeywordResearchFixture(data: ResearchKeywordsInput) {
     makeRow(`${seedKeyword} platform`, 8),
     makeRow(`${seedKeyword} generator`, 9),
   ];
+  if (seedKeyword === "contract keyword") {
+    rows.splice(
+      0,
+      rows.length,
+      makeRow("contract keyword unknown", 0, {
+        searchVolume: null,
+        cpc: null,
+        competition: null,
+        keywordDifficulty: null,
+        trend: [{ year: 2026, month: 9, searchVolume: null }],
+      }),
+      makeRow("contract keyword zero", 1, {
+        searchVolume: 0,
+        cpc: 0,
+        competition: 0,
+        keywordDifficulty: 0,
+        trend: [{ year: 2026, month: 9, searchVolume: 0 }],
+      }),
+    );
+  }
 
   return {
+    contractVersion: 2 as const,
+    fetchedAt: "2026-10-01T12:00:00.000Z",
+    dataSource: "DataForSEO Labs" as const,
+    scope: {
+      projectId: data.projectId,
+      seedKeyword,
+      locationCode: data.locationCode,
+      languageCode: data.languageCode,
+      clickstream: data.clickstream,
+    },
     rows,
     source: "related" as const,
     usedFallback: false,

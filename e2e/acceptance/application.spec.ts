@@ -257,6 +257,9 @@ test("a page action and progress survive a reload without crossing projects", as
   await item
     .getByRole("button", { name: "Save progress", exact: true })
     .click();
+  await expect(
+    item.getByText("Track observed results", { exact: true }),
+  ).toBeVisible({ timeout: 45_000 });
   await item.getByText("Track observed results", { exact: true }).click();
   await item.getByLabel("After start", { exact: true }).fill("2026-09-07");
   await item.getByLabel("After end", { exact: true }).fill("2026-10-04");
