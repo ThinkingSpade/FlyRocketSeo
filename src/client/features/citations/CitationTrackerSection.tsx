@@ -33,6 +33,7 @@ import {
 import { Button } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { LOCATIONS } from "@/shared/keyword-locations";
 
 /** "City, Region" when both are on file, otherwise whichever one is --
  *  matches what CitationTrackerService expects as its single `city` field,
@@ -311,6 +312,16 @@ export function CitationTrackerSection({
             Check citations
           </Button>
         </div>
+
+        {result ? (
+          <p className="text-xs text-base-content/60">
+            {result.contractVersion === 2 && result.scope
+              ? `${result.source} · Captured ${Number.isFinite(Date.parse(result.fetchedAt)) ? new Date(result.fetchedAt).toLocaleString() : "unavailable"} · ${LOCATIONS[result.scope.locationCode] ?? "Market unavailable"} · ${result.scope.languageCode} · Desktop`
+              : "Legacy citation observation · Original source, scope and capture unavailable"}
+            <br />
+            Search: {result.query}
+          </p>
+        ) : null}
 
         {errorMessage ? (
           <Banner variant="error" className="text-sm">

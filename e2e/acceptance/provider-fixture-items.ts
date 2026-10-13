@@ -152,7 +152,10 @@ export function fixtureItems(path: string, input: TaskInput): unknown[] | null {
     case "/v3/business_data/google/my_business_info/live":
       return [
         {
-          title: "Acceptance Rocket Business",
+          title:
+            keyword === "Empty Citation Fixture Business"
+              ? keyword
+              : "Acceptance Rocket Business",
           category: "Rocket equipment",
           additional_categories: [],
           address: "Local fixture address",

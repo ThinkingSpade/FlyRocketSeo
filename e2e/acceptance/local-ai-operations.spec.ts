@@ -5,8 +5,33 @@ import {
   signIn,
   submitWithPendingCheck,
 } from "./helpers";
-import { PROJECT_A2, PROJECT_OPERATIONS } from "./data";
+import { ORG_A, PROJECT_A2, PROJECT_OPERATIONS } from "./data";
 import { readFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+import { z } from "zod";
+import { citationTrackerResultSchema } from "@/types/schemas/citations";
+
+// Decode the actual TanStack RPC protocol with its installed dependency.
+const startRequire = createRequire(
+  import.meta.resolve("@tanstack/react-start"),
+);
+const { fromCrossJSON } = z
+  .object({
+    fromCrossJSON: z.function({
+      input: [z.unknown(), z.object({})],
+      output: z.unknown(),
+    }),
+  })
+  .parse(
+    createRequire(
+      startRequire.resolve("@tanstack/start-client-core/package.json"),
+    )("seroval"),
+  );
+function citationObservation(payload: unknown) {
+  return z
+    .object({ result: citationTrackerResultSchema })
+    .parse(fromCrossJSON(payload, {})).result;
+}
 
 test("Local SEO looks up a scoped profile, collects an owned review task and restores its receipt after reload", async ({
   page,
@@ -128,6 +153,99 @@ test("Local SEO looks up a scoped profile, collects an owned review task and res
   ).toBeVisible();
   expect(posts).toBe(1);
   expect(citations).toBe(1);
+  expect(captured.errors).toEqual([]);
+  expect(captured.externalRequests).toEqual([]);
+  expect(captured.failedServerResponses).toEqual([]);
+});
+
+test("Local SEO saves and restores provider no-results citation observations without another discovery", async ({
+  page,
+}) => {
+  const captured = diagnostics(page);
+  let calls = 0;
+  page.on("request", (request) => {
+    if (serverFunctionName(request.url())?.startsWith("getCitationReport_"))
+      calls += 1;
+  });
+  await signIn(page);
+  await page.goto(`/p/${PROJECT_OPERATIONS}/local`);
+  await page.waitForLoadState("networkidle");
+  await page
+    .getByPlaceholder("Joe's Pizza Brooklyn")
+    .fill("Empty Citation Fixture Business");
+  await page.getByRole("button", { name: /^Look up/ }).click();
+  await expect(
+    page.getByText("Empty Citation Fixture Business", { exact: true }).first(),
+  ).toBeVisible();
+  expect(calls).toBe(0);
+  const citationResponse = () =>
+    page.waitForResponse(
+      (response) =>
+        serverFunctionName(response.url())?.startsWith("getCitationReport_") ===
+        true,
+    );
+  const firstResponse = citationResponse();
+  await submitWithPendingCheck(
+    page,
+    "getCitationReport_",
+    page.getByRole("button", { name: "Check citations", exact: true }),
+  );
+  const first = await firstResponse;
+  expect(first.ok()).toBe(true);
+  const firstObservation = citationObservation(await first.json());
+  expect(firstObservation.contractVersion).toBe(2);
+  expect(firstObservation.source).toBe("DataForSEO Google Organic SERP");
+  expect(firstObservation.scope).toMatchObject({
+    organizationId: ORG_A,
+    projectId: PROJECT_OPERATIONS,
+    businessName: "Empty Citation Fixture Business",
+    locationCode: 2840,
+    languageCode: "en",
+    query: firstObservation.query,
+    city: firstObservation.city,
+    phone: firstObservation.phone,
+  });
+  expect(firstObservation.query).toContain("Empty Citation Fixture Business");
+  expect(firstObservation.results).toEqual([]);
+  const originalCapture = firstObservation.fetchedAt;
+  expect(originalCapture).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+  const emptyVerdict = page.getByText(
+    /Only 0 organic results.*too few to judge citation coverage/,
+  );
+  await expect(emptyVerdict).toBeVisible();
+  const sourceFooter = page.getByText(
+    /DataForSEO Google Organic SERP · Captured/,
+  );
+  await expect(sourceFooter).toContainText("US · en · Desktop");
+  await expect(sourceFooter).toContainText(`Search: ${firstObservation.query}`);
+  const originalFooter = await sourceFooter.textContent();
+  expect(originalFooter).not.toContain("unavailable");
+  const renderedCapture = await page.evaluate(
+    (value) => new Date(value).toLocaleString(),
+    originalCapture,
+  );
+  await expect(sourceFooter).toContainText(`Captured ${renderedCapture}`);
+  expect(calls).toBe(1);
+  await expect(
+    page.getByRole("heading", { name: /^Not found in this search/ }),
+  ).toHaveCount(0);
+  const cachedResponse = citationResponse();
+  await submitWithPendingCheck(
+    page,
+    "getCitationReport_",
+    page.getByRole("button", { name: "Check citations", exact: true }),
+  );
+  const cached = await cachedResponse;
+  expect(cached.ok()).toBe(true);
+  expect(citationObservation(await cached.json())).toEqual(firstObservation);
+  await expect(sourceFooter).toHaveText(originalFooter ?? "");
+  expect(calls).toBe(2);
+  await page.reload();
+  await expect(emptyVerdict).toBeVisible();
+  await expect(sourceFooter).toHaveText(originalFooter ?? "");
+  await expect(page.getByText(/Showing your last run for/)).toBeVisible();
+  await page.waitForLoadState("networkidle");
+  expect(calls).toBe(2);
   expect(captured.errors).toEqual([]);
   expect(captured.externalRequests).toEqual([]);
   expect(captured.failedServerResponses).toEqual([]);

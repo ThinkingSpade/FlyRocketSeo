@@ -88,6 +88,38 @@ export async function providerFixtureResponse(
   const input: TaskInput = Object.fromEntries(Object.entries(inputValue));
   const items = fixtureItems(url.pathname, input);
   if (items === null) return null;
+  if (
+    url.pathname === "/v3/serp/google/organic/live/advanced" &&
+    text(input.keyword, "").includes("Empty Citation Fixture Business")
+  ) {
+    return Response.json({
+      status_code: 20000,
+      tasks_count: 1,
+      tasks_error: 1,
+      tasks: [
+        {
+          id: "acceptance-empty-citation-task",
+          status_code: 40102,
+          status_message: "No Search Results.",
+          cost: 0,
+          path: url.pathname.slice(1).split("/"),
+          data: { ...input, location_code: String(input.location_code) },
+          result_count: 1,
+          result: [
+            {
+              keyword: input.keyword,
+              location_code: input.location_code,
+              language_code: input.language_code,
+              device: input.device,
+              items: null,
+              items_count: 0,
+              se_results_count: 0,
+            },
+          ],
+        },
+      ],
+    });
+  }
   if (url.pathname === "/v3/business_data/google/reviews/task_post") {
     return Response.json({
       status_code: 20000,
