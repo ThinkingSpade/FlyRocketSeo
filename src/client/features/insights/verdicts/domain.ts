@@ -1,4 +1,5 @@
 import { unknownVerdict, type Verdict } from "../types";
+import type { PositionBuckets } from "@/types/schemas/domain";
 
 /**
  * Reads a domain overview for concentration risk: how much of the domain's
@@ -19,13 +20,15 @@ import { unknownVerdict, type Verdict } from "../types";
  * back and are unlikely to be earning meaningful traffic at all.
  */
 
-type PositionBuckets = {
-  top3: number;
-  pos4to10: number;
-  pos11to20: number;
-  pos21to50: number;
-  pos51plus: number;
-};
+type CompletePositionBuckets = { [K in keyof PositionBuckets]: number };
+
+function hasCompleteBuckets(
+  buckets: PositionBuckets,
+): buckets is CompletePositionBuckets {
+  return Object.values(buckets).every(
+    (count) => count !== null && Number.isSafeInteger(count) && count >= 0,
+  );
+}
 
 type DomainVerdictInput = {
   domain: string;
@@ -78,7 +81,7 @@ type ConcentrationActions = {
  *  nearest, cheapest thing to try next. Each is independently gated on its
  *  own non-zero count so neither ever claims a lever that isn't there. */
 function buildConcentrationActions(
-  buckets: PositionBuckets,
+  buckets: CompletePositionBuckets,
   pageOnePct: number,
   bucketTotal: number,
 ): ConcentrationActions {
@@ -117,10 +120,19 @@ export function buildDomainVerdict(input: DomainVerdictInput): Verdict {
       `Organic totals are known for ${input.domain}, but no ranking-position breakdown is available, so there is no way to see where its traffic concentrates.`,
     );
   }
+  if (!hasCompleteBuckets(input.positionBuckets)) {
+    return unknownVerdict(
+      `The ranking-position breakdown for ${input.domain} has partial provider coverage, so its ranking shares are unknown.`,
+    );
+  }
 
   const { top3, pos4to10, pos11to20, pos21to50, pos51plus } =
     input.positionBuckets;
   const bucketTotal = top3 + pos4to10 + pos11to20 + pos21to50 + pos51plus;
+  if (!Number.isSafeInteger(bucketTotal))
+    return unknownVerdict(
+      "The reported ranking counts exceed the supported exact integer range.",
+    );
 
   if (bucketTotal < MIN_TRACKED_KEYWORDS_FOR_CONCENTRATION_READ) {
     return unknownVerdict(

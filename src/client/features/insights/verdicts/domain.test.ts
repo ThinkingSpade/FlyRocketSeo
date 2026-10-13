@@ -2,6 +2,23 @@ import { describe, expect, it } from "vitest";
 import { buildDomainVerdict } from "./domain";
 
 describe("buildDomainVerdict", () => {
+  it("does not infer ranking concentration from partial provider buckets", () => {
+    const verdict = buildDomainVerdict({
+      domain: "example.com",
+      organicKeywords: 500,
+      organicTraffic: 1200,
+      positionBuckets: {
+        top3: 30,
+        pos4to10: null,
+        pos11to20: 100,
+        pos21to50: 200,
+        pos51plus: 170,
+      },
+    });
+    expect(verdict.tone).toBe("unknown");
+    expect(verdict.actions).toEqual([]);
+    expect(verdict.read).toContain("partial");
+  });
   it("says so when there is no organic data at all", () => {
     const verdict = buildDomainVerdict({
       domain: "example.com",

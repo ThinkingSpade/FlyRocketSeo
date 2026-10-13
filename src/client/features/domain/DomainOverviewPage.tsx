@@ -852,6 +852,17 @@ export function DomainOverviewPage({
             />
           </div>
 
+          <p className="text-xs text-base-content/60">
+            {state.overview.source} estimates · Captured{" "}
+            {state.overview.fetchedAt.slice(0, 10)} (UTC)
+            {state.overview.scope
+              ? ` · Market ${state.overview.scope.locationCode} / ${state.overview.scope.languageCode} · Provider domain scope; the subdomain toggle does not constrain these overview estimates`
+              : " · Original market scope unavailable"}
+            {state.overview.contractVersion === 1
+              ? " · Legacy saved contract; ranking breakdown unavailable"
+              : ""}
+          </p>
+
           {state.overview.hasData && state.overview.positionBuckets ? (
             <PositionDistribution buckets={state.overview.positionBuckets} />
           ) : null}

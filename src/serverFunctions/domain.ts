@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import {
   domainOverviewSchema,
+  domainOverviewResultSchema,
   domainKeywordSuggestionsSchema,
   domainKeywordsPageRequestSchema,
   domainPagesPageRequestSchema,
@@ -25,7 +26,16 @@ export const getDomainOverview = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (shouldUseDomainE2eFixtures()) {
       const fixtures = await getDomainE2eFixtures();
-      return fixtures.getFixtureOverview(data.domain);
+      return domainOverviewResultSchema.parse({
+        ...fixtures.getFixtureOverview(data.domain),
+        contractVersion: 2,
+        source: "DataForSEO Labs",
+        scope: {
+          locationCode: data.locationCode,
+          languageCode: data.languageCode,
+          includeSubdomains: data.includeSubdomains,
+        },
+      });
     }
 
     return DomainService.getOverview(

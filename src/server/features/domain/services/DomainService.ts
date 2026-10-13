@@ -9,8 +9,12 @@ import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import {
   domainOverviewResultSchema,
   type DomainOverviewResult,
-  type PositionBuckets,
 } from "@/types/schemas/domain";
+import {
+  mapPositionBuckets,
+  readKeywordCount,
+  readTrafficEstimate,
+} from "./domainOverviewMapper";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
 import { getKeywordsPage } from "@/server/features/domain/services/domainKeywordsPage";
 import { getPagesPage } from "@/server/features/domain/services/domainPagesPage";
@@ -26,53 +30,6 @@ type MeteringOverrides = {
 /** Domain overview data is refreshed every 12 hours. */
 const DOMAIN_OVERVIEW_TTL_SECONDS = 12 * 60 * 60;
 
-// Per-position fields on the Labs rank-overview payload, read defensively.
-const organicPositionsSchema = z
-  .object({
-    pos_1: z.number().nullable().optional(),
-    pos_2_3: z.number().nullable().optional(),
-    pos_4_10: z.number().nullable().optional(),
-    pos_11_20: z.number().nullable().optional(),
-    pos_21_30: z.number().nullable().optional(),
-    pos_31_40: z.number().nullable().optional(),
-    pos_41_50: z.number().nullable().optional(),
-    pos_51_60: z.number().nullable().optional(),
-    pos_61_70: z.number().nullable().optional(),
-    pos_71_80: z.number().nullable().optional(),
-    pos_81_90: z.number().nullable().optional(),
-    pos_91_100: z.number().nullable().optional(),
-  })
-  .passthrough();
-
-const sum = (...values: Array<number | null | undefined>) =>
-  values.reduce<number>((total, value) => total + (value ?? 0), 0);
-
-function mapPositionBuckets(organic: unknown): PositionBuckets | null {
-  const parsed = organicPositionsSchema.safeParse(organic ?? {});
-  if (!parsed.success) return null;
-  const p = parsed.data;
-  const buckets = {
-    top3: sum(p.pos_1, p.pos_2_3),
-    pos4to10: sum(p.pos_4_10),
-    pos11to20: sum(p.pos_11_20),
-    pos21to50: sum(p.pos_21_30, p.pos_31_40, p.pos_41_50),
-    pos51plus: sum(
-      p.pos_51_60,
-      p.pos_61_70,
-      p.pos_71_80,
-      p.pos_81_90,
-      p.pos_91_100,
-    ),
-  };
-  const total =
-    buckets.top3 +
-    buckets.pos4to10 +
-    buckets.pos11to20 +
-    buckets.pos21to50 +
-    buckets.pos51plus;
-  return total > 0 ? buckets : null;
-}
-
 async function getOverview(
   input: {
     projectId: string;
@@ -86,7 +43,7 @@ async function getOverview(
 ): Promise<DomainOverviewResult> {
   const domain = normalizeDomainInput(input.domain, input.includeSubdomains);
 
-  const cacheKey = await buildCacheKey("domain:overview:v2", {
+  const cacheKey = await buildCacheKey("domain:overview:v3", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     domain,
@@ -114,7 +71,7 @@ async function getOverview(
 
   const cachedRaw = await getCached(cacheKey);
   const cached = domainOverviewResultSchema.safeParse(cachedRaw);
-  if (cached.success && cached.data.hasData) {
+  if (cached.success && cached.data.contractVersion === 2) {
     await recordRun();
     return cached.data;
   }
@@ -131,23 +88,28 @@ async function getOverview(
 
   const metrics = metricsResponse[0];
 
-  const organicTraffic =
-    metrics?.metrics?.organic?.etv != null
-      ? Math.round(metrics.metrics.organic.etv)
-      : null;
-  const organicKeywords =
-    metrics?.metrics?.organic?.count != null
-      ? Math.round(metrics.metrics.organic.count)
-      : null;
+  const organicTraffic = readTrafficEstimate(metrics?.metrics?.organic?.etv);
+  const organicKeywords = readKeywordCount(metrics?.metrics?.organic?.count);
+  const positionBuckets = mapPositionBuckets(metrics?.metrics?.organic);
 
   const result: DomainOverviewResult = {
+    contractVersion: 2,
+    source: "DataForSEO Labs",
+    scope: {
+      locationCode: input.locationCode,
+      languageCode: input.languageCode,
+      includeSubdomains: input.includeSubdomains,
+    },
     domain,
     organicTraffic,
     organicKeywords,
     backlinks: null,
     referringDomains: null,
-    positionBuckets: mapPositionBuckets(metrics?.metrics?.organic),
-    hasData: organicKeywords != null && organicKeywords > 0,
+    positionBuckets,
+    hasData:
+      organicKeywords != null ||
+      organicTraffic != null ||
+      positionBuckets !== null,
     fetchedAt: nowIso,
   };
 

@@ -1,10 +1,4 @@
-type Buckets = {
-  top3: number;
-  pos4to10: number;
-  pos11to20: number;
-  pos21to50: number;
-  pos51plus: number;
-};
+import type { PositionBuckets as Buckets } from "@/types/schemas/domain";
 
 const SEGMENTS: Array<{
   key: keyof Buckets;
@@ -22,10 +16,11 @@ const SEGMENTS: Array<{
  *  position buckets, as one stacked bar plus per-bucket counts. */
 export function PositionDistribution({ buckets }: { buckets: Buckets }) {
   const total = SEGMENTS.reduce(
-    (sum, segment) => sum + buckets[segment.key],
+    (sum, segment) => sum + (buckets[segment.key] ?? 0),
     0,
   );
-  if (total === 0) return null;
+  const complete = SEGMENTS.every((segment) => buckets[segment.key] !== null);
+  const showBar = complete && total > 0 && Number.isSafeInteger(total);
 
   return (
     <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
@@ -33,20 +28,28 @@ export function PositionDistribution({ buckets }: { buckets: Buckets }) {
         <p className="text-xs uppercase tracking-wide text-base-content/60">
           Ranking distribution
         </p>
-        <div className="flex h-4 w-full overflow-hidden rounded-full">
-          {SEGMENTS.map((segment) => {
-            const value = buckets[segment.key];
-            if (value === 0) return null;
-            return (
-              <div
-                key={segment.key}
-                className={segment.className}
-                style={{ width: `${(value / total) * 100}%` }}
-                title={`${segment.label}: ${value.toLocaleString()} keywords`}
-              />
-            );
-          })}
-        </div>
+        {!complete ? (
+          <p className="text-xs text-base-content/60">
+            Partial provider coverage. Unknown buckets are not counted as zero;
+            distribution shares are unavailable.
+          </p>
+        ) : null}
+        {showBar ? (
+          <div className="flex h-4 w-full overflow-hidden rounded-full">
+            {SEGMENTS.map((segment) => {
+              const value = buckets[segment.key];
+              if (value === null || value === 0) return null;
+              return (
+                <div
+                  key={segment.key}
+                  className={segment.className}
+                  style={{ width: `${(value / total) * 100}%` }}
+                  title={`${segment.label}: ${value.toLocaleString()} keywords`}
+                />
+              );
+            })}
+          </div>
+        ) : null}
         <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-base-content/70">
           {SEGMENTS.map((segment) => (
             <span key={segment.key} className="flex items-center gap-1.5">
@@ -55,7 +58,7 @@ export function PositionDistribution({ buckets }: { buckets: Buckets }) {
               />
               {segment.label}
               <span className="font-medium tabular-nums text-base-content">
-                {buckets[segment.key].toLocaleString()}
+                {buckets[segment.key]?.toLocaleString() ?? "Unknown"}
               </span>
             </span>
           ))}

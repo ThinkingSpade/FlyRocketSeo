@@ -214,11 +214,11 @@ export type DomainSearchParams = z.infer<typeof domainSearchSchema>;
 
 /** Ranking-position distribution (Ahrefs-style buckets). */
 export const positionBucketsSchema = z.object({
-  top3: z.number(),
-  pos4to10: z.number(),
-  pos11to20: z.number(),
-  pos21to50: z.number(),
-  pos51plus: z.number(),
+  top3: z.number().int().nonnegative().nullable(),
+  pos4to10: z.number().int().nonnegative().nullable(),
+  pos11to20: z.number().int().nonnegative().nullable(),
+  pos21to50: z.number().int().nonnegative().nullable(),
+  pos51plus: z.number().int().nonnegative().nullable(),
 });
 
 export type PositionBuckets = z.infer<typeof positionBucketsSchema>;
@@ -228,16 +228,34 @@ export type PositionBuckets = z.infer<typeof positionBucketsSchema>;
  * because both sides need it: the service validates what it reads back out of
  * the cache, and the client validates a restored past run before rendering it.
  */
-export const domainOverviewResultSchema = z.object({
-  domain: z.string(),
-  organicTraffic: z.number().nullable(),
-  organicKeywords: z.number().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  /** Null when Labs has no per-position breakdown for the domain. */
-  positionBuckets: positionBucketsSchema.nullable(),
-  hasData: z.boolean(),
-  fetchedAt: z.string(),
-});
+export const domainOverviewResultSchema = z
+  .object({
+    contractVersion: z.union([z.literal(1), z.literal(2)]).default(1),
+    source: z.literal("DataForSEO Labs").default("DataForSEO Labs"),
+    scope: z
+      .object({
+        locationCode: z.number().int().positive(),
+        languageCode: z.string(),
+        includeSubdomains: z.boolean(),
+      })
+      .nullable()
+      .default(null),
+    domain: z.string(),
+    organicTraffic: z.number().nonnegative().nullable(),
+    organicKeywords: z.number().int().nonnegative().nullable(),
+    backlinks: z.number().nullable(),
+    referringDomains: z.number().nullable(),
+    /** Null when Labs has no per-position breakdown for the domain. */
+    positionBuckets: positionBucketsSchema.nullable(),
+    hasData: z.boolean(),
+    fetchedAt: z.string(),
+  })
+  .transform((result) => ({
+    ...result,
+    // Older mapped caches converted absent components into zero. Retain useful
+    // headline estimates and the capture date, but don't certify that breakdown.
+    positionBuckets:
+      result.contractVersion === 2 ? result.positionBuckets : null,
+  }));
 
 export type DomainOverviewResult = z.infer<typeof domainOverviewResultSchema>;
