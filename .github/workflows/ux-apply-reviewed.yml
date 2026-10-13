@@ -1,0 +1,55 @@
+name: Apply reviewed UX source to isolated branch
+
+# One-time transfer of a locally reviewed and tested patch. The helper branch
+# and its transport files are never merged into the application branch.
+on:
+  create:
+permissions:
+  contents: write
+defaults:
+  run:
+    shell: bash
+jobs:
+  apply:
+    if: github.event.ref_type == 'branch' && github.event.ref == 'ux/apply-quality-shared-2026-10-13'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+      - name: Verify and reconstruct reviewed patch
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import base64, gzip, hashlib
+          encoded = ''.join(Path(f'.ux-transfer/part-{i}').read_text().strip() for i in range(4))
+          patch = gzip.decompress(base64.b64decode(encoded, validate=True))
+          assert hashlib.sha256(patch).hexdigest() == 'a53401f329ecae3e7753d7fc8a3b915ed176ecba197d6cb5538fd1b2439f56c9', 'Transfer differs from reviewed patch'
+          Path('/tmp/reviewed-ux.patch').write_bytes(patch)
+          PY
+      - name: Apply only to the unchanged UX development baseline
+        run: |
+          git fetch origin refs/heads/ux/product-quality-2026-10-13
+          test "$(git rev-parse FETCH_HEAD)" = cc4377e9e6b90e95b5ae272fe10eddd971ccee1a
+          git checkout --detach FETCH_HEAD
+          git apply --check /tmp/reviewed-ux.patch
+          git apply /tmp/reviewed-ux.patch
+          git diff --check
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm run ci:check
+      - run: pnpm test
+      - name: Commit verified source without deployment or merge
+        run: |
+          git config user.name 'FlyRocketSEO UX review'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add src scripts/ux .github/workflows/ux-browser-review.yml
+          git commit -m '[CF-Pages-Skip] [skip ci] fix: unify accessible navigation, dialogs, tables and feedback'
+          git push origin HEAD:refs/heads/ux/product-quality-2026-10-13
+          git log -1 --format=fuller
