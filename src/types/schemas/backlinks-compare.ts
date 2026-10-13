@@ -137,11 +137,12 @@ const referringNetworkRowSchema = z.object({
 });
 
 export const referringNetworksResultSchema = z.object({
+  contractVersion: z.literal(2).optional(),
   rows: z.array(referringNetworkRowSchema),
   /** Referring domains covered by the rows returned. */
-  totalDomains: z.number(),
+  totalDomains: z.number().int().nonnegative().nullable(),
   /** Share of those domains sitting in the three largest subnets, 0-1. */
-  topThreeShare: z.number(),
+  topThreeShare: z.number().min(0).max(1).nullable(),
   /**
    * Whether `rows` covers every network DataForSEO holds. False means the page
    * was truncated, and `topThreeShare` describes the sample rather than the

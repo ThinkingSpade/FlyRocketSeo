@@ -5,6 +5,11 @@ import type {
   ReferringNetworkRow,
 } from "@/types/schemas/backlinks-compare";
 import { normalizeComparisonTarget } from "@/shared/backlink-targets";
+import {
+  providerCount,
+  providerHundredScore,
+  providerTimestamp,
+} from "@/shared/provider-observations";
 
 /**
  * Shapes the two nested DataForSEO payloads that the compare service reads.
@@ -39,27 +44,30 @@ export function mapIntersectionRows(
     let backlinks: number | null = null;
     let spamScore: number | null = null;
     let firstSeen: string | null = null;
+    let backlinkCountsComplete = true;
 
     for (const [key, entry] of entries) {
       if (!entry) continue;
       const competitor = competitors[Number(key) - 1];
-      if (competitor) linkedTo.push(competitor);
+      if (!competitor || !/^[1-9]\d*$/.test(key)) continue;
+      linkedTo.push(competitor);
 
       if (domain === "") domain = normalizeComparisonTarget(entry.target);
+      if (domain !== normalizeComparisonTarget(entry.target)) return [];
       // Identical across entries in practice, but take the strongest reading
       // rather than assuming which key arrives first.
-      if (entry.rank != null) rank = Math.max(rank ?? entry.rank, entry.rank);
-      if (entry.backlinks != null) {
-        backlinks = (backlinks ?? 0) + entry.backlinks;
+      const entryRank = providerHundredScore(entry.rank);
+      const entryBacklinks = providerCount(entry.backlinks);
+      const entrySpam = providerHundredScore(entry.backlinks_spam_score);
+      const entryFirstSeen = providerTimestamp(entry.first_seen);
+      if (entryRank != null) rank = Math.max(rank ?? entryRank, entryRank);
+      if (entryBacklinks === null) backlinkCountsComplete = false;
+      else backlinks = (backlinks ?? 0) + entryBacklinks;
+      if (entrySpam != null) {
+        spamScore = Math.max(spamScore ?? entrySpam, entrySpam);
       }
-      if (entry.backlinks_spam_score != null) {
-        spamScore = Math.max(
-          spamScore ?? entry.backlinks_spam_score,
-          entry.backlinks_spam_score,
-        );
-      }
-      if (entry.first_seen && (!firstSeen || entry.first_seen < firstSeen)) {
-        firstSeen = entry.first_seen;
+      if (entryFirstSeen && (!firstSeen || entryFirstSeen < firstSeen)) {
+        firstSeen = entryFirstSeen;
       }
     }
 
@@ -71,7 +79,7 @@ export function mapIntersectionRows(
         competitorsLinked: linkedTo.length,
         linkedTo,
         rank,
-        backlinks,
+        backlinks: backlinkCountsComplete ? providerCount(backlinks) : null,
         spamScore,
         firstSeen,
       },
@@ -97,8 +105,8 @@ export function summarizeNetworks(
   totalCount: number | null,
 ): {
   rows: ReferringNetworkRow[];
-  totalDomains: number;
-  topThreeShare: number;
+  totalDomains: number | null;
+  topThreeShare: number | null;
   isComplete: boolean;
 } {
   const rows = items
@@ -108,9 +116,9 @@ export function summarizeNetworks(
       return [
         {
           networkAddress,
-          referringDomains: item.referring_domains ?? null,
-          backlinks: item.backlinks ?? null,
-          rank: item.rank ?? null,
+          referringDomains: providerCount(item.referring_domains),
+          backlinks: providerCount(item.backlinks),
+          rank: providerHundredScore(item.rank),
         },
       ];
     })
@@ -120,7 +128,7 @@ export function summarizeNetworks(
         a.networkAddress.localeCompare(b.networkAddress),
     );
 
-  const totalDomains = rows.reduce(
+  const observedTotal = rows.reduce(
     (total, row) => total + (row.referringDomains ?? 0),
     0,
   );
@@ -128,10 +136,22 @@ export function summarizeNetworks(
     .slice(0, NETWORK_CONCENTRATION_SAMPLE)
     .reduce((total, row) => total + (row.referringDomains ?? 0), 0);
 
+  const totalDomains = rows.every((row) => row.referringDomains !== null)
+    ? providerCount(observedTotal)
+    : null;
   return {
     rows,
     totalDomains,
-    topThreeShare: totalDomains > 0 ? topThree / totalDomains : 0,
-    isComplete: totalCount == null || totalCount <= rows.length,
+    topThreeShare:
+      totalDomains === null
+        ? null
+        : totalDomains > 0
+          ? topThree / totalDomains
+          : 0,
+    isComplete:
+      providerCount(totalCount) !== null &&
+      totalCount === rows.length &&
+      totalDomains !== null &&
+      new Set(rows.map((row) => row.networkAddress)).size === rows.length,
   };
 }

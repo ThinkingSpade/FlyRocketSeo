@@ -118,10 +118,7 @@ describe("mapIntersectionRows", () => {
       [{ domain_intersection: { "9": entry() } }],
       COMPETITORS,
     );
-    expect(rows[0].competitorsLinked).toBe(0);
-    expect(rows[0].linkedTo).toEqual([]);
-    // The domain is still reported, because the link data is real.
-    expect(rows[0].domain).toBe("linker.com");
+    expect(rows).toEqual([]);
   });
 });
 
@@ -175,8 +172,8 @@ describe("summarizeNetworks", () => {
 
   it("does not divide by zero when nothing has a domain count", () => {
     const summary = summarizeNetworks([{ network_address: "a" }], 1);
-    expect(summary.totalDomains).toBe(0);
-    expect(summary.topThreeShare).toBe(0);
+    expect(summary.totalDomains).toBeNull();
+    expect(summary.topThreeShare).toBeNull();
   });
 
   it("drops rows with no network address", () => {
@@ -211,10 +208,10 @@ describe("summarizeNetworks", () => {
     ).toBe(true);
   });
 
-  it("treats an absent total as complete rather than guessing", () => {
+  it("keeps coverage incomplete when the provider universe size is absent", () => {
     expect(
       summarizeNetworks([{ network_address: "a", referring_domains: 5 }], null)
         .isComplete,
-    ).toBe(true);
+    ).toBe(false);
   });
 });

@@ -273,7 +273,7 @@ async function referringNetworks(
   billingCustomer: BillingCustomerContext,
 ): Promise<ReferringNetworksResult> {
   const target = toApiTarget(input.target);
-  const cacheKey = await buildCacheKey("backlinks:referring-networks", {
+  const cacheKey = await buildCacheKey("backlinks:referring-networks:v2", {
     organizationId: billingCustomer.organizationId,
     target,
   });
@@ -289,6 +289,7 @@ async function referringNetworks(
   });
 
   const result: ReferringNetworksResult = {
+    contractVersion: 2,
     ...summarizeNetworks(response.items, response.totalCount),
     fetchedAt: new Date().toISOString(),
   };

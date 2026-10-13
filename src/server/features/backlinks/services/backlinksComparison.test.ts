@@ -204,14 +204,14 @@ describe("buildComparison", () => {
     expect(result.rows[0].netReferringDomains).toBeNull();
   });
 
-  it("treats one missing side of the net as zero", () => {
+  it("keeps net unknown when one component was not reported", () => {
     const result = buildComparison({
       ...EMPTY,
       you: "deliotx.com",
       competitors: [],
       newLost: [{ target: "deliotx.com", new_referring_domains: 5 }],
     });
-    expect(result.rows[0].netReferringDomains).toBe(5);
+    expect(result.rows[0].netReferringDomains).toBeNull();
   });
 
   it("collapses a competitor that is really the analyzed domain", () => {

@@ -5,6 +5,10 @@ import type {
   BulkReferringDomainsItem,
 } from "@/server/lib/dataforseo/backlinks-bulk";
 import { normalizeComparisonTarget } from "@/shared/backlink-targets";
+import {
+  providerCount,
+  providerHundredScore,
+} from "@/shared/provider-observations";
 
 /**
  * Merges the four `bulk_*` responses (plus bulk spam scores) into one row per
@@ -85,25 +89,29 @@ export function buildComparison(inputs: ComparisonInputs): ComparisonResult {
 
   const rows = targets
     .map((target): ComparisonRow => {
-      const newCount = newLost.get(target)?.new_referring_domains ?? null;
-      const lostCount = newLost.get(target)?.lost_referring_domains ?? null;
+      const newCount = providerCount(
+        newLost.get(target)?.new_referring_domains,
+      );
+      const lostCount = providerCount(
+        newLost.get(target)?.lost_referring_domains,
+      );
 
       return {
         target,
         isYou: target === you,
-        rank: ranks.get(target)?.rank ?? null,
-        backlinks: backlinks.get(target)?.backlinks ?? null,
-        referringDomains:
-          referringDomains.get(target)?.referring_domains ?? null,
-        referringDomainsNofollow:
-          referringDomains.get(target)?.referring_domains_nofollow ?? null,
-        spamScore: spamScores.get(target)?.spam_score ?? null,
+        rank: providerHundredScore(ranks.get(target)?.rank),
+        backlinks: providerCount(backlinks.get(target)?.backlinks),
+        referringDomains: providerCount(
+          referringDomains.get(target)?.referring_domains,
+        ),
+        referringDomainsNofollow: providerCount(
+          referringDomains.get(target)?.referring_domains_nofollow,
+        ),
+        spamScore: providerHundredScore(spamScores.get(target)?.spam_score),
         newReferringDomains: newCount,
         lostReferringDomains: lostCount,
         netReferringDomains:
-          newCount == null && lostCount == null
-            ? null
-            : (newCount ?? 0) - (lostCount ?? 0),
+          newCount == null || lostCount == null ? null : newCount - lostCount,
       };
     })
     // Most referring domains first, so the table reads as a leaderboard.

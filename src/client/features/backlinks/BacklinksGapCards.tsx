@@ -324,20 +324,22 @@ export function ReferringNetworksCard({
   onRun: () => void;
 }) {
   const rows = result?.rows.slice(0, NETWORK_PREVIEW_LIMIT) ?? [];
+  const share = result?.topThreeShare ?? null;
   // Only a complete listing supports a claim about the profile. On a truncated
   // page the top three necessarily dominate their own sample, so calling that
   // a link network would flag every large, perfectly healthy profile.
   const canJudge =
     result != null &&
     result.isComplete &&
+    share !== null &&
     result.rows.length >= MIN_NETWORKS_TO_JUDGE;
   const concentrated =
-    canJudge && result.topThreeShare >= NETWORK_CONCENTRATION_WARNING;
+    canJudge && share !== null && share >= NETWORK_CONCENTRATION_WARNING;
 
   return (
     <CardShell
       title="Referring networks"
-      description="Your referring links grouped by the subnet they are hosted on. Links spread across many networks look earned; links piled into a few look bought."
+      description="Observed referring links grouped by their hosting subnet. Concentration can prompt a review; it does not establish link quality."
       icon={Network}
       errorMessage={errorMessage}
       action={
@@ -364,13 +366,13 @@ export function ReferringNetworksCard({
           <p
             className={`text-sm ${concentrated ? "text-warning" : "text-base-content/70"}`}
           >
-            {canJudge ? (
+            {canJudge && share !== null ? (
               <>
-                {Math.round(result.topThreeShare * 100)}% of referring domains
-                sit in the three largest subnets
+                {Math.round(share * 100)}% of referring-domain entries sit in
+                the three largest subnets
                 {concentrated
-                  ? " — that concentration is the footprint a link network leaves."
-                  : ", which is a healthy spread."}
+                  ? ". Concentrated hosting is a signal to review the source pages."
+                  : ". Returned entries are spread across more subnets."}
               </>
             ) : (
               <>

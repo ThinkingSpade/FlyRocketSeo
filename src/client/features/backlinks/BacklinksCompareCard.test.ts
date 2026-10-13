@@ -273,10 +273,10 @@ describe("ReferringNetworksCard", () => {
       }),
     );
     expect(markup).toContain("90%");
-    expect(markup).toContain("footprint a link network leaves");
+    expect(markup).toContain("Concentrated hosting is a signal to review");
   });
 
-  it("reads a well-spread profile as healthy", () => {
+  it("describes the observed spread without certifying link quality", () => {
     const markup = renderToStaticMarkup(
       createElement(ReferringNetworksCard, {
         errorMessage: null,
@@ -323,6 +323,6 @@ describe("ReferringNetworksCard", () => {
         },
       }),
     );
-    expect(markup).toContain("healthy spread");
+    expect(markup).toContain("Returned entries are spread across more subnets");
   });
 });
