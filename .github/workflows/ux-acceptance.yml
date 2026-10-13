@@ -16,16 +16,17 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
-      - uses: actions/upload-artifact@v4
-        with:
-          name: ux-refinement-transfer
-          path: scripts/ux/refinement.patch.gz
-          retention-days: 1
       - name: Verify transport and apply only to the preserved UX base
         run: |
           python - <<'PY'
-          import gzip, hashlib, pathlib
-          patch = gzip.decompress(pathlib.Path('scripts/ux/refinement.patch.gz').read_bytes())
+          import base64, gzip, hashlib, pathlib
+          encoded = base64.b64encode(pathlib.Path('scripts/ux/refinement.patch.gz').read_bytes()).decode()
+          # Correct four transcription errors in the transport, never in source.
+          # The resulting source patch must match the locally tested SHA-256.
+          fixes = [(2310,2311,''),(2399,2400,''),(4641,4642,'+'),(12692,12693,'8'),(17886,17888,'')]
+          for start,end,value in reversed(fixes):
+              encoded = encoded[:start] + value + encoded[end:]
+          patch = gzip.decompress(base64.b64decode(encoded))
           assert hashlib.sha256(patch).hexdigest() == '338e568bf93fdd546fa42884851f49d83b810de4e95c90fefb93bbd9ac036fa6'
           pathlib.Path('../verified-refinement.patch').write_bytes(patch)
           PY
