@@ -279,6 +279,15 @@ export function useKeywordResearchController(
   const controlsForm = useKeywordControlsForm(
     {
       ...input,
+      externalInputKey: JSON.stringify([
+        input.projectId,
+        input.keywordInput,
+        input.locationCode,
+        input.hasExplicitLocationCode,
+        input.resultLimit,
+        input.keywordMode,
+        input.clickstream,
+      ]),
       locationCode,
       getOpenKeywordTabs: input.getOpenKeywordTabs,
       keywordTabsLimit: input.keywordTabsLimit,

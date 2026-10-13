@@ -127,6 +127,9 @@ export function uselocalSeoReportData(projectId: string): localSeoReportData {
   const postsQuery = useQuery({
     queryKey: ["gbpScheduledPosts", projectId],
     queryFn: () => listGbpScheduledPosts({ data: { projectId } }),
+    // Finish the first GBP read before resolving a second handler from the
+    // same lazy module. Saved posts remain readable when disconnected.
+    enabled: connectionQuery.isSuccess,
     staleTime: STALE_TIME,
   });
 

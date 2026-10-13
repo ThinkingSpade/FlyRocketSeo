@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "@tanstack/react-form";
 import {
   createFormValidationErrors,
@@ -20,6 +20,7 @@ type KeywordTabValidationInput = {
 };
 
 type UseKeywordControlsFormInput = {
+  externalInputKey: string;
   keywordInput: string;
   locationCode: number;
   resultLimit: ResultLimit;
@@ -126,6 +127,10 @@ export function useKeywordControlsForm(
   input: UseKeywordControlsFormInput,
   onSubmit: (value: KeywordControlsValues) => void,
 ) {
+  const synchronizedInput = useRef({
+    key: input.externalInputKey,
+    locationCode: input.locationCode,
+  });
   const form = useForm({
     defaultValues: {
       keyword: input.keywordInput,
@@ -155,15 +160,33 @@ export function useKeywordControlsForm(
   });
 
   useEffect(() => {
-    form.reset({
-      keyword: input.keywordInput,
+    const previous = synchronizedInput.current;
+    synchronizedInput.current = {
+      key: input.externalInputKey,
       locationCode: input.locationCode,
-      resultLimit: input.resultLimit,
-      mode: input.keywordMode,
-      clickstream: input.clickstream,
-    });
+    };
+    if (previous.key !== input.externalInputKey) {
+      // A selected search tab or URL deliberately replaces all controls.
+      form.reset({
+        keyword: input.keywordInput,
+        locationCode: input.locationCode,
+        resultLimit: input.resultLimit,
+        mode: input.keywordMode,
+        clickstream: input.clickstream,
+      });
+    } else if (
+      previous.locationCode !== input.locationCode &&
+      !form.getFieldMeta("locationCode")?.isDirty
+    ) {
+      // A late project default only fills the untouched country control.
+      // Resetting the form here would discard a draft and its dirty metadata.
+      form.setFieldValue("locationCode", input.locationCode, {
+        dontUpdateMeta: true,
+      });
+    }
   }, [
     form,
+    input.externalInputKey,
     input.keywordInput,
     input.keywordMode,
     input.locationCode,
