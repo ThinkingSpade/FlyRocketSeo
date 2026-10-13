@@ -18,7 +18,7 @@ The continuation implements the first-party dashboard, page investigation and pe
 - Tenant/target-scoped D1/PG schemas, immutable evidence, assignment, notes, revision checks, stable dedupe and append-only work history support decline investigations and contextual internal links (`fbb1dfa0`). Result observations require aligned complete periods, Pacific calendar boundaries, and a seven-day lag. Insufficient outcomes remain pending; measured outcomes describe association.
 - A separate hosted-auth application acceptance runner uses isolated local D1/R2/KV, two accounts/organizations and provider fixtures. It never loads the developer's provider credentials or calls production. The branch CI now includes this application suite.
 
-Live OAuth/provider access and deployed workflow recovery remain blocked: the user confirms no staging access is available. SQL migrations were reviewed and exercised locally, not applied to production. PostgreSQL runtime execution and R2 expiration/orphan cleanup require further release verification; bounded history pagination is implemented. There is no claim that every provider field/export or every advanced detector is certified.
+Live OAuth/provider access and deployed workflow recovery remain blocked: the user confirms no staging access is available. SQL migrations were reviewed and exercised locally, not applied to production. Local PostgreSQL 17.11 now passes all 22 migrations and 14 runtime cases. Manual R2 orphan/deleted-project cleanup, durable writer fencing and retry recovery are implemented and tested with isolated data. Production migration and deployed storage/runtime behavior still require approved release verification; bounded history pagination is implemented. There is no claim that every provider field/export or every advanced detector is certified.
 
 ## Inherited implemented increment
 
@@ -68,7 +68,7 @@ Impact: high. Complexity: large. Dependencies: reviewed tenant-scoped schema cha
 
 Implement `opportunity-engine.md`: stable deduplication, versioned evidence snapshots, defensible priority/confidence, reviewed recommendations, persistent progress, and comparable before/after observations. Add decline recovery and content-aware internal linking first. Acceptance: reruns do not duplicate tasks or erase progress; disappearing evidence is not called a fix; outcomes distinguish correlation from causation.
 
-Status: the first decline/internal-link lifecycle is implemented with SQLite/service/browser verification. Automatic implementation, additional detector families, prior-year/controlled causal analysis and multiple implementation cycles per saved action are outside this first version. Production retention cleanup and migration execution remain release gates.
+Status: the first decline/internal-link lifecycle is implemented with SQLite/service/browser verification. Automatic implementation, additional detector families, prior-year/controlled causal analysis and multiple implementation cycles per saved action are outside this first version. Manual retention cleanup is implemented and locally verified; production migration, deployed retention behavior and release approval remain gates.
 
 ### P3: Dataset-dependent intelligence
 

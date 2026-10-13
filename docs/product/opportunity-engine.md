@@ -18,7 +18,11 @@ Evidence and events are immutable and retained for the saved work's lifetime; re
 
 Work-list status filters run before the page limit, so terminal work outside the first 100 rows remains reachable. Previous/Next controls page through retained work, with target, page and status in query identity. Offset pages use current ordering; concurrent updates can move work between pages.
 
-SQL project deletion cascades were verified by independent review. R2 expiration and cleanup of deleted-project/orphan objects are not implemented; no destructive cleanup is scheduled. Production migration/release remains gated on an approved retention/deletion policy, verified R2 cleanup and PostgreSQL execution where that backend is used. Keeping an immutable baseline is deliberate; this is not a claim of complete storage lifecycle management.
+SQL project deletion cascades execute in real PostgreSQL tests. A durable evidence-object ledger in both dialects survives those cascades. Writers hold unique ownership through upload, snapshot storage and attachment; cleanup cannot claim an active writer. Every current task, implementation baseline and retained event reference remains protected. Deleted content keys remain retired, preventing a resumed cleaner from deleting newly recreated evidence.
+
+Global Settings now provides an owner/admin-only, organization-scoped preview and explicit permanent cleanup. Preview/deletion batches contain at most five objects, keeping worst-case legacy deletion to 36 D1 statements before middleware under the [Workers Free 50-query allowance](https://developers.cloudflare.com/d1/platform/limits/). A 24-hour production grace applies to uploads and ledger activity. Unfenced legacy objects remain protected while their project exists; deleted-project orphans can be adopted atomically. Interrupted R2/SQL deletion can be retried for the same confirmed keys, including when the object is already gone. Stranded writer claims remain quarantined for review and are never expired automatically.
+
+Native SQLite and real PostgreSQL exercise the protocol; authenticated application tests exercise isolated D1/R2 deletion and real fault recovery. No expiration cron, task/history TTL or production cleanup was introduced. Production migration/release still requires approval and deployed access-path verification. Local PostgreSQL and local R2 evidence are distinct from live Hyperdrive and Cloudflare account verification.
 
 ## Inherited engine and bounded repairs
 

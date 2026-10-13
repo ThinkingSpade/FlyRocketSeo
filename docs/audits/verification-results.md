@@ -5,7 +5,23 @@ Branch: `audit/flyrocketseo-reliability-2026-10-13`.
 Original baseline: `49096606273eaeaeff7b82e49b1a767a48e65eca`.
 Prior native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e141c9`.
 
-## Continuation verification on 2026-10-13
+## Storage/provider continuation from `317d915b`
+
+Tested source/test head: `c2af177d`, on the same audit branch. Seven tested code/infrastructure increments implement durable evidence-object fencing, manual Settings cleanup and retry, broader Domain/Backlinks contracts, saved-capture/billed-error repairs and a disposable PostgreSQL runner. Commit identities and implemented/verified/blocked rows are in `../product/implementation-checklist.md`.
+
+**Native: 3,433/3,433 tests in 345 files** (172.05 seconds). **Real PostgreSQL 17.11: 14/14 runtime cases**, with all **22 migrations** applied and replayed (13.48 seconds); nine independent isolation guards pass. No production driver/repository workaround was needed. The suite uses the production PostgreSQL seam; its cleanup R2 binding is explicitly an in-memory fixture. The throwaway loopback cluster shut down. Docker Desktop could not start; Docker/CI and live Hyperdrive remain unverified. See `postgresql-runtime.md` for isolation and reproduction.
+
+**Authenticated application: 50/50 full cases pass**, followed by **5/5 affected cleanup cases** after reducing batches to five. This is **51 unique cases**, not a single final 51-case run. Real isolated D1/R2 cleanup covers exact confirmed selection, preview pagination, a full five-object batch, referenced baseline/history protection, foreign/anonymous denial and explicit retry after an actual R2 delete followed by injected SQL failure. The age fixture alias applies only in guarded acceptance mode; native tests enforce the production 24-hour grace and writer/deletion races. Native query logging verifies at most 16 preview or 36 worst-case legacy cleanup statements for five objects, reserving capacity for middleware under the [D1 Free allowance](https://developers.cloudflare.com/d1/platform/limits/).
+
+Actual persisted provider views preserve scope, capture time, partial buckets, genuine zero and rank-history gaps without paid requests. SDK envelopes execute through adapters/services/cache/restored schemas and React/CSV/disavow consumers. Invalid shapes and declared scope mismatches reject data while preserving billed-task evidence. Independent review found and repaired four gaps; re-review passed 61 focused tests with no additional blocker.
+
+TypeScript, Knip, global type-aware Oxlint and production client/server build pass. Root prerender returns 200 and the SPA loading-shell assertion passes. A first sandbox-restricted build failed; its authorized local retry passed after the acceptance server stopped. Full Prettier passes after these documentation edits. The existing large-chunk advisory is unchanged; no performance certification follows.
+
+Generated evidence lives in ignored `.logs/` and `test-results/`: `continuation-native-final.log`, `continuation-acceptance.log` (full 50), `cleanup-five-object-browser.log` (latest five), `postgres-runtime-final.log`, static/build logs, latest five-case `acceptance-summary.json` and `postgres-runtime/summary.json`. Prior browser artifacts can be recreated; the last scoped runner overwrites its JSON report. The acceptance process exited and its port has no listener.
+
+**Live integrations remain blocked:** the user confirms no staging access. OAuth renewal/revocation, live provider entitlement, GBP actions, deployed workflows and Cloudflare account configuration are unverified. Remaining provider field families and subdomain normalization are explicit in `data-integrity.md`. No push, merge, deploy, production mutation or paid provider request occurred.
+
+## Prior continuation verification on 2026-10-13
 
 Starting checkout: `f28cfe15`. New incremental commits include `b775587e`
 (provider history), `eb3377fe` (first-party page scope and project market
@@ -86,8 +102,7 @@ Complete existing-link captures reconcile only the examined pair.
 
 The user confirms **no staging access**. Real OAuth renewal, provider entitlement,
 live GBP actions and deployed background-job recovery are **blocked**, not passing.
-PostgreSQL runtime execution, production migrations and approved R2
-expiration/deleted-project/orphan cleanup remain release gates. No merge,
+Local PostgreSQL runtime and manual R2 cleanup are now verified as described above. Production migrations, deployed Hyperdrive/R2 behavior and release approval remain gates. No merge,
 deployment, production write, paid request or new paid service occurred.
 
 ## Prior increment evidence (historical)

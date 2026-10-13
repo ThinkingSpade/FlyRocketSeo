@@ -52,7 +52,7 @@ Page Investigation requests independent current/prior exact-page final-data obse
 
 Saved work retains the full evidence scope and capture time in content-addressed snapshots. Pacific GSC calendar dates govern baseline exclusion and observation lag. Comparable sufficient results record observed changes with seasonality/concurrent-work limitations; missing or incomparable observations remain pending. Reruns preserve human progress and past comparisons. Complete captured existing-link evidence can reconcile one pair without calling it fixed; partial/failed captures cannot.
 
-These contracts passed native/service/real SQLite checks and are exercised through the isolated authenticated application. Live Google/provider responses, PostgreSQL runtime and storage deletion/retention cleanup remain unverified release gates. See `verification-results.md` and `../product/implementation-checklist.md`.
+These contracts passed native/service/real SQLite checks and are exercised through the isolated authenticated application. Local PostgreSQL 17.11 migrations/repositories and isolated application R2 cleanup now execute successfully. Live Google/provider responses, Hyperdrive, deployed storage configuration and production migration remain unverified release gates. See `verification-results.md` and `../product/implementation-checklist.md`.
 
 ### History contract repair, continuation on 2026-10-13
 
@@ -94,3 +94,13 @@ Live entitlement and responses remain blocked without approved test access.
 [P2] DataForSEO general pricing, accessed 2026-10-13: https://dataforseo.com/pricing
 
 [P3] DataForSEO Backlinks pricing index and endpoint detail, accessed 2026-10-13: https://dataforseo.com/pricing/backlinks and https://dataforseo.com/pricing/backlinks/backlinks
+
+### Broader provider contracts and storage verification
+
+Domain overview preserves safe integer counts, missing rank buckets, genuine zero and estimate precision through cache and saved-run restoration. Partial distributions produce neither shares nor concentration verdicts. Legacy ranking breakdowns that previously synthesized absence as zero are suppressed; useful headline data and original capture time remain. Overview explicitly discloses provider domain scope: the requested subdomain toggle does not constrain that endpoint's estimates. Cache writes settle before saved-run copying, including delayed puts and prior payloads.
+
+Backlinks summary, four list mappers, saved overview/history, chart options, status fields, CSV and toxic-link/disavow consumers preserve unknown versus zero. Invalid calendar dates, unsupported counts/ranks and pre-May-2021 event placeholders remain unavailable. Null chart gaps stay visible; incomplete or overflowed disavow totals remain unknown. Scope mismatches and malformed successful SDK tasks reject data while retaining billed-task metadata; controlled metering tests confirm the error accounting path. These are fixture-backed contracts, not a paid-task or live entitlement pass.
+
+Real SDK HTTP envelopes, services/cache/restoration, React/CSV consumers and actual persisted application browser views are exercised. Keyword/Labs research lists, bulk/comparison, local/rank/AI provider families, and detailed subdomain normalization still need broader field coverage. No claim covers every provider field/export.
+
+Storage cleanup protects all evidence/baseline/history references, fences writers through attachment, retires deleted keys and supports explicit retries after real R2 deletion followed by SQL failure. Production 24-hour grace is tested natively; only the guarded acceptance server substitutes zero grace for freshly seeded local R2 fixtures. Actual PostgreSQL applies all 22 migrations and passes 14 runtime cases. See `postgresql-runtime.md` and the execution checklist for the local/live boundary.
