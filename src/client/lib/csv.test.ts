@@ -17,4 +17,12 @@ describe("buildCsv", () => {
 
     expect(csv).toContain('"\'=HYPERLINK(""evil"")"');
   });
+  it("preserves provider precision only when requested and keeps formula safeguards", () => {
+    const csv = Reflect.apply(buildCsv, null, [
+      ["CPC", "Competition", "Target"],
+      [[0.1234, 0.001, "=formula"]],
+      { preservePrecision: true },
+    ]);
+    expect(csv).toContain('"0.1234","0.001","\'=formula"');
+  });
 });

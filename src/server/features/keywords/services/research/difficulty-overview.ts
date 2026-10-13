@@ -8,17 +8,16 @@ import type {
   KeywordDifficultyOverviewInput,
   KeywordDifficultyOverviewRow,
 } from "@/types/schemas/keywords";
+import { keywordDifficultyOverviewRowSchema } from "@/types/schemas/keywords";
 import { normalizeIntent, normalizeKeyword } from "./helpers";
 
 /** Difficulty/intent shift slowly; a day keeps repeat page-loads free. */
 const DIFFICULTY_OVERVIEW_TTL_SECONDS = 24 * 60 * 60;
 
-const cachedRowSchema = z.object({
-  keyword: z.string(),
-  keywordDifficulty: z.number().nullable(),
-  intent: z.string().nullable(),
+const cachedResultSchema = z.object({
+  contractVersion: z.literal(2),
+  rows: z.array(keywordDifficultyOverviewRowSchema),
 });
-const cachedResultSchema = z.array(cachedRowSchema);
 
 /**
  * The backend for Task 6's on-demand "Load difficulty for these N"
@@ -56,6 +55,7 @@ export async function getKeywordDifficultyOverview(
   if (keywords.length === 0) return [];
 
   const cacheKey = await buildCacheKey("kw:difficulty-overview", {
+    contractVersion: 2,
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     keywords,
@@ -64,11 +64,18 @@ export async function getKeywordDifficultyOverview(
   });
 
   const cached = cachedResultSchema.safeParse(await getCached(cacheKey));
-  if (cached.success) {
-    return cached.data.map((row) => ({
-      ...row,
-      intent: normalizeIntent(row.intent),
-    }));
+  if (
+    cached.success &&
+    cached.data.rows.every(
+      (row) =>
+        row.source === "DataForSEO Labs" &&
+        row.fetchedAt &&
+        row.scope?.projectId === input.projectId &&
+        row.scope.locationCode === input.locationCode &&
+        row.scope.languageCode === input.languageCode,
+    )
+  ) {
+    return cached.data.rows;
   }
 
   const client = createDataforseoClient(billingCustomer);
@@ -84,17 +91,38 @@ export async function getKeywordDifficultyOverview(
     creditFeature: "keyword_research",
   });
 
-  const rows: KeywordDifficultyOverviewRow[] = metrics.map((metric) => ({
-    keyword: metric.keyword,
-    keywordDifficulty: metric.keywordDifficulty,
-    intent: normalizeIntent(metric.intent),
-  }));
-
-  void setCached(cacheKey, rows, DIFFICULTY_OVERVIEW_TTL_SECONDS).catch(
-    (error) => {
-      console.error("keywords.difficulty-overview.cache-write failed:", error);
-    },
+  const byKeyword = new Map(
+    metrics.map((metric) => [normalizeKeyword(metric.keyword), metric]),
   );
+  const fetchedAt = new Date().toISOString();
+  const rows: KeywordDifficultyOverviewRow[] = keywords.map((keyword) => {
+    const metric = byKeyword.get(keyword);
+    return {
+      keyword,
+      keywordDifficulty: metric?.keywordDifficulty ?? null,
+      intent: metric?.intent ? normalizeIntent(metric.intent) : null,
+      source: "DataForSEO Labs",
+      fetchedAt,
+      scope: {
+        projectId: input.projectId,
+        locationCode: input.locationCode,
+        languageCode: input.languageCode,
+      },
+      availability: !metric
+        ? "missing"
+        : metric.keywordDifficulty === null
+          ? "partial"
+          : "observed",
+    };
+  });
+
+  await setCached(
+    cacheKey,
+    { contractVersion: 2, rows },
+    DIFFICULTY_OVERVIEW_TTL_SECONDS,
+  ).catch((error) => {
+    console.error("keywords.difficulty-overview.cache-write failed:", error);
+  });
 
   return rows;
 }

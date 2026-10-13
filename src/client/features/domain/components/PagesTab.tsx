@@ -173,7 +173,11 @@ export function PagesTab({
     [appliedPagesFilters],
   );
 
-  const exportTable = useMemo(() => pagesToTable(rows), [rows]);
+  const capture = query.data;
+  const exportTable = useMemo(
+    () => pagesToTable(rows, capture),
+    [rows, capture],
+  );
 
   const handleCopy = async () => {
     await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
@@ -184,12 +188,15 @@ export function PagesTab({
       headers: exportTable.headers,
       rows: exportTable.rows,
       feature: "domain_overview",
+      preservePrecision: true,
     });
   };
   const handleDownload = (extension: "csv" | "xls") => {
     downloadCsv(
       `${domain}-pages.${extension}`,
-      buildCsv(exportTable.headers, exportTable.rows),
+      buildCsv(exportTable.headers, exportTable.rows, {
+        preservePrecision: true,
+      }),
     );
     if (extension === "csv") {
       captureClientEvent("data:export", {
@@ -201,6 +208,14 @@ export function PagesTab({
 
   return (
     <>
+      {capture ? (
+        <p className="px-4 py-2 text-xs text-base-content/60">
+          DataForSEO Labs estimates for {capture.domain} · Captured{" "}
+          {capture.fetchedAt.slice(0, 10)} (UTC). Provider target scope may
+          include subdomains; the requested toggle does not exclude them. This
+          is one loaded result page.
+        </p>
+      ) : null}
       {!run.authorized ? (
         <div className="border-b border-base-300 p-4 text-center">
           <Button

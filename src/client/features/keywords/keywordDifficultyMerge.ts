@@ -12,6 +12,25 @@ export type DifficultyOverviewByKeyword = ReadonlyMap<
   string,
   KeywordDifficultyOverviewRow
 >;
+type DifficultyScope = {
+  projectId: string;
+  locationCode: number;
+  languageCode: string;
+};
+export function scopeDifficultyOverview(
+  byKeyword: DifficultyOverviewByKeyword,
+  scope: DifficultyScope | null,
+): DifficultyOverviewByKeyword {
+  return new Map(
+    [...byKeyword].filter(
+      ([, row]) =>
+        scope !== null &&
+        row.scope?.projectId === scope.projectId &&
+        row.scope.locationCode === scope.locationCode &&
+        row.scope.languageCode === scope.languageCode,
+    ),
+  );
+}
 
 /**
  * Overlays one row with its on-demand-loaded difficulty/intent, if any was
@@ -29,8 +48,11 @@ export type DifficultyOverviewByKeyword = ReadonlyMap<
 export function mergeDifficultyOverview(
   row: KeywordResearchRow,
   byKeyword: DifficultyOverviewByKeyword,
+  scope?: DifficultyScope,
 ): KeywordResearchRow {
-  const loaded = byKeyword.get(row.keyword.toLowerCase());
+  const loaded = (
+    scope ? scopeDifficultyOverview(byKeyword, scope) : byKeyword
+  ).get(row.keyword.toLowerCase());
   if (!loaded) return row;
   return {
     ...row,
@@ -59,12 +81,15 @@ export function selectDifficultyBackfillKeywords(
   rows: readonly KeywordResearchRow[],
   byKeyword: DifficultyOverviewByKeyword,
   max: number,
+  scope?: DifficultyScope,
 ): string[] {
   return rows
     .filter(
       (row) =>
         row.keywordDifficulty == null &&
-        !byKeyword.has(row.keyword.toLowerCase()),
+        !(scope ? scopeDifficultyOverview(byKeyword, scope) : byKeyword).has(
+          row.keyword.toLowerCase(),
+        ),
     )
     .slice(0, max)
     .map((row) => row.keyword);

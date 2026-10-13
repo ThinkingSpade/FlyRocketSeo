@@ -227,10 +227,18 @@ export function KeywordsTab({
     [appliedFilters],
   );
 
-  const exportTable = useMemo(() => keywordsToTable(rows), [rows]);
+  const capture = query.data;
+  const exportTable = useMemo(
+    () => keywordsToTable(rows, capture),
+    [rows, capture],
+  );
   const selectedExportTable = useMemo(
-    () => keywordsToTable(rows.filter((r) => selectedKeywords.has(r.keyword))),
-    [rows, selectedKeywords],
+    () =>
+      keywordsToTable(
+        rows.filter((r) => selectedKeywords.has(r.keyword)),
+        capture,
+      ),
+    [rows, selectedKeywords, capture],
   );
 
   const handleCopy = async () => {
@@ -242,12 +250,15 @@ export function KeywordsTab({
       headers: exportTable.headers,
       rows: exportTable.rows,
       feature: "domain_overview",
+      preservePrecision: true,
     });
   };
   const handleDownload = (extension: "csv" | "xls") => {
     downloadCsv(
       `${domain}-keywords.${extension}`,
-      buildCsv(exportTable.headers, exportTable.rows),
+      buildCsv(exportTable.headers, exportTable.rows, {
+        preservePrecision: true,
+      }),
     );
     if (extension === "csv") {
       captureClientEvent("data:export", {
@@ -261,12 +272,15 @@ export function KeywordsTab({
       headers: selectedExportTable.headers,
       rows: selectedExportTable.rows,
       feature: "domain_overview",
+      preservePrecision: true,
     });
   };
   const handleDownloadSelectionCsv = () => {
     downloadCsv(
       `${domain}-selected-keywords.csv`,
-      buildCsv(selectedExportTable.headers, selectedExportTable.rows),
+      buildCsv(selectedExportTable.headers, selectedExportTable.rows, {
+        preservePrecision: true,
+      }),
     );
     captureClientEvent("data:export", {
       source_feature: "domain_overview",
@@ -277,6 +291,14 @@ export function KeywordsTab({
 
   return (
     <>
+      {capture ? (
+        <p className="px-4 py-2 text-xs text-base-content/60">
+          DataForSEO Labs estimates for {capture.domain} · Captured{" "}
+          {capture.fetchedAt.slice(0, 10)} (UTC). Provider target scope may
+          include subdomains; the requested toggle does not exclude them. This
+          is one loaded result page.
+        </p>
+      ) : null}
       {!run.authorized ? (
         <div className="border-b border-base-300 p-4 text-center">
           <Button

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { getKeywordDifficultyOverview } from "@/serverFunctions/keywords";
 import {
   createMeteredRunKey,
@@ -73,8 +73,12 @@ export function useKeywordDifficultyOverview(projectId: string) {
     );
   };
 
-  const byKeyword: DifficultyOverviewByKeyword = new Map(
-    (query.data ?? []).map((row) => [row.keyword.toLowerCase(), row]),
+  const byKeyword: DifficultyOverviewByKeyword = useMemo(
+    () =>
+      new Map(
+        (query.data ?? []).map((row) => [row.keyword.toLowerCase(), row]),
+      ),
+    [query.data],
   );
 
   return {

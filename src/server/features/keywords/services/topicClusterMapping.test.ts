@@ -6,6 +6,29 @@ function item(keyword: string, volume: number | null = 100) {
 }
 
 describe("buildTopicClusters", () => {
+  it("keeps incomplete cluster demand unknown and refuses invalid scores/counts", () => {
+    const plan = buildTopicClusters("seo", [
+      item("seo tools", 0),
+      {
+        ...item("seo tools guide", null),
+        keyword_properties: { keyword_difficulty: 101 },
+      },
+    ]);
+    expect(plan.clusters[0]).toMatchObject({
+      totalVolume: null,
+      keywordCount: 2,
+    });
+    expect(plan.clusters[0].keywords[1]).toMatchObject({
+      searchVolume: null,
+      keywordDifficulty: null,
+    });
+    expect(
+      buildTopicClusters("seo", [
+        item("seo tools", Number.MAX_SAFE_INTEGER),
+        item("seo tools guide", 1),
+      ]).clusters[0].totalVolume,
+    ).toBeNull();
+  });
   it("groups keywords by their first non-seed modifier", () => {
     const plan = buildTopicClusters("vending machines", [
       item("vending machines", 5000),

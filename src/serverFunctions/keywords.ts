@@ -11,6 +11,7 @@ import {
   updateSavedKeywordTagSchema,
   updateSavedKeywordTagsSchema,
   keywordDifficultyOverviewSchema,
+  keywordResearchResultSchema,
 } from "@/types/schemas/keywords";
 import { KeywordResearchService } from "@/server/features/keywords/services/KeywordResearchService";
 import { requireProjectContext } from "@/serverFunctions/middleware";
@@ -31,7 +32,9 @@ export const researchKeywords = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (shouldUseKeywordE2eFixtures()) {
       const fixtures = await getKeywordE2eFixtures();
-      return fixtures.getKeywordResearchFixture(data);
+      return keywordResearchResultSchema.parse(
+        fixtures.getKeywordResearchFixture(data),
+      );
     }
 
     return KeywordResearchService.research(

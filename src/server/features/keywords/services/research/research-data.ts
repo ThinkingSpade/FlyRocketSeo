@@ -11,6 +11,13 @@ import {
   type EnrichedKeyword,
 } from "./helpers";
 import type { KeywordSource } from "./selection";
+import { providerCount } from "@/shared/provider-observations";
+import {
+  keywordEstimate,
+  keywordRatio,
+  keywordScore,
+  keywordMonthlySearches,
+} from "@/shared/keyword-observations";
 
 type FetchResearchRowsParams = {
   seedKeyword: string;
@@ -24,7 +31,10 @@ type FetchResearchRowsParams = {
   creditFeature?: CreditFeature;
 };
 
-function mapKeywordDataItems(items: LabsKeywordDataItem[]): EnrichedKeyword[] {
+function mapKeywordDataItems(
+  items: LabsKeywordDataItem[],
+  includeClickstreamData = false,
+): EnrichedKeyword[] {
   const rows: EnrichedKeyword[] = [];
   const seen = new Set<string>();
 
@@ -33,27 +43,29 @@ function mapKeywordDataItems(items: LabsKeywordDataItem[]): EnrichedKeyword[] {
     if (!keyword) continue;
 
     const normalized = normalizeKeyword(keyword);
+    if (!normalized) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
 
     // The clickstream-normalized block only exists when the caller opted into
     // clickstream data (it doubles the request cost); prefer it when present.
-    const keywordInfo = item.keyword_info_normalized_with_clickstream
-      ?.search_volume
-      ? item.keyword_info_normalized_with_clickstream
-      : item.keyword_info;
+    const keywordInfo =
+      includeClickstreamData &&
+      providerCount(
+        item.keyword_info_normalized_with_clickstream?.search_volume,
+      ) !== null
+        ? item.keyword_info_normalized_with_clickstream
+        : item.keyword_info;
 
     rows.push({
       keyword: normalized,
-      searchVolume: keywordInfo?.search_volume ?? null,
-      trend: (keywordInfo?.monthly_searches ?? []).map((entry) => ({
-        year: entry.year ?? 0,
-        month: entry.month ?? 0,
-        searchVolume: entry.search_volume ?? 0,
-      })),
-      cpc: item.keyword_info?.cpc ?? null,
-      competition: item.keyword_info?.competition ?? null,
-      keywordDifficulty: item.keyword_properties?.keyword_difficulty ?? null,
+      searchVolume: providerCount(keywordInfo?.search_volume),
+      trend: keywordMonthlySearches(keywordInfo?.monthly_searches),
+      cpc: keywordEstimate(item.keyword_info?.cpc),
+      competition: keywordRatio(item.keyword_info?.competition),
+      keywordDifficulty: keywordScore(
+        item.keyword_properties?.keyword_difficulty,
+      ),
       intent: normalizeIntent(item.search_intent_info?.main_intent),
     });
   }
@@ -76,20 +88,19 @@ export function mapAdsKeywordItems(
     if (!keyword) continue;
 
     const normalized = normalizeKeyword(keyword);
+    if (!normalized) continue;
     if (seen.has(normalized)) continue;
     seen.add(normalized);
 
     rows.push({
       keyword: normalized,
-      searchVolume: item.search_volume ?? null,
-      trend: (item.monthly_searches ?? []).map((entry) => ({
-        year: entry.year ?? 0,
-        month: entry.month ?? 0,
-        searchVolume: entry.search_volume ?? 0,
-      })),
-      cpc: item.cpc ?? null,
+      searchVolume: providerCount(item.search_volume),
+      trend: keywordMonthlySearches(item.monthly_searches),
+      cpc: keywordEstimate(item.cpc),
       competition:
-        item.competition_index != null ? item.competition_index / 100 : null,
+        keywordScore(item.competition_index) !== null
+          ? item.competition_index! / 100
+          : null,
       keywordDifficulty: null,
       intent: "unknown",
     });
@@ -147,6 +158,7 @@ async function fetchRelatedRows(
     items
       .map((item) => item.keyword_data)
       .filter((data): data is NonNullable<typeof data> => data != null),
+    params.includeClickstreamData,
   );
 }
 
@@ -170,6 +182,7 @@ export async function fetchResearchRowsBySource(
         includeClickstreamData: params.includeClickstreamData,
         creditFeature: params.creditFeature,
       }),
+      params.includeClickstreamData,
     );
   }
 
@@ -182,5 +195,6 @@ export async function fetchResearchRowsBySource(
       includeClickstreamData: params.includeClickstreamData,
       creditFeature: params.creditFeature,
     }),
+    params.includeClickstreamData,
   );
 }

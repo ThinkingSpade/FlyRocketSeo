@@ -31,7 +31,12 @@ function labelFor(row: PageRowInput): string {
  */
 export function buildPagesTreemapData(rows: PageRowInput[]): TreemapDatum[] {
   const withTraffic = rows
-    .filter((row) => (row.organicTraffic ?? 0) > 0)
+    .filter(
+      (row) =>
+        row.organicTraffic !== null &&
+        Number.isFinite(row.organicTraffic) &&
+        row.organicTraffic > 0,
+    )
     .toSorted((a, b) => (b.organicTraffic ?? 0) - (a.organicTraffic ?? 0));
   if (withTraffic.length < MIN_PAGES) return [];
 
@@ -58,6 +63,7 @@ export function buildPagesTreemapData(rows: PageRowInput[]): TreemapDatum[] {
   }
 
   const total = data.reduce((sum, datum) => sum + datum.traffic, 0);
+  if (!Number.isFinite(total)) return [];
   return data.map((datum) => ({
     ...datum,
     share: total > 0 ? datum.traffic / total : 0,

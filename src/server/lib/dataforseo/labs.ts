@@ -24,6 +24,14 @@ import {
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
 
+import { providerCount } from "@/shared/provider-observations";
+import {
+  validateLabsItems,
+  labsKeywordItemSchema,
+  labsRelatedItemSchema,
+  labsPageItemSchema,
+} from "./labs-contract";
+
 // SDK item models are 1:1 supersets of what we need, so we expose them directly
 // under the names the rest of the app already uses (no hand-written Zod).
 export type LabsKeywordDataItem = KeywordDataInfo;
@@ -118,7 +126,8 @@ export async function fetchRelatedKeywords(input: {
       include_serp_info: false,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  validateLabsItems(task, labsRelatedItemSchema, input, false);
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),
@@ -145,7 +154,8 @@ export async function fetchKeywordSuggestions(input: {
       exact_match: false,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  validateLabsItems(task, labsKeywordItemSchema, input, false);
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),
@@ -171,7 +181,8 @@ export async function fetchKeywordIdeas(input: {
       closely_variants: false,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  validateLabsItems(task, labsKeywordItemSchema, input, false);
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),
@@ -191,7 +202,7 @@ export async function fetchDomainRankOverview(input: {
       limit: 1,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
   const result = task.result?.[0];
   if (
     result &&
@@ -247,7 +258,13 @@ export async function fetchRankedKeywords(input: {
       include_subdomains: input.includeSubdomains,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const result = validateLabsItems(
+    task,
+    domainRankedKeywordItemSchema,
+    input,
+    false,
+  );
   return {
     data: {
       items: parseTaskItems(
@@ -255,7 +272,7 @@ export async function fetchRankedKeywords(input: {
         task,
         domainRankedKeywordItemSchema,
       ),
-      totalCount: task.result?.[0]?.total_count ?? null,
+      totalCount: providerCount(result.total_count),
     },
     billing: buildTaskBilling(task),
   };
@@ -286,11 +303,12 @@ export async function fetchRelevantPages(input: {
       filters: input.filters,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  const result = validateLabsItems(task, labsPageItemSchema, input, false);
   return {
     data: {
       items: task.result?.[0]?.items ?? [],
-      totalCount: task.result?.[0]?.total_count ?? null,
+      totalCount: providerCount(result.total_count),
     },
     billing: buildTaskBilling(task),
   };
@@ -310,7 +328,8 @@ export async function fetchKeywordOverview(input: {
       include_clickstream_data: input.includeClickstreamData ?? false,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  validateLabsItems(task, labsKeywordItemSchema, input, true);
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),
@@ -337,7 +356,7 @@ export async function fetchSerpCompetitors(input: {
       offset: input.offset,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),

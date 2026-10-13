@@ -4,6 +4,13 @@ import type { KeywordOverviewItem } from "@/server/lib/dataforseo/labs";
 import type { CreditFeature } from "@/shared/billing-credit-features";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import type { MonthlySearch } from "@/types/keywords";
+import { providerCount } from "@/shared/provider-observations";
+import {
+  keywordEstimate,
+  keywordRatio,
+  keywordScore,
+  keywordMonthlySearches,
+} from "@/shared/keyword-observations";
 
 type DataforseoClient = ReturnType<typeof createDataforseoClient>;
 
@@ -29,41 +36,31 @@ export type KeywordMetricRow = {
   monthlySearches: MonthlySearch[];
 };
 
-function toMonthlySearches(
-  entries:
-    | {
-        year?: number | null;
-        month?: number | null;
-        search_volume?: number | null;
-      }[]
-    | null
-    | undefined,
-): MonthlySearch[] {
-  return (entries ?? []).map((entry) => ({
-    year: entry.year ?? 0,
-    month: entry.month ?? 0,
-    searchVolume: entry.search_volume ?? 0,
-  }));
-}
-
 function normalizeKeywordOverview(
   item: KeywordOverviewItem,
   keyword: string,
+  includeClickstreamData: boolean,
 ): KeywordMetricRow {
   const info = item.keyword_info;
   // The clickstream-normalized block only exists when the caller opted into
   // clickstream data (it doubles request cost); prefer it when present.
   const clickstreamInfo = item.keyword_info_normalized_with_clickstream;
-  const usesClickstream = clickstreamInfo?.search_volume != null;
+  const usesClickstream =
+    includeClickstreamData &&
+    providerCount(clickstreamInfo?.search_volume) !== null;
   return {
     keyword,
-    searchVolume: clickstreamInfo?.search_volume ?? info?.search_volume ?? null,
-    cpc: info?.cpc ?? null,
-    competition: info?.competition ?? null,
+    searchVolume: providerCount(
+      usesClickstream ? clickstreamInfo?.search_volume : info?.search_volume,
+    ),
+    cpc: keywordEstimate(info?.cpc),
+    competition: keywordRatio(info?.competition),
     competitionLevel: info?.competition_level ?? null,
-    keywordDifficulty: item.keyword_properties?.keyword_difficulty ?? null,
+    keywordDifficulty: keywordScore(
+      item.keyword_properties?.keyword_difficulty,
+    ),
     intent: item.search_intent_info?.main_intent ?? null,
-    monthlySearches: toMonthlySearches(
+    monthlySearches: keywordMonthlySearches(
       usesClickstream
         ? clickstreamInfo?.monthly_searches
         : info?.monthly_searches,
@@ -79,15 +76,17 @@ function normalizeAdsKeyword(
 ): KeywordMetricRow {
   return {
     keyword,
-    searchVolume: item.search_volume ?? null,
-    cpc: item.cpc ?? null,
+    searchVolume: providerCount(item.search_volume),
+    cpc: keywordEstimate(item.cpc),
     // competition_index is a 0-100 scale; the app stores a 0-1 ratio.
     competition:
-      item.competition_index != null ? item.competition_index / 100 : null,
+      keywordScore(item.competition_index) !== null
+        ? item.competition_index! / 100
+        : null,
     competitionLevel: item.competition ?? null,
     keywordDifficulty: null,
     intent: null,
-    monthlySearches: toMonthlySearches(item.monthly_searches),
+    monthlySearches: keywordMonthlySearches(item.monthly_searches),
   };
 }
 
@@ -110,6 +109,9 @@ export async function fetchKeywordMetricsForList(
 
   for (let i = 0; i < params.keywords.length; i += KEYWORD_METRICS_BATCH_SIZE) {
     const keywords = params.keywords.slice(i, i + KEYWORD_METRICS_BATCH_SIZE);
+    const requested = new Set(
+      keywords.map((keyword) => keyword.trim().toLowerCase()),
+    );
 
     if (useGoogleAds) {
       const items = await client.keywords.adsSearchVolume({
@@ -119,7 +121,8 @@ export async function fetchKeywordMetricsForList(
         creditFeature: params.creditFeature,
       });
       for (const item of items) {
-        if (!item.keyword) continue;
+        if (!item.keyword || !requested.has(item.keyword.trim().toLowerCase()))
+          continue;
         rows.push(normalizeAdsKeyword(item, item.keyword));
       }
     } else {
@@ -131,8 +134,15 @@ export async function fetchKeywordMetricsForList(
         creditFeature: params.creditFeature,
       });
       for (const item of items) {
-        if (!item.keyword) continue;
-        rows.push(normalizeKeywordOverview(item, item.keyword));
+        if (!item.keyword || !requested.has(item.keyword.trim().toLowerCase()))
+          continue;
+        rows.push(
+          normalizeKeywordOverview(
+            item,
+            item.keyword,
+            params.includeClickstreamData ?? false,
+          ),
+        );
       }
     }
   }

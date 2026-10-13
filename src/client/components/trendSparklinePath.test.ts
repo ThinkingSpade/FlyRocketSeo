@@ -39,4 +39,26 @@ describe("buildSparklinePath", () => {
     const path = buildSparklinePath([point(1, 50), point(2, 50)], 40, 22);
     expect(path!.line).toBe("M0,11 L40,11");
   });
+
+  it("does not turn a missing sample into zero or bridge a calendar gap", () => {
+    const path = buildSparklinePath(
+      [
+        point(1, 0),
+        point(2, 10),
+        { year: 2026, month: 3, searchVolume: null },
+        point(4, 5),
+        point(5, 0),
+      ],
+      80,
+      22,
+    );
+    expect(path?.line).toBe("M0,20.5 L20,1.5 M60,11 L80,20.5");
+    expect(
+      buildSparklinePath(
+        [point(1, 0), point(2, 10), point(4, 5), point(5, 0)],
+        60,
+        22,
+      )?.line,
+    ).toBe("M0,20.5 L20,1.5 M40,11 L60,20.5");
+  });
 });

@@ -1,4 +1,6 @@
 import type { KeywordResearchRow } from "@/types/keywords";
+import { providerCount } from "@/shared/provider-observations";
+import { keywordScore } from "@/shared/keyword-observations";
 
 // Pure term-grouping for the Keyword Magic-style groups rail (no I/O),
 // split out so the tokenization rules are unit-testable.
@@ -7,8 +9,8 @@ export type KeywordGroup = {
   term: string;
   /** How many result keywords contain the term. */
   keywordCount: number;
-  /** Summed search volume of those keywords (nulls count as 0). */
-  totalVolume: number;
+  /** Summed provider volumes; unknown if any member is missing. */
+  totalVolume: number | null;
 };
 
 export type KeywordGroupSort = "count" | "volume";
@@ -53,7 +55,7 @@ export function extractKeywordGroups(
   const seedTerms = new Set(tokenize(seedKeyword));
   const groups = new Map<
     string,
-    { keywordCount: number; totalVolume: number }
+    { keywordCount: number; totalVolume: number | null }
   >();
 
   for (const row of rows) {
@@ -65,7 +67,11 @@ export function extractKeywordGroups(
       seen.add(term);
       const group = groups.get(term) ?? { keywordCount: 0, totalVolume: 0 };
       group.keywordCount += 1;
-      group.totalVolume += row.searchVolume ?? 0;
+      const volume = providerCount(row.searchVolume);
+      group.totalVolume =
+        group.totalVolume !== null && volume !== null
+          ? providerCount(group.totalVolume + volume)
+          : null;
       groups.set(term, group);
     }
   }
@@ -86,14 +92,19 @@ export function sortKeywordGroups(
 ): KeywordGroup[] {
   return groups.toSorted((a, b) =>
     sort === "volume"
-      ? b.totalVolume - a.totalVolume || b.keywordCount - a.keywordCount
-      : b.keywordCount - a.keywordCount || b.totalVolume - a.totalVolume,
+      ? (b.totalVolume ?? -1) - (a.totalVolume ?? -1) ||
+        b.keywordCount - a.keywordCount
+      : b.keywordCount - a.keywordCount ||
+        (b.totalVolume ?? -1) - (a.totalVolume ?? -1),
   );
 }
 
 type KeywordTotals = {
   keywordCount: number;
-  totalVolume: number;
+  totalVolume: number | null;
+  knownVolume: number | null;
+  volumeReported: number;
+  difficultyReported: number;
   /** Average keyword difficulty across rows that have one, or null. */
   averageDifficulty: number | null;
 };
@@ -105,16 +116,26 @@ export function computeKeywordTotals(
   let totalVolume = 0;
   let difficultySum = 0;
   let difficultyCount = 0;
+  let volumeReported = 0;
   for (const row of rows) {
-    totalVolume += row.searchVolume ?? 0;
-    if (row.keywordDifficulty != null) {
-      difficultySum += row.keywordDifficulty;
+    const volume = providerCount(row.searchVolume);
+    if (volume !== null) {
+      totalVolume += volume;
+      volumeReported++;
+    }
+    const difficulty = keywordScore(row.keywordDifficulty);
+    if (difficulty != null) {
+      difficultySum += difficulty;
       difficultyCount += 1;
     }
   }
   return {
     keywordCount: rows.length,
-    totalVolume,
+    totalVolume:
+      volumeReported === rows.length ? providerCount(totalVolume) : null,
+    knownVolume: providerCount(totalVolume),
+    volumeReported,
+    difficultyReported: difficultyCount,
     averageDifficulty:
       difficultyCount > 0 ? Math.round(difficultySum / difficultyCount) : null,
   };

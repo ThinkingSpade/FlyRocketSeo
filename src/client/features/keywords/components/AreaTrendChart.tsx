@@ -26,7 +26,6 @@
  * keep the charting library out of anything the barrel can reach.
  */
 import { useMemo } from "react";
-import { sortBy } from "remeda";
 import { Chart } from "@cloudflare/kumo/components/chart";
 import { echarts } from "@/client/components/chart/echarts";
 import { tooltipRows } from "@/client/components/chart/tooltipParams";
@@ -36,6 +35,7 @@ import {
 } from "@/client/components/chart/useChartTheme";
 import type { MonthlySearch } from "@/types/keywords";
 import { formatCompactNumber } from "../utils";
+import { keywordTrendWindow } from "../keywordTrendWindow";
 
 const MONTH_LABELS = [
   "Jan",
@@ -57,9 +57,7 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
   const base = useChartBase(theme);
 
   const { months, values, fullLabels } = useMemo(() => {
-    const last12 = sortBy(trend, (item) => item.year * 100 + item.month).slice(
-      -12,
-    );
+    const last12 = keywordTrendWindow(trend);
     return {
       months: last12.map((m) => MONTH_LABELS[m.month - 1]),
       values: last12.map((m) => m.searchVolume),
@@ -81,7 +79,7 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
           const heading = index === -1 ? first.axisValue : fullLabels[index];
           return [
             `<div style="font-size:11px;opacity:0.6">${heading}</div>`,
-            `<div style="font-size:13px;font-weight:500">${formatCompactNumber(first.value ?? 0)}</div>`,
+            `<div style="font-size:13px;font-weight:500">${first.value === null ? "Unknown" : formatCompactNumber(first.value)}</div>`,
           ].join("");
         },
       },
@@ -106,6 +104,7 @@ export function AreaTrendChart({ trend }: { trend: MonthlySearch[] }) {
           type: "line" as const,
           name: "Search volume",
           data: values,
+          connectNulls: false,
           smooth: true,
           symbol: "none" as const,
           lineStyle: { width: 2, color: theme.brand },

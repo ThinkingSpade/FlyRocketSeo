@@ -84,6 +84,7 @@ export function formatNumber(value: number | null | undefined) {
 
 export function formatRounded(value: number | null | undefined) {
   if (value == null) return "-";
+  if (value > 0 && value < 1) return "<1";
   return new Intl.NumberFormat().format(Math.round(value));
 }
 
@@ -95,11 +96,59 @@ export function formatMetric(
   return formatRounded(value);
 }
 
-type ExportTable = { headers: string[]; rows: (string | number | null)[][] };
+type ExportTable = {
+  headers: string[];
+  rows: (string | number | boolean | null)[][];
+};
+type DomainCapture = {
+  source: string;
+  domain: string;
+  fetchedAt: string;
+  scope?: {
+    locationCode: number;
+    languageCode: string;
+    includeSubdomains: boolean;
+    providerScope: string;
+  };
+};
+const CAPTURE_HEADERS = [
+  "Source",
+  "Target",
+  "Location Code",
+  "Language",
+  "Provider Scope",
+  "Requested Subdomains",
+  "Fetched At",
+];
+function captureCells(
+  capture?: DomainCapture,
+): (string | number | boolean | null)[] {
+  return [
+    capture?.source ?? "Unknown",
+    capture?.domain ?? null,
+    capture?.scope?.locationCode ?? null,
+    capture?.scope?.languageCode ?? null,
+    capture?.scope?.providerScope ?? "Unknown",
+    capture?.scope?.includeSubdomains ?? null,
+    capture?.fetchedAt ?? null,
+  ];
+}
 
-export function keywordsToTable(rows: KeywordRow[]): ExportTable {
+export function keywordsToTable(
+  rows: KeywordRow[],
+  capture?: DomainCapture,
+): ExportTable {
   return {
-    headers: ["Keyword", "Rank", "Volume", "Traffic", "CPC", "URL", "Score"],
+    headers: [
+      "Keyword",
+      "Rank",
+      "Volume",
+      "Traffic",
+      "CPC",
+      "URL",
+      "Score",
+      ...CAPTURE_HEADERS,
+    ],
     rows: rows.map((row) => [
       row.keyword,
       row.position,
@@ -108,13 +157,22 @@ export function keywordsToTable(rows: KeywordRow[]): ExportTable {
       row.cpc,
       row.url ?? row.relativeUrl,
       row.keywordDifficulty,
+      ...captureCells(capture),
     ]),
   };
 }
 
-export function pagesToTable(rows: PageRow[]): ExportTable {
+export function pagesToTable(
+  rows: PageRow[],
+  capture?: DomainCapture,
+): ExportTable {
   return {
-    headers: ["Page", "Organic Traffic", "Keywords"],
-    rows: rows.map((row) => [row.page, row.organicTraffic, row.keywords]),
+    headers: ["Page", "Organic Traffic", "Keywords", ...CAPTURE_HEADERS],
+    rows: rows.map((row) => [
+      row.page,
+      row.organicTraffic,
+      row.keywords,
+      ...captureCells(capture),
+    ]),
   };
 }

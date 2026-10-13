@@ -24,6 +24,21 @@ function cluster(
 }
 
 describe("prioritizeClusters", () => {
+  it("leaves incomplete volume unranked and total unknown", () => {
+    const partial = { ...cluster("partial", 0, 10), totalVolume: null };
+    const result = prioritizeClusters([partial, cluster("known", 0, 10)]);
+    expect(result[0]).toMatchObject({ name: "known", opportunityScore: 0 });
+    expect(result[1]).toMatchObject({ priority: null, opportunityScore: null });
+    expect(computeClusterPlanTotals([partial]).totalVolume).toBeNull();
+    const markdown = clusterPlanToMarkdown({
+      topic: "seo",
+      hub: [],
+      clusters: result,
+    });
+    expect(markdown).toContain("Unranked");
+    expect(markdown).toContain("Unknown vol/mo");
+    expect(markdown).not.toContain("null vol");
+  });
   it("ranks high-volume low-difficulty clusters first and tiers them", () => {
     const result = prioritizeClusters([
       cluster("hard", 1000, 90),

@@ -1,4 +1,12 @@
 import { z } from "zod";
+import {
+  monthlySearchSchema,
+  keywordEstimate,
+  keywordRatio,
+  keywordScore,
+  keywordMonthlySearches,
+} from "@/shared/keyword-observations";
+import { providerCount } from "@/shared/provider-observations";
 import { TAG_COLOR_KEYS } from "@/shared/tag-colors";
 import { booleanSearchParamSchema } from "@/types/schemas/domain";
 import {
@@ -84,15 +92,8 @@ export const saveKeywordsSchema = z
             ])
             .nullable()
             .optional(),
-          monthlySearches: z
-            .array(
-              z.object({
-                year: z.number().int().positive(),
-                month: z.number().int().min(1).max(12),
-                searchVolume: z.number().int().nonnegative(),
-              }),
-            )
-            .optional(),
+          monthlySearches: z.array(monthlySearchSchema).optional(),
+          fetchedAt: z.iso.datetime().optional(),
         }),
       )
       .max(500)
@@ -239,6 +240,16 @@ export const keywordDifficultyOverviewRowSchema = z.object({
   keyword: z.string(),
   keywordDifficulty: z.number().nullable(),
   intent: z.enum(keywordIntentValues).nullable(),
+  source: z.literal("DataForSEO Labs").optional(),
+  fetchedAt: z.iso.datetime().optional(),
+  scope: z
+    .object({
+      projectId: z.string(),
+      locationCode: z.number().int().positive(),
+      languageCode: z.string(),
+    })
+    .optional(),
+  availability: z.enum(["observed", "partial", "missing"]).optional(),
 });
 export type KeywordDifficultyOverviewRow = z.infer<
   typeof keywordDifficultyOverviewRowSchema
@@ -278,17 +289,11 @@ export const keywordsSearchSchema = z.object({
 
 const cachedKeywordRowSchema = z.object({
   keyword: z.string(),
-  searchVolume: z.number().nullable(),
-  trend: z.array(
-    z.object({
-      year: z.number(),
-      month: z.number(),
-      searchVolume: z.number(),
-    }),
-  ),
-  cpc: z.number().nullable(),
-  competition: z.number().nullable(),
-  keywordDifficulty: z.number().nullable(),
+  searchVolume: z.number().nullable().transform(providerCount),
+  trend: z.array(z.unknown()).transform(keywordMonthlySearches),
+  cpc: z.number().nullable().transform(keywordEstimate),
+  competition: z.number().nullable().transform(keywordRatio),
+  keywordDifficulty: z.number().nullable().transform(keywordScore),
   intent: z.enum([
     "informational",
     "commercial",
@@ -313,13 +318,59 @@ const sourceAttemptSchema = z.object({
 /** A keyword-research result exactly as it is cached. Lives here rather than
  *  beside the service that writes it so auto-restore can validate a stored
  *  payload from the client against the same definition. */
-export const keywordResearchResultSchema = z.object({
-  rows: z.array(cachedKeywordRowSchema),
-  source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
-  usedFallback: z.boolean(),
-  diagnostics: z.object({
-    requestedMode: z.enum(["auto", "related", "suggestions", "ideas"]),
-    threshold: z.number(),
-    sourceAttempts: z.array(sourceAttemptSchema),
-  }),
-});
+export const keywordResearchResultSchema = z
+  .object({
+    contractVersion: z.union([z.literal(1), z.literal(2)]).default(1),
+    fetchedAt: z.iso.datetime().nullable().default(null),
+    dataSource: z
+      .enum(["DataForSEO Labs", "DataForSEO Google Ads"])
+      .nullable()
+      .default(null),
+    scope: z
+      .object({
+        projectId: z.string(),
+        seedKeyword: z.string(),
+        locationCode: z.number().int().positive(),
+        languageCode: z.string(),
+        clickstream: z.boolean(),
+      })
+      .nullable()
+      .default(null),
+    rows: z.array(cachedKeywordRowSchema),
+    source: z.enum(["related", "suggestions", "ideas", "google_ads"]),
+    usedFallback: z.boolean(),
+    diagnostics: z.object({
+      requestedMode: z.enum(["auto", "related", "suggestions", "ideas"]),
+      threshold: z.number(),
+      sourceAttempts: z.array(sourceAttemptSchema),
+    }),
+  })
+  .superRefine((result, ctx) => {
+    if (
+      result.contractVersion === 2 &&
+      (!result.fetchedAt || !result.dataSource || !result.scope)
+    )
+      ctx.addIssue({
+        code: "custom",
+        message: "Keyword capture scope is required",
+      });
+  })
+  .transform((result) => ({
+    ...result,
+    rows: result.rows.map((row) => ({
+      ...row,
+      trend: result.contractVersion === 2 ? row.trend : [],
+      observation:
+        result.contractVersion === 2 &&
+        result.fetchedAt &&
+        result.scope &&
+        result.dataSource
+          ? {
+              ...result.scope,
+              source: result.dataSource,
+              fetchedAt: result.fetchedAt,
+            }
+          : null,
+    })),
+  }));
+export type KeywordResearchResult = z.infer<typeof keywordResearchResultSchema>;

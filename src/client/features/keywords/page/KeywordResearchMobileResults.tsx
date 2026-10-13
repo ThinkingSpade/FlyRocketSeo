@@ -155,6 +155,7 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
       headers: KEYWORD_RESEARCH_HEADERS,
       rows: sheetsExportRows,
       feature: "keyword_research",
+      preservePrecision: true,
     });
   };
   const handleExportSelectionToSheets = () => {
@@ -162,6 +163,7 @@ function MobileKeywordResults({ controller, ownDomainRating }: Props) {
       headers: KEYWORD_RESEARCH_HEADERS,
       rows: selectedExportRows,
       feature: "keyword_research",
+      preservePrecision: true,
     });
   };
   const handleExportSelectionCsv = () => {

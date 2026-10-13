@@ -42,4 +42,20 @@ describe("buildPagesTreemapData", () => {
   it("returns empty below three traffic-bearing pages", () => {
     expect(buildPagesTreemapData([row("/a", 10), row("/b", 5)])).toEqual([]);
   });
+  it("refuses invalid or overflowed estimates rather than inventing concentration shares", () => {
+    expect(
+      buildPagesTreemapData([
+        row("/a", Infinity),
+        row("/b", 50),
+        row("/c", 25),
+      ]),
+    ).toEqual([]);
+    expect(
+      buildPagesTreemapData([
+        row("/a", Number.MAX_VALUE),
+        row("/b", Number.MAX_VALUE),
+        row("/c", Number.MAX_VALUE),
+      ]),
+    ).toEqual([]);
+  });
 });

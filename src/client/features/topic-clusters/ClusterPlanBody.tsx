@@ -112,16 +112,26 @@ export function ClusterPlanBody({
                 <div className="flex items-baseline justify-between gap-2">
                   <h3 className="flex items-center gap-1.5 font-semibold">
                     <span title="Priority from volume weighed against difficulty — write P1 clusters first">
-                      <Badge variant={PRIORITY_BADGES[cluster.priority]}>
-                        P{cluster.priority}
+                      <Badge
+                        variant={
+                          cluster.priority === null
+                            ? "neutral"
+                            : PRIORITY_BADGES[cluster.priority]
+                        }
+                      >
+                        {cluster.priority === null
+                          ? "Unranked"
+                          : `P${cluster.priority}`}
                       </Badge>
                     </span>
                     {cluster.name}
                   </h3>
                   <span className="text-xs text-base-content/50 tabular-nums">
-                    {cluster.totalVolume.toLocaleString()} vol
+                    {cluster.totalVolume?.toLocaleString() ?? "Unknown"} vol
                     {geoSuffix ? ` (${geoSuffix})` : ""} ·{" "}
-                    {cluster.keywords.length} keywords
+                    {cluster.keywords.length}/
+                    {cluster.keywordCount ?? cluster.keywords.length} returned
+                    keywords
                     {cluster.averageDifficulty != null
                       ? ` · KD ${Math.round(cluster.averageDifficulty)}${geoSuffix ? ` (${geoSuffix})` : ""}`
                       : ""}
@@ -196,7 +206,9 @@ export function ClusterPlanBody({
 
       <p className="text-xs text-base-content/40">
         Plan for &ldquo;{plan.topic}&rdquo; · fetched{" "}
-        {new Date(plan.fetchedAt).toLocaleString()}
+        {plan.fetchedAt
+          ? new Date(plan.fetchedAt).toLocaleString()
+          : "Capture unknown"}
       </p>
     </>
   );

@@ -64,6 +64,16 @@ describe("copyTableToClipboard", () => {
     expect(written[0].plain).toBe("Traffic\n1250.32");
     expect(written[0].html).toContain("<td>1250.32</td>");
   });
+  it("retains requested provider precision in spreadsheet clipboard payloads", async () => {
+    const { written } = mockClipboard();
+    await Reflect.apply(copyTableToClipboard, null, [
+      ["CPC", "Target"],
+      [[0.1234, "=formula"]],
+      { preservePrecision: true },
+    ]);
+    expect(written[0].plain).toContain("0.1234\t'=formula");
+    expect(written[0].html).toContain("<td>0.1234</td>");
+  });
 
   it("emits URL cells as HTML links for spreadsheet paste", async () => {
     const { written } = mockClipboard();

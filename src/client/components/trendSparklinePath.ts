@@ -4,7 +4,7 @@
 export type SparklinePoint = {
   year: number;
   month: number;
-  searchVolume: number;
+  searchVolume: number | null;
 };
 
 type SparklinePath = {
@@ -37,15 +37,24 @@ export function buildSparklinePath(
     .slice(-MAX_POINTS);
   if (sorted.length < 2) return null;
 
-  const values = sorted.map((point) => Math.max(0, point.searchVolume));
-  const max = Math.max(...values);
-  const min = Math.min(...values);
+  const values = sorted.map((point) =>
+    point.searchVolume !== null &&
+    Number.isFinite(point.searchVolume) &&
+    point.searchVolume >= 0
+      ? point.searchVolume
+      : null,
+  );
+  const available = values.filter((value): value is number => value !== null);
+  if (available.length < 2) return null;
+  const max = Math.max(...available);
+  const min = Math.min(...available);
   const span = max - min;
 
   const stepX = width / (sorted.length - 1);
   const usableHeight = height - PAD_Y * 2;
 
   const coords = values.map((value, index) => {
+    if (value === null) return null;
     const x = round(index * stepX);
     const y =
       span === 0
@@ -54,11 +63,32 @@ export function buildSparklinePath(
     return { x, y };
   });
 
-  const line = coords
-    .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+  const segments: Array<Array<{ x: number; y: number }>> = [];
+  let segment: Array<{ x: number; y: number }> = [];
+  for (let index = 0; index < coords.length; index++) {
+    const point = coords[index];
+    const month = sorted[index].year * 12 + sorted[index].month;
+    const previous =
+      index > 0 ? sorted[index - 1].year * 12 + sorted[index - 1].month : null;
+    if (!point || (previous !== null && month !== previous + 1)) {
+      if (segment.length) segments.push(segment);
+      segment = [];
+    }
+    if (point) segment.push(point);
+  }
+  if (segment.length) segments.push(segment);
+  const lines = segments.map((segmentPoints) =>
+    segmentPoints
+      .map((point, index) => `${index === 0 ? "M" : "L"}${point.x},${point.y}`)
+      .join(" "),
+  );
+  const line = lines.join(" ");
+  const area = segments
+    .map(
+      (segmentPoints, index) =>
+        `${lines[index]} L${segmentPoints[segmentPoints.length - 1].x},${height} L${segmentPoints[0].x},${height} Z`,
+    )
     .join(" ");
-  const last = coords[coords.length - 1];
-  const area = `${line} L${last.x},${height} L0,${height} Z`;
 
   return { line, area };
 }

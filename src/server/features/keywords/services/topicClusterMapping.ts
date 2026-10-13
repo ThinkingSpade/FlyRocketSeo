@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { providerCount } from "@/shared/provider-observations";
+import { keywordScore } from "@/shared/keyword-observations";
 
 // Pure clustering (no I/O) for the Topic Cluster Planner, split out so the
 // grouping rules are unit-testable without the DataForSEO client.
@@ -13,7 +15,8 @@ type TopicCluster = {
   /** Human label derived from the shared modifier (e.g. "healthy"). */
   name: string;
   keywords: ClusterKeyword[];
-  totalVolume: number;
+  totalVolume: number | null;
+  keywordCount: number;
 };
 
 type TopicClusterPlan = {
@@ -87,6 +90,14 @@ function stem(token: string): string {
 function titleCase(value: string): string {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
+function completeVolume(keywords: ClusterKeyword[]): number | null {
+  let sum = 0;
+  for (const keyword of keywords) {
+    if (keyword.searchVolume === null) return null;
+    sum += keyword.searchVolume;
+  }
+  return providerCount(sum);
+}
 
 /**
  * Deterministic lexical clustering: strip the seed's own words and glue words
@@ -115,9 +126,10 @@ export function buildTopicClusters(
 
     const entry: ClusterKeyword = {
       keyword,
-      searchVolume: parsed.data.keyword_info?.search_volume ?? null,
-      keywordDifficulty:
-        parsed.data.keyword_properties?.keyword_difficulty ?? null,
+      searchVolume: providerCount(parsed.data.keyword_info?.search_volume),
+      keywordDifficulty: keywordScore(
+        parsed.data.keyword_properties?.keyword_difficulty,
+      ),
     };
 
     const modifiers = tokenize(keyword).filter(
@@ -168,30 +180,26 @@ export function buildTopicClusters(
     }
     clusters.push({
       name: titleCase(displayByStem.get(modifier) ?? modifier),
+      keywordCount: keywords.length,
       keywords: keywords
         .toSorted((a, b) => (b.searchVolume ?? -1) - (a.searchVolume ?? -1))
         .slice(0, MAX_KEYWORDS_PER_CLUSTER),
-      totalVolume: keywords.reduce(
-        (sum, entry) => sum + (entry.searchVolume ?? 0),
-        0,
-      ),
+      totalVolume: completeVolume(keywords),
     });
   }
 
   const ranked = clusters
-    .toSorted((a, b) => b.totalVolume - a.totalVolume)
+    .toSorted((a, b) => (b.totalVolume ?? -1) - (a.totalVolume ?? -1))
     .slice(0, MAX_CLUSTERS);
 
   if (leftovers.length > 0) {
     ranked.push({
       name: "More ideas",
+      keywordCount: leftovers.length,
       keywords: leftovers
         .toSorted((a, b) => (b.searchVolume ?? -1) - (a.searchVolume ?? -1))
         .slice(0, MAX_KEYWORDS_PER_CLUSTER),
-      totalVolume: leftovers.reduce(
-        (sum, entry) => sum + (entry.searchVolume ?? 0),
-        0,
-      ),
+      totalVolume: completeVolume(leftovers),
     });
   }
 

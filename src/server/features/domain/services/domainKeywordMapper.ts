@@ -1,5 +1,11 @@
 import { type DomainRankedKeywordItem } from "@/server/lib/dataforseo";
 import { toRelativePath } from "@/server/lib/domainUtils";
+import { providerCount } from "@/shared/provider-observations";
+import {
+  keywordEstimate,
+  keywordPosition,
+  keywordScore,
+} from "@/shared/keyword-observations";
 
 export function mapKeywordItem(item: DomainRankedKeywordItem) {
   const keywordData = item.keyword_data;
@@ -9,7 +15,7 @@ export function mapKeywordItem(item: DomainRankedKeywordItem) {
   const serpItem = rankedSerpElement?.serp_item;
 
   const keyword = keywordData?.keyword ?? item.keyword;
-  if (!keyword) return null;
+  if (!keyword?.trim()) return null;
 
   const url = serpItem?.url ?? rankedSerpElement?.url ?? null;
 
@@ -30,16 +36,12 @@ export function mapKeywordItem(item: DomainRankedKeywordItem) {
 
   return {
     keyword,
-    position: position != null ? Math.round(position) : null,
-    searchVolume:
-      keywordInfo?.search_volume != null
-        ? Math.round(keywordInfo.search_volume)
-        : null,
-    traffic: traffic ?? null,
-    cpc: keywordInfo?.cpc ?? null,
+    position: keywordPosition(position),
+    searchVolume: providerCount(keywordInfo?.search_volume),
+    traffic: keywordEstimate(traffic),
+    cpc: keywordEstimate(keywordInfo?.cpc),
     url: url ?? null,
     relativeUrl,
-    keywordDifficulty:
-      keywordDifficulty != null ? Math.round(keywordDifficulty) : null,
+    keywordDifficulty: keywordScore(keywordDifficulty),
   };
 }

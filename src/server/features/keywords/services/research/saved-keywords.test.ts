@@ -33,6 +33,88 @@ describe("saved keyword service", () => {
     for (const mock of Object.values(mocks)) mock.mockReset();
   });
 
+  it("retains unknown versus zero monthly data and sanitizes invalid stored metrics", async () => {
+    mocks.listSavedKeywordsByProject.mockResolvedValue({
+      totalCount: 1,
+      tags: [],
+      rows: [
+        {
+          row: savedKeywordRow,
+          tags: [],
+          metric: {
+            searchVolume: 1.5,
+            cpc: -1,
+            competition: 2,
+            keywordDifficulty: 101,
+            monthlySearches: JSON.stringify([
+              { year: 2026, month: 1, searchVolume: null },
+              { year: 2026, month: 2, searchVolume: 0 },
+            ]),
+            fetchedAt: "2026-01-03T00:00:00.000Z",
+          },
+        },
+      ],
+    });
+    const { getSavedKeywords } = await import("./saved-keywords");
+    const { rows } = await getSavedKeywords({
+      projectId: "project_1",
+      page: 1,
+      pageSize: 50,
+      sort: "createdAt",
+      order: "desc",
+    });
+    expect(rows[0]).toMatchObject({
+      searchVolume: null,
+      cpc: null,
+      competition: null,
+      keywordDifficulty: null,
+      monthlySearches: [
+        { year: 2026, month: 1, searchVolume: null },
+        { year: 2026, month: 2, searchVolume: 0 },
+      ],
+      fetchedAt: "2026-01-03T00:00:00.000Z",
+    });
+  });
+
+  it("passes the original provider capture time when saving restored metrics", async () => {
+    mocks.saveKeywordsToProject.mockResolvedValue([savedKeywordRow]);
+    const { saveKeywords } = await import("./saved-keywords");
+    await Reflect.apply(saveKeywords, null, [
+      {
+        projectId: "project_1",
+        keywords: ["technical seo"],
+        locationCode: 2840,
+        languageCode: "en",
+        metrics: [
+          {
+            keyword: "technical seo",
+            searchVolume: 0,
+            fetchedAt: "2026-01-03T00:00:00.000Z",
+          },
+        ],
+      },
+    ]);
+    expect(mocks.upsertKeywordMetric).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fetchedAt: "2026-01-03T00:00:00.000Z",
+        searchVolume: 0,
+      }),
+    );
+  });
+  it("saves legacy keyword names without stamping unknown captures as fresh metrics", async () => {
+    mocks.saveKeywordsToProject.mockResolvedValue([savedKeywordRow]);
+    const { saveKeywords } = await import("./saved-keywords");
+    await saveKeywords({
+      projectId: "project_1",
+      keywords: ["technical seo"],
+      locationCode: 2840,
+      languageCode: "en",
+      metrics: [{ keyword: "technical seo", searchVolume: 12 }],
+    });
+    expect(mocks.upsertKeywordMetric).not.toHaveBeenCalled();
+    expect(mocks.saveKeywordsToProject).toHaveBeenCalled();
+  });
+
   it("attaches tags to saved keyword rows after saving", async () => {
     mocks.saveKeywordsToProject.mockResolvedValue([
       savedKeywordRow,

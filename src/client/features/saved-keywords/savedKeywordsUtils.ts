@@ -5,9 +5,13 @@ import type { GetSavedKeywordsInput } from "@/types/schemas/keywords";
 
 export const SAVED_KEYWORD_PAGE_SIZES = [50, 100, 250] as const;
 export const SAVED_KEYWORD_EXPORT_HEADERS = [
-  ...KEYWORD_RESEARCH_HEADERS,
+  ...KEYWORD_RESEARCH_HEADERS.slice(0, 6),
   "Tags",
   "Fetched At",
+  "Source",
+  "Project ID",
+  "Location Code",
+  "Language",
 ];
 
 export function savedKeywordExportRow(row: SavedKeywordRow): CsvValue[] {
@@ -20,6 +24,10 @@ export function savedKeywordExportRow(row: SavedKeywordRow): CsvValue[] {
     row.intent ?? "",
     row.tags.map((tag) => tag.name).join(", "),
     row.fetchedAt ?? "",
+    "Saved keyword metrics",
+    row.projectId,
+    row.locationCode,
+    row.languageCode,
   ];
 }
 

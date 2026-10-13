@@ -129,4 +129,112 @@ describe("fetchKeywordMetricsForList", () => {
     expect(keywordOverview).toHaveBeenCalledTimes(3); // 700 + 700 + 100
     expect(rows).toHaveLength(1500);
   });
+
+  it("does not invent volumes or dates from missing and invalid observations", async () => {
+    const client = fakeClient({
+      keywordOverview: vi.fn().mockResolvedValue([
+        {
+          keyword: "crm",
+          keyword_info: {
+            search_volume: 1.5,
+            cpc: -1,
+            competition: 1.2,
+            monthly_searches: [
+              { year: 2026, month: 1 },
+              { year: 2026, month: 2, search_volume: 0 },
+              { year: 2026, month: 13, search_volume: 9 },
+              { month: 3, search_volume: 9 },
+              {
+                year: 2026,
+                month: 4,
+                search_volume: Number.MAX_SAFE_INTEGER + 1,
+              },
+            ],
+          },
+          keyword_properties: { keyword_difficulty: 101 },
+        },
+      ]),
+    });
+    const [row] = await fetchKeywordMetricsForList(client, {
+      keywords: ["crm"],
+      locationCode: 2840,
+      languageCode: "en",
+      creditFeature: "keyword_research",
+    });
+    expect(row).toMatchObject({
+      searchVolume: null,
+      cpc: null,
+      competition: null,
+      keywordDifficulty: null,
+      monthlySearches: [
+        { year: 2026, month: 1, searchVolume: null },
+        { year: 2026, month: 2, searchVolume: 0 },
+        { year: 2026, month: 4, searchVolume: null },
+      ],
+    });
+  });
+
+  it("ignores unsolicited clickstream evidence and retains explicitly requested zero", async () => {
+    const client = fakeClient({
+      keywordOverview: vi.fn().mockResolvedValue([
+        {
+          keyword: "crm",
+          keyword_info: {
+            search_volume: 12,
+            monthly_searches: [{ year: 2026, month: 1, search_volume: 12 }],
+          },
+          keyword_info_normalized_with_clickstream: {
+            search_volume: 0,
+            monthly_searches: [{ year: 2026, month: 1, search_volume: 0 }],
+          },
+        },
+      ]),
+    });
+    const params = {
+      keywords: ["crm"],
+      locationCode: 2840,
+      languageCode: "en",
+      creditFeature: "keyword_research" as const,
+    };
+    expect(
+      (await fetchKeywordMetricsForList(client, params))[0].searchVolume,
+    ).toBe(12);
+    expect(
+      (
+        await fetchKeywordMetricsForList(client, {
+          ...params,
+          includeClickstreamData: true,
+        })
+      )[0],
+    ).toMatchObject({
+      searchVolume: 0,
+      monthlySearches: [{ year: 2026, month: 1, searchVolume: 0 }],
+    });
+  });
+
+  it("drops foreign keyword responses and normalizes Ads competition without rounding estimates", async () => {
+    const client = fakeClient({
+      adsSearchVolume: vi.fn().mockResolvedValue([
+        {
+          keyword: "hotel",
+          search_volume: 0,
+          cpc: 0.1234,
+          competition_index: 101,
+        },
+        { keyword: "foreign", search_volume: 999 },
+      ]),
+    });
+    const rows = await fetchKeywordMetricsForList(client, {
+      keywords: ["hotel"],
+      locationCode: 2352,
+      languageCode: "is",
+      creditFeature: "keyword_research",
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      searchVolume: 0,
+      cpc: 0.1234,
+      competition: null,
+    });
+  });
 });

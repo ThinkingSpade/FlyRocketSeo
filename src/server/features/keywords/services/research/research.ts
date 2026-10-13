@@ -9,7 +9,10 @@ import {
 } from "@/server/lib/r2-cache";
 import { KeywordResearchRepository } from "@/server/features/keywords/repositories/KeywordResearchRepository";
 import type { KeywordResearchRow } from "@/types/keywords";
-import type { ResearchKeywordsInput } from "@/types/schemas/keywords";
+import type {
+  ResearchKeywordsInput,
+  KeywordResearchResult,
+} from "@/types/schemas/keywords";
 import { getKeywordDataProvider } from "@/shared/keyword-locations";
 import { type EnrichedKeyword, normalizeKeyword } from "./helpers";
 import {
@@ -52,13 +55,13 @@ type ResearchResult = {
   diagnostics: ResearchDiagnostics;
 };
 
-type CachedResult = ResearchResult;
+type CachedResult = KeywordResearchResult;
 
 import { keywordResearchResultSchema as cachedResultSchema } from "@/types/schemas/keywords";
 
 // v4: Auto tries suggestions before related and related walks one hop, so the
 // same request no longer returns the drifted rows a v3 entry cached.
-const CACHE_VERSION = 4;
+const CACHE_VERSION = 5;
 
 async function fetchRowsFromSource(
   source: KeywordSource,
@@ -240,7 +243,11 @@ async function buildResearchCacheKey(
   });
 }
 
-function persistRows(input: ResearchKeywordsInput, rows: EnrichedKeyword[]) {
+function persistRows(
+  input: ResearchKeywordsInput,
+  rows: EnrichedKeyword[],
+  fetchedAt: string,
+) {
   void Promise.all(
     rows.map((row) =>
       KeywordResearchRepository.upsertKeywordMetric({
@@ -254,6 +261,7 @@ function persistRows(input: ResearchKeywordsInput, rows: EnrichedKeyword[]) {
         keywordDifficulty: row.keywordDifficulty,
         intent: row.intent,
         monthlySearchesJson: JSON.stringify(row.trend),
+        fetchedAt,
       }),
     ),
   ).catch((error) => {
@@ -265,7 +273,7 @@ export async function research(
   input: ResearchKeywordsInput,
   billingCustomer: BillingCustomerContext,
   creditFeature?: CreditFeature,
-): Promise<ResearchResult> {
+): Promise<KeywordResearchResult> {
   const uniqueKeywords = [
     ...new Set(input.keywords.map(normalizeKeyword)),
   ].filter((keyword) => keyword.length > 0);
@@ -320,7 +328,14 @@ export async function research(
     ? cachedResult.data
     : null;
 
-  if (cached && cached.rows.length > 0) {
+  if (
+    cached?.contractVersion === 2 &&
+    cached.scope?.projectId === effectiveInput.projectId &&
+    cached.scope.locationCode === effectiveInput.locationCode &&
+    cached.scope.languageCode === effectiveInput.languageCode &&
+    cached.scope.clickstream === effectiveInput.clickstream &&
+    cached.scope.seedKeyword === seedKeyword
+  ) {
     await recordRun();
     return cached;
   }
@@ -348,9 +363,23 @@ export async function research(
             creditFeature,
           );
 
-  await setCached(cacheKey, result, CACHE_TTL.researchResult);
-  persistRows(effectiveInput, result.rows);
-  if (result.rows.length > 0) await recordRun();
+  const captured = cachedResultSchema.parse({
+    ...result,
+    contractVersion: 2,
+    fetchedAt: new Date().toISOString(),
+    dataSource:
+      provider === "google_ads" ? "DataForSEO Google Ads" : "DataForSEO Labs",
+    scope: {
+      projectId: effectiveInput.projectId,
+      seedKeyword,
+      locationCode: effectiveInput.locationCode,
+      languageCode: effectiveInput.languageCode,
+      clickstream: effectiveInput.clickstream,
+    },
+  });
+  await setCached(cacheKey, captured, CACHE_TTL.researchResult);
+  persistRows(effectiveInput, result.rows, captured.fetchedAt!);
+  await recordRun();
 
-  return result;
+  return captured;
 }

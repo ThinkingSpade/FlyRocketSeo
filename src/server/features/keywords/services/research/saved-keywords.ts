@@ -16,14 +16,20 @@ import type {
 } from "@/types/keywords";
 import { normalizeKeyword } from "./helpers";
 import { z } from "zod";
+import {
+  keywordMonthlySearches,
+  keywordEstimate,
+  keywordRatio,
+  keywordScore,
+} from "@/shared/keyword-observations";
+import {
+  providerCount,
+  providerTimestamp,
+} from "@/shared/provider-observations";
 
-const monthlySearchSchema = z.object({
-  year: z.number().int().positive(),
-  month: z.number().int().min(1).max(12),
-  searchVolume: z.number().int().nonnegative(),
-});
-
-const monthlySearchesCodec = jsonCodec(z.array(monthlySearchSchema));
+const monthlySearchesCodec = jsonCodec(
+  z.array(z.unknown()).transform(keywordMonthlySearches),
+);
 
 function parseMonthlySearches(payload: string | null): MonthlySearch[] {
   if (!payload) return [];
@@ -59,7 +65,7 @@ export async function saveKeywords(input: SaveKeywordsInput) {
     await Promise.all(
       normalizedKeywords.map(async (keyword) => {
         const metric = metricByKeyword.get(keyword);
-        if (!metric) return;
+        if (!metric?.fetchedAt) return;
 
         await KeywordResearchRepository.upsertKeywordMetric({
           projectId: input.projectId,
@@ -72,6 +78,7 @@ export async function saveKeywords(input: SaveKeywordsInput) {
           keywordDifficulty: metric.keywordDifficulty ?? null,
           intent: metric.intent ?? null,
           monthlySearchesJson: JSON.stringify(metric.monthlySearches ?? []),
+          fetchedAt: metric.fetchedAt,
         });
       }),
     );
@@ -213,13 +220,13 @@ function mapSavedKeywordRows(
     locationCode: row.locationCode,
     languageCode: row.languageCode,
     createdAt: row.createdAt,
-    searchVolume: metric?.searchVolume ?? null,
-    cpc: metric?.cpc ?? null,
-    competition: metric?.competition ?? null,
-    keywordDifficulty: metric?.keywordDifficulty ?? null,
+    searchVolume: providerCount(metric?.searchVolume),
+    cpc: keywordEstimate(metric?.cpc),
+    competition: keywordRatio(metric?.competition),
+    keywordDifficulty: keywordScore(metric?.keywordDifficulty),
     intent: metric?.intent ?? null,
     monthlySearches: parseMonthlySearches(metric?.monthlySearches ?? null),
-    fetchedAt: metric?.fetchedAt ?? null,
+    fetchedAt: providerTimestamp(metric?.fetchedAt),
     tags: tags.map((tag) => ({
       id: tag.id,
       name: tag.name,

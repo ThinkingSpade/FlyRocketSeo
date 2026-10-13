@@ -50,6 +50,7 @@ export async function exportTableToSheets(args: {
   headers: string[];
   rows: CsvValue[][];
   feature: string;
+  preservePrecision?: boolean;
 }) {
   const { headers, rows, feature } = args;
   if (rows.length === 0) {
@@ -57,7 +58,9 @@ export async function exportTableToSheets(args: {
     return;
   }
   try {
-    await copyTableToClipboard(headers, rows);
+    await copyTableToClipboard(headers, rows, {
+      preservePrecision: args.preservePrecision,
+    });
     captureClientEvent("data:export_sheets", {
       source_feature: feature,
       result_count: rows.length,

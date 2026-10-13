@@ -85,7 +85,17 @@ export const getDomainKeywordsPage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (shouldUseDomainE2eFixtures()) {
       const fixtures = await getDomainE2eFixtures();
-      return fixtures.getFixtureKeywordsPage(data);
+      return {
+        ...fixtures.getFixtureKeywordsPage(data),
+        contractVersion: 2 as const,
+        source: "DataForSEO Labs" as const,
+        scope: {
+          locationCode: data.locationCode,
+          languageCode: data.languageCode,
+          includeSubdomains: data.includeSubdomains,
+          providerScope: "target" as const,
+        },
+      };
     }
 
     return DomainService.getKeywordsPage(
@@ -103,7 +113,17 @@ export const getDomainPagesPage = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     if (shouldUseDomainE2eFixtures()) {
       const fixtures = await getDomainE2eFixtures();
-      return fixtures.getFixturePagesPage(data);
+      return {
+        ...fixtures.getFixturePagesPage(data),
+        contractVersion: 2 as const,
+        source: "DataForSEO Labs" as const,
+        scope: {
+          locationCode: data.locationCode,
+          languageCode: data.languageCode,
+          includeSubdomains: data.includeSubdomains,
+          providerScope: "target" as const,
+        },
+      };
     }
 
     return DomainService.getPagesPage(

@@ -4,6 +4,7 @@ import { KeywordResearchDesktopResults } from "./KeywordResearchDesktopResults";
 import { KeywordResearchMobileResults } from "./KeywordResearchMobileResults";
 import { PpcValuePanel } from "./PpcValuePanel";
 import type { KeywordResearchControllerState } from "./types";
+import { KeywordCaptureNotice } from "./KeywordCaptureNotice";
 
 type Props = {
   projectId: string;
@@ -20,6 +21,11 @@ export function KeywordResearchResults({
 }: Props) {
   return (
     <div className="flex-1 flex flex-col overflow-hidden w-full gap-3">
+      <KeywordCaptureNotice
+        observation={controller.rows[0]?.observation ?? null}
+        restored={Boolean(controller.restoredRun)}
+        rowCount={controller.rows.length}
+      />
       {/* Pure read of rows already on the page plus the free DR lookup above
           -- no extra metered call, so it costs nothing to show. */}
       <NextStepsCard

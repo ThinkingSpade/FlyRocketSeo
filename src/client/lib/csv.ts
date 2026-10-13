@@ -4,9 +4,13 @@ export type CsvValue = string | number | boolean | null | undefined;
 
 export type ExportValue = string | number | boolean;
 
-export function buildCsv(headers: string[], rows: CsvValue[][]): string {
+export function buildCsv(
+  headers: string[],
+  rows: CsvValue[][],
+  options: { preservePrecision?: boolean } = {},
+): string {
   const normalizedRows = rows.map((row) =>
-    row.map((value) => normalizeExportValue(value ?? "")),
+    row.map((value) => normalizeExportValue(value ?? "", options)),
   );
 
   return Papa.unparse(
@@ -21,9 +25,14 @@ export function buildCsv(headers: string[], rows: CsvValue[][]): string {
   );
 }
 
-export function normalizeExportValue(value: CsvValue): ExportValue {
+export function normalizeExportValue(
+  value: CsvValue,
+  options: { preservePrecision?: boolean } = {},
+): ExportValue {
   const normalized =
-    typeof value === "number" ? roundExportNumber(value) : value;
+    typeof value === "number" && !options.preservePrecision
+      ? roundExportNumber(value)
+      : value;
   return sanitizeCsvValue(normalized ?? "");
 }
 

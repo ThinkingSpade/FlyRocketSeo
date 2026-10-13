@@ -234,10 +234,18 @@ export function useKeywordResearchData(
     hasSearched,
     lastSearchError: request !== null && researchQuery.isError,
     lastResultSource:
-      researchQuery.data?.source ?? ("related" as ResearchSource),
-    lastUsedFallback: researchQuery.data?.usedFallback ?? false,
+      researchQuery.data?.source ??
+      restoredRun?.result.source ??
+      ("related" as ResearchSource),
+    lastUsedFallback:
+      researchQuery.data?.usedFallback ??
+      restoredRun?.result.usedFallback ??
+      false,
     lastSearchKeyword: request?.seedKeyword ?? restoredRun?.label ?? "",
-    lastSearchLocationCode: request?.locationCode ?? DEFAULT_LOCATION_CODE,
+    lastSearchLocationCode:
+      request?.locationCode ??
+      restoredRun?.result.scope?.locationCode ??
+      DEFAULT_LOCATION_CODE,
     researchError,
     researchMutationError: researchQuery.error,
     searchedKeyword: request?.seedKeyword ?? restoredRun?.label ?? "",

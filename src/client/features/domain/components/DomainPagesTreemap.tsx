@@ -161,8 +161,9 @@ export function DomainPagesTreemap({
         Traffic by page
       </h3>
       <p className="mt-0.5 text-xs text-base-content/50">
-        The loaded pages sized by estimated organic traffic — how concentrated
-        this domain&rsquo;s visibility is.
+        The loaded pages sized by estimated organic traffic. Shares cover only
+        reported positive estimates in this result page; unknown and zero rows
+        are omitted.
       </p>
       <Chart
         echarts={echarts}

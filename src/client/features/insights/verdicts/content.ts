@@ -214,7 +214,7 @@ type ClusterCandidate = {
    *  (TopicCluster, clusterPriorities.ts) holds a `keywords` array, not a
    *  count; the wiring passes `keywords.length`. */
   keywordCount: number;
-  totalVolume: number;
+  totalVolume: number | null;
   /** Average keyword difficulty across the cluster's keywords that have one
    *  (prioritizeClusters' own `averageDifficulty`), null when none do. Not
    *  in the brief's signature -- added because "worth a hub" can't be
@@ -270,6 +270,12 @@ export function buildClustersVerdict(input: ClustersVerdictInput): Verdict {
   }
 
   const lead = input.clusters[0];
+  if (input.clusters.some((cluster) => cluster.totalVolume === null))
+    return unknownVerdict(
+      "Some cluster demand is unavailable; review the keyword evidence before prioritizing a hub.",
+    );
+  if (lead.totalVolume === null)
+    return unknownVerdict("Cluster demand is unavailable.");
 
   if (lead.totalVolume < MIN_CLUSTER_VOLUME) {
     return {

@@ -76,6 +76,7 @@ export function useSavedKeywordsExport(params: {
         headers: SAVED_KEYWORD_EXPORT_HEADERS,
         rows: rows.map(savedKeywordExportRow),
         feature: "saved_keywords",
+        preservePrecision: true,
       });
     } catch (error) {
       toast.error(getStandardErrorMessage(error, "Could not export to Sheets"));
@@ -107,6 +108,7 @@ export function useSavedKeywordsExport(params: {
         headers: SAVED_KEYWORD_EXPORT_HEADERS,
         rows: selectedRows.map(savedKeywordExportRow),
         feature: "saved_keywords",
+        preservePrecision: true,
       });
     } catch (error) {
       toast.error(getStandardErrorMessage(error, "Could not export to Sheets"));
@@ -126,17 +128,11 @@ export function useSavedKeywordsExport(params: {
 }
 
 function downloadKeywordCsv(rows: SavedKeywordRow[]) {
-  const csvRows = rows
-    .map(savedKeywordExportRow)
-    .map((row) =>
-      row.map((cell, index) =>
-        (index === 2 || index === 3) && typeof cell === "number"
-          ? cell.toFixed(2)
-          : cell,
-      ),
-    );
+  const csvRows = rows.map(savedKeywordExportRow);
   downloadCsv(
     "saved-keywords.csv",
-    buildCsv(SAVED_KEYWORD_EXPORT_HEADERS, csvRows),
+    buildCsv(SAVED_KEYWORD_EXPORT_HEADERS, csvRows, {
+      preservePrecision: true,
+    }),
   );
 }

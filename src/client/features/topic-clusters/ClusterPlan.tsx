@@ -109,7 +109,15 @@ export function ClusterPlan({
     }
     try {
       await navigator.clipboard.writeText(
-        clusterPlanToMarkdown({ topic: plan.topic, hub: plan.hub, clusters }),
+        clusterPlanToMarkdown({
+          topic: plan.topic,
+          hub: plan.hub,
+          clusters,
+          source: plan.source,
+          locationCode: plan.locationCode,
+          languageCode: plan.languageCode,
+          fetchedAt: plan.fetchedAt,
+        }),
       );
     } catch {
       toast.error("Couldn't copy to clipboard");
@@ -125,6 +133,15 @@ export function ClusterPlan({
 
   return (
     <>
+      <p className="text-xs text-base-content/60">
+        {plan.source} provider sample · Captured{" "}
+        {plan.fetchedAt?.slice(0, 10) ?? "Unknown"} (UTC). Lexical grouping and
+        priority are internal heuristics; unknown difficulty is assumed 50 for
+        priority. Missing cluster demand stays unranked.{" "}
+        {plan.contractVersion === 1
+          ? "Legacy aggregate demand could not be verified."
+          : ""}
+      </p>
       <CoverageSummary
         coverage={coverageState.coverage}
         isLoading={coverageState.isLoading}
@@ -139,7 +156,7 @@ export function ClusterPlan({
           {totals.keywordCount} keywords
         </Badge>
         <Badge variant="neutral" className="tabular-nums">
-          {totals.totalVolume.toLocaleString()} total vol
+          {totals.totalVolume?.toLocaleString() ?? "Unknown"} total vol
           {geoSuffix ? ` (${geoSuffix})` : ""}
         </Badge>
         {totals.averageDifficulty != null ? (

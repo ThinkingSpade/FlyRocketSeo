@@ -82,7 +82,9 @@ export function KeywordGroupsRail({
               </span>
               <span className="shrink-0 text-xs text-base-content/50 tabular-nums">
                 {sort === "volume"
-                  ? formatCompactNumber(group.totalVolume)
+                  ? group.totalVolume === null
+                    ? "Unknown"
+                    : formatCompactNumber(group.totalVolume)
                   : group.keywordCount.toLocaleString()}
               </span>
             </button>

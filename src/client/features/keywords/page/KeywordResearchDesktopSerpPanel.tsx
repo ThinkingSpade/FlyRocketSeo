@@ -8,6 +8,7 @@ import type { KeywordResearchRow } from "@/types/keywords";
 import type { KeywordResearchControllerState } from "./types";
 import { SerpPanelActions } from "./keywordResearchDesktopFilters";
 import { KeywordActionPlanCard } from "@/client/features/keywords/actionPlan/KeywordActionPlanCard";
+import { keywordTrendWindow } from "../keywordTrendWindow";
 
 // Split out of KeywordResearchDesktopResults.tsx to keep that file under the
 // line-count cap -- this panel is otherwise unrelated to the table/filters it
@@ -32,10 +33,8 @@ const MONTH_SHORT_LABELS = [
 function formatTrendRangeLabel(trend: KeywordResearchRow["trend"]): string {
   if (trend.length === 0) return "Last 12 available months";
 
-  const sorted = trend.toSorted(
-    (a, b) => a.year * 100 + a.month - (b.year * 100 + b.month),
-  );
-  const last12 = sorted.slice(-12);
+  const last12 = keywordTrendWindow(trend);
+  if (last12.length === 0) return "Monthly observations unavailable";
   const start = last12[0];
   const end = last12[last12.length - 1];
 

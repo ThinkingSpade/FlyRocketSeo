@@ -6,6 +6,9 @@ import { normalizeDomainInput, toRelativePath } from "@/server/lib/domainUtils";
 import type { RelevantPagesItem } from "@/server/lib/dataforseo";
 import type { DomainKeywordsFilters } from "@/types/schemas/domain";
 
+import { providerCount } from "@/shared/provider-observations";
+import { keywordEstimate } from "@/shared/keyword-observations";
+
 const DOMAIN_PAGES_PAGE_TTL_SECONDS = 12 * 60 * 60;
 
 type DomainPagesSortMode = "traffic" | "keywords";
@@ -17,20 +20,38 @@ const SORT_FIELD_BY_MODE: Record<DomainPagesSortMode, string> = {
 };
 
 const domainPagesPageResultSchema = z.object({
+  contractVersion: z.literal(2),
+  source: z.literal("DataForSEO Labs"),
+  scope: z.object({
+    locationCode: z.number().int().positive(),
+    languageCode: z.string(),
+    includeSubdomains: z.boolean(),
+    providerScope: z.literal("target"),
+  }),
   domain: z.string(),
   page: z.number(),
   pageSize: z.number(),
-  totalCount: z.number().nullable(),
+  totalCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(Number.MAX_SAFE_INTEGER)
+    .nullable(),
   hasMore: z.boolean(),
   pages: z.array(
     z.object({
       page: z.string(),
       relativePath: z.string().nullable(),
-      organicTraffic: z.number().nullable(),
-      keywords: z.number().nullable(),
+      organicTraffic: z.number().nonnegative().nullable(),
+      keywords: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(Number.MAX_SAFE_INTEGER)
+        .nullable(),
     }),
   ),
-  fetchedAt: z.string(),
+  fetchedAt: z.iso.datetime(),
 });
 
 type DomainPagesPageResult = z.infer<typeof domainPagesPageResultSchema>;
@@ -112,8 +133,8 @@ function mapPageItem(item: RelevantPagesItem) {
   return {
     page: url,
     relativePath: toRelativePath(url),
-    organicTraffic: traffic != null ? Math.round(traffic) : null,
-    keywords: keywords != null ? Math.round(keywords) : null,
+    organicTraffic: keywordEstimate(traffic),
+    keywords: providerCount(keywords),
   };
 }
 
@@ -139,6 +160,7 @@ export async function getPagesPage(
   const filters = buildPageFilters(input.filters, input.search);
 
   const cacheKey = await buildCacheKey("domain:pages-page", {
+    contractVersion: 2,
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     domain,
@@ -155,7 +177,13 @@ export async function getPagesPage(
 
   const cachedRaw = await getCached(cacheKey);
   const cached = domainPagesPageResultSchema.safeParse(cachedRaw);
-  if (cached.success) {
+  if (
+    cached.success &&
+    cached.data.domain === domain &&
+    cached.data.scope.locationCode === input.locationCode &&
+    cached.data.scope.languageCode === input.languageCode &&
+    cached.data.scope.includeSubdomains === input.includeSubdomains
+  ) {
     return cached.data;
   }
 
@@ -177,13 +205,21 @@ export async function getPagesPage(
         item != null,
     );
 
-  const totalCount = response.totalCount;
+  const totalCount = providerCount(response.totalCount);
   const hasMore =
     totalCount != null
-      ? offset + pages.length < totalCount
-      : pages.length === input.pageSize;
+      ? offset + response.items.length < totalCount
+      : response.items.length === input.pageSize;
 
   const result: DomainPagesPageResult = {
+    contractVersion: 2,
+    source: "DataForSEO Labs",
+    scope: {
+      locationCode: input.locationCode,
+      languageCode: input.languageCode,
+      includeSubdomains: input.includeSubdomains,
+      providerScope: "target",
+    },
     domain,
     page: input.page,
     pageSize: input.pageSize,
@@ -193,7 +229,7 @@ export async function getPagesPage(
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, DOMAIN_PAGES_PAGE_TTL_SECONDS).catch(
+  await setCached(cacheKey, result, DOMAIN_PAGES_PAGE_TTL_SECONDS).catch(
     (error) => {
       console.error("domain.pages-page.cache-write failed:", error);
     },

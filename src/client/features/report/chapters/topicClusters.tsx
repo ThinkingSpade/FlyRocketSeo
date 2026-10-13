@@ -209,10 +209,11 @@ function buildIntroParagraph(plan: TopicClusterPlan, hasCoverage: boolean) {
   const lead = hasCoverage
     ? "We mapped the search landscape around the topic you sell into, grouped it into clusters, and checked which of those your site already ranks for — the ones nothing on your site answers are your next pages."
     : "We mapped the search landscape around the topic you sell into and grouped it into clusters of related searches.";
-  const pulled = new Date(plan.fetchedAt);
-  const mapped = Number.isNaN(pulled.getTime())
-    ? ""
-    : ` on ${pulled.toLocaleDateString("en-US", DATE_FORMAT)}`;
+  const pulled = plan.fetchedAt ? new Date(plan.fetchedAt) : null;
+  const mapped =
+    !pulled || Number.isNaN(pulled.getTime())
+      ? ""
+      : ` on ${pulled.toLocaleDateString("en-US", DATE_FORMAT)}`;
   return `${lead} The topic we mapped was “${plan.topic}”, and the landscape was pulled${mapped} — the search volumes below are rolling monthly averages from the day of that pull, not a count for this reporting period.`;
 }
 
@@ -321,9 +322,15 @@ function RoadmapTable({ plan, coverage, truncated }: RoadmapProps) {
               <Table.Cell className="max-w-md">
                 <span className="line-clamp-1">{cluster.name}</span>
               </Table.Cell>
-              <Table.Cell>P{cluster.priority}</Table.Cell>
+              <Table.Cell>
+                {cluster.priority === null
+                  ? "Unranked"
+                  : `P${cluster.priority}`}
+              </Table.Cell>
               <Table.Cell className="text-right tabular-nums">
-                {formatNumber(cluster.totalVolume)}
+                {cluster.totalVolume === null
+                  ? "Unknown"
+                  : formatNumber(cluster.totalVolume)}
               </Table.Cell>
               <Table.Cell className="text-right tabular-nums">
                 {cluster.averageDifficulty == null
@@ -362,7 +369,13 @@ function TopicClustersBody({ data, plan }: BodyProps) {
     },
     counts && !truncated
       ? { label: "No page ranking yet", value: formatNumber(counts.missing) }
-      : { label: "Monthly searches", value: formatNumber(totals.totalVolume) },
+      : {
+          label: "Monthly searches",
+          value:
+            totals.totalVolume === null
+              ? "Unknown"
+              : formatNumber(totals.totalVolume),
+        },
   ];
   const missingLabel = truncated
     ? "No match in the rows we read"

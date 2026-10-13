@@ -20,6 +20,12 @@ export const KEYWORD_RESEARCH_HEADERS = [
   "Competition",
   "Score",
   "Intent",
+  "Source",
+  "Project ID",
+  "Location Code",
+  "Language",
+  "Clickstream",
+  "Fetched At",
 ];
 
 export function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
@@ -30,6 +36,12 @@ export function keywordResearchExportRow(row: KeywordResearchRow): CsvValue[] {
     row.competition ?? "",
     row.keywordDifficulty ?? "",
     row.intent,
+    row.observation?.source ?? "Unknown",
+    row.observation?.projectId ?? "",
+    row.observation?.locationCode ?? "",
+    row.observation?.languageCode ?? "",
+    row.observation?.clickstream ?? "",
+    row.observation?.fetchedAt ?? "",
   ];
 }
 
@@ -120,14 +132,17 @@ export function useSaveAndExportActions(params: SaveExportActionParams) {
         keywordDifficulty: row.keywordDifficulty,
         intent: row.intent,
         monthlySearches: row.trend,
+        fetchedAt: row.observation?.fetchedAt,
       }));
 
     saveKeywordsMutate(
       {
         projectId: input.projectId,
         keywords: [...selectedRows],
-        locationCode: input.locationCode,
-        languageCode: getLanguageCode(input.locationCode),
+        locationCode: rows[0]?.observation?.locationCode ?? input.locationCode,
+        languageCode:
+          rows[0]?.observation?.languageCode ??
+          getLanguageCode(input.locationCode),
         metrics,
       },
       {
@@ -167,16 +182,8 @@ export function useSaveAndExportActions(params: SaveExportActionParams) {
 }
 
 export function downloadKeywordResearchCsv(rows: CsvValue[][]) {
-  // CSV file keeps cents-formatted CPC/competition for human readability.
-  const csvRows = rows.map((row) =>
-    row.map((cell, idx) =>
-      (idx === 2 || idx === 3) && typeof cell === "number"
-        ? cell.toFixed(2)
-        : cell,
-    ),
-  );
   downloadCsv(
     "keyword-research.csv",
-    buildCsv(KEYWORD_RESEARCH_HEADERS, csvRows),
+    buildCsv(KEYWORD_RESEARCH_HEADERS, rows, { preservePrecision: true }),
   );
 }

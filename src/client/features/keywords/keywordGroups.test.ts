@@ -98,15 +98,42 @@ describe("sortKeywordGroups", () => {
 });
 
 describe("computeKeywordTotals", () => {
+  it("keeps partial and all-missing total volume unknown, and preserves reported zero", () => {
+    expect(computeKeywordTotals([row("a", 0), row("b", null)])).toMatchObject({
+      totalVolume: null,
+      knownVolume: 0,
+      volumeReported: 1,
+    });
+    expect(computeKeywordTotals([row("a", null)])).toMatchObject({
+      totalVolume: null,
+      volumeReported: 0,
+    });
+    expect(computeKeywordTotals([row("a", 0), row("b", 0)])).toMatchObject({
+      totalVolume: 0,
+      volumeReported: 2,
+    });
+    expect(
+      extractKeywordGroups(
+        [row("seo tools", 0), row("seo tools guide", null)],
+        "seo",
+      )[0].totalVolume,
+    ).toBeNull();
+    expect(
+      computeKeywordTotals([row("a", Number.MAX_SAFE_INTEGER), row("b", 1)])
+        .totalVolume,
+    ).toBeNull();
+  });
   it("sums volume and averages difficulty over rows that have one", () => {
     const totals = computeKeywordTotals([
       row("a", 100, 40),
       row("b", 50, 20),
       row("c", null, null),
     ]);
-    expect(totals).toEqual({
+    expect(totals).toMatchObject({
       keywordCount: 3,
-      totalVolume: 150,
+      totalVolume: null,
+      knownVolume: 150,
+      volumeReported: 2,
       averageDifficulty: 30,
     });
   });

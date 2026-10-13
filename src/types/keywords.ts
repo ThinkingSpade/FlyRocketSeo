@@ -8,7 +8,16 @@ export type KeywordIntent =
 export type MonthlySearch = {
   year: number;
   month: number;
-  searchVolume: number;
+  searchVolume: number | null;
+};
+
+export type KeywordObservation = {
+  source: "DataForSEO Labs" | "DataForSEO Google Ads";
+  projectId: string;
+  locationCode: number;
+  languageCode: string;
+  clickstream: boolean;
+  fetchedAt: string;
 };
 
 export type KeywordResearchRow = {
@@ -19,6 +28,7 @@ export type KeywordResearchRow = {
   cpc: number | null;
   competition: number | null;
   intent: KeywordIntent;
+  observation?: KeywordObservation | null;
 };
 
 export type SavedKeywordRow = {
@@ -51,6 +61,10 @@ export type SavedKeywordTagSummary = SavedKeywordTag & {
 };
 
 export type SerpResultItem = {
+  source?: string;
+  fetchedAt?: string;
+  locationCode?: number;
+  languageCode?: string;
   rank: number;
   title: string;
   url: string;

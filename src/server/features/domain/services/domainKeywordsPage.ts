@@ -12,27 +12,52 @@ import {
 } from "@/server/features/domain/services/domainKeywordFilters";
 import type { DomainKeywordsFilters } from "@/types/schemas/domain";
 
+import { providerCount } from "@/shared/provider-observations";
+
 const DOMAIN_KEYWORDS_PAGE_TTL_SECONDS = 12 * 60 * 60;
 
 const domainKeywordsPageResultSchema = z.object({
+  contractVersion: z.literal(2),
+  source: z.literal("DataForSEO Labs"),
+  scope: z.object({
+    locationCode: z.number().int().positive(),
+    languageCode: z.string(),
+    includeSubdomains: z.boolean(),
+    providerScope: z.literal("target"),
+  }),
   domain: z.string(),
   page: z.number(),
   pageSize: z.number(),
-  totalCount: z.number().nullable(),
+  totalCount: z
+    .number()
+    .int()
+    .nonnegative()
+    .max(Number.MAX_SAFE_INTEGER)
+    .nullable(),
   hasMore: z.boolean(),
   keywords: z.array(
     z.object({
       keyword: z.string(),
-      position: z.number().nullable(),
-      searchVolume: z.number().nullable(),
-      traffic: z.number().nullable(),
-      cpc: z.number().nullable(),
+      position: z
+        .number()
+        .int()
+        .positive()
+        .max(Number.MAX_SAFE_INTEGER)
+        .nullable(),
+      searchVolume: z
+        .number()
+        .int()
+        .nonnegative()
+        .max(Number.MAX_SAFE_INTEGER)
+        .nullable(),
+      traffic: z.number().nonnegative().nullable(),
+      cpc: z.number().nonnegative().nullable(),
       url: z.string().nullable(),
       relativeUrl: z.string().nullable(),
-      keywordDifficulty: z.number().nullable(),
+      keywordDifficulty: z.number().int().min(0).max(100).nullable(),
     }),
   ),
-  fetchedAt: z.string(),
+  fetchedAt: z.iso.datetime(),
 });
 
 type DomainKeywordsPageResult = z.infer<typeof domainKeywordsPageResultSchema>;
@@ -59,6 +84,7 @@ export async function getKeywordsPage(
   const filters = buildKeywordFilters(input.filters, input.search);
 
   const cacheKey = await buildCacheKey("domain:keywords-page", {
+    contractVersion: 2,
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     domain,
@@ -75,7 +101,13 @@ export async function getKeywordsPage(
 
   const cachedRaw = await getCached(cacheKey);
   const cached = domainKeywordsPageResultSchema.safeParse(cachedRaw);
-  if (cached.success) {
+  if (
+    cached.success &&
+    cached.data.domain === domain &&
+    cached.data.scope.locationCode === input.locationCode &&
+    cached.data.scope.languageCode === input.languageCode &&
+    cached.data.scope.includeSubdomains === input.includeSubdomains
+  ) {
     return cached.data;
   }
 
@@ -97,13 +129,21 @@ export async function getKeywordsPage(
         item != null,
     );
 
-  const totalCount = response.totalCount;
+  const totalCount = providerCount(response.totalCount);
   const hasMore =
     totalCount != null
-      ? offset + keywords.length < totalCount
-      : keywords.length === input.pageSize;
+      ? offset + response.items.length < totalCount
+      : response.items.length === input.pageSize;
 
   const result: DomainKeywordsPageResult = {
+    contractVersion: 2,
+    source: "DataForSEO Labs",
+    scope: {
+      locationCode: input.locationCode,
+      languageCode: input.languageCode,
+      includeSubdomains: input.includeSubdomains,
+      providerScope: "target",
+    },
     domain,
     page: input.page,
     pageSize: input.pageSize,
@@ -113,7 +153,7 @@ export async function getKeywordsPage(
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, DOMAIN_KEYWORDS_PAGE_TTL_SECONDS).catch(
+  await setCached(cacheKey, result, DOMAIN_KEYWORDS_PAGE_TTL_SECONDS).catch(
     (error) => {
       console.error("domain.keywords-page.cache-write failed:", error);
     },

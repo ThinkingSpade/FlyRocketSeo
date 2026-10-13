@@ -38,6 +38,26 @@ function byKeywordOf(
 }
 
 describe("mergeDifficultyOverview", () => {
+  it("cannot reuse a prior country's difficulty after a research scope change", () => {
+    const target = row();
+    const map = byKeywordOf(
+      overviewRow({
+        scope: { projectId: "p1", locationCode: 2840, languageCode: "en" },
+      }),
+    );
+    const scope = { projectId: "p1", locationCode: 2826, languageCode: "en" };
+    expect(
+      Reflect.apply(mergeDifficultyOverview, null, [target, map, scope]),
+    ).toBe(target);
+    expect(
+      Reflect.apply(selectDifficultyBackfillKeywords, null, [
+        [target],
+        map,
+        100,
+        scope,
+      ]),
+    ).toEqual(["coffee shop"]);
+  });
   it("overlays a loaded difficulty and intent onto a row that had neither", () => {
     const target = row({ keyword: "Coffee Shop", keywordDifficulty: null });
     const byKeyword = byKeywordOf(

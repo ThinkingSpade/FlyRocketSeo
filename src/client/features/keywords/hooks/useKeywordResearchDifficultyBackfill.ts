@@ -6,6 +6,7 @@ import { describeGeoUnavailable } from "@/client/features/geo/geoUnavailableMess
 import {
   mergeDifficultyOverview,
   selectDifficultyBackfillKeywords,
+  scopeDifficultyOverview,
 } from "@/client/features/keywords/keywordDifficultyMerge";
 import { useKeywordDifficultyOverview } from "./useKeywordDifficultyOverview";
 
@@ -56,23 +57,34 @@ export function useKeywordResearchDifficultyBackfill(
   researchGeo: ResearchGeoForDifficulty | null,
 ) {
   const difficultyOverview = useKeywordDifficultyOverview(projectId);
+  const scopedOverview = useMemo(
+    () =>
+      scopeDifficultyOverview(
+        difficultyOverview.byKeyword,
+        researchGeo
+          ? {
+              projectId,
+              locationCode: researchGeo.difficulty.locationCode,
+              languageCode: researchGeo.difficulty.languageCode,
+            }
+          : null,
+      ),
+    [difficultyOverview.byKeyword, projectId, researchGeo],
+  );
 
   const mergedRows = useMemo(
-    () =>
-      pageRows.map((row) =>
-        mergeDifficultyOverview(row, difficultyOverview.byKeyword),
-      ),
-    [pageRows, difficultyOverview.byKeyword],
+    () => pageRows.map((row) => mergeDifficultyOverview(row, scopedOverview)),
+    [pageRows, scopedOverview],
   );
 
   const backfillKeywords = useMemo(
     () =>
       selectDifficultyBackfillKeywords(
         pageRows,
-        difficultyOverview.byKeyword,
+        scopedOverview,
         KEYWORD_DIFFICULTY_OVERVIEW_MAX_KEYWORDS,
       ),
-    [pageRows, difficultyOverview.byKeyword],
+    [pageRows, scopedOverview],
   );
 
   const difficultyNeed = researchGeo?.difficulty ?? null;

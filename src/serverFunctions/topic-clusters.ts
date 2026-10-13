@@ -30,7 +30,7 @@ export const getTopicClusters = createServerFn({ method: "POST" })
     // v2: suggestions (phrase-match) instead of ideas — ideas expands to
     // category-level concepts sharing any seed token ("office vending
     // machines" pulled in office chair mats), which makes junk clusters.
-    const cacheKey = await buildCacheKey("topic-clusters:v2", {
+    const cacheKey = await buildCacheKey("topic-clusters:v3", {
       organizationId: context.organizationId,
       projectId: context.projectId,
       topic,
@@ -56,7 +56,13 @@ export const getTopicClusters = createServerFn({ method: "POST" })
       });
 
     const cached = planSchema.safeParse(await getCached(cacheKey));
-    if (cached.success && cached.data.clusters.length > 0) {
+    if (
+      cached.success &&
+      cached.data.contractVersion === 2 &&
+      cached.data.topic === topic &&
+      cached.data.locationCode === locationCode &&
+      cached.data.languageCode === languageCode
+    ) {
       await recordRun();
       return cached.data;
     }
@@ -69,15 +75,17 @@ export const getTopicClusters = createServerFn({ method: "POST" })
       limit: IDEAS_LIMIT,
     });
 
-    const result = {
+    const result = planSchema.parse({
+      contractVersion: 2,
+      source: "DataForSEO Labs",
       topic,
       locationCode,
       languageCode,
       ...buildTopicClusters(topic, items),
       fetchedAt: new Date().toISOString(),
-    };
+    });
 
-    void setCached(cacheKey, result, CLUSTERS_TTL_SECONDS).catch((error) => {
+    await setCached(cacheKey, result, CLUSTERS_TTL_SECONDS).catch((error) => {
       console.error("topic-clusters cache-write failed:", error);
     });
     await recordRun();

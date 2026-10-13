@@ -5,13 +5,14 @@ export const GOOGLE_SHEETS_NEW_URL = "https://sheets.new";
 export async function copyTableToClipboard(
   headers: string[],
   rows: CsvValue[][],
+  options: { preservePrecision?: boolean } = {},
 ): Promise<void> {
   if (typeof navigator === "undefined" || !navigator.clipboard?.write) {
     throw new Error("Clipboard API not available in this browser.");
   }
 
   const safeRows = rows.map((row) =>
-    row.map((value) => normalizeExportValue(value ?? "")),
+    row.map((value) => normalizeExportValue(value ?? "", options)),
   );
 
   const tsv = buildTsv(headers, safeRows);

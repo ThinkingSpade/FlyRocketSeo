@@ -34,6 +34,8 @@ function keyword(word: string) {
 
 function plan(overrides: Partial<Plan> = {}): Plan {
   return {
+    contractVersion: 2,
+    source: "DataForSEO Labs",
     topic: "solar panels",
     locationCode: 2840,
     languageCode: "en",
@@ -43,11 +45,13 @@ function plan(overrides: Partial<Plan> = {}): Plan {
         name: "solar panel cost",
         keywords: [keyword("solar panel cost"), keyword("solar panel price")],
         totalVolume: 900,
+        keywordCount: 2,
       },
       {
         name: "solar panel installers",
         keywords: [keyword("solar panel installers")],
         totalVolume: 400,
+        keywordCount: 1,
       },
     ],
     fetchedAt: "2026-03-12T09:00:00.000Z",

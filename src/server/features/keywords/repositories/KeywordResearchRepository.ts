@@ -69,8 +69,9 @@ async function upsertKeywordMetric(params: {
   keywordDifficulty: number | null;
   intent: string | null;
   monthlySearchesJson: string;
+  fetchedAt?: string;
 }) {
-  const fetchedAt = new Date().toISOString();
+  const fetchedAt = params.fetchedAt ?? new Date().toISOString();
 
   await db
     .insert(keywordMetrics)

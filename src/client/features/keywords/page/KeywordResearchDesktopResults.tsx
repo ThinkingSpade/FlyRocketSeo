@@ -169,6 +169,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
       headers: KEYWORD_RESEARCH_HEADERS,
       rows: sheetsExportRows,
       feature: "keyword_research",
+      preservePrecision: true,
     });
   };
   const handleExportSelectionToSheets = () => {
@@ -176,6 +177,7 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
       headers: KEYWORD_RESEARCH_HEADERS,
       rows: selectedExportRows,
       feature: "keyword_research",
+      preservePrecision: true,
     });
   };
   const handleExportSelectionCsv = () => {
@@ -234,10 +236,17 @@ function DesktopTableCard({ controller, ownDomainRating }: Props) {
             className="hidden xl:inline text-sm text-base-content/50 tabular-nums"
             title="Summed monthly volume and average difficulty of the keywords shown"
           >
-            · {formatCompactNumber(totals.totalVolume)} total vol
+            ·{" "}
+            {totals.totalVolume === null
+              ? "Unknown"
+              : formatCompactNumber(totals.totalVolume)}{" "}
+            total vol
+            {totals.totalVolume === null
+              ? ` (${totals.volumeReported}/${totals.keywordCount} reported)`
+              : ""}
             {volumeSuffix ? ` (${volumeSuffix})` : ""}
             {totals.averageDifficulty != null
-              ? ` · avg KD ${totals.averageDifficulty}${difficultySuffix ? ` (${difficultySuffix})` : ""}`
+              ? ` · avg KD ${totals.averageDifficulty} (${totals.difficultyReported}/${totals.keywordCount} reported)${difficultySuffix ? ` (${difficultySuffix})` : ""}`
               : ""}
           </span>
         ) : null}
