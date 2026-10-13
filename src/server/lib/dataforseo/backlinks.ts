@@ -11,7 +11,6 @@ import {
   type BacklinksSpamFilterOptions,
 } from "@/types/schemas/backlinks";
 import { createDataforseoBillingClassifier } from "@/server/lib/dataforseoBillingClassification";
-import { AppError } from "@/server/lib/errors";
 import { backlinksApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
@@ -235,9 +234,9 @@ export async function fetchBacklinksSummary(input: BacklinksRequest) {
         "dataforseo.backlinks-summary-live.invalid-result",
         parsed.error.issues.slice(0, 5),
       );
-      throw new AppError(
-        "INTERNAL_ERROR",
+      throw new DataforseoChargedTaskError(
         "DataForSEO backlinks-summary-live returned an invalid response shape",
+        buildTaskBilling(task),
       );
     }
     return {

@@ -67,6 +67,49 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+it("settles the overview cache put before a caller can copy its saved-run envelope", async () => {
+  vi.mocked(normalizeBacklinksTarget).mockReturnValue({
+    apiTarget: "example.com",
+    displayTarget: "example.com",
+    scope: "domain",
+  });
+  backlinksSummaryMock.mockResolvedValue({ backlinks: 12 });
+  backlinksHistoryMock.mockResolvedValue([]);
+  let releasePut: () => void = vi.fn();
+  let markPutStarted: () => void = vi.fn();
+  const delayedPut = new Promise<void>((resolve) => {
+    releasePut = resolve;
+  });
+  const putStarted = new Promise<void>((resolve) => {
+    markPutStarted = resolve;
+  });
+  let storedEnvelope: unknown = null;
+  const delayedService = createBacklinksService({
+    get: async () => null,
+    set: async (_key, value) => {
+      markPutStarted();
+      await delayedPut;
+      storedEnvelope = value;
+    },
+  });
+  let savedPayload: unknown = null;
+  const record = vi.fn(async () => {
+    savedPayload = storedEnvelope;
+  });
+  const resultPromise = delayedService
+    .profileOverview({ target: "example.com" }, billingCustomer)
+    .then(async (profile) => {
+      await record();
+      return profile;
+    });
+  await putStarted;
+  const recordsBeforePutSettled = record.mock.calls.length;
+  releasePut();
+  const result = await resultPromise;
+  expect(recordsBeforePutSettled).toBe(0);
+  expect(savedPayload).toEqual({ overview: result.overview });
+});
+
 it("normalizes summary observations independently, preserving zero and nulling unsafe counts", async () => {
   vi.mocked(normalizeBacklinksTarget).mockReturnValue({
     apiTarget: "example.com",

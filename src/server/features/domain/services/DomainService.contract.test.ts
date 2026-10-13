@@ -5,6 +5,8 @@ import { domainOverviewResultSchema } from "@/types/schemas/domain";
 const mocks = vi.hoisted(() => ({
   rankOverview: vi.fn(),
   record: vi.fn(),
+  beforePut: vi.fn<() => Promise<void>>(),
+  initialCachedValue: null as unknown,
   cache: new Map<string, unknown>(),
 }));
 vi.mock("@/server/lib/dataforseo", () => ({
@@ -15,8 +17,10 @@ vi.mock("@/server/lib/dataforseo", () => ({
 vi.mock("@/server/lib/r2-cache", () => ({
   buildCacheKey: async (prefix: string, params: Record<string, unknown>) =>
     `${prefix}:${JSON.stringify(params)}`,
-  getCached: async (key: string) => mocks.cache.get(key) ?? null,
+  getCached: async (key: string) =>
+    mocks.cache.get(key) ?? mocks.initialCachedValue,
   setCached: async (key: string, value: unknown) => {
+    await mocks.beforePut();
     mocks.cache.set(key, value);
   },
 }));
@@ -39,6 +43,81 @@ const customer = {
 beforeEach(() => {
   mocks.cache.clear();
   vi.clearAllMocks();
+  mocks.initialCachedValue = null;
+  mocks.beforePut.mockReset().mockResolvedValue(undefined);
+  mocks.record.mockReset();
+});
+
+it.each([
+  null,
+  {
+    domain: "example.com",
+    organicTraffic: 7,
+    organicKeywords: 7,
+    backlinks: null,
+    referringDomains: null,
+    positionBuckets: null,
+    hasData: true,
+    fetchedAt: "2026-01-01T00:00:00.000Z",
+  },
+])(
+  "records the newly settled cache payload when a delayed put replaces %j",
+  async (previous) => {
+    mocks.initialCachedValue = previous;
+    mocks.rankOverview.mockResolvedValue([
+      { metrics: { organic: { count: 12, etv: 12.5 } } },
+    ]);
+    let releasePut: () => void = vi.fn();
+    let markPutStarted: () => void = vi.fn();
+    const delayedPut = new Promise<void>((resolve) => {
+      releasePut = resolve;
+    });
+    const putStarted = new Promise<void>((resolve) => {
+      markPutStarted = resolve;
+    });
+    mocks.beforePut.mockImplementationOnce(async () => {
+      markPutStarted();
+      await delayedPut;
+    });
+    let savedPayload: unknown;
+    mocks.record.mockImplementation(
+      async ({ cacheKey }: { cacheKey: string }) => {
+        savedPayload = mocks.cache.get(cacheKey) ?? mocks.initialCachedValue;
+      },
+    );
+    const resultPromise = DomainService.getOverview(input, customer);
+    await putStarted;
+    const recordsBeforePutSettled = mocks.record.mock.calls.length;
+    releasePut();
+    const result = await resultPromise;
+    expect(recordsBeforePutSettled).toBe(0);
+    expect(savedPayload).toEqual(result);
+    expect(savedPayload).toMatchObject({
+      organicKeywords: 12,
+      organicTraffic: 12.5,
+      fetchedAt: result.fetchedAt,
+    });
+  },
+);
+
+it("keeps the paid result available and logs a failed cache put before best-effort recording", async () => {
+  const error = new Error("isolated R2 put failure");
+  const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+  mocks.beforePut.mockRejectedValueOnce(error);
+  mocks.rankOverview.mockResolvedValue([
+    { metrics: { organic: { count: 12 } } },
+  ]);
+  try {
+    const result = await DomainService.getOverview(input, customer);
+    expect(result.organicKeywords).toBe(12);
+    expect(logged).toHaveBeenCalledWith(
+      "domain.overview.cache-write failed:",
+      error,
+    );
+    expect(mocks.record).toHaveBeenCalledOnce();
+  } finally {
+    logged.mockRestore();
+  }
 });
 
 it("keeps partial rank buckets unknown and preserves estimate precision through cached and saved payloads", async () => {

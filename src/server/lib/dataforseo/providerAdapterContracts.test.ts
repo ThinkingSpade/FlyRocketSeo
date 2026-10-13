@@ -298,3 +298,59 @@ it("rejects declared Backlinks target mismatch and retains billed-task metadata"
   });
   expect(mocks.cache.size).toBe(0);
 });
+
+it.each(["summary", "pages"] as const)(
+  "retains charged-task metadata when a successful %s task has malformed observations",
+  async (kind) => {
+    const logged = vi
+      .spyOn(console, "error")
+      .mockImplementation(() => undefined);
+    vi.mocked(fetch).mockImplementation(async (url, init) => {
+      const path = captureRequest(url, init);
+      return response(
+        path,
+        kind === "summary"
+          ? [{ backlinks: "unexpected-value" }]
+          : [
+              {
+                total_count: 1,
+                items: [
+                  {
+                    page: "https://example.com/page",
+                    backlinks: "unexpected-value",
+                  },
+                ],
+              },
+            ],
+      );
+    });
+    try {
+      const result =
+        kind === "summary"
+          ? service.profileOverview(
+              { target: "example.com", scope: "page" },
+              customer,
+            )
+          : service.profileTopPagesPage(
+              {
+                target: "example.com",
+                scope: "domain",
+                page: 1,
+                pageSize: 100,
+                sortField: "backlinks",
+                sortOrder: "desc",
+                filters: {},
+              },
+              customer,
+            );
+      await expect(result).rejects.toMatchObject({
+        code: "INTERNAL_ERROR",
+        billing: { costUsd: 0.01 },
+      });
+      expect(logged).toHaveBeenCalled();
+      expect(mocks.cache.size).toBe(0);
+    } finally {
+      logged.mockRestore();
+    }
+  },
+);

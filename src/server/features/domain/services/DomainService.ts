@@ -114,7 +114,9 @@ async function getOverview(
   };
 
   if (result.hasData) {
-    void setCached(cacheKey, result, DOMAIN_OVERVIEW_TTL_SECONDS).catch(
+    // Run recording reads R2 to copy this payload. Settle the put first so a
+    // slow write cannot give the new run a missing or previous capture.
+    await setCached(cacheKey, result, DOMAIN_OVERVIEW_TTL_SECONDS).catch(
       (error) => {
         console.error("domain.overview.cache-write failed:", error);
       },
