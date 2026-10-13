@@ -55,6 +55,17 @@ function page<T>(rows: T[]) {
 }
 
 describe("FollowSplitCard", () => {
+  it("suppresses an inconsistent provider share instead of rendering every domain as nofollow", () => {
+    const markup = renderToStaticMarkup(
+      createElement(FollowSplitCard, {
+        summary: summary({
+          referringDomains: 50,
+          referringDomainsNofollow: 80,
+        }),
+      }),
+    );
+    expect(markup).toBe("");
+  });
   it("reports nofollow exposure without claiming a dofollow domain count", () => {
     const markup = renderToStaticMarkup(
       createElement(FollowSplitCard, { summary: summary() }),

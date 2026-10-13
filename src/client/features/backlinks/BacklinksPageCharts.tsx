@@ -44,6 +44,9 @@ export function BacklinksTrendChart({
   const domainsInformation = classifyNumericSeries(
     data.map((point) => point.referringDomains),
   );
+  const partial = data.some(
+    (point) => point.backlinks === null || point.referringDomains === null,
+  );
 
   const options = useMemo(
     () => ({
@@ -85,7 +88,13 @@ export function BacklinksTrendChart({
     isStableSeries(domainsInformation)
   ) {
     return (
-      <EmptyChartState title="Backlinks and referring domains were unchanged over this period." />
+      <EmptyChartState
+        title={
+          partial
+            ? "Reported backlinks and referring domains were unchanged. Some periods are unknown."
+            : "Backlinks and referring domains were unchanged over this period."
+        }
+      />
     );
   }
 
@@ -97,7 +106,13 @@ export function BacklinksTrendChart({
   }
 
   return (
-    <div className="h-56 min-w-0" aria-label="Backlink trend chart">
+    <div className="min-w-0" aria-label="Backlink trend chart">
+      {partial ? (
+        <p className="mb-2 text-xs text-base-content/60">
+          Some periods are unknown; chart gaps preserve missing provider
+          observations.
+        </p>
+      ) : null}
       <Chart
         echarts={echarts}
         options={options}
@@ -122,19 +137,14 @@ export function BacklinksAuthorityChart({
   const theme = useChartTheme();
   const base = useChartBase(theme);
   const information = classifyNumericSeries(data.map((point) => point.rank));
-  // Memoised because it feeds the options below: filtering inline would hand
-  // that memo a new array on every render.
-  const points = useMemo(
-    () => data.filter((point) => point.rank != null),
-    [data],
-  );
+  const partial = data.some((point) => point.rank === null);
 
   const options = useMemo(
     () => ({
       ...base,
       ...legendAndGrid(base, theme, ["Domain authority"]),
       tooltip: { ...base.tooltip, ...TOOLTIP },
-      xAxis: dateAxis(base, points),
+      xAxis: dateAxis(base, data),
       yAxis: {
         ...base.axisCommon,
         type: "value" as const,
@@ -148,33 +158,45 @@ export function BacklinksAuthorityChart({
         lineSeries({
           name: "Domain authority",
           color: RANK_COLOR,
-          data: points.map((point) => point.rank),
+          data: data.map((point) => point.rank),
         }),
       ],
     }),
-    [base, theme, points],
+    [base, theme, data],
   );
 
   if (information.kind === "all-zero") {
     return (
-      <EmptyChartState title="Domain authority stayed at 0 over this period" />
+      <EmptyChartState
+        title={
+          partial
+            ? "Reported DataForSEO rank was 0. Some periods are unknown."
+            : "DataForSEO rank stayed at 0 over this period"
+        }
+      />
     );
   }
 
   if (information.kind === "constant") {
     return (
       <EmptyChartState
-        title={`Domain authority held at ${formatAxisValue(information.value)} over this period`}
+        title={`DataForSEO rank held at ${formatAxisValue(information.value)}${partial ? " among reported observations. Some periods are unknown." : " over this period"}`}
       />
     );
   }
 
-  if (points.length === 0) {
+  if (information.kind === "all-null" || information.kind === "insufficient") {
     return <EmptyChartState />;
   }
 
   return (
-    <div className="h-56 min-w-0" aria-label="Domain authority trend chart">
+    <div className="min-w-0" aria-label="Domain authority trend chart">
+      {partial ? (
+        <p className="mb-2 text-xs text-base-content/60">
+          Some periods are unknown; chart gaps preserve missing provider
+          observations.
+        </p>
+      ) : null}
       <Chart
         echarts={echarts}
         options={options}
@@ -198,6 +220,9 @@ export function BacklinksNewLostChart({
   );
   const lostInformation = classifyNumericSeries(
     data.map((point) => point.lostBacklinks),
+  );
+  const partial = data.some(
+    (point) => point.newBacklinks === null || point.lostBacklinks === null,
   );
 
   const options = useMemo(
@@ -237,7 +262,13 @@ export function BacklinksNewLostChart({
     lostInformation.kind === "all-zero"
   ) {
     return (
-      <EmptyChartState title="No backlink gains or losses were recorded in this period." />
+      <EmptyChartState
+        title={
+          partial
+            ? "Reported months had no backlink gains or losses. Some periods are unknown."
+            : "No backlink gains or losses were recorded in this period."
+        }
+      />
     );
   }
 
@@ -246,7 +277,13 @@ export function BacklinksNewLostChart({
   }
 
   return (
-    <div className="h-56 min-w-0" aria-label="New and lost backlinks chart">
+    <div className="min-w-0" aria-label="New and lost backlinks chart">
+      {partial ? (
+        <p className="mb-2 text-xs text-base-content/60">
+          Some periods are unknown; chart gaps preserve missing provider
+          observations.
+        </p>
+      ) : null}
       <Chart
         echarts={echarts}
         options={options}
@@ -322,6 +359,7 @@ function lineSeries(args: {
     type: "line" as const,
     name: args.name,
     data: args.data,
+    connectNulls: false,
     yAxisIndex: args.yAxisIndex ?? 0,
     smooth: true,
     // `showSymbol: false` rather than `symbol: "none"`: Recharts drew no dots

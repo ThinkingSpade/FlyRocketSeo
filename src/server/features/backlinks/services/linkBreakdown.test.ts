@@ -2,6 +2,20 @@ import { describe, it, expect } from "vitest";
 import { toLinkBreakdown } from "./linkBreakdown";
 
 describe("toLinkBreakdown", () => {
+  it("drops invalid and overflowing counts rather than rounding them", () => {
+    expect(
+      toLinkBreakdown(
+        {
+          negative: -1,
+          fractional: 1.5,
+          overflow: Number.MAX_SAFE_INTEGER + 1,
+          nonfinite: Number.POSITIVE_INFINITY,
+          valid: 3,
+        },
+        5,
+      ),
+    ).toEqual([{ label: "valid", value: 3 }]);
+  });
   it("sorts by count, biggest first", () => {
     expect(toLinkBreakdown({ NL: 8, BE: 1720, DE: 12 }, 5)).toEqual([
       { label: "BE", value: 1720 },

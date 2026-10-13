@@ -39,6 +39,11 @@ import {
 } from "@/server/features/backlinks/services/backlinksApiFilters";
 import { toLinkBreakdown } from "@/server/features/backlinks/services/linkBreakdown";
 import {
+  providerCount,
+  providerHundredScore,
+} from "@/shared/provider-observations";
+import { mapOverviewHistory } from "./backlinksOverviewMapper";
+import {
   mapAnchorsRows,
   mapBacklinksRows,
   mapReferringDomainsRows,
@@ -88,7 +93,7 @@ export async function profileBacklinksOverview(
   const cached = backlinksOverviewCacheSchema.safeParse(
     await cache.get(cacheKey),
   );
-  if (cached.success) {
+  if (cached.success && cached.data.overview.contractVersion === 2) {
     return {
       overview: cached.data.overview,
     };
@@ -142,7 +147,7 @@ export async function profileBacklinksRowsPage(
   const cached = backlinksRowsPageResultSchema.safeParse(
     await cache.get(cacheKey),
   );
-  if (cached.success) {
+  if (cached.success && cached.data.contractVersion === 2) {
     return cached.data;
   }
 
@@ -180,7 +185,7 @@ export async function profileReferringDomainsPage(
   const cached = referringDomainsPageResultSchema.safeParse(
     await cache.get(cacheKey),
   );
-  if (cached.success) {
+  if (cached.success && cached.data.contractVersion === 2) {
     return cached.data;
   }
 
@@ -214,7 +219,7 @@ export async function profileTopPagesPage(
   billingCustomer: BillingCustomerContext,
 ): Promise<TopPagesPageResult> {
   const cached = topPagesPageResultSchema.safeParse(await cache.get(cacheKey));
-  if (cached.success) {
+  if (cached.success && cached.data.contractVersion === 2) {
     return cached.data;
   }
 
@@ -247,7 +252,7 @@ export async function profileAnchorsPage(
   billingCustomer: BillingCustomerContext,
 ): Promise<AnchorsPageResult> {
   const cached = anchorsPageResultSchema.safeParse(await cache.get(cacheKey));
-  if (cached.success) {
+  if (cached.success && cached.data.contractVersion === 2) {
     return cached.data;
   }
 
@@ -278,14 +283,16 @@ function buildPageResult<TRow>(
   offset: number,
   data: { rows: TRow[]; totalCount: number | null },
 ) {
+  const totalCount = providerCount(data.totalCount);
   const hasMore =
-    data.totalCount != null
-      ? offset + data.rows.length < data.totalCount
+    totalCount != null
+      ? offset + data.rows.length < totalCount
       : data.rows.length === input.pageSize;
 
   return {
+    contractVersion: 2 as const,
     rows: data.rows,
-    totalCount: data.totalCount,
+    totalCount,
     hasMore,
     page: input.page,
     pageSize: input.pageSize,
@@ -315,50 +322,38 @@ function buildOverviewResult(args: {
   summary: BacklinksSummaryItem;
   history: BacklinksHistoryItem[];
 }): BacklinksOverviewResult {
-  const historyRows = args.history
-    .map((item) => ({
-      date: normalizeHistoryDate(item.date),
-      backlinks: item.backlinks ?? null,
-      referringDomains: item.referring_domains ?? null,
-      rank: item.rank ?? null,
-      newBacklinks: item.new_backlinks ?? null,
-      lostBacklinks: item.lost_backlinks ?? null,
-      newReferringDomains:
-        item.new_referring_domains ?? item.new_reffering_domains ?? null,
-      lostReferringDomains:
-        item.lost_referring_domains ?? item.lost_reffering_domains ?? null,
-    }))
-    .filter(
-      (
-        item,
-      ): item is typeof item & {
-        date: string;
-      } => item.date !== null,
-    );
+  const historyRows = mapOverviewHistory(args.history);
 
   return {
+    contractVersion: 2,
     target: args.normalizedTarget.apiTarget,
     displayTarget: args.normalizedTarget.displayTarget,
     scope: args.normalizedTarget.scope,
     summary: {
-      rank: args.summary.rank ?? null,
-      backlinks: args.summary.backlinks ?? null,
-      referringPages: args.summary.referring_pages ?? null,
-      referringDomains: args.summary.referring_domains ?? null,
-      brokenBacklinks: args.summary.broken_backlinks ?? null,
-      brokenPages: args.summary.broken_pages ?? null,
-      backlinksSpamScore: args.summary.backlinks_spam_score ?? null,
-      targetSpamScore: args.summary.info?.target_spam_score ?? null,
-      newBacklinks: args.summary.new_backlinks ?? null,
-      lostBacklinks: args.summary.lost_backlinks ?? null,
-      newReferringDomains:
+      rank: providerHundredScore(args.summary.rank),
+      backlinks: providerCount(args.summary.backlinks),
+      referringPages: providerCount(args.summary.referring_pages),
+      referringDomains: providerCount(args.summary.referring_domains),
+      brokenBacklinks: providerCount(args.summary.broken_backlinks),
+      brokenPages: providerCount(args.summary.broken_pages),
+      backlinksSpamScore: providerHundredScore(
+        args.summary.backlinks_spam_score,
+      ),
+      targetSpamScore: providerHundredScore(
+        args.summary.info?.target_spam_score,
+      ),
+      newBacklinks: providerCount(args.summary.new_backlinks),
+      lostBacklinks: providerCount(args.summary.lost_backlinks),
+      newReferringDomains: providerCount(
         args.summary.new_referring_domains ??
-        args.summary.new_reffering_domains ??
-        null,
-      lostReferringDomains:
+          args.summary.new_reffering_domains ??
+          null,
+      ),
+      lostReferringDomains: providerCount(
         args.summary.lost_referring_domains ??
-        args.summary.lost_reffering_domains ??
-        null,
+          args.summary.lost_reffering_domains ??
+          null,
+      ),
       referringCountries: toLinkBreakdown(
         args.summary.referring_links_countries,
         LINK_BREAKDOWN_LIMIT,
@@ -383,8 +378,12 @@ function buildOverviewResult(args: {
         args.summary.referring_links_semantic_locations,
         LINK_BREAKDOWN_LIMIT,
       ),
-      referringDomainsNofollow: args.summary.referring_domains_nofollow ?? null,
-      referringPagesNofollow: args.summary.referring_pages_nofollow ?? null,
+      referringDomainsNofollow: providerCount(
+        args.summary.referring_domains_nofollow,
+      ),
+      referringPagesNofollow: providerCount(
+        args.summary.referring_pages_nofollow,
+      ),
     },
     trends: historyRows.map((item) => ({
       date: item.date,
@@ -401,10 +400,6 @@ function buildOverviewResult(args: {
     })),
     fetchedAt: args.now.toISOString(),
   };
-}
-
-function normalizeHistoryDate(value: string | null | undefined) {
-  return value ? value.slice(0, 10) : null;
 }
 
 async function cacheValue(

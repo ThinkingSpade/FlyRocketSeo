@@ -167,6 +167,8 @@ export function buildBacklinksVerdict(input: BacklinksVerdictInput): Verdict {
   return { read: sentences.join(" "), tone, actions };
 }
 
-export function backlinksRowNote(row: { isBroken: boolean }): string | null {
+export function backlinksRowNote(row: {
+  isBroken: boolean | null;
+}): string | null {
   return row.isBroken ? "recoverable" : null;
 }

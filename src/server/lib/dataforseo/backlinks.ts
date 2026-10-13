@@ -16,9 +16,12 @@ import { backlinksApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
   buildTaskBilling,
+  DataforseoChargedTaskError,
+  isRecord,
   parseTaskItems,
   parseTaskTotalCount,
   type DataforseoApiResponse,
+  type DataforseoTaskLike,
 } from "@/server/lib/dataforseo/envelope";
 
 type BacklinksRequest = { target: string };
@@ -185,6 +188,20 @@ function buildCommonPayload(input: BacklinksRequest) {
 const assertOptions = (path: string) =>
   ({ classify: classifyBacklinksError, classifyPath: path }) as const;
 
+function assertBacklinksTarget(task: DataforseoTaskLike, target: string) {
+  const result = task.result?.[0];
+  if (
+    isRecord(result) &&
+    result.target !== undefined &&
+    result.target !== target
+  ) {
+    throw new DataforseoChargedTaskError(
+      "DataForSEO backlinks returned evidence for a different target",
+      buildTaskBilling(task),
+    );
+  }
+}
+
 /**
  * Joins caller-provided filter expressions with the spam-score condition.
  * `userFilters` arrives already and/or-joined, so the spam condition is
@@ -208,6 +225,7 @@ export async function fetchBacklinksSummary(input: BacklinksRequest) {
     new BacklinksSummaryLiveRequestInfo(buildCommonPayload(input)),
   ]);
   const task = assertOk(response, assertOptions("/v3/backlinks/summary/live"));
+  assertBacklinksTarget(task, input.target);
 
   const firstResult = task.result?.[0];
   if (firstResult) {
@@ -256,6 +274,7 @@ export async function fetchBacklinksRows(input: BacklinksListRequest) {
     response,
     assertOptions("/v3/backlinks/backlinks/live"),
   );
+  assertBacklinksTarget(task, input.target);
   return {
     data: {
       items: parseTaskItems("backlinks-live", task, backlinksItemSchema),
@@ -288,6 +307,7 @@ export async function fetchReferringDomains(input: BacklinksListRequest) {
     response,
     assertOptions("/v3/backlinks/referring_domains/live"),
   );
+  assertBacklinksTarget(task, input.target);
   return {
     data: {
       items: parseTaskItems(
@@ -319,6 +339,7 @@ export async function fetchDomainPagesSummary(input: BacklinksListRequest) {
     response,
     assertOptions("/v3/backlinks/domain_pages_summary/live"),
   );
+  assertBacklinksTarget(task, input.target);
   return {
     data: {
       items: parseTaskItems(
@@ -342,6 +363,7 @@ export async function fetchBacklinksHistory(input: BacklinksTimeseriesRequest) {
     }),
   ]);
   const task = assertOk(response, assertOptions("/v3/backlinks/history/live"));
+  assertBacklinksTarget(task, input.target);
   return {
     data: parseTaskItems(
       "backlinks-history-live",

@@ -37,6 +37,9 @@ export type BacklinksDisplayRow =
 function BacklinkFlags({ row }: { row: BacklinksRow }) {
   return (
     <div className="flex flex-wrap gap-1">
+      {row.isLost === null || row.isBroken === null ? (
+        <Badge variant="outline">Status partly unreported</Badge>
+      ) : null}
       {row.isLost ? (
         <Badge variant="error" appearance="dot">
           Lost

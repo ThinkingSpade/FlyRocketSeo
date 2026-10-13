@@ -1,4 +1,20 @@
 import { z } from "zod";
+import {
+  providerCount,
+  providerDate,
+  providerHundredScore,
+  providerTimestamp,
+} from "@/shared/provider-observations";
+
+const count = z.preprocess(
+  providerCount,
+  z.number().int().nonnegative().nullable(),
+);
+const score = z.preprocess(
+  providerHundredScore,
+  z.number().int().min(0).max(100).nullable(),
+);
+const timestamp = z.preprocess(providerTimestamp, z.string().nullable());
 
 const backlinksRowSchema = z.object({
   domainFrom: z.string().nullable(),
@@ -8,103 +24,139 @@ const backlinksRowSchema = z.object({
   itemType: z.string().nullable(),
   isDofollow: z.boolean().nullable(),
   relAttributes: z.array(z.string()),
-  rank: z.number().nullable(),
-  domainFromRank: z.number().nullable(),
-  pageFromRank: z.number().nullable(),
-  spamScore: z.number().nullable(),
-  firstSeen: z.string().nullable(),
-  lastSeen: z.string().nullable(),
-  isLost: z.boolean(),
-  isBroken: z.boolean(),
-  linksCount: z.number().nullable(),
+  rank: score,
+  domainFromRank: score,
+  pageFromRank: score,
+  spamScore: score,
+  firstSeen: timestamp,
+  lastSeen: timestamp,
+  isLost: z.boolean().nullable(),
+  isBroken: z.boolean().nullable(),
+  linksCount: count,
 });
 
 const referringDomainRowSchema = z.object({
   domain: z.string().nullable(),
-  backlinks: z.number().nullable(),
-  referringPages: z.number().nullable(),
-  rank: z.number().nullable(),
-  spamScore: z.number().nullable(),
-  firstSeen: z.string().nullable(),
-  brokenBacklinks: z.number().nullable(),
-  brokenPages: z.number().nullable(),
+  backlinks: count,
+  referringPages: count,
+  rank: score,
+  spamScore: score,
+  firstSeen: timestamp,
+  brokenBacklinks: count,
+  brokenPages: count,
 });
 
 const topPageRowSchema = z.object({
   page: z.string().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  rank: z.number().nullable(),
-  brokenBacklinks: z.number().nullable(),
+  backlinks: count,
+  referringDomains: count,
+  rank: score,
+  brokenBacklinks: count,
 });
 
 const anchorRowSchema = z.object({
   anchor: z.string().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  rank: z.number().nullable(),
-  spamScore: z.number().nullable(),
-  firstSeen: z.string().nullable(),
+  backlinks: count,
+  referringDomains: count,
+  rank: score,
+  spamScore: score,
+  firstSeen: timestamp,
 });
 
 const linkBreakdownRowSchema = z.object({
   label: z.string(),
-  value: z.number(),
+  value: count,
 });
+const linkBreakdownSchema = z
+  .array(linkBreakdownRowSchema)
+  .transform((rows) =>
+    rows.flatMap((row) =>
+      row.value !== null && row.value > 0
+        ? [{ label: row.label, value: row.value }]
+        : [],
+    ),
+  );
 
 const backlinksTrendRowSchema = z.object({
   date: z.string(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  rank: z.number().nullable(),
+  backlinks: count,
+  referringDomains: count,
+  rank: score,
 });
 
 const backlinksNewLostTrendRowSchema = z.object({
   date: z.string(),
-  newBacklinks: z.number().nullable(),
-  lostBacklinks: z.number().nullable(),
-  newReferringDomains: z.number().nullable(),
-  lostReferringDomains: z.number().nullable(),
+  newBacklinks: count,
+  lostBacklinks: count,
+  newReferringDomains: count,
+  lostReferringDomains: count,
 });
 
-export const backlinksOverviewSchema = z.object({
-  target: z.string(),
-  displayTarget: z.string(),
-  scope: z.enum(["domain", "page"]),
-  summary: z.object({
-    rank: z.number().nullable(),
-    backlinks: z.number().nullable(),
-    referringPages: z.number().nullable(),
-    referringDomains: z.number().nullable(),
-    brokenBacklinks: z.number().nullable(),
-    brokenPages: z.number().nullable(),
-    backlinksSpamScore: z.number().nullable(),
-    targetSpamScore: z.number().nullable(),
-    newBacklinks: z.number().nullable(),
-    lostBacklinks: z.number().nullable(),
-    newReferringDomains: z.number().nullable(),
-    lostReferringDomains: z.number().nullable(),
-    /** Ranked label/count splits from the same summary call. Empty when
-     *  DataForSEO didn't return them for this target. */
-    referringCountries: z.array(linkBreakdownRowSchema).default([]),
-    referringLinkTypes: z.array(linkBreakdownRowSchema).default([]),
-    /** Referring-domain split by top-level domain (.com, .org, .edu…). */
-    referringTlds: z.array(linkBreakdownRowSchema).default([]),
-    /** rel attributes on the links — nofollow, ugc, sponsored, noopener. */
-    referringLinkAttributes: z.array(linkBreakdownRowSchema).default([]),
-    /** What kind of site links — blogs, cms, ecommerce, news. */
-    referringPlatformTypes: z.array(linkBreakdownRowSchema).default([]),
-    /** Where on the page the link sits — article, footer, sidebar. */
-    referringPlacements: z.array(linkBreakdownRowSchema).default([]),
-    /** Referring domains/pages carrying rel="nofollow". The dofollow share is
-     *  the total minus these, so no extra call is needed for the split. */
-    referringDomainsNofollow: z.number().nullable().default(null),
-    referringPagesNofollow: z.number().nullable().default(null),
-  }),
-  trends: z.array(backlinksTrendRowSchema),
-  newLostTrends: z.array(backlinksNewLostTrendRowSchema),
-  fetchedAt: z.string(),
-});
+export const backlinksOverviewSchema = z
+  .object({
+    contractVersion: z.literal(2).optional(),
+    target: z.string(),
+    displayTarget: z.string(),
+    scope: z.enum(["domain", "page"]),
+    summary: z.object({
+      rank: score,
+      backlinks: count,
+      referringPages: count,
+      referringDomains: count,
+      brokenBacklinks: count,
+      brokenPages: count,
+      backlinksSpamScore: score,
+      targetSpamScore: score,
+      newBacklinks: count,
+      lostBacklinks: count,
+      newReferringDomains: count,
+      lostReferringDomains: count,
+      /** Ranked label/count splits from the same summary call. Empty when
+       *  DataForSEO didn't return them for this target. */
+      referringCountries: linkBreakdownSchema.default([]),
+      referringLinkTypes: linkBreakdownSchema.default([]),
+      /** Referring-domain split by top-level domain (.com, .org, .edu…). */
+      referringTlds: linkBreakdownSchema.default([]),
+      /** rel attributes on the links — nofollow, ugc, sponsored, noopener. */
+      referringLinkAttributes: linkBreakdownSchema.default([]),
+      /** What kind of site links — blogs, cms, ecommerce, news. */
+      referringPlatformTypes: linkBreakdownSchema.default([]),
+      /** Where on the page the link sits — article, footer, sidebar. */
+      referringPlacements: linkBreakdownSchema.default([]),
+      /** Referring domains/pages carrying rel="nofollow". The dofollow share is
+       *  the total minus these, so no extra call is needed for the split. */
+      referringDomainsNofollow: count.default(null),
+      referringPagesNofollow: count.default(null),
+    }),
+    trends: z.array(backlinksTrendRowSchema),
+    newLostTrends: z.array(backlinksNewLostTrendRowSchema),
+    fetchedAt: z.string(),
+  })
+  .transform((result) => ({
+    ...result,
+    trends: result.trends
+      .filter((point) => providerDate(point.date) !== null)
+      .map((point) => ({
+        ...point,
+        date: providerDate(point.date) ?? point.date,
+      }))
+      .toSorted((a, b) => a.date.localeCompare(b.date)),
+    newLostTrends: result.newLostTrends
+      .filter((point) => providerDate(point.date) !== null)
+      .map((point) => ({
+        ...point,
+        date: providerDate(point.date) ?? point.date,
+        ...(point.date < "2021-05-01"
+          ? {
+              newBacklinks: null,
+              lostBacklinks: null,
+              newReferringDomains: null,
+              lostReferringDomains: null,
+            }
+          : {}),
+      }))
+      .toSorted((a, b) => a.date.localeCompare(b.date)),
+  }));
 
 export type BacklinksOverviewResult = z.infer<typeof backlinksOverviewSchema>;
 
@@ -122,8 +174,9 @@ export const backlinksOverviewCacheSchema = z.object({
 
 function buildPageResultSchema<T extends z.ZodTypeAny>(rowSchema: T) {
   return z.object({
+    contractVersion: z.literal(2).optional(),
     rows: z.array(rowSchema),
-    totalCount: z.number().nullable(),
+    totalCount: count,
     hasMore: z.boolean(),
     page: z.number(),
     pageSize: z.number(),

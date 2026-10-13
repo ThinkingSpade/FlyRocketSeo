@@ -19,6 +19,7 @@ import { labsApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
   buildTaskBilling,
+  DataforseoChargedTaskError,
   parseTaskItems,
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
@@ -191,8 +192,28 @@ export async function fetchDomainRankOverview(input: {
     }),
   ]);
   const task = assertOk(response);
+  const result = task.result?.[0];
+  if (
+    result &&
+    ((result.target !== undefined && result.target !== input.target) ||
+      (result.location_code !== undefined &&
+        result.location_code !== input.locationCode) ||
+      (result.language_code !== undefined &&
+        result.language_code !== input.languageCode) ||
+      result.items?.some(
+        (item) =>
+          (item.location_code !== undefined &&
+            item.location_code !== input.locationCode) ||
+          (item.language_code !== undefined &&
+            item.language_code !== input.languageCode),
+      ))
+  )
+    throw new DataforseoChargedTaskError(
+      "DataForSEO domain overview returned evidence for a different target or market",
+      buildTaskBilling(task),
+    );
   return {
-    data: task.result?.[0]?.items ?? [],
+    data: result?.items ?? [],
     billing: buildTaskBilling(task),
   };
 }

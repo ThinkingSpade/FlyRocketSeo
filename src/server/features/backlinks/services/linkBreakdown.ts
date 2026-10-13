@@ -1,3 +1,5 @@
+import { providerCount } from "@/shared/provider-observations";
+
 /**
  * DataForSEO returns the country and link-type splits as objects keyed by
  * label (`{ BE: 1720, NL: 8 }`). Flatten them into a ranked list the report can
@@ -14,9 +16,10 @@ export function toLinkBreakdown(
   if (!raw) return [];
 
   return Object.entries(raw)
-    .flatMap(([label, value]) =>
-      value != null && value > 0 ? [{ label, value }] : [],
-    )
+    .flatMap(([label, rawValue]) => {
+      const value = providerCount(rawValue);
+      return value !== null && value > 0 ? [{ label, value }] : [];
+    })
     .toSorted((a, b) =>
       b.value !== a.value ? b.value - a.value : a.label.localeCompare(b.label),
     )

@@ -59,7 +59,11 @@ export function BacklinksOverviewPanels({
         </Badge>
         <span>Target: {data.displayTarget}</span>
         <span aria-hidden="true">·</span>
-        <span>Updated {formatRelativeTimestamp(data.fetchedAt)}</span>
+        <span>
+          DataForSEO Backlinks · Captured{" "}
+          {formatRelativeTimestamp(data.fetchedAt)} ·{" "}
+          {data.fetchedAt.slice(0, 10)} (UTC)
+        </span>
       </div>
       <OverviewGrid data={data} summaryStats={summaryStats} />
       {data.scope === "page" ? (
@@ -161,7 +165,7 @@ function TrendPanels({ data }: { data: BacklinksOverviewData }) {
       </TrendCard>
       <TrendCard
         title="Authority trend"
-        description="Domain authority over the last year"
+        description="DataForSEO rank (0–100), from captured provider history"
       >
         <BacklinksAuthorityChart data={data.trends} />
       </TrendCard>

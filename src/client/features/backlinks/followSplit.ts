@@ -42,19 +42,24 @@ export function computeNofollowExposure(
   total: number | null,
   nofollow: number | null,
 ): NofollowExposure | null {
-  if (total == null || total <= 0 || nofollow == null || nofollow < 0) {
+  if (
+    total == null ||
+    total <= 0 ||
+    !Number.isSafeInteger(total) ||
+    nofollow == null ||
+    nofollow < 0 ||
+    !Number.isSafeInteger(nofollow) ||
+    nofollow > total
+  ) {
     return null;
   }
-  // A nofollow count above the total would be provider noise; clamping keeps
-  // the bar from rendering a negative segment.
-  const clampedNofollow = Math.min(nofollow, total);
-  const nofollowShare = clampedNofollow / total;
+  const nofollowShare = nofollow / total;
 
   return {
-    nofollow: clampedNofollow,
+    nofollow,
     total,
     nofollowShare,
-    cleanDofollow: total - clampedNofollow,
+    cleanDofollow: total - nofollow,
     ...describeExposure(nofollowShare),
   };
 }

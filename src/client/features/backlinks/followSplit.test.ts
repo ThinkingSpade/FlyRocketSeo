@@ -5,6 +5,12 @@ import {
 } from "./followSplit";
 
 describe("computeNofollowExposure", () => {
+  it("declines a share from inconsistent, fractional or overflowing provider counts", () => {
+    expect(computeNofollowExposure(5, 6)).toBeNull();
+    expect(computeNofollowExposure(5.5, 1)).toBeNull();
+    expect(computeNofollowExposure(Number.MAX_SAFE_INTEGER + 1, 1)).toBeNull();
+    expect(computeNofollowExposure(5, 1.5)).toBeNull();
+  });
   it("returns null when the total is missing or zero", () => {
     expect(computeNofollowExposure(null, 10)).toBeNull();
     expect(computeNofollowExposure(0, 0)).toBeNull();
@@ -47,11 +53,8 @@ describe("computeNofollowExposure", () => {
     expect(computeNofollowExposure(100, 25)?.verdict).toBe("healthy");
   });
 
-  it("clamps a nofollow count that exceeds the total", () => {
-    const exposure = computeNofollowExposure(50, 80);
-    expect(exposure?.nofollow).toBe(50);
-    expect(exposure?.cleanDofollow).toBe(0);
-    expect(exposure?.nofollowShare).toBe(1);
+  it("keeps a nofollow count above the total unknown instead of manufacturing a full share", () => {
+    expect(computeNofollowExposure(50, 80)).toBeNull();
   });
 
   it("rejects a negative nofollow count rather than inventing links", () => {
