@@ -53,6 +53,97 @@ const billingCustomer = {
 };
 
 describe("SerpOverviewService.getSerpOverview", () => {
+  it("does not copy an older cached payload into a new saved run after its cache write fails", async () => {
+    mocks.setCached.mockRejectedValue(new Error("isolated cache write failed"));
+    const { SerpOverviewService } = await import("./SerpOverviewService");
+    const result = await SerpOverviewService.getSerpOverview(
+      {
+        projectId: "project_1",
+        keyword: "office coffee service",
+        locationCode: 2840,
+        languageCode: "en",
+      },
+      billingCustomer,
+    );
+    expect(result.results).toHaveLength(1);
+    expect(mocks.record).not.toHaveBeenCalled();
+  });
+  it("preserves an empty scoped observation as a reusable cache result with its original capture time", async () => {
+    mocks.serpLive.mockResolvedValue([]);
+    const { SerpOverviewService } = await import("./SerpOverviewService");
+    const input = {
+      projectId: "project_1",
+      keyword: "office coffee service",
+      locationCode: 2840,
+      languageCode: "en",
+    };
+    const first = await SerpOverviewService.getSerpOverview(
+      input,
+      billingCustomer,
+    );
+    expect(first).toMatchObject({
+      contractVersion: 2,
+      source: "DataForSEO Google Organic SERP",
+      scope: {
+        organizationId: "org_1",
+        projectId: "project_1",
+        keyword: input.keyword,
+        locationCode: 2840,
+        languageCode: "en",
+        device: "desktop",
+        depth: 100,
+      },
+    });
+    mocks.getCached.mockResolvedValue(first);
+    expect(
+      await SerpOverviewService.getSerpOverview(input, billingCustomer),
+    ).toEqual(first);
+    expect(mocks.serpLive).toHaveBeenCalledTimes(1);
+  });
+  it("does not accept an invalid estimate or unrelated enrichment target as measured domain traffic", async () => {
+    mocks.trafficEstimation.mockResolvedValue([
+      { target: "example.com", metrics: { organic: { etv: -1 } } },
+      { target: "unrelated.example", metrics: { organic: { etv: 900 } } },
+    ]);
+    const { SerpOverviewService } = await import("./SerpOverviewService");
+    expect(
+      (
+        await SerpOverviewService.getSerpOverview(
+          {
+            projectId: "project_1",
+            keyword: "office coffee service",
+            locationCode: 2840,
+            languageCode: "en",
+          },
+          billingCustomer,
+        )
+      ).results[0]?.domainEtv,
+    ).toBeNull();
+  });
+  it("awaits the cached payload before recording its saved run", async () => {
+    let resolveWrite: (() => void) | undefined;
+    mocks.setCached.mockImplementation(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveWrite = resolve;
+        }),
+    );
+    const { SerpOverviewService } = await import("./SerpOverviewService");
+    const request = SerpOverviewService.getSerpOverview(
+      {
+        projectId: "project_1",
+        keyword: "office coffee service",
+        locationCode: 2840,
+        languageCode: "en",
+      },
+      billingCustomer,
+    );
+    await vi.waitFor(() => expect(mocks.setCached).toHaveBeenCalledTimes(1));
+    expect(mocks.record).not.toHaveBeenCalled();
+    resolveWrite?.();
+    await request;
+    expect(mocks.record).toHaveBeenCalledTimes(1);
+  });
   beforeEach(() => {
     vi.resetModules();
     for (const mock of Object.values(mocks)) mock.mockReset();

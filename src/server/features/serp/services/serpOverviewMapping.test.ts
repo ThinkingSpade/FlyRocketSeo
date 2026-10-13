@@ -23,6 +23,22 @@ function organicItem(overrides: Partial<SerpLiveItem> = {}): SerpLiveItem {
 }
 
 describe("mapSerpOverview", () => {
+  it("preserves unknown and zero through raw legacy enrichment mapping", () => {
+    expect(
+      mapSerpOverview([
+        organicItem({
+          etv: -1,
+          backlinks_info: { backlinks: 0.5, referring_domains: 0 },
+          rank_changes: { previous_rank_absolute: 0 },
+        }),
+      ]).results[0],
+    ).toMatchObject({
+      etv: null,
+      backlinks: null,
+      referringDomains: 0,
+      previousRank: null,
+    });
+  });
   it("maps organic results with metrics and movement", () => {
     const overview = mapSerpOverview([
       organicItem(),

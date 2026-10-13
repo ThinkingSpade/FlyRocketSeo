@@ -56,32 +56,53 @@ export const serpSearchSchema = z.object({
 });
 
 const serpOverviewResultSchema = z.object({
-  rank: z.number().nullable(),
+  rank: z.number().int().safe().positive().nullable().catch(null),
   title: z.string().nullable(),
   url: z.string().nullable(),
   domain: z.string().nullable(),
   description: z.string().nullable(),
-  etv: z.number().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  previousRank: z.number().nullable(),
+  etv: z.number().finite().nonnegative().nullable().catch(null),
+  backlinks: z.number().int().safe().nonnegative().nullable().catch(null),
+  referringDomains: z
+    .number()
+    .int()
+    .safe()
+    .nonnegative()
+    .nullable()
+    .catch(null),
+  previousRank: z.number().int().safe().positive().nullable().catch(null),
   isNew: z.boolean(),
   isUp: z.boolean(),
   isDown: z.boolean(),
   /** Estimated monthly organic traffic for the result's whole domain (Labs
    *  bulk_traffic_estimation) — the plain SERP payload carries no metrics. */
-  domainEtv: z.number().nullable(),
+  domainEtv: z.number().finite().nonnegative().nullable().catch(null),
 });
 
 const keywordStatsSchema = z.object({
-  searchVolume: z.number().nullable(),
-  keywordDifficulty: z.number().nullable(),
-  cpc: z.number().nullable(),
+  searchVolume: z.number().int().safe().nonnegative().nullable().catch(null),
+  keywordDifficulty: z.number().finite().min(0).max(100).nullable().catch(null),
+  cpc: z.number().finite().nonnegative().nullable().catch(null),
 });
 
 /** The SERP overview exactly as it is cached — shared so auto-restore
  *  validates against the same definition that wrote it. */
 export const serpOverviewSchema = z.object({
+  contractVersion: z.literal(2).optional(),
+  source: z.literal("DataForSEO Google Organic SERP").optional(),
+  scope: z
+    .object({
+      organizationId: z.string(),
+      projectId: z.string(),
+      keyword: z.string(),
+      locationCode: z.number().int().positive(),
+      languageCode: z.string(),
+      device: z.literal("desktop"),
+      depth: z.literal(100),
+      domainAnalyticsLocationCode: z.number().int().positive(),
+      domainAnalyticsLanguageCode: z.string(),
+    })
+    .optional(),
   keyword: z.string(),
   locationCode: z.number(),
   languageCode: z.string(),
@@ -90,8 +111,8 @@ export const serpOverviewSchema = z.object({
   results: z.array(serpOverviewResultSchema),
   paaQuestions: z.array(z.string()),
   serpFeatures: z.array(z.object({ type: z.string(), count: z.number() })),
-  totalOrganic: z.number(),
-  fetchedAt: z.string(),
+  totalOrganic: z.number().int().safe().nonnegative(),
+  fetchedAt: z.iso.datetime(),
   /** True only when THIS run's own Labs domain-traffic enrichment was
    *  attempted and threw (Defect 3 fix) -- never when there was simply
    *  nothing to enrich (no ranking domain) or a domain's own etv came back

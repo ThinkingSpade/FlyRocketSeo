@@ -42,11 +42,22 @@ export function estimateTrafficShare(
   searchVolume: number | null | undefined,
   ranks: Array<number | null>,
 ): Map<number, TrafficShareEstimate> | null {
-  if (searchVolume == null || searchVolume <= 0) return null;
+  if (
+    searchVolume == null ||
+    !Number.isSafeInteger(searchVolume) ||
+    searchVolume < 0
+  )
+    return null;
 
   const clicksByRank = new Map<number, number>();
   for (const rank of ranks) {
-    if (rank == null || clicksByRank.has(rank)) continue;
+    if (
+      rank == null ||
+      !Number.isSafeInteger(rank) ||
+      rank < 1 ||
+      clicksByRank.has(rank)
+    )
+      continue;
     clicksByRank.set(rank, Math.round(searchVolume * ctrForPosition(rank)));
   }
 

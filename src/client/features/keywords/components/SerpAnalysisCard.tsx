@@ -60,14 +60,34 @@ export function SerpAnalysisCard({
       <div className="flex items-center justify-between mb-3">
         <div className="text-xs text-base-content/50">
           {items.length} organic results
+          {items[0]?.fetchedAt
+            ? ` · DataForSEO Google Organic SERP · fetched ${new Date(items[0].fetchedAt).toLocaleString()} · ${items[0].locationCode}/${items[0].languageCode} · Desktop · Depth100`
+            : " · Original lookup scope unavailable"}
         </div>
         <ExportToSheetsButton
-          headers={["Rank", "Title", "URL", "Domain"]}
+          headers={[
+            "Rank",
+            "Title",
+            "URL",
+            "Domain",
+            "Source",
+            "Fetched At",
+            "Location Code",
+            "Language",
+            "Device",
+            "Depth",
+          ]}
           rows={items.map((item) => [
             item.rank,
             item.title ?? "",
             item.url,
             item.domain,
+            item.source ?? "",
+            item.fetchedAt ?? "",
+            item.locationCode ?? "",
+            item.languageCode ?? "",
+            "desktop",
+            item.fetchedAt ? 100 : "",
           ])}
           feature="serp_analysis"
         />

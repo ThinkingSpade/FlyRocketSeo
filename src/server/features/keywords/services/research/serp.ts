@@ -5,6 +5,12 @@ import { z } from "zod";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { normalizeKeyword } from "./helpers";
+import { AppError } from "@/server/lib/errors";
+import {
+  safeSerpCount,
+  safeSerpEstimate,
+  safeSerpPosition,
+} from "@/server/features/serp/services/serpOverviewMapping";
 
 const SERP_CACHE_TTL_SECONDS = 12 * 60 * 60;
 
@@ -17,7 +23,11 @@ type SerpAnalysisResult = {
 };
 
 const serpResultItemSchema = z.object({
-  rank: z.number().int(),
+  rank: z.number().int().safe().positive(),
+  source: z.literal("DataForSEO Google Organic SERP"),
+  fetchedAt: z.iso.datetime(),
+  locationCode: z.number().int().positive(),
+  languageCode: z.string(),
   title: z.string(),
   url: z.string(),
   domain: z.string(),
@@ -31,27 +41,50 @@ const serpResultItemSchema = z.object({
 });
 
 const serpCacheSchema = z.object({
+  contractVersion: z.literal(2),
+  scope: z.object({
+    organizationId: z.string(),
+    projectId: z.string(),
+    keyword: z.string(),
+    locationCode: z.number().int().positive(),
+    languageCode: z.string(),
+  }),
   requestedKeyword: z.string(),
   items: z.array(serpResultItemSchema),
   reason: z.enum(["no_organic_results"]).optional(),
 });
 
-function mapOrganicSerpItems(items: SerpLiveItem[]): SerpResultItem[] {
+function mapOrganicSerpItems(
+  items: SerpLiveItem[],
+  meta: { fetchedAt: string; locationCode: number; languageCode: string },
+): Array<z.infer<typeof serpResultItemSchema>> {
   return items
     .filter((item) => item.type === "organic")
-    .map((item) => ({
-      rank: item.rank_absolute ?? item.rank_group ?? 0,
-      title: item.title ?? "",
-      url: item.url ?? "",
-      domain: item.domain ?? "",
-      description: item.description ?? "",
-      etv: item.etv ?? null,
-      estimatedPaidTrafficCost: item.estimated_paid_traffic_cost ?? null,
-      referringDomains: item.backlinks_info?.referring_domains ?? null,
-      backlinks: item.backlinks_info?.backlinks ?? null,
-      isNew: false,
-      rankChange: null,
-    }));
+    .map((item) => {
+      const rank = safeSerpPosition(item.rank_absolute ?? item.rank_group);
+      if (rank == null)
+        throw new AppError(
+          "INTERNAL_ERROR",
+          "SERP observation has no valid organic position",
+        );
+      return {
+        rank,
+        source: "DataForSEO Google Organic SERP" as const,
+        ...meta,
+        title: item.title ?? "",
+        url: item.url ?? "",
+        domain: item.domain ?? "",
+        description: item.description ?? "",
+        etv: safeSerpEstimate(item.etv),
+        estimatedPaidTrafficCost: safeSerpEstimate(
+          item.estimated_paid_traffic_cost,
+        ),
+        referringDomains: safeSerpCount(item.backlinks_info?.referring_domains),
+        backlinks: safeSerpCount(item.backlinks_info?.backlinks),
+        isNew: false,
+        rankChange: null,
+      };
+    });
 }
 
 async function getSerpLiveAnalysis(
@@ -64,8 +97,15 @@ async function getSerpLiveAnalysis(
   billingCustomer: BillingCustomerContext,
 ): Promise<SerpAnalysisResult> {
   const keyword = normalizeKeyword(input.keyword);
+  const scope = {
+    organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    keyword,
+    locationCode: input.locationCode,
+    languageCode: input.languageCode,
+  };
 
-  const cacheKey = await buildCacheKey("serp:analysis", {
+  const cacheKey = await buildCacheKey("serp:analysis:v2", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     keyword,
@@ -75,7 +115,10 @@ async function getSerpLiveAnalysis(
 
   const cachedRaw = await getCached(cacheKey);
   const cached = serpCacheSchema.safeParse(cachedRaw);
-  if (cached.success) {
+  if (
+    cached.success &&
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope)
+  ) {
     return cached.data;
   }
 
@@ -85,13 +128,22 @@ async function getSerpLiveAnalysis(
     languageCode: input.languageCode,
   });
 
-  const items = mapOrganicSerpItems(liveItems);
-  const result: SerpAnalysisResult = { requestedKeyword: keyword, items };
+  const items = mapOrganicSerpItems(liveItems, {
+    locationCode: input.locationCode,
+    languageCode: input.languageCode,
+    fetchedAt: new Date().toISOString(),
+  });
+  const result: z.infer<typeof serpCacheSchema> = {
+    contractVersion: 2 as const,
+    scope,
+    requestedKeyword: keyword,
+    items,
+  };
   if (items.length === 0) {
     result.reason = "no_organic_results";
   }
 
-  void setCached(cacheKey, result, SERP_CACHE_TTL_SECONDS).catch((error) => {
+  await setCached(cacheKey, result, SERP_CACHE_TTL_SECONDS).catch((error) => {
     console.error("keywords.serp.cache-write failed:", error);
   });
 

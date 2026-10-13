@@ -2,6 +2,21 @@ import { describe, expect, it } from "vitest";
 import { mapLocalGridCell } from "./localGridMapping";
 
 describe("mapLocalGridCell", () => {
+  it("uses the local result group rank when absolute SERP position includes other elements", () => {
+    expect(
+      mapLocalGridCell(
+        [
+          {
+            type: "local_pack",
+            domain: "example.com",
+            rank_group: 2,
+            rank_absolute: 22,
+          },
+        ],
+        "example.com",
+      ).position,
+    ).toBe(2);
+  });
   it("does not report a negative or fractional target rank as a measured local rank", () => {
     for (const rank of [0, -1, 1.5, 21, Number.MAX_SAFE_INTEGER + 1]) {
       expect(

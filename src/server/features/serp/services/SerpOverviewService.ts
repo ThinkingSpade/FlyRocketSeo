@@ -22,7 +22,9 @@ const trafficEstimationItemSchema = z
     metrics: z
       .object({
         organic: z
-          .object({ etv: z.number().nullable().optional() })
+          .object({
+            etv: z.number().finite().nonnegative().nullable().optional(),
+          })
           .passthrough()
           .nullable()
           .optional(),
@@ -67,6 +69,17 @@ async function getSerpOverview(
     domainAnalyticsLocationCode: input.domainAnalyticsLocationCode,
     domainAnalyticsLanguageCode: input.domainAnalyticsLanguageCode,
   });
+  const scope = {
+    organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    keyword,
+    locationCode,
+    languageCode,
+    device: "desktop" as const,
+    depth: 100 as const,
+    domainAnalyticsLocationCode: domainAnalyticsGeo.locationCode,
+    domainAnalyticsLanguageCode: domainAnalyticsGeo.languageCode,
+  };
 
   // Bumped to v3 (Defect 2/3 fix): a v2 entry's domainEtv values may have
   // been computed by sending Labs the metro code, and it never carries the
@@ -74,7 +87,7 @@ async function getSerpOverview(
   // schema now requires -- folding the new geo pair into the key AND bumping
   // the prefix guarantees no pre-fix entry is ever served as if it were
   // already correct, rather than relying solely on the schema mismatch below.
-  const cacheKey = await buildCacheKey("serp:overview:v3", {
+  const cacheKey = await buildCacheKey("serp:overview:v4", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     keyword,
@@ -94,7 +107,11 @@ async function getSerpOverview(
     });
 
   const cached = serpOverviewSchema.safeParse(await getCached(cacheKey));
-  if (cached.success && cached.data.results.length > 0) {
+  if (
+    cached.success &&
+    cached.data.contractVersion === 2 &&
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope)
+  ) {
     await recordRun();
     return cached.data;
   }
@@ -137,7 +154,8 @@ async function getSerpOverview(
         if (!parsed.success) continue;
         const target = parsed.data.target;
         const etv = parsed.data.metrics?.organic?.etv;
-        if (target && etv != null) etvByDomain.set(target, etv);
+        if (target && domains.includes(target) && etv != null)
+          etvByDomain.set(target, etv);
       }
     } catch (error) {
       console.warn("serp:overview traffic enrichment failed:", error);
@@ -168,7 +186,9 @@ async function getSerpOverview(
       languageCode,
       creditFeature: "keyword_research",
     });
-    const metric = metrics[0];
+    const metric = metrics.find(
+      (row) => row.keyword.trim().toLowerCase() === keyword,
+    );
     if (metric) {
       keywordStats = {
         searchVolume: metric.searchVolume,
@@ -182,6 +202,9 @@ async function getSerpOverview(
   }
 
   const result: SerpOverviewResponse = {
+    contractVersion: 2,
+    source: "DataForSEO Google Organic SERP",
+    scope,
     keyword,
     locationCode,
     languageCode,
@@ -197,10 +220,17 @@ async function getSerpOverview(
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, SERP_OVERVIEW_TTL_SECONDS).catch((error) => {
-    console.error("serp:overview cache-write failed:", error);
-  });
-  await recordRun();
+  const cachedSuccessfully = await setCached(
+    cacheKey,
+    result,
+    SERP_OVERVIEW_TTL_SECONDS,
+  )
+    .then(() => true)
+    .catch((error) => {
+      console.error("serp:overview cache-write failed:", error);
+      return false;
+    });
+  if (cachedSuccessfully) await recordRun();
 
   return result;
 }

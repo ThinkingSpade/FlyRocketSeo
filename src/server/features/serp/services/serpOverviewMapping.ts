@@ -29,6 +29,26 @@ type SerpOverview = {
 const MAX_RESULTS = 20;
 const MAX_PAA_QUESTIONS = 12;
 
+export function safeSerpEstimate(
+  value: number | null | undefined,
+): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value >= 0
+    ? value
+    : null;
+}
+export function safeSerpCount(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : null;
+}
+export function safeSerpPosition(
+  value: number | null | undefined,
+): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value > 0
+    ? value
+    : null;
+}
+
 // The live-advanced item schema is passthrough, so people_also_ask items keep
 // their `items` sub-array (each entry's `title` is the question). Parse it
 // defensively — SERP payloads are external data.
@@ -64,15 +84,15 @@ export function mapSerpOverview(items: SerpLiveItem[]): SerpOverview {
   const results: SerpOverviewResult[] = organic
     .slice(0, MAX_RESULTS)
     .map((item) => ({
-      rank: item.rank_absolute ?? item.rank_group ?? null,
+      rank: safeSerpPosition(item.rank_absolute ?? item.rank_group),
       title: item.title ?? null,
       url: item.url ?? null,
       domain: item.domain ?? null,
       description: item.description ?? null,
-      etv: item.etv ?? null,
-      backlinks: item.backlinks_info?.backlinks ?? null,
-      referringDomains: item.backlinks_info?.referring_domains ?? null,
-      previousRank: item.rank_changes?.previous_rank_absolute ?? null,
+      etv: safeSerpEstimate(item.etv),
+      backlinks: safeSerpCount(item.backlinks_info?.backlinks),
+      referringDomains: safeSerpCount(item.backlinks_info?.referring_domains),
+      previousRank: safeSerpPosition(item.rank_changes?.previous_rank_absolute),
       isNew: item.rank_changes?.is_new ?? false,
       isUp: item.rank_changes?.is_up ?? false,
       isDown: item.rank_changes?.is_down ?? false,

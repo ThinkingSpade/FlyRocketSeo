@@ -25,19 +25,35 @@ export function computeSerpStrength(
   results: SerpStrengthInput[],
   ratings: Record<string, number | null> | null,
 ): SerpStrength {
-  const top10 = results.filter((item) => item.rank != null && item.rank <= 10);
+  const top10 = results.filter(
+    (item) =>
+      item.rank != null &&
+      Number.isSafeInteger(item.rank) &&
+      item.rank >= 1 &&
+      item.rank <= 10,
+  );
 
   const rated: Array<{ rank: number; domain: string; dr: number }> = [];
   for (const item of top10) {
     const dr = item.domain != null ? (ratings?.[item.domain] ?? null) : null;
-    if (dr != null && item.rank != null && item.domain != null) {
+    if (
+      dr != null &&
+      Number.isFinite(dr) &&
+      dr >= 0 &&
+      dr <= 100 &&
+      item.rank != null &&
+      item.domain != null
+    ) {
       rated.push({ rank: item.rank, domain: item.domain, dr });
     }
   }
 
   const traffics = top10
     .map((item) => item.domainEtv)
-    .filter((value): value is number => value != null)
+    .filter(
+      (value): value is number =>
+        value != null && Number.isFinite(value) && value >= 0,
+    )
     .toSorted((a, b) => a - b);
   const medianDomainTraffic =
     traffics.length === 0

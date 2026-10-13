@@ -1,3 +1,10 @@
+import {
+  backlinksCountField,
+  backlinksScoreField,
+  backlinksTimestampField,
+  parseScopedBacklinksItems,
+  backlinksTotalCount,
+} from "./backlinks-contracts";
 import { z } from "zod";
 import {
   BacklinksAnchorsLiveRequestInfo,
@@ -8,12 +15,7 @@ import {
 } from "dataforseo-client";
 import { createDataforseoBillingClassifier } from "@/server/lib/dataforseoBillingClassification";
 import { backlinksApi } from "@/server/lib/dataforseo/core";
-import {
-  assertOk,
-  buildTaskBilling,
-  parseTaskItems,
-  parseTaskTotalCount,
-} from "@/server/lib/dataforseo/envelope";
+import { assertOk, buildTaskBilling } from "@/server/lib/dataforseo/envelope";
 
 // Deeper backlink analytics (anchors, link competitors, link gap, spam scores,
 // new/lost timeline), split from backlinks.ts to keep both modules under the
@@ -33,21 +35,21 @@ const assertOptions = (path: string) =>
 const backlinksAnchorItemSchema = z
   .object({
     anchor: z.string().nullable().optional(),
-    rank: z.number().nullable().optional(),
-    backlinks: z.number().nullable().optional(),
-    referring_domains: z.number().nullable().optional(),
-    referring_pages: z.number().nullable().optional(),
-    backlinks_spam_score: z.number().nullable().optional(),
-    first_seen: z.string().nullable().optional(),
-    lost_date: z.string().nullable().optional(),
+    rank: backlinksScoreField,
+    backlinks: backlinksCountField,
+    referring_domains: backlinksCountField,
+    referring_pages: backlinksCountField,
+    backlinks_spam_score: backlinksScoreField,
+    first_seen: backlinksTimestampField,
+    lost_date: backlinksTimestampField,
   })
   .passthrough();
 
 const backlinksCompetitorItemSchema = z
   .object({
     target: z.string().nullable().optional(),
-    rank: z.number().nullable().optional(),
-    intersections: z.number().nullable().optional(),
+    rank: backlinksScoreField,
+    intersections: backlinksCountField,
   })
   .passthrough();
 
@@ -56,11 +58,11 @@ const backlinksCompetitorItemSchema = z
 const intersectionEntrySchema = z
   .object({
     target: z.string().nullable().optional(),
-    rank: z.number().nullable().optional(),
-    backlinks: z.number().nullable().optional(),
-    referring_pages: z.number().nullable().optional(),
-    backlinks_spam_score: z.number().nullable().optional(),
-    first_seen: z.string().nullable().optional(),
+    rank: backlinksScoreField,
+    backlinks: backlinksCountField,
+    referring_pages: backlinksCountField,
+    backlinks_spam_score: backlinksScoreField,
+    first_seen: backlinksTimestampField,
   })
   .passthrough();
 
@@ -76,17 +78,17 @@ export const backlinksIntersectionItemSchema = z
 const bulkSpamScoreItemSchema = z
   .object({
     target: z.string().nullable().optional(),
-    spam_score: z.number().nullable().optional(),
+    spam_score: backlinksScoreField,
   })
   .passthrough();
 
 const backlinksNewLostItemSchema = z
   .object({
-    date: z.string().nullable().optional(),
-    new_backlinks: z.number().nullable().optional(),
-    lost_backlinks: z.number().nullable().optional(),
-    new_referring_domains: z.number().nullable().optional(),
-    lost_referring_domains: z.number().nullable().optional(),
+    date: backlinksTimestampField,
+    new_backlinks: backlinksCountField,
+    lost_backlinks: backlinksCountField,
+    new_referring_domains: backlinksCountField,
+    lost_referring_domains: backlinksCountField,
   })
   .passthrough();
 
@@ -116,8 +118,13 @@ export async function fetchBacklinksAnchors(input: {
   const task = assertOk(response, assertOptions("/v3/backlinks/anchors/live"));
   return {
     data: {
-      items: parseTaskItems("anchors-live", task, backlinksAnchorItemSchema),
-      totalCount: parseTaskTotalCount(task),
+      items: parseScopedBacklinksItems(
+        "anchors-live",
+        task,
+        backlinksAnchorItemSchema,
+        { target: input.target },
+      ),
+      totalCount: backlinksTotalCount(task),
     },
     billing: buildTaskBilling(task),
   };
@@ -147,12 +154,13 @@ export async function fetchBacklinksCompetitors(input: {
   );
   return {
     data: {
-      items: parseTaskItems(
+      items: parseScopedBacklinksItems(
         "backlinks-competitors-live",
         task,
         backlinksCompetitorItemSchema,
+        { target: input.target },
       ),
-      totalCount: parseTaskTotalCount(task),
+      totalCount: backlinksTotalCount(task),
     },
     billing: buildTaskBilling(task),
   };
@@ -190,12 +198,13 @@ export async function fetchBacklinksDomainIntersection(input: {
   );
   return {
     data: {
-      items: parseTaskItems(
+      items: parseScopedBacklinksItems(
         "backlinks-domain-intersection-live",
         task,
         backlinksIntersectionItemSchema,
+        { targets: input.targets, intersection: true },
       ),
-      totalCount: parseTaskTotalCount(task),
+      totalCount: backlinksTotalCount(task),
     },
     billing: buildTaskBilling(task),
   };
@@ -214,7 +223,12 @@ export async function fetchBulkSpamScores(input: { targets: string[] }) {
     assertOptions("/v3/backlinks/bulk_spam_score/live"),
   );
   return {
-    data: parseTaskItems("bulk-spam-score-live", task, bulkSpamScoreItemSchema),
+    data: parseScopedBacklinksItems(
+      "bulk-spam-score-live",
+      task,
+      bulkSpamScoreItemSchema,
+      { targets: input.targets },
+    ),
     billing: buildTaskBilling(task),
   };
 }
@@ -242,10 +256,16 @@ export async function fetchBacklinksNewLostTimeseries(input: {
     assertOptions("/v3/backlinks/timeseries_new_lost_summary/live"),
   );
   return {
-    data: parseTaskItems(
+    data: parseScopedBacklinksItems(
       "timeseries-new-lost-summary-live",
       task,
       backlinksNewLostItemSchema,
+      {
+        target: input.target,
+        dateFrom: input.dateFrom,
+        dateTo: input.dateTo,
+        groupRange: input.groupRange ?? "month",
+      },
     ),
     billing: buildTaskBilling(task),
   };

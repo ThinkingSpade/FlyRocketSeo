@@ -22,18 +22,45 @@ export const serpSnapshotItemSchema = z
     description: z.string().nullable().optional(),
     breadcrumb: z.string().nullable().optional(),
     etv: z.number().finite().nonnegative().nullable().catch(null).optional(),
-    estimated_paid_traffic_cost: z.number().finite().nonnegative().nullable().catch(null).optional(),
+    estimated_paid_traffic_cost: z
+      .number()
+      .finite()
+      .nonnegative()
+      .nullable()
+      .catch(null)
+      .optional(),
     backlinks_info: z
       .object({
-        referring_domains: z.number().int().safe().nonnegative().nullable().catch(null).optional(),
-        backlinks: z.number().int().safe().nonnegative().nullable().catch(null).optional(),
+        referring_domains: z
+          .number()
+          .int()
+          .safe()
+          .nonnegative()
+          .nullable()
+          .catch(null)
+          .optional(),
+        backlinks: z
+          .number()
+          .int()
+          .safe()
+          .nonnegative()
+          .nullable()
+          .catch(null)
+          .optional(),
       })
       .passthrough()
       .nullable()
       .optional(),
     rank_changes: z
       .object({
-        previous_rank_absolute: z.number().int().safe().positive().nullable().catch(null).optional(),
+        previous_rank_absolute: z
+          .number()
+          .int()
+          .safe()
+          .positive()
+          .nullable()
+          .catch(null)
+          .optional(),
         is_new: z.boolean().nullable().optional(),
         is_up: z.boolean().nullable().optional(),
         is_down: z.boolean().nullable().optional(),

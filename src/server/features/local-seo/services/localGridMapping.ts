@@ -15,7 +15,7 @@ const localItemSchema = z
   .object({
     type: z.string().nullable().optional(),
     rank_group: z.number().int().safe().min(1).max(20).nullable().optional(),
-    rank_absolute: z.number().int().safe().min(1).max(20).nullable().optional(),
+    rank_absolute: z.number().int().safe().min(1).nullable().optional(),
     title: z.string().nullable().optional(),
     domain: z.string().nullable().optional(),
     url: z.string().nullable().optional(),
@@ -49,7 +49,11 @@ export function mapLocalGridCell(
     .map((raw) => localItemSchema.safeParse(raw))
     .filter((parsed) => parsed.success)
     .map((parsed) => parsed.data)
-    .filter((item) => (item.rank_group ?? item.rank_absolute) != null)
+    .filter(
+      (item) =>
+        (item.rank_group ?? item.rank_absolute) != null &&
+        (item.rank_group ?? item.rank_absolute)! <= 20,
+    )
     .toSorted(
       (a, b) =>
         (a.rank_group ?? a.rank_absolute ?? 0) -

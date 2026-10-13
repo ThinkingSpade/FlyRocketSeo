@@ -59,6 +59,7 @@ import {
   describeGeoUnavailable,
 } from "@/client/features/geo/geoUnavailableMessage";
 import { useKeywordDifficultyOverview } from "@/client/features/keywords/hooks/useKeywordDifficultyOverview";
+import { scopeDifficultyOverview } from "@/client/features/keywords/keywordDifficultyMerge";
 import { DifficultyOverviewControl } from "@/client/features/keywords/DifficultyOverviewControl";
 import { formatGeoMetricLabel } from "@/client/features/geo/geoMetricLabel";
 import {
@@ -319,9 +320,22 @@ function SerpKeywordStatsTiles({
   geo: SerpRunGeo | null;
 }) {
   const difficultyOverview = useKeywordDifficultyOverview(projectId);
-  const loadedDifficulty = difficultyOverview.byKeyword.get(
-    result.keyword.toLowerCase(),
-  )?.keywordDifficulty;
+  const loadedDifficulty = scopeDifficultyOverview(
+    difficultyOverview.byKeyword,
+    geo
+      ? {
+          projectId,
+          locationCode: geo.difficulty.locationCode,
+          languageCode: geo.difficulty.languageCode,
+        }
+      : result.scope
+        ? {
+            projectId,
+            locationCode: result.scope.locationCode,
+            languageCode: result.scope.languageCode,
+          }
+        : null,
+  ).get(result.keyword.toLowerCase())?.keywordDifficulty;
   const difficultyValue =
     loadedDifficulty !== undefined
       ? loadedDifficulty
@@ -803,6 +817,14 @@ export function SerpOverviewPage({
             ownDomainRating={ownDomainRating}
             geo={effectiveGeo}
           />
+          {result.results.length === 0 ? (
+            <p
+              role="status"
+              className="rounded-lg border border-dashed border-base-300 p-6 text-center text-sm text-base-content/60"
+            >
+              No organic results returned for this keyword and market.
+            </p>
+          ) : null}
 
           {result.paaQuestions.length > 0 ? (
             <div className="relative flex flex-col rounded-xl border border-base-300 bg-base-100">
@@ -822,8 +844,13 @@ export function SerpOverviewPage({
 
           <p className="text-xs text-base-content/40">
             Top {result.results.length} of {result.totalOrganic} organic results
-            · fetched {new Date(result.fetchedAt).toLocaleString()} · DR via
-            Ahrefs
+            · fetched {new Date(result.fetchedAt).toLocaleString()} · DataForSEO
+            Google Organic SERP · Desktop · Depth{" "}
+            {result.scope?.depth ?? "not recorded"} ·{" "}
+            {result.scope
+              ? `Market ${result.scope.locationCode}/${result.scope.languageCode}; domain estimates ${result.scope.domainAnalyticsLocationCode}/${result.scope.domainAnalyticsLanguageCode}`
+              : "Legacy scope metadata unavailable"}{" "}
+            · DR via Ahrefs
           </p>
         </>
       ) : null}

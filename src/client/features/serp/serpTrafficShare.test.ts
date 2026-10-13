@@ -4,7 +4,14 @@ import { estimateTrafficShare } from "./serpTrafficShare";
 describe("estimateTrafficShare", () => {
   it("returns null without a usable search volume", () => {
     expect(estimateTrafficShare(null, [1, 2])).toBeNull();
-    expect(estimateTrafficShare(0, [1, 2])).toBeNull();
+  });
+  it("preserves an observed zero volume while ignoring invalid ranks or volume", () => {
+    expect(estimateTrafficShare(0, [1])?.get(1)).toEqual({
+      clicks: 0,
+      relative: 0,
+    });
+    expect(estimateTrafficShare(Number.POSITIVE_INFINITY, [1])).toBeNull();
+    expect(estimateTrafficShare(100, [0, -1, 0.5])?.size).toBe(0);
   });
 
   it("estimates clicks from the CTR curve and scales bars to the top result", () => {

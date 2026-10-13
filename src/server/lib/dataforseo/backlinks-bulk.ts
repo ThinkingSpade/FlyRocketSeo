@@ -1,3 +1,10 @@
+import {
+  backlinksCountField,
+  backlinksScoreField,
+  backlinksTimestampField,
+  parseScopedBacklinksItems,
+  backlinksTotalCount,
+} from "./backlinks-contracts";
 import { z } from "zod";
 import {
   BacklinksBulkBacklinksLiveRequestInfo,
@@ -8,12 +15,7 @@ import {
 } from "dataforseo-client";
 import { createDataforseoBillingClassifier } from "@/server/lib/dataforseoBillingClassification";
 import { backlinksApi } from "@/server/lib/dataforseo/core";
-import {
-  assertOk,
-  buildTaskBilling,
-  parseTaskItems,
-  parseTaskTotalCount,
-} from "@/server/lib/dataforseo/envelope";
+import { assertOk, buildTaskBilling } from "@/server/lib/dataforseo/envelope";
 
 /**
  * The `bulk_*` backlinks endpoints, which answer one question for up to 1,000
@@ -43,45 +45,45 @@ const assertOptions = (path: string) =>
 const bulkRankItemSchema = z
   .object({
     target: z.string().nullable().optional(),
-    rank: z.number().nullable().optional(),
+    rank: backlinksScoreField,
   })
   .passthrough();
 
 const bulkBacklinksItemSchema = z
   .object({
     target: z.string().nullable().optional(),
-    backlinks: z.number().nullable().optional(),
+    backlinks: backlinksCountField,
   })
   .passthrough();
 
 const bulkReferringDomainsItemSchema = z
   .object({
     target: z.string().nullable().optional(),
-    referring_domains: z.number().nullable().optional(),
-    referring_domains_nofollow: z.number().nullable().optional(),
-    referring_main_domains: z.number().nullable().optional(),
-    referring_main_domains_nofollow: z.number().nullable().optional(),
+    referring_domains: backlinksCountField,
+    referring_domains_nofollow: backlinksCountField,
+    referring_main_domains: backlinksCountField,
+    referring_main_domains_nofollow: backlinksCountField,
   })
   .passthrough();
 
 const bulkNewLostReferringDomainsItemSchema = z
   .object({
     target: z.string().nullable().optional(),
-    new_referring_domains: z.number().nullable().optional(),
-    lost_referring_domains: z.number().nullable().optional(),
-    new_referring_main_domains: z.number().nullable().optional(),
-    lost_referring_main_domains: z.number().nullable().optional(),
+    new_referring_domains: backlinksCountField,
+    lost_referring_domains: backlinksCountField,
+    new_referring_main_domains: backlinksCountField,
+    lost_referring_main_domains: backlinksCountField,
   })
   .passthrough();
 
 const referringNetworkItemSchema = z
   .object({
     network_address: z.string().nullable().optional(),
-    rank: z.number().nullable().optional(),
-    backlinks: z.number().nullable().optional(),
-    referring_domains: z.number().nullable().optional(),
-    referring_pages: z.number().nullable().optional(),
-    first_seen: z.string().nullable().optional(),
+    rank: backlinksScoreField,
+    backlinks: backlinksCountField,
+    referring_domains: backlinksCountField,
+    referring_pages: backlinksCountField,
+    first_seen: backlinksTimestampField,
   })
   .passthrough();
 
@@ -103,7 +105,12 @@ export async function fetchBulkRanks(input: { targets: string[] }) {
     assertOptions("/v3/backlinks/bulk_ranks/live"),
   );
   return {
-    data: parseTaskItems("bulk-ranks-live", task, bulkRankItemSchema),
+    data: parseScopedBacklinksItems(
+      "bulk-ranks-live",
+      task,
+      bulkRankItemSchema,
+      { targets: input.targets },
+    ),
     billing: buildTaskBilling(task),
   };
 }
@@ -117,7 +124,12 @@ export async function fetchBulkBacklinks(input: { targets: string[] }) {
     assertOptions("/v3/backlinks/bulk_backlinks/live"),
   );
   return {
-    data: parseTaskItems("bulk-backlinks-live", task, bulkBacklinksItemSchema),
+    data: parseScopedBacklinksItems(
+      "bulk-backlinks-live",
+      task,
+      bulkBacklinksItemSchema,
+      { targets: input.targets },
+    ),
     billing: buildTaskBilling(task),
   };
 }
@@ -135,10 +147,11 @@ export async function fetchBulkReferringDomains(input: { targets: string[] }) {
     assertOptions("/v3/backlinks/bulk_referring_domains/live"),
   );
   return {
-    data: parseTaskItems(
+    data: parseScopedBacklinksItems(
       "bulk-referring-domains-live",
       task,
       bulkReferringDomainsItemSchema,
+      { targets: input.targets },
     ),
     billing: buildTaskBilling(task),
   };
@@ -166,10 +179,11 @@ export async function fetchBulkNewLostReferringDomains(input: {
     assertOptions("/v3/backlinks/bulk_new_lost_referring_domains/live"),
   );
   return {
-    data: parseTaskItems(
+    data: parseScopedBacklinksItems(
       "bulk-new-lost-referring-domains-live",
       task,
       bulkNewLostReferringDomainsItemSchema,
+      { targets: input.targets, dateFrom: input.dateFrom },
     ),
     billing: buildTaskBilling(task),
   };
@@ -209,12 +223,13 @@ export async function fetchReferringNetworks(input: {
   );
   return {
     data: {
-      items: parseTaskItems(
+      items: parseScopedBacklinksItems(
         "referring-networks-live",
         task,
         referringNetworkItemSchema,
+        { target: input.target },
       ),
-      totalCount: parseTaskTotalCount(task),
+      totalCount: backlinksTotalCount(task),
     },
     billing: buildTaskBilling(task),
   };
