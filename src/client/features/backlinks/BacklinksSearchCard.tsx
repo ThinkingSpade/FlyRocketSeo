@@ -59,6 +59,7 @@ export function BacklinksSearchCard({
   compact = false,
   errorMessage,
   initialValues,
+  isBusy = false,
   onSubmit,
   prefillTarget,
   tabLimit,
@@ -67,6 +68,7 @@ export function BacklinksSearchCard({
   compact?: boolean;
   errorMessage: string | null;
   initialValues: SearchDraft;
+  isBusy?: boolean;
   onSubmit: (values: SearchDraft) => void;
   /** A handoff, last-run, or project-domain value the page resolved to seed
    *  the target field with; "" means it found nothing to offer. */
@@ -88,6 +90,7 @@ export function BacklinksSearchCard({
         getBacklinksValidationErrors(value, true, canOpenSearch, tabLimit),
     },
     onSubmit: ({ value }) => {
+      if (isBusy) return;
       const target = value.target.trim();
       const scope = resolveBacklinksSearchScope({
         target,
@@ -201,18 +204,18 @@ export function BacklinksSearchCard({
           <Toolbar.Button
             type="submit"
             className="shrink-0"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isBusy}
           >
-            {isSubmitting ? "Loading..." : "Search"}
+            {isSubmitting || isBusy ? "Loading..." : "Search"}
           </Toolbar.Button>
         ) : (
           <Button
             type="submit"
             variant="primary"
             className="shrink-0 px-6"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isBusy}
           >
-            {isSubmitting ? "Loading..." : "Search"}
+            {isSubmitting || isBusy ? "Loading..." : "Search"}
           </Button>
         )
       }

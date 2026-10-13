@@ -1,4 +1,4 @@
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import {
   SealCheck,
   MapPin,
@@ -74,6 +74,10 @@ export function LocalSeoPage({
   query: string;
 }) {
   const [input, setInput] = useState(query);
+  const inputEdited = useRef(false);
+  const prefillInput = useCallback((value: string) => {
+    if (!inputEdited.current) setInput(value);
+  }, []);
   const [runKeyword, setRunKeyword] = useState<string | null>(null);
   // Reported by LocalReviewsSection once its (user-triggered) review crawl
   // completes -- tagged with the business it was crawled for (see
@@ -87,7 +91,7 @@ export function LocalSeoPage({
   const projectContext = useLocalSeoProjectContext({
     projectId,
     initialQuery: query,
-    onPrefill: setInput,
+    onPrefill: prefillInput,
   });
   const { projectDomain, cachedBusiness, businessGuess, guessSource } =
     projectContext;
@@ -203,7 +207,13 @@ export function LocalSeoPage({
                 className="w-full"
                 placeholder="Joe's Pizza Brooklyn"
                 value={input}
-                onChange={(event) => setInput(event.target.value)}
+                onFocus={() => {
+                  inputEdited.current = true;
+                }}
+                onChange={(event) => {
+                  inputEdited.current = true;
+                  setInput(event.target.value);
+                }}
               />
               {guessSource && runKeyword == null ? (
                 <span className="mt-1 text-xs text-base-content/50">

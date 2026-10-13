@@ -4,8 +4,10 @@ import { useQueries } from "@tanstack/react-query";
 import { NotePencil, MagnifyingGlass } from "@phosphor-icons/react";
 import { meteredActionLabel } from "@/client/components/MeteredActionLabel";
 import { BriefTargets, quantile } from "@/client/features/content/BriefTargets";
+import { contentEvidenceCounts } from "@/client/features/content/contentEvidence";
 import { ContentEmptyState } from "@/client/features/content/ContentEmptyState";
 import { useContentBriefHistory } from "@/client/features/content/useContentBriefHistory";
+import { outlineAuthorizationKey } from "@/client/features/content/outlineAuthorization";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   analyzeContentCompetitor,
@@ -68,6 +70,7 @@ type CompetitorAnalysis = {
   title: string;
   wordCount: number | null;
   h2: string[];
+  h2Available?: boolean;
   h3: string[];
 } | null;
 
@@ -289,7 +292,9 @@ export function ContentOptimizerPage({
   // never recomputed from live scope afterward. See `ContentRunGeo`'s own
   // doc comment for why this is two geographies, not one.
   const [runGeo, setRunGeo] = useState<ContentRunGeo | null>(null);
-  const [competitorsAuthorized, setCompetitorsAuthorized] = useState(false);
+  const [authorizedOutlineKey, setAuthorizedOutlineKey] = useState<
+    string | null
+  >(null);
   const run = useAuthorizedRun(
     createMeteredRunKey(projectId, input.trim(), Number(locationInput)),
   );
@@ -362,13 +367,19 @@ export function ContentOptimizerPage({
 
   // One analysis call per competitor page — each is its own Worker invocation
   // (CPU-bounded) and is cached server-side for a week.
-  // Deliberately keyed off the LIVE brief, never the restored one: each URL
-  // here becomes its own metered analyzeContentCompetitor call, so restoring a
-  // brief with ten competitors would turn a free page load into ten paid ones.
-  // Outlines wait for "Run again".
-  const competitorUrls = (briefQuery.data?.competitors ?? [])
+  // Restored briefs retain the explicit outline action. The queries remain
+  // disabled until the user authorizes this separate paid analysis below;
+  // simply restoring the brief never starts an outline request.
+  const competitorUrls = (brief?.competitors ?? [])
     .map((competitor) => competitor.url)
     .filter((url): url is string => Boolean(url));
+  const currentOutlineKey = outlineAuthorizationKey(
+    projectId,
+    brief,
+    selectedRunId,
+  );
+  const competitorsAuthorized =
+    authorizedOutlineKey !== null && authorizedOutlineKey === currentOutlineKey;
   const analysisQueries = useQueries({
     queries: competitorUrls.map((url) => ({
       queryKey: ["content-competitor", projectId, url],
@@ -409,13 +420,7 @@ export function ContentOptimizerPage({
     (query_) => query_.isError,
   ).length;
 
-  const wordCounts = loadedAnalyses
-    .map((analysis) => analysis.wordCount)
-    .filter((count): count is number => count != null && count > 0)
-    .toSorted((a, b) => a - b);
-  const h2Counts = loadedAnalyses
-    .map((analysis) => analysis.h2.length)
-    .toSorted((a, b) => a - b);
+  const { wordCounts, h2Counts } = contentEvidenceCounts(loadedAnalyses);
   // Read once and threaded into both BriefTargets and DraftGrader's verdict
   // below, so the two can never disagree on what "the target" is.
   const targetWordCount =
@@ -443,7 +448,7 @@ export function ContentOptimizerPage({
               event.preventDefault();
               const next = input.trim();
               if (!next) return;
-              setCompetitorsAuthorized(false);
+              setAuthorizedOutlineKey(null);
               // Captured HERE, at authorize()-time -- never recomputed from
               // live scope afterward.
               setRunGeo(
@@ -536,14 +541,17 @@ export function ContentOptimizerPage({
         projectId={projectId}
         feature={RUN_FEATURES.contentBrief}
         selectedRunId={selectedRunId}
-        onSelectRun={setSelectedRunId}
+        onSelectRun={(runId) => {
+          setAuthorizedOutlineKey(null);
+          setSelectedRunId(runId);
+        }}
         idle={runInput == null}
         restoredRun={restoredRun}
         onRunAgain={() => {
           if (!restoredRun) return;
           setInput(restoredRun.result.keyword);
           setLocationInput(String(restoredRun.result.locationCode));
-          setCompetitorsAuthorized(false);
+          setAuthorizedOutlineKey(null);
           // A genuine new user-authorized run: captures the CURRENT live
           // scope, same as a fresh submit.
           setRunGeo(
@@ -619,7 +627,7 @@ export function ContentOptimizerPage({
                   type="button"
                   variant="primary"
                   size="sm"
-                  onClick={() => setCompetitorsAuthorized(true)}
+                  onClick={() => setAuthorizedOutlineKey(currentOutlineKey)}
                 >
                   Analyze competitor outlines
                 </Button>
@@ -630,7 +638,8 @@ export function ContentOptimizerPage({
           <BriefTargets
             wordCounts={wordCounts}
             h2Counts={h2Counts}
-            analyzedCount={loadedAnalyses.length}
+            analyzedCount={h2Counts.length}
+            headingCountsUnavailable={loadedAnalyses.length - h2Counts.length}
             paaCount={brief.paaQuestions.length}
             analysesPending={analysesPending}
             analysesFailed={analysesFailed}
@@ -769,8 +778,10 @@ export function ContentOptimizerPage({
                           ) : competitorsAuthorized &&
                             analysis === undefined ? (
                             <Loader size="sm" />
+                          ) : analysis?.h2Available === true ? (
+                            analysis.h2.length
                           ) : (
-                            (analysis?.h2.length ?? "—")
+                            "—"
                           )}
                         </Table.Cell>
                       </Table.Row>
@@ -798,8 +809,22 @@ export function ContentOptimizerPage({
           />
 
           <p className="text-xs text-base-content/40">
-            Brief for &ldquo;{brief.keyword}&rdquo; · fetched{" "}
+            Brief for &ldquo;{brief.keyword}&rdquo; · assembled{" "}
             {new Date(brief.fetchedAt).toLocaleString()}
+            {brief.components ? (
+              <>
+                {" · SERP captured "}
+                {brief.components.serp.fetchedAt
+                  ? new Date(brief.components.serp.fetchedAt).toLocaleString()
+                  : "date unavailable"}
+                {" · related terms "}
+                {brief.components.terms.fetchedAt
+                  ? `captured ${new Date(brief.components.terms.fetchedAt).toLocaleString()}`
+                  : "unavailable"}
+              </>
+            ) : (
+              " · original ingredient capture dates unavailable"
+            )}
           </p>
         </>
       ) : null}

@@ -276,6 +276,11 @@ export function BacklinksPage({
         compact={overviewData != null}
         errorMessage={restoredOverviewNotice ? null : overviewErrorMessage}
         initialValues={searchCardInitialValues}
+        isBusy={
+          overviewQuery.isFetching ||
+          activeTabQuery.isFetching ||
+          restoredRefresh?.phase === "loading"
+        }
         canOpenSearch={canOpenSearch}
         tabLimit={searchTabs.limit}
         onSubmit={runBacklinksSearch}
