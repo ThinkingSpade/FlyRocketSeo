@@ -1,5 +1,4 @@
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
 import { waitUntil } from "cloudflare:workers";
 import { z } from "zod";
 import { GscService } from "@/server/features/gsc/services/GscService";
@@ -125,6 +124,8 @@ export const startSelfHostedGscLink = createServerFn({ method: "POST" })
   .middleware(requireAuthenticatedContext)
   .validator(startSelfHostedLinkSchema)
   .handler(async ({ data, context }) => {
+    // Keep the server barrel out of this module's cold RPC import graph.
+    const { getRequest } = await import("@tanstack/react-start/server");
     const publicOrigin = getPublicOrigin(getRequest());
     const url = await createSelfHostedGscAuthorizationUrl({
       user: {
