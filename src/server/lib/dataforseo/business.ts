@@ -33,6 +33,28 @@ function requireBusinessItems(task: DataforseoTaskLike): void {
   }
 }
 
+function requireBusinessScope(
+  task: DataforseoTaskLike,
+  expected: Record<string, unknown>,
+): void {
+  for (const reported of [task.data, ...(task.result ?? [])].filter(isRecord)) {
+    for (const [field, value] of Object.entries(expected)) {
+      const actual = reported[field];
+      if (value == null || actual == null) continue;
+      const matches =
+        typeof value === "string"
+          ? typeof actual === "string" &&
+            actual.trim().toLowerCase() === value.trim().toLowerCase()
+          : actual === value;
+      if (!matches)
+        throw new DataforseoChargedTaskError(
+          `DataForSEO business data returned mismatched ${field}`,
+          buildTaskBilling(task),
+        );
+    }
+  }
+}
+
 export async function fetchBusinessListingsSearch(input: {
   categories?: string[];
   title?: string;
@@ -54,6 +76,7 @@ export async function fetchBusinessListingsSearch(input: {
   // empty success instead of surfacing a charged-task error to the user.
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
   requireBusinessItems(task);
+  requireBusinessScope(task, { location_coordinate: input.locationCoordinate });
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),
@@ -122,6 +145,10 @@ export async function fetchQuestionsAnswers(input: {
   // businesses/keywords — DataForSEO still charges for it, so treat it as an
   // empty success instead of surfacing a charged-task error to the user.
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  requireBusinessScope(task, {
+    keyword: input.keyword,
+    language_code: input.languageCode,
+  });
   return {
     data: combinedQuestionItems(task),
     billing: buildTaskBilling(task),
@@ -145,6 +172,11 @@ export async function fetchMyBusinessInfo(input: {
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
   requireBusinessItems(task);
+  requireBusinessScope(task, {
+    keyword: input.keyword,
+    location_code: input.locationCode,
+    language_code: input.languageCode,
+  });
   return {
     data: task.result?.[0]?.items?.[0] ?? null,
     billing: buildTaskBilling(task),
@@ -192,6 +224,11 @@ export async function postGoogleReviewsTask(input: {
       /Invalid Field:/i.test(message),
     );
   }
+  requireBusinessScope(entry, {
+    keyword: input.keyword,
+    location_code: input.locationCode,
+    language_code: input.languageCode,
+  });
   return {
     data: { taskId: entry.id },
     billing: {
@@ -222,6 +259,7 @@ type GoogleReviewsOutcome =
  */
 export async function fetchGoogleReviewsResult(
   taskId: string,
+  expected?: { keyword: string; locationCode: number; languageCode: string },
 ): Promise<GoogleReviewsOutcome> {
   const response = await businessDataApi().googleReviewsTaskGet(taskId);
   const task = response?.tasks?.[0];
@@ -231,6 +269,17 @@ export async function fetchGoogleReviewsResult(
       response?.status_message ?? "DataForSEO reviews task_get failed",
     );
   }
+  if (task.id && task.id !== taskId)
+    throw new AppError(
+      "INTERNAL_ERROR",
+      "DataForSEO returned another review task",
+    );
+  if (expected)
+    requireBusinessScope(task, {
+      keyword: expected.keyword,
+      location_code: expected.locationCode,
+      language_code: expected.languageCode,
+    });
   if (REVIEWS_TASK_IN_PROGRESS_CODES.has(task.status_code ?? 0)) {
     return { status: "pending" };
   }

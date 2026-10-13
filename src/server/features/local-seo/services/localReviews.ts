@@ -176,7 +176,10 @@ export async function getReviewsResult(
   // to keep the DataForSEO SDK out of the Worker startup graph.
   const { fetchGoogleReviewsResult } =
     await import("@/server/lib/dataforseo/business");
-  const outcome = await fetchGoogleReviewsResult(input.taskId);
+  const outcome = await fetchGoogleReviewsResult(
+    input.taskId,
+    receipt.data.scope,
+  );
   if (outcome.status !== "completed") return outcome;
   const result = {
     status: "completed" as const,

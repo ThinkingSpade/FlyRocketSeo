@@ -40,6 +40,38 @@ describe("BusinessData observation contracts", () => {
       billing: { costUsd: 0.01 },
     });
   });
+  it("rejects another declared business or market instead of stamping the requested scope on it", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      response([
+        {
+          keyword: "Different business",
+          location_code: 2826,
+          language_code: "fr",
+          items: [{ title: "Foreign-market business", rating: { value: 5 } }],
+        },
+      ]),
+    );
+    await expect(fetchMyBusinessInfo(input)).rejects.toMatchObject({
+      name: "DataforseoChargedTaskError",
+      billing: { costUsd: 0.01 },
+    });
+  });
+  it("rejects mismatched Q&A language while preserving paid-task evidence", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      response([{ language_code: "fr", items: [], items_without_answers: [] }]),
+    );
+    await expect(
+      fetchQuestionsAnswers({
+        keyword: "Acme",
+        locationCoordinate: "0,0",
+        languageCode: "en",
+        depth: 20,
+      }),
+    ).rejects.toMatchObject({
+      name: "DataforseoChargedTaskError",
+      billing: { costUsd: 0.01 },
+    });
+  });
   it("preserves a recognized no-search-results response as observed not found", async () => {
     vi.mocked(fetch).mockResolvedValue(
       response([], 40501, "No Search Results."),
@@ -89,5 +121,29 @@ describe("BusinessData observation contracts", () => {
       rating: 4.4,
       reviewsCount: 0,
     });
+  });
+  it("rejects review observations from another market before assigning the ownership receipt's scope", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      response([
+        {
+          keyword: "Acme",
+          location_code: 2826,
+          language_code: "fr",
+          items: [],
+          reviews_count: 0,
+        },
+      ]),
+    );
+    await expect(
+      fetchGoogleReviewsResult("task-1", input),
+    ).rejects.toMatchObject({ name: "DataforseoChargedTaskError" });
+  });
+  it("rejects a returned review task identity different from the collected task", async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      response([{ items: [], reviews_count: 0 }]),
+    );
+    await expect(
+      fetchGoogleReviewsResult("other-task", input),
+    ).rejects.toMatchObject({ code: "INTERNAL_ERROR" });
   });
 });
