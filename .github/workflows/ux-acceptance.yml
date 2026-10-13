@@ -1,0 +1,86 @@
+name: UX acceptance
+on:
+  create:
+permissions:
+  contents: read
+defaults:
+  run:
+    shell: bash
+jobs:
+  verify:
+    if: github.event.ref_type == 'branch' && startsWith(github.event.ref, 'ux/acceptance-')
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Export exact source
+        run: |
+          mkdir -p ux-source ux-checks
+          git bundle create ux-source/repository.bundle HEAD
+          git rev-parse HEAD > ux-source/commit.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ux-source
+          path: ux-source/
+          retention-days: 7
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Static checks
+        id: static
+        continue-on-error: true
+        run: pnpm run ci:check 2>&1 | tee ux-checks/static.log
+      - name: Unit tests
+        id: unit
+        continue-on-error: true
+        run: pnpm test 2>&1 | tee ux-checks/unit.log
+      - name: Build without deployment
+        id: build
+        continue-on-error: true
+        run: pnpm run build 2>&1 | tee ux-checks/build.log
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Prepare isolated app
+        run: |
+          mkdir -p ux-evidence
+          printf 'AUTH_MODE=local_noauth\nVITE_E2E_DOMAIN_FIXTURES=1\nVITE_E2E_KEYWORD_FIXTURES=1\nVITE_SHOW_DEVTOOLS=false\n' > .env.local
+          pnpm exec wrangler d1 migrations apply DB --local
+      - name: Real application browser checks
+        id: browser
+        continue-on-error: true
+        env:
+          AUTH_MODE: local_noauth
+          PORT: "3101"
+          WRANGLER_SEND_METRICS: "false"
+          NODE_OPTIONS: --max-old-space-size=3072
+        run: |
+          pnpm exec vite dev --host 127.0.0.1 --strictPort > ux-evidence/server.log 2>&1 &
+          for i in {1..80}; do if curl -s http://127.0.0.1:3101/ > /dev/null; then break; fi; sleep 2; done
+          node scripts/ux/browser-review.mjs 2>&1 | tee ux-checks/browser.log
+          node --input-type=module -e 'import fs from "node:fs"; const r=JSON.parse(fs.readFileSync("ux-evidence/results.json","utf8")); if(r.fatal || r.consoleErrors.length || !r.checks.length || r.checks.some(c=>!c.pass) || r.screens.some(s=>s.error || s.documentOverflow)) process.exit(1);'
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: ux-acceptance-evidence
+          path: |
+            ux-evidence/
+            ux-checks/
+          retention-days: 7
+      - name: Enforce all acceptance checks
+        if: always()
+        env:
+          STATIC: ${{ steps.static.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+        run: |
+          test "$STATIC" = success
+          test "$UNIT" = success
+          test "$BUILD" = success
+          test "$BROWSER" = success
