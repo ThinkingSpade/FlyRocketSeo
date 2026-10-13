@@ -119,7 +119,15 @@ export function TableBulkExportMenu({
       />
       {/* side="top": this bar floats at the bottom of the viewport, so the menu
           has to open upward — what `dropdown-top` used to do. */}
-      <DropdownMenu.Content side="top" align="end" className="w-52">
+      <DropdownMenu.Content
+        side="top"
+        align="end"
+        className="w-52"
+        // Kumo forwards style to the portaled positioner, className to its
+        // child popup. Keep the whole positioner above the z-30 toolbar and
+        // below dialogs (z-50), including when touch targets wrap the bar.
+        style={{ zIndex: 40 }}
+      >
         <ExportMenuItems actions={actions} busy={busy} />
       </DropdownMenu.Content>
     </DropdownMenu>
