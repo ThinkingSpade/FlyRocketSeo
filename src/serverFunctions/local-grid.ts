@@ -17,10 +17,47 @@ const LOCAL_GRID_TTL_SECONDS = 24 * 60 * 60;
 const LOCAL_FINDER_DEPTH = 20;
 
 const cellSchema = z.object({
-  position: z.number().nullable(),
+  contractVersion: z.literal(2),
+  source: z.literal("DataForSEO Local Finder"),
+  scope: z.object({
+    organizationId: z.string(),
+    projectId: z.string(),
+    domain: z.string(),
+    keyword: z.string(),
+    lat: z.string(),
+    lng: z.string(),
+    languageCode: z.literal("en"),
+    device: z.literal("desktop"),
+    searchType: z.literal("local_finder"),
+    depth: z.literal(20),
+  }),
+  position: z.number().int().safe().min(1).max(LOCAL_FINDER_DEPTH).nullable(),
   topCompetitors: z.array(z.string()),
-  fetchedAt: z.string(),
+  fetchedAt: z.iso.datetime(),
 });
+
+function gridScope(input: {
+  organizationId: string;
+  projectId: string;
+  domain: string;
+  keyword: string;
+  lat: string;
+  lng: string;
+}) {
+  const { organizationId, projectId, domain, keyword, lat, lng } = input;
+  return {
+    organizationId,
+    projectId,
+    domain,
+    keyword,
+    lat,
+    lng,
+    languageCode: "en" as const,
+    device: "desktop" as const,
+    searchType: "local_finder" as const,
+    depth: LOCAL_FINDER_DEPTH as 20,
+  };
+}
 const cachedCellsRequestSchema = z.object({
   projectId: z.string().min(1),
   keyword: z.string().min(1).max(255),
@@ -51,15 +88,18 @@ export const getCachedLocalGridCells = createServerFn({ method: "POST" })
       data.points.map(async (point) => {
         const lat = point.lat.toFixed(4);
         const lng = point.lng.toFixed(4);
-        const cacheKey = await buildCacheKey("local-grid:cell", {
+        const scope = gridScope({
           organizationId: context.organizationId,
+          projectId: context.projectId,
           domain,
           keyword,
           lat,
           lng,
         });
+        const cacheKey = await buildCacheKey("local-grid:cell:v2", scope);
         const cached = cellSchema.safeParse(await getCached(cacheKey));
-        return cached.success
+        return cached.success &&
+          JSON.stringify(cached.data.scope) === JSON.stringify(scope)
           ? { lat: point.lat, lng: point.lng, ...cached.data }
           : null;
       }),
@@ -91,15 +131,20 @@ export const getLocalGridCell = createServerFn({ method: "POST" })
     const lat = data.lat.toFixed(4);
     const lng = data.lng.toFixed(4);
 
-    const cacheKey = await buildCacheKey("local-grid:cell", {
+    const scope = gridScope({
       organizationId: context.organizationId,
+      projectId: context.projectId,
       domain,
       keyword,
       lat,
       lng,
     });
+    const cacheKey = await buildCacheKey("local-grid:cell:v2", scope);
     const cached = cellSchema.safeParse(await getCached(cacheKey));
-    if (cached.success) {
+    if (
+      cached.success &&
+      JSON.stringify(cached.data.scope) === JSON.stringify(scope)
+    ) {
       return cached.data;
     }
 
@@ -114,11 +159,14 @@ export const getLocalGridCell = createServerFn({ method: "POST" })
     });
 
     const result = {
+      contractVersion: 2 as const,
+      source: "DataForSEO Local Finder" as const,
+      scope,
       ...mapLocalGridCell(items, domain),
       fetchedAt: new Date().toISOString(),
     };
 
-    void setCached(cacheKey, result, LOCAL_GRID_TTL_SECONDS).catch((error) => {
+    await setCached(cacheKey, result, LOCAL_GRID_TTL_SECONDS).catch((error) => {
       console.error("local-grid cache-write failed:", error);
     });
 
@@ -140,8 +188,8 @@ const nominatimResultSchema = z.array(
 );
 
 const geocodeResultSchema = z.object({
-  lat: z.number(),
-  lng: z.number(),
+  lat: z.number().finite().min(-90).max(90),
+  lng: z.number().finite().min(-180).max(180),
   label: z.string(),
 });
 
@@ -187,7 +235,12 @@ export const geocodeLocation = createServerFn({ method: "POST" })
         if (first) {
           const lat = Number(first.lat);
           const lng = Number(first.lon);
-          if (Number.isFinite(lat) && Number.isFinite(lng)) {
+          if (
+            Number.isFinite(lat) &&
+            Number.isFinite(lng) &&
+            Math.abs(lat) <= 90 &&
+            Math.abs(lng) <= 180
+          ) {
             result = {
               lat,
               lng,

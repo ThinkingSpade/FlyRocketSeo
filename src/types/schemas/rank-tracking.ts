@@ -26,6 +26,11 @@ export type RankCheckTriggerResult =
     };
 
 export interface RankTrackingDeviceResult {
+  availability?: "observed" | "unavailable";
+  comparisonAvailability?: "observed" | "unavailable";
+  checkedAt?: string | null;
+  source?: string;
+  scope?: { projectId: string; configId: string; domain: string; locationCode: number; languageCode: string; serpDepth: number };
   position: number | null;
   previousPosition: number | null;
   rankingUrl: string | null;

@@ -95,7 +95,10 @@ export function LocalReviewsSection({
 
   const isWorking =
     startMutation.isPending ||
-    (taskId != null && !stalled && (!outcome || outcome.status === "pending"));
+    (taskId != null &&
+      !resultQuery.isError &&
+      !stalled &&
+      (!outcome || outcome.status === "pending"));
   const errorMessage = startMutation.isError
     ? getStandardErrorMessage(startMutation.error)
     : resultQuery.isError
@@ -145,6 +148,20 @@ export function LocalReviewsSection({
             <Banner variant="error" className="text-sm">
               {errorMessage}
             </Banner>
+          ) : null}
+          {startMutation.data?.warning ? (
+            <Banner variant="error" className="text-sm">
+              {startMutation.data.warning}
+            </Banner>
+          ) : null}
+          {outcome?.status === "completed" ? (
+            <p className="text-xs text-base-content/60">
+              {outcome.source} · Captured{" "}
+              {new Date(outcome.fetchedAt).toLocaleString()} ·{" "}
+              {outcome.scope.keyword} · Market {outcome.scope.locationCode}/
+              {outcome.scope.languageCode} · Newest {outcome.depth} requested
+              reviews; this is a sampled crawl.
+            </p>
           ) : null}
 
           {outcome?.status === "completed" ? (

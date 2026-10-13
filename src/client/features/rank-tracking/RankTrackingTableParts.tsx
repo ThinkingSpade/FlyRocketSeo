@@ -59,6 +59,37 @@ export function DeviceRankCell({
   result: RankTrackingDeviceResult;
 }) {
   const { position, previousPosition } = result;
+  if (result.availability === "unavailable") {
+    return (
+      <span
+        className="text-base-content/40"
+        title="No successful observation in the current target/market/depth scope"
+      >
+        Unknown
+      </span>
+    );
+  }
+  if (
+    position === null &&
+    result.availability === "observed" &&
+    previousPosition === null
+  ) {
+    return (
+      <span
+        className="text-base-content/40"
+        title={`Not found within the checked depth${result.scope ? ` ${result.scope.serpDepth}` : ""}`}
+      >
+        Not found
+      </span>
+    );
+  }
+  if (result.comparisonAvailability === "unavailable" && position !== null) {
+    return (
+      <span className="font-mono" title="Comparison observation unavailable">
+        {position}
+      </span>
+    );
+  }
 
   // Nothing at all
   if (position === null && previousPosition === null) {
@@ -186,6 +217,10 @@ export function buildRankTrackingExport(
           "Desktop Change",
           "Desktop URL",
           "Desktop SERP Features",
+          "Desktop Status",
+          "Desktop Captured At",
+          "Desktop Source",
+          "Desktop Scope",
         ]
       : []),
     ...(showMobile
@@ -194,6 +229,10 @@ export function buildRankTrackingExport(
           "Mobile Change",
           "Mobile URL",
           "Mobile SERP Features",
+          "Mobile Status",
+          "Mobile Captured At",
+          "Mobile Source",
+          "Mobile Scope",
         ]
       : []),
   ];
@@ -207,21 +246,41 @@ export function buildRankTrackingExport(
     ...(showDesktop
       ? [
           row.desktop.position ?? "",
-          csvChange(row.desktop.position, row.desktop.previousPosition),
+          row.desktop.availability === "unavailable" ||
+          row.desktop.comparisonAvailability === "unavailable"
+            ? ""
+            : csvChange(row.desktop.position, row.desktop.previousPosition),
           row.desktop.rankingUrl ?? "",
           row.desktop.serpFeatures.join(", "),
+          rankStatus(row.desktop),
+          row.desktop.checkedAt ?? "",
+          row.desktop.source ?? "",
+          row.desktop.scope ? JSON.stringify(row.desktop.scope) : "",
         ]
       : []),
     ...(showMobile
       ? [
           row.mobile.position ?? "",
-          csvChange(row.mobile.position, row.mobile.previousPosition),
+          row.mobile.availability === "unavailable" ||
+          row.mobile.comparisonAvailability === "unavailable"
+            ? ""
+            : csvChange(row.mobile.position, row.mobile.previousPosition),
           row.mobile.rankingUrl ?? "",
           row.mobile.serpFeatures.join(", "),
+          rankStatus(row.mobile),
+          row.mobile.checkedAt ?? "",
+          row.mobile.source ?? "",
+          row.mobile.scope ? JSON.stringify(row.mobile.scope) : "",
         ]
       : []),
   ]);
   return { headers, rows };
+}
+
+function rankStatus(result: RankTrackingDeviceResult): string {
+  if (result.availability === "unavailable") return "Unknown";
+  if (result.availability !== "observed") return "Legacy availability unknown";
+  return result.position == null ? "Not found in checked depth" : "Ranked";
 }
 
 export function exportRankTrackingToSheets(

@@ -491,7 +491,35 @@ export function LocalRankGridPage({
       </div>
 
       {keyword && shareOfVoice.scannedPins > 0 ? (
-        <GridShareOfVoiceCards shareOfVoice={shareOfVoice} />
+        <>
+          <p className="text-xs text-base-content/60">
+            DataForSEO Local Finder · English · Desktop · Depth 20 ·{" "}
+            {shareOfVoice.scannedPins} successful pins
+            {activeScan ? ` of ${activePoints.length} requested` : " restored"}.
+            Failed and pending pins are excluded. Average rank uses only visible
+            businesses; leaderboard matches returned business names.
+          </p>
+          <p className="text-xs text-base-content/60">
+            Original cell captures:{" "}
+            {[
+              ...new Set([
+                ...restoredCells.map((cell) => cell.fetchedAt),
+                ...cellQueries.flatMap((cell) =>
+                  cell.data ? [cell.data.fetchedAt] : [],
+                ),
+              ]),
+            ]
+              .map((time) => new Date(time).toLocaleString())
+              .join("; ")}
+          </p>
+          <GridShareOfVoiceCards shareOfVoice={shareOfVoice} />
+        </>
+      ) : null}
+      {keyword && activeScan && cellQueries.some((cell) => cell.isError) ? (
+        <p className="text-sm text-error">
+          {cellQueries.filter((cell) => cell.isError).length} pin check(s)
+          failed. Their rank is unknown; a new scan may spend credits.
+        </p>
       ) : null}
 
       {!keyword ? (

@@ -1,4 +1,12 @@
-import { z } from "zod";
+import {
+  serpSnapshotItemSchema,
+  localSerpItemSchema,
+  requireSerpItems,
+  requireSerpScope,
+  requireOrganicRanks,
+  type SerpLiveItem,
+} from "./serp-contracts";
+export type { SerpLiveItem } from "./serp-contracts";
 import { MAX_TASKS_PER_POST } from "@/server/lib/dataforseoLimits";
 import {
   SerpApiStopCrawlOnMatchInfo,
@@ -42,45 +50,6 @@ function stopCrawlOnTarget(targetDomain: string) {
   };
 }
 
-// Kept as a hand-written schema: the SDK's BaseSerpApiElementItem type omits
-// etv / estimated_paid_traffic_cost / backlinks_info / rank_changes, which we
-// rely on. The fields survive deserialization (the SDK copies unknown keys), so
-// validating here is both our type-safety guard and how we read those fields.
-const serpSnapshotItemSchema = z
-  .object({
-    type: z.string(),
-    rank_group: z.number().nullable().optional(),
-    rank_absolute: z.number().nullable().optional(),
-    domain: z.string().nullable().optional(),
-    title: z.string().nullable().optional(),
-    url: z.string().nullable().optional(),
-    description: z.string().nullable().optional(),
-    breadcrumb: z.string().nullable().optional(),
-    etv: z.number().nullable().optional(),
-    estimated_paid_traffic_cost: z.number().nullable().optional(),
-    backlinks_info: z
-      .object({
-        referring_domains: z.number().nullable().optional(),
-        backlinks: z.number().nullable().optional(),
-      })
-      .passthrough()
-      .nullable()
-      .optional(),
-    rank_changes: z
-      .object({
-        previous_rank_absolute: z.number().nullable().optional(),
-        is_new: z.boolean().nullable().optional(),
-        is_up: z.boolean().nullable().optional(),
-        is_down: z.boolean().nullable().optional(),
-      })
-      .passthrough()
-      .nullable()
-      .optional(),
-  })
-  .passthrough();
-
-export type SerpLiveItem = z.infer<typeof serpSnapshotItemSchema>;
-
 export async function fetchLiveSerp(input: {
   keyword: string;
   locationCode: number;
@@ -97,6 +66,13 @@ export async function fetchLiveSerp(input: {
     }),
   ]);
   const task = assertOk(response);
+  requireSerpItems(task);
+  requireSerpScope(task, {
+    keyword: input.keyword,
+    location_code: input.locationCode,
+    language_code: input.languageCode,
+    device: "desktop",
+  });
   return {
     data: parseTaskItems(
       "google-organic-live-advanced",
@@ -162,11 +138,20 @@ export async function fetchRankCheckSerp(input: {
   // "No Search Results" (40501) is valid for obscure/new keywords — treat as an
   // empty result set rather than failing the whole rank-tracking run.
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  requireSerpItems(task);
+  requireSerpScope(task, {
+    keyword: input.keyword,
+    location_code: input.locationCode,
+    language_code: input.languageCode,
+    device: input.device,
+  });
   const items = parseTaskItems(
     "google-organic-live-advanced",
     task,
     serpSnapshotItemSchema,
   );
+
+  requireOrganicRanks(task, items);
 
   return {
     data: buildRankCheckResult(input, items),
@@ -320,11 +305,14 @@ export async function fetchRankCheckTaskResult(input: {
     };
   }
 
+  requireSerpItems(task);
+  requireSerpScope(task, { keyword: input.keyword });
   const items = parseTaskItems(
     "google-organic-task-get-advanced",
     task,
     serpSnapshotItemSchema,
   );
+  requireOrganicRanks(task, items);
   return { status: "completed", result: buildRankCheckResult(input, items) };
 }
 
@@ -353,9 +341,25 @@ export async function fetchLocalSerp(input: {
         search_places: input.searchPlaces,
       }),
     ]);
-    const task = assertOk(response);
+    const task = assertOk(response, { treatNoResultsAsEmpty: true });
+    requireSerpItems(task);
+    requireSerpScope(task, {
+      keyword: input.keyword,
+      language_code: input.languageCode,
+      device: input.device,
+      location_coordinate: input.locationCoordinate,
+    });
     return {
-      data: task.result?.[0]?.items ?? [],
+      data: parseTaskItems(
+        "google-maps-live-advanced",
+        task,
+        localSerpItemSchema.refine(
+          (item) =>
+            (item.rank_group ?? item.rank_absolute) != null &&
+            (item.rank_group ?? item.rank_absolute)! <= input.depth,
+          "Missing or outside-depth local rank",
+        ),
+      ),
       billing: buildTaskBilling(task),
     };
   }
@@ -370,9 +374,25 @@ export async function fetchLocalSerp(input: {
       depth: input.depth,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  requireSerpItems(task);
+  requireSerpScope(task, {
+    keyword: input.keyword,
+    language_code: input.languageCode,
+    device: input.device,
+    location_coordinate: input.locationCoordinate,
+  });
   return {
-    data: task.result?.[0]?.items ?? [],
+    data: parseTaskItems(
+      "google-local-finder-live-advanced",
+      task,
+      localSerpItemSchema.refine(
+        (item) =>
+          (item.rank_group ?? item.rank_absolute) != null &&
+          (item.rank_group ?? item.rank_absolute)! <= input.depth,
+        "Missing or outside-depth local rank",
+      ),
+    ),
     billing: buildTaskBilling(task),
   };
 }

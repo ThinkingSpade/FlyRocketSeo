@@ -1,0 +1,1 @@
+ALTER TABLE `rank_tracking_keywords` ADD `metrics_scope_json` text;

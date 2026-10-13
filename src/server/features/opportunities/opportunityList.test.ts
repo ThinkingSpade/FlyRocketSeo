@@ -1,4 +1,4 @@
-import { readFileSync, readdirSync } from "node:fs";
+import { applyOpportunityMigrations } from "./opportunityMigrations.fixture";
 import { createClient, type Client } from "@libsql/client";
 import { drizzle } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -88,10 +88,7 @@ beforeEach(async () => {
     CREATE TABLE member(id TEXT PRIMARY KEY, organization_id TEXT, user_id TEXT);
     INSERT INTO organization VALUES('org-a'),('org-b');
     INSERT INTO projects VALUES('project-a','org-a','example.com'),('project-b','org-b','example.com'),('project-c','org-a','example.com');`);
-  for (const file of readdirSync("drizzle")
-    .filter((name) => /^\d+.*\.sql$/.test(name) && name >= "0044")
-    .toSorted())
-    await client.executeMultiple(readFileSync(`drizzle/${file}`, "utf8"));
+  await applyOpportunityMigrations(client);
   state.database = drizzle(client, { schema });
   const fixtures = [
     ...Array.from({ length: 121 }, (_, index) =>

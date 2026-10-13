@@ -72,6 +72,14 @@ export function RankTrackingScoreboard({
 
   return (
     <div className="space-y-3 px-4 pt-4">
+      <p className="text-xs text-base-content/60">
+        DataForSEO Google Organic SERP ·{" "}
+        {rows.filter((row) => row[device].availability === "observed").length}{" "}
+        of {rows.length} keywords have successful {device} observations in this
+        target, market and depth. Missing checks are unknown. Comparisons
+        require matching observations. Legacy scope is retained in storage and
+        excluded until a scoped check exists.
+      </p>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <InsightTile
           icon={Megaphone}

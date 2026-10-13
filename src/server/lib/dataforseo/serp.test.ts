@@ -5,6 +5,9 @@ vi.mock("@/server/lib/runtime-env", () => ({
 }));
 
 import {
+  fetchLocalSerp,
+  fetchLiveSerp,
+  fetchRankCheckSerp,
   fetchRankCheckTaskResult,
   postRankCheckTasks,
 } from "@/server/lib/dataforseo/serp";
@@ -172,6 +175,147 @@ describe("rank check task queue", () => {
         url: "https://www.example.com/page",
         serpFeatures: ["organic"],
       },
+    });
+  });
+});
+
+function liveResponse(items: unknown) {
+  return Response.json({
+    status_code: 20000,
+    tasks: [
+      {
+        status_code: 20000,
+        cost: 0.002,
+        path: ["v3", "serp", "google", "organic", "live", "advanced"],
+        result: [{ items }],
+      },
+    ],
+  });
+}
+
+describe("SERP observation contracts", () => {
+  it("preserves estimate precision and actual count zero while invalid SERP enrichment fields remain unknown", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(liveResponse([{ type: "organic", domain: "example.com", rank_absolute: 1, etv: -1, estimated_paid_traffic_cost: 1.25, backlinks_info: { referring_domains: 0, backlinks: 0.5 }, rank_changes: { previous_rank_absolute: 0 } }])));
+    expect((await fetchLiveSerp({ keyword: "alpha", locationCode: 2840, languageCode: "en" })).data[0]).toMatchObject({ etv: null, estimated_paid_traffic_cost: 1.25, backlinks_info: { referring_domains: 0, backlinks: null }, rank_changes: { previous_rank_absolute: null } });
+  });
+  beforeEach(() => vi.restoreAllMocks());
+
+  const input = {
+    keyword: "alpha",
+    keywordId: "kw-1",
+    targetDomain: "example.com",
+    locationCode: 2840,
+    languageCode: "en",
+    device: "desktop" as const,
+    depth: 20,
+  };
+
+  it.each([0, -1, 1.5, Number.MAX_SAFE_INTEGER + 1])(
+    "rejects a target rank %s instead of recording an absence or corrupt position",
+    async (rank) => {
+      vi.stubGlobal(
+        "fetch",
+        vi
+          .fn()
+          .mockResolvedValue(
+            liveResponse([
+              { type: "organic", domain: "example.com", rank_absolute: rank },
+            ]),
+          ),
+      );
+      await expect(fetchRankCheckSerp(input)).rejects.toMatchObject({
+        name: "DataforseoChargedTaskError",
+        billing: { costUsd: 0.002 },
+      });
+    },
+  );
+
+  it("rejects missing successful result items instead of treating them as not ranked", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(liveResponse(undefined)));
+    await expect(fetchRankCheckSerp(input)).rejects.toMatchObject({
+      name: "DataforseoChargedTaskError",
+    });
+  });
+
+  it("preserves an explicitly observed empty SERP", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(liveResponse([])));
+    expect((await fetchRankCheckSerp(input)).data.position).toBeNull();
+  });
+
+  it("rejects a mismatched observed keyword before attaching a rank to the requested keyword", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        Response.json({
+          status_code: 20000,
+          tasks: [
+            {
+              status_code: 20000,
+              cost: 0.002,
+              path: ["v3", "serp", "google", "organic", "live", "advanced"],
+              result: [
+                { keyword: "different", location_code: 2840, items: [] },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+    await expect(fetchRankCheckSerp(input)).rejects.toMatchObject({
+      name: "DataforseoChargedTaskError",
+    });
+  });
+
+  it("rejects an organic target without any observed rank", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          liveResponse([{ type: "organic", domain: "example.com" }]),
+        ),
+    );
+    await expect(fetchRankCheckSerp(input)).rejects.toMatchObject({
+      name: "DataforseoChargedTaskError",
+    });
+  });
+
+  it("rejects a local row outside the requested search depth", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          liveResponse([{ type: "local_pack", rank_group: 21 }]),
+        ),
+    );
+    await expect(
+      fetchLocalSerp({
+        keyword: "coffee",
+        languageCode: "en",
+        searchType: "local_finder",
+        device: "desktop",
+        depth: 20,
+      }),
+    ).rejects.toMatchObject({ name: "DataforseoChargedTaskError" });
+  });
+
+  it("rejects malformed local result rows with billed-task evidence", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(liveResponse(["invalid-row"])),
+    );
+    await expect(
+      fetchLocalSerp({
+        keyword: "coffee",
+        languageCode: "en",
+        searchType: "local_finder",
+        device: "desktop",
+        depth: 20,
+      }),
+    ).rejects.toMatchObject({
+      name: "DataforseoChargedTaskError",
+      billing: { costUsd: 0.002 },
     });
   });
 });

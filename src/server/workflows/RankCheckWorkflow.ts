@@ -104,6 +104,7 @@ async function finalizeRankCheckRun(input: {
   trigger: RankCheckParams["trigger"];
   batchError: string | null;
   queueStats: QueuedCheckStats | null;
+  devices: RankCheckParams["devices"];
 }) {
   // If stale-cleanup already marked our run failed, don't overwrite that
   // decision with a completed status — a replacement run may already be
@@ -127,19 +128,27 @@ async function finalizeRankCheckRun(input: {
     .size;
 
   const keywordsTotal = run.keywordsTotal || keywordsChecked;
-  const incompleteCount = keywordsTotal - keywordsChecked;
+  const expectedChecks = keywordsTotal * (input.devices === "both" ? 2 : 1);
+  const observedChecks = new Set(
+    snapshots.map(
+      (snapshot) => `${snapshot.trackingKeywordId}:${snapshot.device}`,
+    ),
+  ).size;
+  const incompleteCount = Math.max(0, expectedChecks - observedChecks);
+  const status =
+    observedChecks > 0 ? ("completed" as const) : ("failed" as const);
 
   let errorMessage: string | undefined;
   if (input.batchError) {
-    errorMessage = `Completed ${keywordsChecked} of ${keywordsTotal} keyword(s). Error: ${input.batchError}`;
+    errorMessage = `Completed ${observedChecks} of ${expectedChecks} device check(s). Error: ${input.batchError}`;
   } else if (incompleteCount > 0) {
-    errorMessage = `${incompleteCount} keyword(s) could not be checked`;
+    errorMessage = `${incompleteCount} of ${expectedChecks} device check(s) could not be checked`;
   }
 
   // Flipping status away from 'pending'/'running' is what releases the
   // partial-index slot for the next run.
   await RankTrackingRepository.updateRun(input.runId, {
-    status: "completed",
+    status,
     keywordsChecked,
     completedAt: nowIso,
     ...(errorMessage ? { errorMessage } : {}),
@@ -148,10 +157,11 @@ async function finalizeRankCheckRun(input: {
   // Clear any previous skip reason on success.
   // Note: nextCheckAt is NOT set here — the cron handler advances it eagerly
   // before starting the workflow to prevent retry storms.
-  await RankTrackingRepository.updateConfig(input.configId, input.projectId, {
-    lastCheckedAt: nowIso,
-    lastSkipReason: null,
-  });
+  if (observedChecks > 0)
+    await RankTrackingRepository.updateConfig(input.configId, input.projectId, {
+      lastCheckedAt: nowIso,
+      lastSkipReason: null,
+    });
 
   // One-line summary per run so fallback rates are visible in Workers Logs.
   // Keys match the PostHog event properties for log/event correlation.
@@ -163,7 +173,7 @@ async function finalizeRankCheckRun(input: {
     ? ` error="${errorMessage.replace(/\s+/g, " ").slice(0, 200)}"`
     : "";
   console.log(
-    `[rank-check] ${input.runId} completed org=${input.billingCustomer.organizationId} project=${input.projectId} trigger=${input.trigger} keywords=${keywordsChecked}/${keywordsTotal}${queueSummary}${errorSummary}`,
+    `[rank-check] ${input.runId} ${status} org=${input.billingCustomer.organizationId} project=${input.projectId} trigger=${input.trigger} keywords=${keywordsChecked}/${keywordsTotal} device_checks=${observedChecks}/${expectedChecks}${queueSummary}${errorSummary}`,
   );
 
   await captureServerEvent({
@@ -172,7 +182,7 @@ async function finalizeRankCheckRun(input: {
     organizationId: input.billingCustomer.organizationId,
     properties: {
       project_id: input.projectId,
-      status: "completed",
+      status,
       trigger: input.trigger,
       keywords_checked: keywordsChecked,
       ...(input.queueStats
@@ -331,6 +341,7 @@ export class RankCheckWorkflow extends WorkflowEntrypoint<
           trigger,
           batchError,
           queueStats,
+          devices,
         }),
       );
     } catch (error) {

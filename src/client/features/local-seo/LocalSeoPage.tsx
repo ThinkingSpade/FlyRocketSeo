@@ -156,6 +156,15 @@ export function LocalSeoPage({
 
   return (
     <AppPageShell>
+      {profile ? (
+        <p className="text-xs text-base-content/60">
+          {profile.source} · Captured{" "}
+          {new Date(profile.fetchedAt).toLocaleString()} ·{" "}
+          {profile.scope
+            ? `Market ${profile.scope.locationCode}/${profile.scope.languageCode}`
+            : "Lookup scope unavailable"}
+        </p>
+      ) : null}
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-semibold">
           <MapPin className="size-6" />

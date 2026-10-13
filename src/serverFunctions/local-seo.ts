@@ -46,6 +46,9 @@ export const startBusinessReviews = createServerFn({ method: "POST" })
 export const getBusinessReviewsResult = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(reviewsResultRequestSchema)
-  .handler(async ({ data }) => {
-    return LocalSeoService.getReviewsResult(data.taskId);
+  .handler(async ({ data, context }) => {
+    return LocalSeoService.getReviewsResult(
+      { taskId: data.taskId, projectId: context.projectId },
+      context,
+    );
   });

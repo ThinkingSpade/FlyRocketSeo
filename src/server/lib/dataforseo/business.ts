@@ -13,10 +13,25 @@ import { businessDataApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
   buildTaskBilling,
+  DataforseoChargedTaskError,
+  isNoResultsTask,
+  isRecord,
+  type DataforseoTaskLike,
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
 
 type BusinessListingItem = BusinessDataBusinessListingsSearchLiveItem;
+
+function requireBusinessItems(task: DataforseoTaskLike): void {
+  if (isNoResultsTask(task)) return;
+  const first = task.result?.[0];
+  if (!isRecord(first) || !Array.isArray(first.items)) {
+    throw new DataforseoChargedTaskError(
+      "DataForSEO business data returned missing observation items",
+      buildTaskBilling(task),
+    );
+  }
+}
 
 export async function fetchBusinessListingsSearch(input: {
   categories?: string[];
@@ -38,6 +53,7 @@ export async function fetchBusinessListingsSearch(input: {
   // businesses/keywords — DataForSEO still charges for it, so treat it as an
   // empty success instead of surfacing a charged-task error to the user.
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  requireBusinessItems(task);
   return {
     data: task.result?.[0]?.items ?? [],
     billing: buildTaskBilling(task),
@@ -57,11 +73,30 @@ const questionsResultSchema = z
   })
   .passthrough();
 
-function combinedQuestionItems(results: unknown): Record<string, unknown>[] {
+function combinedQuestionItems(
+  task: DataforseoTaskLike,
+): Record<string, unknown>[] {
+  const results = task.result;
+  if (isNoResultsTask(task)) return [];
   const list = Array.isArray(results) ? results : [];
+  if (!list.length)
+    throw new DataforseoChargedTaskError(
+      "DataForSEO Q&A returned missing observations",
+      buildTaskBilling(task),
+    );
   return list.flatMap((result) => {
     const parsed = questionsResultSchema.safeParse(result ?? {});
-    if (!parsed.success) return [];
+    if (
+      !parsed.success ||
+      !isRecord(result) ||
+      (!Array.isArray(result.items) &&
+        !Array.isArray(result.items_without_answers))
+    ) {
+      throw new DataforseoChargedTaskError(
+        "DataForSEO Q&A returned invalid observation items",
+        buildTaskBilling(task),
+      );
+    }
     return [
       ...(parsed.data.items ?? []),
       ...(parsed.data.items_without_answers ?? []),
@@ -88,7 +123,7 @@ export async function fetchQuestionsAnswers(input: {
   // empty success instead of surfacing a charged-task error to the user.
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
   return {
-    data: combinedQuestionItems(task.result),
+    data: combinedQuestionItems(task),
     billing: buildTaskBilling(task),
   };
 }
@@ -109,6 +144,7 @@ export async function fetchMyBusinessInfo(input: {
     }),
   ]);
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  requireBusinessItems(task);
   return {
     data: task.result?.[0]?.items?.[0] ?? null,
     billing: buildTaskBilling(task),
@@ -141,10 +177,19 @@ export async function postGoogleReviewsTask(input: {
   const entry = response?.tasks?.[0];
   // task_post acceptance is 20100 "Task Created" (not 20000), so assertOk
   // doesn't apply here.
-  if (!entry || entry.status_code !== 20100 || !entry.id) {
+  if (response?.status_code !== 20000 || !entry) {
     throw new AppError(
       "INTERNAL_ERROR",
-      entry?.status_message ?? "DataForSEO reviews task_post failed",
+      response?.status_message ?? "DataForSEO reviews task_post failed",
+    );
+  }
+  if (entry.status_code !== 20100 || !entry.id) {
+    const message =
+      entry.status_message ?? "DataForSEO reviews task_post failed";
+    throw new DataforseoChargedTaskError(
+      message,
+      buildTaskBilling(entry),
+      /Invalid Field:/i.test(message),
     );
   }
   return {
@@ -196,10 +241,22 @@ export async function fetchGoogleReviewsResult(
     };
   }
   const result = task.result?.[0];
+  requireBusinessItems(task);
+  const rating = result?.rating?.value;
+  const count = result?.reviews_count;
   return {
     status: "completed",
-    rating: result?.rating?.value ?? null,
-    reviewsCount: result?.reviews_count ?? null,
+    rating:
+      typeof rating === "number" &&
+      Number.isFinite(rating) &&
+      rating >= 0 &&
+      rating <= 5
+        ? rating
+        : null,
+    reviewsCount:
+      typeof count === "number" && Number.isSafeInteger(count) && count >= 0
+        ? count
+        : null,
     items: result?.items ?? [],
   };
 }

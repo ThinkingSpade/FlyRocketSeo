@@ -57,7 +57,7 @@ export function computeAveragePositionTrend(
 /**
  * Replay the scorecard's visibility formula over every run in the history
  * matrix. Keywords without a known volume are ignored (same rule as the
- * scorecard); keywords missing from a run count as not ranking. Points come
+ * scorecard); keywords missing from a run keep weighted visibility unknown. Points come
  * back oldest-first.
  */
 export function computeVisibilityTrend(
@@ -83,12 +83,18 @@ export function computeVisibilityTrend(
     .map(([runId, run]) => ({
       runId,
       checkedAt: run.checkedAt,
-      visibility: computeVisibilityScore(
-        trackedIds.map((keywordId) => ({
-          searchVolume: volumeByKeywordId.get(keywordId) ?? null,
-          position: run.positionByKeyword.get(keywordId) ?? null,
-        })),
-      ),
+      visibility: trackedIds.some(
+        (id) =>
+          (volumeByKeywordId.get(id) ?? 0) > 0 &&
+          !run.positionByKeyword.has(id),
+      )
+        ? null
+        : computeVisibilityScore(
+            trackedIds.map((keywordId) => ({
+              searchVolume: volumeByKeywordId.get(keywordId) ?? null,
+              position: run.positionByKeyword.get(keywordId) ?? null,
+            })),
+          ),
     }))
     .toSorted((a, b) => a.checkedAt.localeCompare(b.checkedAt));
 }

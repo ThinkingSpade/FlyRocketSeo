@@ -1,4 +1,4 @@
-import { ItemsGoogleBusinessInfo } from "dataforseo-client";
+import { ItemsGoogleBusinessInfo, RatingInfo } from "dataforseo-client";
 import { describe, expect, it, vi } from "vitest";
 
 // LocalSeoService.ts imports r2-cache.ts, which reads Cloudflare Workers'
@@ -23,6 +23,33 @@ const ITEM_WITHOUT_ADDITIONAL_CATEGORIES = new ItemsGoogleBusinessInfo({
 });
 
 describe("mapBusinessProfile - additionalCategories null-vs-empty", () => {
+  it("does not turn invalid numeric profile evidence into ratings, counts or coordinates", () => {
+    const item = new ItemsGoogleBusinessInfo({
+      rating: new RatingInfo({ value: 8, votes_count: 1.5 }),
+      latitude: 91,
+      longitude: -181,
+    });
+    expect(mapBusinessProfile(item, FETCHED_AT)).toMatchObject({
+      rating: null,
+      reviewsCount: null,
+      latitude: null,
+      longitude: null,
+    });
+  });
+
+  it("preserves actual zero reviews and fractional valid five-star ratings", () => {
+    const item = new ItemsGoogleBusinessInfo({
+      rating: new RatingInfo({ value: 4.25, votes_count: 0 }),
+      latitude: 0,
+      longitude: 0,
+    });
+    expect(mapBusinessProfile(item, FETCHED_AT)).toMatchObject({
+      rating: 4.25,
+      reviewsCount: 0,
+      latitude: 0,
+      longitude: 0,
+    });
+  });
   it("maps an unreturned additional_categories field to null, not an empty array", () => {
     const profile = mapBusinessProfile(
       ITEM_WITHOUT_ADDITIONAL_CATEGORIES,

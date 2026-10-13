@@ -2,6 +2,25 @@ import { describe, expect, it } from "vitest";
 import { mapLocalGridCell } from "./localGridMapping";
 
 describe("mapLocalGridCell", () => {
+  it("does not report a negative or fractional target rank as a measured local rank", () => {
+    for (const rank of [0, -1, 1.5, 21, Number.MAX_SAFE_INTEGER + 1]) {
+      expect(
+        mapLocalGridCell(
+          [{ type: "local_pack", domain: "example.com", rank_group: rank }],
+          "example.com",
+        ).position,
+      ).toBeNull();
+    }
+  });
+
+  it("does not fill the top-three leaderboard using valid rows outside top three", () => {
+    expect(
+      mapLocalGridCell(
+        [{ type: "local_pack", rank_group: 4, title: "Fourth place" }],
+        "example.com",
+      ).topCompetitors,
+    ).toEqual([]);
+  });
   const items = [
     {
       type: "local_finder",

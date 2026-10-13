@@ -256,6 +256,7 @@ export const rankTrackingKeywords = pgTable(
     keywordDifficulty: integer("keyword_difficulty"),
     cpc: real("cpc"),
     metricsFetchedAt: timestampColumn("metrics_fetched_at"),
+    metricsScopeJson: text("metrics_scope_json"),
     createdAt: timestampColumn("created_at").notNull().default(isoNow),
   },
   (table) => [
@@ -290,6 +291,7 @@ export const rankCheckRuns = pgTable(
     keywordsChecked: integer("keywords_checked").notNull().default(0),
     isSubsetRun: boolean("is_subset_run").notNull().default(false),
     errorMessage: text("error_message"),
+    scopeJson: text("scope_json"),
     startedAt: timestampColumn("started_at").notNull().default(isoNow),
     completedAt: timestampColumn("completed_at"),
   },

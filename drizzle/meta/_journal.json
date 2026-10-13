@@ -337,6 +337,20 @@
       "when": 1791897164591,
       "tag": "0047_evidence_storage_fences",
       "breakpoints": true
+    },
+    {
+      "idx": 48,
+      "version": "6",
+      "when": 1791902199679,
+      "tag": "0048_rank_observation_scope",
+      "breakpoints": true
+    },
+    {
+      "idx": 49,
+      "version": "6",
+      "when": 1791902540949,
+      "tag": "0049_rank_keyword_metric_scope",
+      "breakpoints": true
     }
   ]
 }

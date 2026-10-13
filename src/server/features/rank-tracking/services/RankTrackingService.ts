@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { keywordMetricsScopeJson } from "@/server/features/rank-tracking/rankObservationScope";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
@@ -298,6 +299,7 @@ async function refreshKeywordMetrics(
         keywordDifficulty: metric.keywordDifficulty,
         cpc: metric.cpc,
         metricsFetchedAt: now,
+        metricsScopeJson: keywordMetricsScopeJson(config),
       };
     })
     .filter((u): u is NonNullable<typeof u> => u !== null);

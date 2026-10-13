@@ -179,6 +179,11 @@ export const getBusinessReviewsTool = {
       rating: z.number().nullable().optional(),
       reviewsCount: z.number().nullable().optional(),
       reviews: z.array(looseObjectOutputSchema).optional(),
+      source: z.string().optional(),
+      fetchedAt: z.string().optional(),
+      scope: looseObjectOutputSchema.optional(),
+      receiptSaved: z.boolean().optional(),
+      warning: z.string().optional(),
       ...optionalMetaOutputSchema,
     },
     annotations: {
@@ -214,10 +219,27 @@ export const getBusinessReviewsTool = {
         context.billing,
       );
       taskId = posted.taskId;
+      if (!posted.receiptSaved) {
+        return mcpResponse({
+          text:
+            posted.warning ??
+            `Paid review task ${taskId} could not save its ownership receipt.`,
+          meta,
+          structuredContent: {
+            status: "pending",
+            taskId,
+            receiptSaved: false,
+            warning: posted.warning,
+          },
+        });
+      }
     }
 
     for (let attempt = 0; attempt < REVIEWS_POLL_ATTEMPTS; attempt++) {
-      const outcome = await LocalSeoService.getReviewsResult(taskId);
+      const outcome = await LocalSeoService.getReviewsResult(
+        { taskId, projectId: args.projectId },
+        context.billing,
+      );
       if (outcome.status === "failed") {
         throw new AppError("INTERNAL_ERROR", outcome.message);
       }
@@ -235,6 +257,9 @@ export const getBusinessReviewsTool = {
             rating: outcome.rating,
             reviewsCount: outcome.reviewsCount,
             reviews: outcome.items,
+            source: outcome.source,
+            fetchedAt: outcome.fetchedAt,
+            scope: outcome.scope,
           },
         });
       }

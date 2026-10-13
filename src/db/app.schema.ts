@@ -255,6 +255,7 @@ export const rankTrackingKeywords = sqliteTable(
     keywordDifficulty: integer("keyword_difficulty"),
     cpc: real("cpc"),
     metricsFetchedAt: text("metrics_fetched_at"),
+    metricsScopeJson: text("metrics_scope_json"),
     createdAt: text("created_at")
       .notNull()
       .default(sql`(current_timestamp)`),
@@ -293,6 +294,8 @@ export const rankCheckRuns = sqliteTable(
       .notNull()
       .default(false),
     errorMessage: text("error_message"),
+    // Immutable observation scope; legacy null rows cannot certify current scope.
+    scopeJson: text("scope_json"),
     startedAt: text("started_at")
       .notNull()
       .default(sql`(current_timestamp)`),

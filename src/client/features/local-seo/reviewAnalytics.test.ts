@@ -21,6 +21,15 @@ function review(
 }
 
 describe("computeReviewAnalytics", () => {
+  it("ignores invalid ratings and future dates instead of creating negative-review or recency evidence", () => {
+    const result = computeReviewAnalytics(
+      [review(-1, -5), review(7, 1), review(null, null)],
+      NOW,
+    );
+    expect(result.averageRating).toBeNull();
+    expect(result.unansweredNegativeCount).toBe(0);
+    expect(result.last90DaysCount).toBe(1);
+  });
   it("aggregates rating distribution, response rate, and recency", () => {
     const analytics = computeReviewAnalytics(
       [

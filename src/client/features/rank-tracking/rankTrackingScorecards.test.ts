@@ -32,6 +32,38 @@ function row(
 }
 
 describe("computeScorecards", () => {
+  it("does not call missing checks lost rankings or zero visibility", () => {
+    const result = computeScorecards(
+      [
+        row(
+          {
+            ...device(null, 8),
+            availability: "unavailable",
+            comparisonAvailability: "observed",
+          },
+          undefined,
+          100,
+        ),
+      ],
+      "desktop",
+    );
+    expect(result.declined).toBe(0);
+    expect(result.visibility).toBeNull();
+  });
+  it("does not call an unknown comparison a new or improved rank", () => {
+    const result = computeScorecards(
+      [
+        row({
+          ...device(3, null),
+          availability: "observed",
+          comparisonAvailability: "unavailable",
+        }),
+      ],
+      "desktop",
+    );
+    expect(result.improved).toBe(0);
+    expect(result.visibilityDelta).toBeNull();
+  });
   it("counts ranking keywords and the delta vs the comparison period", () => {
     const rows = [row(device(2, 5)), row(device(null, 8))];
     const result = computeScorecards(rows, "desktop");

@@ -1,6 +1,10 @@
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import { toStoredTimestamp } from "@/server/features/rank-tracking/rankTrackingTimestamps";
 import { AppError } from "@/server/lib/errors";
+import {
+  matchesRankScope,
+  matchesKeywordMetricsScope,
+} from "@/server/features/rank-tracking/rankObservationScope";
 import type { ComparePeriod } from "@/types/schemas/rank-tracking";
 import type {
   RankTrackingDeviceResult,
@@ -38,7 +42,7 @@ export async function getLatestResults(
   // be a continent away. The project-scoped config lookup doubles as the
   // authorization gate for the configId-keyed reads racing alongside it: when
   // config is null, throw without returning anything from the other reads.
-  const [config, activeKeywords, currentSnapshots, comparisonSnapshots] =
+  const [config, activeKeywords, rawCurrentSnapshots, rawComparisonSnapshots] =
     await Promise.all([
       RankTrackingRepository.getConfigById({ configId, projectId }),
       RankTrackingRepository.getKeywordsForConfig(configId),
@@ -50,6 +54,22 @@ export async function getLatestResults(
   if (!config) {
     throw new AppError("INTERNAL_ERROR", "Rank tracking config not found");
   }
+  const currentSnapshots = rawCurrentSnapshots.filter(
+    (snap) =>
+      matchesRankScope(snap.scopeJson, config) && validPosition(snap.position),
+  );
+  const comparisonSnapshots = rawComparisonSnapshots.filter(
+    (snap) =>
+      matchesRankScope(snap.scopeJson, config) && validPosition(snap.position),
+  );
+  const scope = {
+    projectId,
+    configId,
+    domain: config.domain,
+    locationCode: config.locationCode,
+    languageCode: config.languageCode,
+    serpDepth: config.serpDepth,
+  };
 
   const previousPositions = new Map<string, number | null>();
   for (const snap of comparisonSnapshots) {
@@ -77,6 +97,11 @@ export async function getLatestResults(
         uniqueMissingIds,
       );
     for (const snap of earliestSnapshots) {
+      if (
+        !matchesRankScope(snap.scopeJson, config) ||
+        !validPosition(snap.position)
+      )
+        continue;
       const key = `${snap.trackingKeywordId}:${snap.device}`;
       if (!previousPositions.has(key)) {
         previousPositions.set(key, snap.position);
@@ -91,14 +116,37 @@ export async function getLatestResults(
       {
         trackingKeywordId: keyword.id,
         keyword: keyword.keyword,
-        searchVolume: keyword.searchVolume,
-        keywordDifficulty: keyword.keywordDifficulty,
-        cpc: keyword.cpc,
+        searchVolume:
+          matchesKeywordMetricsScope(keyword.metricsScopeJson, config) &&
+          typeof keyword.searchVolume === "number" &&
+          Number.isSafeInteger(keyword.searchVolume) &&
+          keyword.searchVolume >= 0
+            ? keyword.searchVolume
+            : null,
+        keywordDifficulty:
+          matchesKeywordMetricsScope(keyword.metricsScopeJson, config) &&
+          typeof keyword.keywordDifficulty === "number" &&
+          Number.isFinite(keyword.keywordDifficulty) &&
+          keyword.keywordDifficulty >= 0 &&
+          keyword.keywordDifficulty <= 100
+            ? keyword.keywordDifficulty
+            : null,
+        cpc:
+          matchesKeywordMetricsScope(keyword.metricsScopeJson, config) &&
+          typeof keyword.cpc === "number" &&
+          Number.isFinite(keyword.cpc) &&
+          keyword.cpc >= 0
+            ? keyword.cpc
+            : null,
         desktop: createEmptyDeviceResult(
           previousPositions.get(`${keyword.id}:desktop`) ?? null,
+          previousPositions.has(`${keyword.id}:desktop`),
+          scope,
         ),
         mobile: createEmptyDeviceResult(
           previousPositions.get(`${keyword.id}:mobile`) ?? null,
+          previousPositions.has(`${keyword.id}:mobile`),
+          scope,
         ),
       },
     ]),
@@ -116,6 +164,8 @@ export async function getLatestResults(
       previousPositions.get(
         `${snapshot.trackingKeywordId}:${snapshot.device}`,
       ) ?? null,
+      previousPositions.has(`${snapshot.trackingKeywordId}:${snapshot.device}`),
+      scope,
     );
 
     // Track the most recent run for the header display
@@ -149,8 +199,15 @@ function parseSerpFeatures(raw: string | null): string[] {
 
 function createEmptyDeviceResult(
   previousPosition: number | null,
+  hasComparison: boolean,
+  scope: NonNullable<RankTrackingDeviceResult["scope"]>,
 ): RankTrackingDeviceResult {
   return {
+    availability: "unavailable",
+    comparisonAvailability: hasComparison ? "observed" : "unavailable",
+    checkedAt: null,
+    source: "DataForSEO Google Organic SERP",
+    scope,
     position: null,
     previousPosition,
     rankingUrl: null,
@@ -161,11 +218,22 @@ function createEmptyDeviceResult(
 function toDeviceResult(
   snapshot: SnapshotRow,
   previousPosition: number | null,
+  hasComparison: boolean,
+  scope: NonNullable<RankTrackingDeviceResult["scope"]>,
 ): RankTrackingDeviceResult {
   return {
+    availability: "observed",
+    comparisonAvailability: hasComparison ? "observed" : "unavailable",
+    checkedAt: snapshot.checkedAt,
+    source: "DataForSEO Google Organic SERP",
+    scope,
     position: snapshot.position,
     previousPosition,
     rankingUrl: snapshot.url,
     serpFeatures: parseSerpFeatures(snapshot.serpFeatures),
   };
+}
+
+function validPosition(value: number | null): boolean {
+  return value == null || (Number.isSafeInteger(value) && value > 0);
 }

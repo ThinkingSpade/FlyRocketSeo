@@ -33,7 +33,7 @@ describe("computeVisibilityTrend", () => {
     expect(points[1].visibility).toBeCloseTo(100, 5);
   });
 
-  it("treats keywords missing from a run as not ranking", () => {
+  it("keeps visibility unknown when a weighted keyword has no successful observation in the run", () => {
     const volumes = new Map<string, number | null>([
       ["kw1", 500],
       ["kw2", 500],
@@ -42,8 +42,7 @@ describe("computeVisibilityTrend", () => {
       [cell("r1", "2026-07-01", "kw1", 1)],
       volumes,
     );
-    // kw2 absent → contributes zero CTR: (500*0.28) / (1000*0.28) = 50%.
-    expect(points[0].visibility).toBeCloseTo(50, 5);
+    expect(points[0].visibility).toBeNull();
   });
 
   it("returns null visibility when no keyword has volume", () => {

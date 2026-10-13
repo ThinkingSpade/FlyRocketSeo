@@ -1,4 +1,5 @@
 import { env } from "cloudflare:workers";
+import { rankScopeJson } from "@/server/features/rank-tracking/rankObservationScope";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { RankTrackingRepository } from "@/server/features/rank-tracking/repositories/RankTrackingRepository";
 import type {
@@ -150,6 +151,7 @@ export async function beginRankCheckRun(input: {
       projectId: input.projectId,
       keywordsTotal: input.keywordsTotal,
       isSubsetRun: (input.keywordIds?.length ?? 0) > 0,
+      scopeJson: rankScopeJson(input.config),
     });
 
     if (inserted) {

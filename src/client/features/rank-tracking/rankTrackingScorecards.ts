@@ -75,16 +75,26 @@ export function computeScorecards(
   let visNumCurrent = 0;
   let visNumPrevious = 0;
   let visVolume = 0; // Σ volume over keywords with known volume
+  let missingWeightedObservation = false;
+  let missingComparison = false;
 
   for (const row of rows) {
     const { position, previousPosition } = row[device];
+    const observed = row[device].availability !== "unavailable";
+    const compared = row[device].comparisonAvailability !== "unavailable";
+    if (!compared) missingComparison = true;
+    if (!observed) {
+      if (row.searchVolume != null && row.searchVolume > 0)
+        missingWeightedObservation = true;
+      continue;
+    }
 
     if (position !== null) {
       countCurrent += 1;
       if (position <= 3) top3 += 1;
       if (position <= 10) top10 += 1;
     }
-    if (previousPosition !== null) {
+    if (compared && previousPosition !== null) {
       countPrevious += 1;
     }
 
@@ -95,7 +105,9 @@ export function computeScorecards(
     }
 
     // 4-case change classification (mirrors DeviceRankCell)
-    if (position === null && previousPosition === null) {
+    if (!compared) {
+      // An absent comparison cannot establish a new/improved/lost ranking.
+    } else if (position === null && previousPosition === null) {
       // nothing tracked — neither improved nor declined
     } else if (position === null) {
       declined += 1; // was ranking, now lost
@@ -111,14 +123,16 @@ export function computeScorecards(
   }
 
   const visibility =
-    visVolume > 0 ? (visNumCurrent / (visVolume * TOP_CTR)) * 100 : null;
+    visVolume > 0 && !missingWeightedObservation
+      ? (visNumCurrent / (visVolume * TOP_CTR)) * 100
+      : null;
   const visibilityPrevious =
     visVolume > 0 ? (visNumPrevious / (visVolume * TOP_CTR)) * 100 : null;
 
   return {
     visibility,
     visibilityDelta:
-      visibility !== null && visibilityPrevious !== null
+      visibility !== null && visibilityPrevious !== null && !missingComparison
         ? visibility - visibilityPrevious
         : null,
     ranking: countCurrent,
@@ -163,8 +177,10 @@ export function computeBucketTransitions(
   };
 
   for (const row of rows) {
-    previous[bucketIndex(row[device].previousPosition)] += 1;
-    current[bucketIndex(row[device].position)] += 1;
+    if (row[device].comparisonAvailability !== "unavailable")
+      previous[bucketIndex(row[device].previousPosition)] += 1;
+    if (row[device].availability !== "unavailable")
+      current[bucketIndex(row[device].position)] += 1;
   }
 
   return [

@@ -14,8 +14,8 @@ type LocalGridCell = {
 const localItemSchema = z
   .object({
     type: z.string().nullable().optional(),
-    rank_group: z.number().nullable().optional(),
-    rank_absolute: z.number().nullable().optional(),
+    rank_group: z.number().int().safe().min(1).max(20).nullable().optional(),
+    rank_absolute: z.number().int().safe().min(1).max(20).nullable().optional(),
     title: z.string().nullable().optional(),
     domain: z.string().nullable().optional(),
     url: z.string().nullable().optional(),
@@ -66,6 +66,7 @@ export function mapLocalGridCell(
   }
 
   const topCompetitors = items
+    .filter((item) => (item.rank_group ?? item.rank_absolute)! <= 3)
     .slice(0, 3)
     .map((item) => item.title?.trim())
     .filter((title): title is string => Boolean(title));

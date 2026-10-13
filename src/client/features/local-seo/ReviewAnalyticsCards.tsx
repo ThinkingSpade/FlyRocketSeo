@@ -44,7 +44,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
               ? analytics.averageRating.toFixed(2)
               : "—"
           }
-          hint={`${analytics.reviewCount} reviews crawled`}
+          hint={`${analytics.reviewCount - analytics.unknownRatingCount} rated of ${analytics.reviewCount} reviews crawled`}
           tone="warning"
         />
         <InsightTile
@@ -72,7 +72,7 @@ export function ReviewAnalyticsCards({ reviews }: { reviews: ReviewRow[] }) {
           icon={CalendarCheck}
           label="Last 90 days"
           value={analytics.last90DaysCount}
-          hint="Recent review velocity"
+          hint={`Among ${analytics.datedCount} dated reviews of ${analytics.reviewCount} crawled; undated/future records excluded`}
           tone="primary"
         />
       </div>

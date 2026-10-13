@@ -1,0 +1,1 @@
+ALTER TABLE "rank_check_runs" ADD COLUMN "scope_json" text;

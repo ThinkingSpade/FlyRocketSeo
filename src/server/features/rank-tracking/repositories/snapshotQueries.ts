@@ -12,10 +12,20 @@ import {
   sql,
 } from "drizzle-orm";
 import { db } from "@/db";
-import { rankCheckRuns, rankSnapshots } from "@/db/schema";
+import { rankCheckRuns, rankSnapshots, rankTrackingConfigs } from "@/db/schema";
+import { rankScopeJson } from "@/server/features/rank-tracking/rankObservationScope";
 import { toStoredTimestamp } from "@/server/features/rank-tracking/rankTrackingTimestamps";
 
-function completedRunIdsForConfig(configId: string) {
+async function observationScope(configId: string): Promise<string | null> {
+  const rows = await db
+    .select()
+    .from(rankTrackingConfigs)
+    .where(eq(rankTrackingConfigs.id, configId))
+    .limit(1);
+  return rows[0] ? rankScopeJson(rows[0]) : null;
+}
+
+function completedRunIdsForConfig(configId: string, scopeJson: string) {
   return db
     .select({ id: rankCheckRuns.id })
     .from(rankCheckRuns)
@@ -23,6 +33,7 @@ function completedRunIdsForConfig(configId: string) {
       and(
         eq(rankCheckRuns.configId, configId),
         eq(rankCheckRuns.status, "completed"),
+        eq(rankCheckRuns.scopeJson, scopeJson),
       ),
     );
 }
@@ -45,6 +56,8 @@ export async function getKeywordHistory(
   trackingKeywordId: string,
   sinceDays: number,
 ) {
+  const scopeJson = await observationScope(configId);
+  if (!scopeJson) return [];
   return db
     .select({
       device: rankSnapshots.device,
@@ -54,7 +67,10 @@ export async function getKeywordHistory(
     .from(rankSnapshots)
     .where(
       and(
-        inArray(rankSnapshots.runId, completedRunIdsForConfig(configId)),
+        inArray(
+          rankSnapshots.runId,
+          completedRunIdsForConfig(configId, scopeJson),
+        ),
         eq(rankSnapshots.trackingKeywordId, trackingKeywordId),
         gte(rankSnapshots.checkedAt, cutoffTimestamp(sinceDays)),
       ),
@@ -74,6 +90,8 @@ export async function getConfigTrend(
   device: "desktop" | "mobile",
   sinceDays: number,
 ) {
+  const scopeJson = await observationScope(configId);
+  if (!scopeJson) return [];
   return db
     .select({
       runId: rankSnapshots.runId,
@@ -89,6 +107,7 @@ export async function getConfigTrend(
       and(
         eq(rankCheckRuns.configId, configId),
         eq(rankCheckRuns.status, "completed"),
+        eq(rankCheckRuns.scopeJson, scopeJson),
         eq(rankCheckRuns.isSubsetRun, false),
         eq(rankSnapshots.device, device),
         gte(rankSnapshots.checkedAt, cutoffTimestamp(sinceDays)),
@@ -108,6 +127,8 @@ export async function getPositionMatrix(
   device: "desktop" | "mobile",
   runLimit: number,
 ) {
+  const scopeJson = await observationScope(configId);
+  if (!scopeJson) return [];
   const recentRunIds = db
     .select({ id: rankCheckRuns.id })
     .from(rankCheckRuns)
@@ -115,6 +136,7 @@ export async function getPositionMatrix(
       and(
         eq(rankCheckRuns.configId, configId),
         eq(rankCheckRuns.status, "completed"),
+        eq(rankCheckRuns.scopeJson, scopeJson),
         eq(rankCheckRuns.isSubsetRun, false),
       ),
     )
@@ -150,15 +172,9 @@ export async function getSnapshotsForConfig(
   configId: string,
   opts: { beforeDate?: string; order: "latest" | "earliest" },
 ) {
-  const completedRunIds = db
-    .select({ id: rankCheckRuns.id })
-    .from(rankCheckRuns)
-    .where(
-      and(
-        eq(rankCheckRuns.configId, configId),
-        eq(rankCheckRuns.status, "completed"),
-      ),
-    );
+  const scopeJson = await observationScope(configId);
+  if (!scopeJson) return [];
+  const completedRunIds = completedRunIdsForConfig(configId, scopeJson);
 
   const aggFn = opts.order === "latest" ? max : min;
 
@@ -190,6 +206,7 @@ export async function getSnapshotsForConfig(
         url: rankSnapshots.url,
         serpFeatures: rankSnapshots.serpFeatures,
         checkedAt: rankSnapshots.checkedAt,
+        scopeJson: rankCheckRuns.scopeJson,
       })
       .from(rankSnapshots)
       .innerJoin(
@@ -200,6 +217,7 @@ export async function getSnapshotsForConfig(
           eq(rankSnapshots.checkedAt, grouped.targetCheckedAt),
         ),
       )
+      .innerJoin(rankCheckRuns, eq(rankSnapshots.runId, rankCheckRuns.id))
       .where(inArray(rankSnapshots.runId, completedRunIds))
       // The join matches on timestamp equality, and D1's `current_timestamp` has
       // one-second precision — so two completed runs in the same second BOTH match
@@ -231,16 +249,9 @@ export async function getEarliestSnapshotsForKeywords(
   keywordIds: string[],
 ) {
   if (keywordIds.length === 0) return [];
-
-  const completedRunIds = db
-    .select({ id: rankCheckRuns.id })
-    .from(rankCheckRuns)
-    .where(
-      and(
-        eq(rankCheckRuns.configId, configId),
-        eq(rankCheckRuns.status, "completed"),
-      ),
-    );
+  const scopeJson = await observationScope(configId);
+  if (!scopeJson) return [];
+  const completedRunIds = completedRunIdsForConfig(configId, scopeJson);
 
   // D1 caps bound parameters at 100 per statement. The query binds N keyword
   // IDs plus 4 params from the completedRunIds subquery (referenced twice).
@@ -278,6 +289,7 @@ export async function getEarliestSnapshotsForKeywords(
         url: rankSnapshots.url,
         serpFeatures: rankSnapshots.serpFeatures,
         checkedAt: rankSnapshots.checkedAt,
+        scopeJson: rankCheckRuns.scopeJson,
       })
       .from(rankSnapshots)
       .innerJoin(
@@ -288,6 +300,7 @@ export async function getEarliestSnapshotsForKeywords(
           eq(rankSnapshots.checkedAt, grouped.targetCheckedAt),
         ),
       )
+      .innerJoin(rankCheckRuns, eq(rankSnapshots.runId, rankCheckRuns.id))
       .where(inArray(rankSnapshots.runId, completedRunIds));
 
     allResults.push(...rows);

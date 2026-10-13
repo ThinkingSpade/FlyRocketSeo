@@ -140,6 +140,7 @@ async function tryCreateRun(data: {
   projectId: string;
   keywordsTotal: number;
   isSubsetRun?: boolean;
+  scopeJson?: string;
 }): Promise<boolean> {
   const inserted = await db
     .insert(rankCheckRuns)
@@ -339,6 +340,7 @@ async function updateKeywordMetrics(
     keywordDifficulty: number | null;
     cpc: number | null;
     metricsFetchedAt: string;
+    metricsScopeJson: string;
   }>,
 ) {
   await executeInBatches(updates, (tx, u) =>
@@ -349,6 +351,7 @@ async function updateKeywordMetrics(
         keywordDifficulty: u.keywordDifficulty,
         cpc: u.cpc,
         metricsFetchedAt: u.metricsFetchedAt,
+        metricsScopeJson: u.metricsScopeJson,
       })
       .where(eq(rankTrackingKeywords.id, u.id)),
   );

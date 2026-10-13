@@ -9,6 +9,8 @@ export type ReviewInput = {
 };
 
 type ReviewAnalytics = {
+  datedCount: number;
+  unknownRatingCount: number;
   reviewCount: number;
   /** Average over reviews that carry a rating, or null. */
   averageRating: number | null;
@@ -64,6 +66,8 @@ export function computeReviewAnalytics(
   let replied = 0;
   let unansweredNegativeCount = 0;
   let last90DaysCount = 0;
+  let datedCount = 0;
+  let unknownRatingCount = 0;
 
   // Trailing 12 calendar months, oldest first, keyed year-month.
   const monthKeys: string[] = [];
@@ -80,17 +84,23 @@ export function computeReviewAnalytics(
 
   for (const review of reviews) {
     const rating = review.rating;
-    if (rating != null) {
+    if (
+      rating != null &&
+      Number.isFinite(rating) &&
+      rating >= 1 &&
+      rating <= 5
+    ) {
       ratingSum += rating;
       ratedCount += 1;
       const bucket = Math.min(5, Math.max(1, Math.round(rating)));
       distribution[5 - bucket] += 1;
       if (rating <= 3 && !hasReply(review)) unansweredNegativeCount += 1;
-    }
+    } else unknownRatingCount += 1;
     if (hasReply(review)) replied += 1;
 
     const timestamp = parseTimestamp(review.timestamp);
-    if (timestamp != null) {
+    if (timestamp != null && timestamp <= now) {
+      datedCount += 1;
       if (now - timestamp <= 90 * DAY_MS) last90DaysCount += 1;
       const date = new Date(timestamp);
       const key = `${date.getUTCFullYear()}-${date.getUTCMonth()}`;
@@ -101,6 +111,8 @@ export function computeReviewAnalytics(
   }
 
   return {
+    datedCount,
+    unknownRatingCount,
     reviewCount: reviews.length,
     averageRating: ratedCount > 0 ? ratingSum / ratedCount : null,
     distribution,
@@ -126,7 +138,11 @@ export function selectNeedsResponse<
   return reviews
     .filter(
       (review) =>
-        review.rating != null && review.rating <= 3 && !hasReply(review),
+        review.rating != null &&
+        Number.isFinite(review.rating) &&
+        review.rating >= 1 &&
+        review.rating <= 3 &&
+        !hasReply(review),
     )
     .map((review) => ({
       ...review,
