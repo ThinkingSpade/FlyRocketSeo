@@ -1,0 +1,60 @@
+{
+  "scope": "Isolated production computations; not full-app E2E",
+  "browser": "144.0.7559.96",
+  "checks": [
+    {
+      "name": "Disabled result query shows no-audit state",
+      "passed": true,
+      "actual": "not-run",
+      "expected": "not-run"
+    },
+    {
+      "name": "Empty completed crawl stays unknown",
+      "passed": true,
+      "actual": "empty",
+      "expected": "empty"
+    },
+    {
+      "name": "One URL with several findings counts once",
+      "passed": true,
+      "actual": 1,
+      "expected": 1
+    },
+    {
+      "name": "404 does not fabricate missing metadata",
+      "passed": true,
+      "actual": ["status"],
+      "expected": ["status"]
+    },
+    {
+      "name": "Unknown fetch stays unverified",
+      "passed": true,
+      "actual": ["unverified"],
+      "expected": ["unverified"]
+    },
+    {
+      "name": "Redirect is not a confirmed HTTP failure",
+      "passed": true,
+      "actual": ["redirect"],
+      "expected": ["redirect"]
+    },
+    {
+      "name": "Missing GSC payload is unavailable",
+      "passed": true,
+      "actual": true,
+      "expected": true
+    },
+    {
+      "name": "Invalid positions do not create click scenarios",
+      "passed": true,
+      "actual": 0,
+      "expected": 0
+    },
+    {
+      "name": "Existing valid scenario remains stable",
+      "passed": true,
+      "actual": 80,
+      "expected": 80
+    }
+  ]
+}
