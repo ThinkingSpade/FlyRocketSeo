@@ -61,23 +61,13 @@ export function KeywordTargetsCard({
             </p>
           </div>
           {targets.paidState === "ok" ? (
-            // Deliberately NOT `disabled`. The guard against a concurrent
-            // paid call lives in `runAgain` itself (useKeywordTargets.ts's
-            // `start`, which reads the live MutationCache at click time
-            // rather than a rendered value -- see that comment for why)
-            // rather than on this control -- a click that lands mid-flight
-            // is a silent no-op there, not a second bill. Disabling the
-            // button here would be redundant AND would remove the one
-            // thing worth keeping about staying clickable/focusable: the
-            // label below still confirms the click landed. Same reasoning
-            // applies to "Try again"/"Refresh it" below.
             <Button
               type="button"
               variant="ghost"
               size="sm"
               onClick={targets.runAgain}
             >
-              {targets.isRunningPaid ? "Refreshing…" : "Refresh"}
+              {targets.isRunningPaid ? "Refreshing…" : "Refresh (uses credits)"}
             </Button>
           ) : null}
         </div>
@@ -102,19 +92,13 @@ export function KeywordTargetsCard({
                     invalidation lands, not the common "this attempt just
                     failed" path. Not worth a conditional for a label that
                     would rarely be visible. */}
-                Try again
+                Try again (uses credits)
               </Button>
             ) : null}
           </Banner>
         ) : null}
 
         {targets.paidState === "restore-failed" ? (
-          // Distinct from "failed" on purpose: nothing was spent and nothing
-          // is known. The read of this project's own analysis history broke,
-          // so we cannot tell whether a paid run already exists -- and the
-          // auto-run guard rightly refuses to spend to find out. Before this
-          // banner existed that combination rendered NOTHING at all: no
-          // error, no button, and no way back, permanently.
           <Banner variant="error" className="text-sm">
             Couldn’t check whether ranking data has already been loaded for{" "}
             {domain ?? "your site"}, so it isn’t shown below. Nothing was
@@ -137,34 +121,6 @@ export function KeywordTargetsCard({
         {targets.paidState === "none" &&
         !targets.isRunningPaid &&
         targetAreaScope.ready ? (
-          // The spec's own States table requires this prompt, and until now
-          // nothing rendered for "none" at all -- a project whose auto-run
-          // never fired (or was blocked) showed Search Console rows with no
-          // hint that the paid half exists. Hidden while a run is in flight:
-          // the click would be a no-op (see useKeywordTargets' `start`) and
-          // the in-flight line below already says what is happening. It is
-          // NOT shown while the restore is still resolving either -- that is
-          // paidState "unknown", deliberately kept distinct from "none" so
-          // this never flashes at a project that has already run.
-          //
-          // `targetAreaScope.ready` is the third condition, and it is the one
-          // that actually matters. Enumerate `resolvePaidState` with credits
-          // present and a domain present, and an unready scope is the ONLY
-          // durable way to sit in "none" -- every other route is a sub-frame
-          // flash before the auto-run effect commits. So without this gate
-          // the button would be reachable ESSENTIALLY ONLY in the window
-          // where spending is forbidden. `start()` deliberately does not
-          // check `ready` (a user clicking a rendered scope control is
-          // choosing what they can see), and before `ready` the area is the
-          // plain country fallback -- so a click here would send Labs a
-          // NATIONAL location_code instead of the project's confirmed metro.
-          // That is the permanent mis-targeting the `ready` gate exists to
-          // prevent, and the auto-run fires a moment later anyway, so the
-          // button buys nothing in that window. Not a double-spend: `fresh`
-          // is set in `onSuccess` before `onSettled`, and the restore's
-          // setData and the mutation's success dispatch land in the same
-          // notifyManager flush, so no intermediate render exists right
-          // after a successful run.
           <Banner variant="default" className="text-sm">
             Ranking data hasn’t been loaded for this project yet.
             <Button
@@ -174,15 +130,12 @@ export function KeywordTargetsCard({
               className="ml-2"
               onClick={targets.runAgain}
             >
-              Get ranking data for {domain ?? "your site"}
+              Get ranking data for {domain ?? "your site"} (uses credits)
             </Button>
           </Banner>
         ) : null}
 
         {targets.paidState === "expired" ? (
-          // Kumo's Banner ships "default" | "alert" | "error" | "secondary" --
-          // no "warning" variant exists (see banner.d.ts). "alert" is its
-          // cautionary-yellow equivalent.
           <Banner variant="alert" className="text-sm">
             Your saved keyword list is no longer available.
             <Button
@@ -192,15 +145,14 @@ export function KeywordTargetsCard({
               className="ml-2"
               onClick={targets.runAgain}
             >
-              {targets.isRunningPaid ? "Refreshing…" : "Refresh it"}
+              {targets.isRunningPaid
+                ? "Refreshing…"
+                : "Refresh it (uses credits)"}
             </Button>
           </Banner>
         ) : null}
 
         {targets.paidState === "no-credits" ? (
-          // Same gap as above: no "info" variant. "default" is Banner's own
-          // informational style (see AppShellParts.tsx, DomainOverviewPage.tsx
-          // for the same choice on a non-urgent notice).
           <Banner variant="default" className="text-sm">
             Ranking data needs credits. The keywords below come from Search
             Console, which is free.
@@ -215,12 +167,6 @@ export function KeywordTargetsCard({
           <KeywordTargetsTable
             rows={targets.rows}
             domain={domain ?? ""}
-            // "No keywords yet." asserts an absence, and with Search Console
-            // unavailable we have not established one -- the free half of
-            // this table never arrived, so an empty table is a MISSING
-            // SOURCE, not an empty result. The card this table replaced
-            // rendered nothing at all in that case, which at least never
-            // claimed otherwise.
             emptyMessage={
               targets.gscUnavailable
                 ? "Search Console isn’t connected for this project, so the free half of this table is missing. This isn’t “no keywords” — it’s no data source."

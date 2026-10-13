@@ -17,8 +17,13 @@
 export function canStartPaidRun(input: {
   hasDomain: boolean;
   paidCallInFlight: boolean;
+  hasCredits: boolean;
+  scopeReady: boolean;
+  restoreFailed: boolean;
 }): boolean {
   if (!input.hasDomain) return false;
   if (input.paidCallInFlight) return false;
+  if (!input.hasCredits || !input.scopeReady || input.restoreFailed)
+    return false;
   return true;
 }

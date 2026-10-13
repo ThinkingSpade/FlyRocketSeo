@@ -16,9 +16,8 @@ const inputSchema = z.object({
 /**
  * PAID. One Labs ranked_keywords call per invocation.
  *
- * The Keyword Trends tab calls this automatically the first time a project
- * opens the tab and never again -- the guard is the analysis_runs row this
- * writes, not anything in the client. See shouldAutoRunDiscovery.ts.
+ * The Keyword Trends tab invokes this only from an explicit control labeled
+ * as using credits. Navigation and restore reads never invoke it.
  *
  * The explicit return type is not decoration: without it `createServerFn`
  * widens the result union's two branches into one optional-everything object

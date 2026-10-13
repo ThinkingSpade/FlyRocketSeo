@@ -1,6 +1,6 @@
 import type { KeywordDiscoveryResult } from "@/types/schemas/keyword-discovery";
 import type { ResolvedGeo } from "@/shared/geo/types";
-import type { RestoreOutcomeName } from "./shouldAutoRunDiscovery";
+export type RestoreOutcomeName = "none" | "expired" | "unreadable" | "ready";
 
 /**
  * Pure decision logic pulled out of useKeywordTargets.ts specifically so it
@@ -39,15 +39,14 @@ export type PaidState =
  * `restoreFailed` is a THIRD, distinct failure, and collapsing it into
  * "none" was a permanently stuck dead end. When `restoreLatestRun` itself
  * errors, `useAutoRestoredRun` has no `query.data`, so `outcome` is null --
- * which is also the ordinary still-loading state, and which
- * `shouldAutoRunDiscovery` (correctly) refuses to spend on. The card
+ * which is also the ordinary still-loading state. The card
  * therefore rendered no banner, no button and no error over a table of
  * GSC-only rows, and nothing on the page could ever get it out of that
  * state. It sits AFTER the `active` checks: a live run that succeeded this
  * mount is real data worth showing even if the history read is broken.
  *
  * `"unknown"` and `"none"` are then split apart for the same reason, using
- * the same convention `shouldAutoRunDiscovery` already relies on: a null
+ * the history restore's convention: a null
  * `outcome` means the restore has not ANSWERED yet, not that no run exists.
  * Collapsing the two would flash "Ranking data hasn't been loaded for this
  * project yet", with a button offering to spend, on every cold mount of a

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   useIsMutating,
   useMutation,
@@ -27,69 +27,23 @@ import { useTrendingOpportunities } from "./useTrendingOpportunities";
 import { mergeKeywordRows, type KeywordTargetRow } from "./mergeKeywordRows";
 import { canStartPaidRun } from "./canStartPaidRun";
 import {
-  shouldAutoRunDiscovery,
-  type RestoreOutcomeName,
-} from "./shouldAutoRunDiscovery";
-import {
   pickDisplayGeo,
   resolveFailureReason,
   resolvePaidState,
   type PaidState,
+  type RestoreOutcomeName,
 } from "./keywordTargetsState";
 
 /**
- * The Keyword Trends tab's keyword table: a free GSC half plus a once-only
- * paid Labs half (`getKeywordDiscovery`), merged into one list.
+ * Merge free Search Console observations with explicitly requested ranking
+ * research. Paid discovery is a mutation started only by runAgain controls;
+ * opening, restoring, reconnecting or changing a project never authorizes it.
  *
- * Four properties matter more than anything else in this file -- each has
- * already caused a real defect (in this codebase, or in an earlier draft of
- * THIS file, caught on review), cited inline below where it's relevant:
- *
- * 1. The DURABLE "have we already spent on this project" guard is
- *    `restored.outcome`, an analysis_runs row read via `useAutoRestoredRun`.
- *    `attemptedRef` is only a within-mount latch that stops a second render
- *    of THIS SAME MOUNT firing before the first request resolves -- it
- *    resets on every navigation and must never be mistaken for the guard
- *    (see shouldAutoRunDiscovery.ts's own header). Because that D1 row, and
- *    this hook's own client-side cache of it, can each lag behind the
- *    actual paid call by several seconds, `paidCallInFlight` (below) adds a
- *    SECOND, complementary guard that survives an unmount mid-call, which
- *    `attemptedRef` and `restored.outcome` alone cannot.
- *
- *    The stale cache entry that guard protects is REFRESHED (`onSettled`'s
- *    `invalidateQueries` with `refetchType: "all"`), never DROPPED
- *    (`removeQueries`). Both close the double-spend window, and dropping it
- *    looks safer at first glance -- a remount would then see
- *    `data === undefined`, so `outcome` is null and `shouldAutoRunDiscovery`
- *    refuses outright. But `removeQueries` is synchronous and returns
- *    `void`, so the mutation would dispatch "success" -- and
- *    `paidCallInFlight` would drop to false -- the instant the cache entry
- *    vanished, moving the whole guarantee onto a state (`outcome === null`)
- *    that is ALSO the ordinary first-load state. A mount landing in that
- *    window would resolve `paidState` to "none" and render the "Get ranking
- *    data" prompt, one click away from re-billing a run that had just
- *    succeeded. Refreshing keeps BOTH guards armed for the whole window:
- *    the mutation stays pending (so `queryClient.isMutating` no-ops the
- *    button and the auto-run effect bails) until real data replaces the
- *    stale entry.
- * 2. A restored run is labeled with the geography it was actually fetched
- *    under, read back via `parseStoredGeo`, never with whatever the live
- *    ScopeControl shows right now -- see resolveRunGeo.ts's own header for
- *    the mislabeling bug ("Defect 1") this exists to prevent. The same
- *    property governs the CAPTURE side too: the live scope control
- *    (`targetAreaScope.area`) isn't trustworthy to capture from until
- *    `targetAreaScope.ready` says so (see useTargetAreaScope.ts's own doc
- *    comment on `ready`) -- this project's one-shot paid call must never
- *    fire against a still-resolving default.
- * 3. The paid call is a MUTATION, not a query. A query can refetch on window
- *    focus, remount, or reconnect; that refetch is exactly the unbounded
- *    spend this whole "run once" design exists to rule out.
- * 4. `fresh` and `freshGeo` are set TOGETHER, only in `onSuccess`, from that
- *    SAME call's own mutation variables -- never eagerly in `start()`
- *    before the call resolves. See `pickDisplayGeo`'s own comment for the
- *    mislabeling bug that ordering used to cause.
+ * The shared MutationCache prevents repeat clicks and survives a remount
+ * while a request is pending. Awaiting history invalidation keeps that guard
+ * active until the saved run is available. Capture the confirmed geography
+ * with the request and label restored data with its recorded geography.
  */
-
 /**
  * `useAutoRestoredRun`'s own cache key for this feature's "latest" restore
  * (mirrored, not imported -- the hook doesn't export it). Used only to
@@ -177,19 +131,13 @@ export function useKeywordTargets(
     schema: keywordDiscoveryResultSchema,
     enabled: true,
   });
-  // Named via `shouldAutoRunDiscovery`'s own produced type rather than left
-  // as an inline literal union, so the guard's contract (Task 3) and this
-  // hook's use of it can't silently drift apart.
+  // Restore state describes stored evidence; it never authorizes spending.
   const outcome: RestoreOutcomeName | null = restored.outcome;
 
   const [fresh, setFresh] = useState<KeywordDiscoveryResult | null>(null);
   // The geo CAPTURED for `fresh` -- set ONLY inside `onSuccess`, from that
   // same call's own variables. See property 4 above.
   const [freshGeo, setFreshGeo] = useState<ResolvedGeo | null>(null);
-  // Within-mount latch ONLY -- see property 1 above. Resets on every
-  // navigation; the durable guard is `restored.outcome`, not this ref.
-  const attemptedRef = useRef(false);
-
   const discovery = useMutation({
     mutationKey: keywordDiscoveryMutationKey(projectId),
     mutationFn: (input: { geo: ResolvedGeo; countryCode: number }) =>
@@ -212,89 +160,10 @@ export function useKeywordTargets(
       setFresh(result);
       setFreshGeo(variables.geo);
     },
-    // MUST `return` this promise, never `void` it -- this is the one
-    // `invalidateQueries` call in this codebase where that distinction is
-    // load-bearing, not style. query-core's `Mutation.execute` AWAITS
-    // `onSettled` before dispatching the `"success"`/`"error"` action that
-    // flips `status` out of "pending" (see mutation.js: onSuccess, then
-    // onSettled, THEN `dispatch({type:"success"})`; the error path is the
-    // same shape). `void`-ing the call here makes the awaited value
-    // `undefined` immediately, so the dispatch -- and with it
-    // `paidCallInFlight` dropping to false -- fires before the
-    // invalidation's own refetch has actually landed. In that gap `outcome`
-    // is STILL "none" (the query is mid-refetch, `useAutoRestoredRun.ts`
-    // derives `outcome` from the OLD `query.data` until the new response
-    // arrives) and `paidCallInFlight` has already gone false, so a
-    // just-then remount sails straight through both of Critical 2's guards
-    // and fires a second paid call -- the same double-spend the mutation
-    // key was added to prevent, just delayed by the length of the first
-    // call instead of eliminated. Returning the promise keeps the mutation
-    // "pending" (and `paidCallInFlight` true) until this invalidation's own
-    // refetch has actually settled.
-    //
-    // `refetchType: "all"` is the other half of that, and it is NOT a
-    // default-tightening nicety -- without it the returned promise can
-    // resolve having refetched NOTHING. `invalidateQueries` forwards
-    // `type: filters?.refetchType ?? filters?.type ?? "active"` to
-    // `refetchQueries` (query-core queryClient.js), and `"active"` is
-    // decided by `Query.isActive()`, which is `this.observers.some(...)` --
-    // FALSE for a query with zero observers (query.js). The card unmounting
-    // mid-call is exactly when this hook's restore query has zero
-    // observers, and it is exactly the case the guard above was written
-    // for: the invalidation would mark the query stale, refetch nothing,
-    // resolve immediately, and leave the cached `{status:"none"}` sitting
-    // there for the rest of the QueryClient's 1h `gcTime`
-    // (src/client/tanstack-db/queryClient.ts). The next mount inside that
-    // hour reads `outcome === "none"` and auto-fires a SECOND paid run.
-    // `"all"` reaches the observer-less query instead: `refetchQueries`
-    // only skips `query.isDisabled() || query.isStatic()`, and with zero
-    // observers `isDisabled()` is `queryFn === skipToken || !isFetched()`
-    // -- false here, because this query has fetched at least once (that is
-    // what put the "none" in the cache) -- while `isStatic()` is
-    // unconditionally false with no observers.
-    //
-    // `removeQueries` was considered and rejected; see this hook's own
-    // header note on why the cache is refreshed rather than dropped.
-    //
-    // This cannot wedge the mutation in "pending" forever if the REFETCH
-    // itself fails: `invalidateQueries` -> `refetchQueries`
-    // (queryClient.js) calls `query.fetch()` and, whenever
-    // `options.throwOnError` isn't explicitly set (this app's QueryClient,
-    // src/client/tanstack-db/queryClient.ts, never sets it), wraps that
-    // fetch in `.catch(noop)` -- so a failed refetch resolves the returned
-    // promise, it never rejects it. That matters because query-core's
-    // SUCCESS path (unlike its error path) does not wrap its `onSettled`
-    // await in a try/catch: a REJECTED onSettled after a successful paid
-    // call would fall into the outer catch and flip a genuinely successful
-    // run to `status: "error"`, corrupting `discovery.isError` for no
-    // reason. Since the promise here is verified to never reject on a
-    // refetch failure, that miscategorization can't happen. A refetch that
-    // never settles at all (true network hang, not a failure) is a
-    // different, pre-existing risk this doesn't newly introduce -- it's the
-    // same class of risk the original `getKeywordDiscovery` call already
-    // carries with no CLIENT-side timeout anywhere in this codebase, and
-    // that risk is NOT bounded by Cloudflare Workers' own request timeout:
-    // that timeout bounds the SERVER, not this client-side fetch promise,
-    // which can sit unsettled indefinitely regardless of what the Worker
-    // that served it does. `runAgain` below is now gated on a live
-    // MutationCache read (see `start`'s own comment) precisely because a
-    // second click while a call is in flight would bill Labs twice, not
-    // because the wait is bounded. If the promise genuinely never settles,
-    // the only recovery is a reload -- accepted deliberately, NOT fixed
-    // with a client-side abort/timeout, because the SERVER may already have
-    // billed and recorded the run by the time any client-side deadline
-    // fires; aborting would present a false failure for a call that
-    // actually succeeded.
-    //
-    // Runs on BOTH success and failure (unlike onSuccess): the service
-    // records an analysis_runs row for a failed attempt too (see
-    // "RECORD THE FAILURE, then rethrow" in
-    // src/server/features/keywords/services/keywordDiscovery.ts), so the
-    // D1 guard is already updated either way -- the client cache of it
-    // must catch up either way too. Without this running on failure,
-    // `useAutoRestoredRun`'s own query would still be serving the
-    // fresh-but-pre-call "none" it cached before THIS call ran, for up to
-    // its own 60s staleTime.
+    // Await the history refresh so the mutation remains pending until the
+    // saved result is visible, including after the initiating card unmounts.
+    // Refresh inactive observers too; dropping their cache would permit a
+    // duplicate click before the durable history can be read.
     onSettled: () =>
       queryClient.invalidateQueries({
         queryKey: latestRunQueryKey(projectId),
@@ -306,79 +175,20 @@ export function useKeywordTargets(
     retry: 0,
   });
 
-  // Reads the shared MutationCache directly (via `useIsMutating`), NOT this
-  // observer's own `discovery.isPending` -- so it stays true for a call an
-  // EARLIER, now-unmounted instance of this hook started. TanStack Query
-  // mutations outlive the observer/component that created them by design.
-  // Without this, a component that unmounts mid paid-call and remounts gets
-  // a fresh (false) `attemptedRef` AND a restore cache the in-flight call
-  // hasn't had a chance to invalidate yet (`onSettled` above hasn't fired,
-  // because the call hasn't finished) -- so `outcome` still reads "none",
-  // which is exactly what `shouldAutoRunDiscovery` treats as safe, firing a
-  // SECOND paid call before the first has even finished. The durable D1
-  // guard cannot close this window on its own: the row doesn't exist until
-  // the call settles.
-  //
-  // Informs the MANUAL `runAgain` path below too -- a reversal of this
-  // file's earlier stance, which left `runAgain` deliberately ungated as an
-  // escape hatch for a call that never settles. But the actual gate inside
-  // `start` does NOT read this value; it reads the live MutationCache
-  // directly via `queryClient.isMutating` (see `start`'s own comment for
-  // why a rendered value like this one is the wrong tool for an action
-  // gate -- in short, this updates on a `setTimeout(0)` macrotask, not
-  // synchronously with the click). Traced through `@tanstack/query-core`:
-  // `mutationKey` is lookup-only (`useIsMutating`, `find`/`findAll`), never
-  // consulted by `mutate()`/`MutationCache.build()`, which always
-  // constructs and executes a brand-new `Mutation` regardless of what else
-  // currently shares its key -- so nothing before this change actually
-  // deduped or serialized concurrent calls. A second click on
-  // "Refresh"/"Try again"/"Refresh it" while a call is already in flight
-  // would fire a SECOND, independently billed Labs call: a concrete,
-  // trivially reachable double-spend, not a hypothetical one.
-  //
-  // If the underlying call never settles, this DOES wedge both the
-  // automatic effect below and the manual retry -- only a hard reload
-  // (which clears the in-memory MutationCache outright) recovers. That is
-  // accepted, not an oversight: there is no client-side timeout anywhere in
-  // this codebase (see the `onSettled` comment above), and it stays that
-  // way deliberately -- a client-side abort/timeout is NOT the fix, because
-  // the SERVER may already have billed and recorded the run by the time any
-  // client-side deadline fires. Aborting would present a false failure for
-  // a call that actually succeeded, which is worse than staying stuck.
+  // A mutation can outlive its component. Read the shared cache for the
+  // spinner and read it synchronously again at click time below.
   const paidCallInFlight =
     useIsMutating({ mutationKey: keywordDiscoveryMutationKey(projectId) }) > 0;
 
   const start = useCallback(() => {
-    // `paidCallInFlight` fed in here is read LIVE, from `queryClient
-    // .isMutating` called right now -- deliberately NOT the
-    // `paidCallInFlight` value closed over above. That value only updates
-    // when THIS render commits, and TanStack Query's subscriber
-    // notification runs through `notifyManager`'s scheduler, which flushes
-    // on a `setTimeout(0)` MACROtask, not a microtask -- so at least one
-    // task-queue turn separates a `mutate()` call from the re-render that
-    // would refresh a closed-over snapshot. Browsers dispatch queued input
-    // (a second click) ahead of queued timers, so a second click fired
-    // while the main thread is busy (re-rendering the ~100-row table
-    // below, for instance) can run BEFORE that notification lands and
-    // close over a STALE `paidCallInFlight === false` -- a snapshot-based
-    // guard would let it through. `queryClient.isMutating` is a synchronous
-    // cache read (`findAll({...filters, status:"pending"}).length`
-    // underneath) with no render dependency, so calling it HERE, at click
-    // time, can't be stale this way. See `paidCallInFlight`'s own comment
-    // above for why blocking this at all matters (a second click would
-    // bill Labs twice) and why a client-side abort/timeout is deliberately
-    // not the alternative fix.
-    //
-    // `canStartPaidRun` itself only covers the ORDER of the two
-    // conditions (domain, then in-flight) -- that part is unit-tested
-    // because it needs no live QueryClient to exercise. It does NOT cover
-    // the fix above: fed a stale `paidCallInFlight`, it would happily
-    // return `true` for an already-in-flight call. That staleness is
-    // exactly why the value is computed fresh, inline, right here rather
-    // than reused from the render-time `paidCallInFlight` above.
+    // A rendered pending value can lag a second click. This cache lookup
+    // runs synchronously for every explicit request and cannot be stale.
     if (
       !canStartPaidRun({
         hasDomain: domain != null,
+        hasCredits,
+        scopeReady: targetAreaScope.ready,
+        restoreFailed: restored.isError,
         paidCallInFlight:
           queryClient.isMutating({
             mutationKey: keywordDiscoveryMutationKey(projectId),
@@ -387,74 +197,21 @@ export function useKeywordTargets(
     ) {
       return;
     }
-    // Applies to every UI call site that invokes `runAgain` (header
-    // Refresh, the failed banner's "Try again", the expired banner's
-    // "Refresh it", the empty state's "Get ranking data"), not just the
-    // automatic effect below -- guarding HERE, once, is what keeps every
-    // call site safe without having to repeat the check at each one.
-    // Silent no-op rather than surfacing an error: while this is true the
-    // card renders its in-flight line ("Loading ranking data for …"), and
-    // the two buttons that survive an in-flight render swap their own
-    // labels to "Refreshing…" as well. ("Try again" does not -- clicking it
-    // clears `isError` synchronously and unmounts its own banner; "Get
-    // ranking data" does not either -- it is hidden outright while a call
-    // is in flight.) A click that lands here was never going to tell the
-    // user anything the page is not already saying.
     const geo = resolveRunGeo(
       "keyword-volume",
       targetAreaScope.area,
       market.locationCode,
     );
-    attemptedRef.current = true;
     discovery.mutate({ geo, countryCode: market.locationCode });
   }, [
     discovery,
     domain,
+    hasCredits,
     market.locationCode,
     projectId,
     queryClient,
-    targetAreaScope.area,
-  ]);
-
-  useEffect(() => {
-    if (paidCallInFlight) return;
-    // Property 2's capture side: `targetAreaScope.area` starts at the
-    // country default and only reflects the project's actually-confirmed
-    // area once `ready` says so (see useTargetAreaScope.ts's own doc
-    // comment on `ready` for exactly which render that becomes true on).
-    // Firing before then would spend this project's one-shot paid call
-    // under the wrong geography -- permanently; there is no free re-fetch
-    // to correct it with afterward. Deliberately NOT applied to the manual
-    // `runAgain` path: a user clicking "Run again" is looking at the
-    // CURRENT, already-rendered scope control and choosing to spend against
-    // whatever it shows right now, ready or not.
-    if (!targetAreaScope.ready) return;
-    if (
-      !shouldAutoRunDiscovery({
-        outcome,
-        // The SAME signal `resolvePaidState` reads to render
-        // "restore-failed", and both have to see it. Without it here, a
-        // failed settle-time refetch leaves the pre-call "none" in
-        // `query.data` (query-core keeps `state.data` on an errored
-        // refetch), so this effect would fire a SECOND paid call on the next
-        // mount while the card renders "Nothing was charged." See
-        // `shouldAutoRunDiscovery`'s own comment on this input.
-        restoreFailed: restored.isError,
-        hasDomain: domain != null,
-        hasCredits,
-        alreadyAttempted: attemptedRef.current,
-      })
-    ) {
-      return;
-    }
-    start();
-  }, [
-    domain,
-    hasCredits,
-    outcome,
-    paidCallInFlight,
     restored.isError,
-    start,
+    targetAreaScope.area,
     targetAreaScope.ready,
   ]);
 
@@ -505,7 +262,7 @@ export function useKeywordTargets(
     geo: pickDisplayGeo({ active, fresh, freshGeo, restoredGeo }),
     fetchedAt: active?.status === "ok" ? active.fetchedAt : null,
     isLoadingFree: free.isLoading,
-    // Reads the same MutationCache-backed signal the auto-run guard does
+    // Reads the shared MutationCache across component remounts
     // (see `paidCallInFlight`'s own comment): `discovery.isPending` alone
     // would read false right after a mid-call remount even though a call
     // this same hook started earlier is still genuinely running.

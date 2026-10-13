@@ -18,13 +18,10 @@ import { STORED_GEO_BUNDLE_VERSION } from "@/types/schemas/geo";
  * already fetches, maps, filters and caches Labs ranked_keywords for Domain
  * Overview. What is new here is (a) asking for one big page instead of a
  * paginated slice and (b) RECORDING the attempt, which is what lets the tab
- * auto-run exactly once.
+ * restore saved evidence without spending again.
  *
- * Deliberately not routed through Domain Overview's own server function: that
- * endpoint carries a tab's pagination/sort/filter arguments, records no run,
- * and is consumed behind `useMeteredQuery`'s authorize gate. This tab opens
- * that gate without a click, and widening the shared endpoint to allow it
- * would remove the protection from the tab that still needs it.
+ * Domain Overview keeps its own metered query authorization and pagination.
+ * This service runs only after the user explicitly requests ranking data.
  */
 
 /** One page, not a paginated table: the user asked for a list of 50-100.
