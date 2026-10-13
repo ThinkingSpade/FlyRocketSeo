@@ -43,15 +43,19 @@ the local verified production build. Although version annotations contain no
 commit/build ID, the completed GitHub check now establishes the exact audit
 commit/build/version linkage. Combined with direct 100% deployment metadata,
 this confirms an automatic production deployment following the audit push.
-The user was informed. A question about an intentional concurrent deployment
-was asked before this stronger evidence arrived; production changes or rollback
-still require explicit approval. No claim of unchanged production is made.
+The user subsequently answered the pending deployment question: **"Yes, it was
+intentional."** The observed deployment is therefore recorded as intentional,
+and that question is closed. No rollback was requested. The reply concerns this
+existing deployment; publication or deployment of later local repairs still
+requires approval. Production data/migration effects remain uninspected.
 
 ## Boundaries and required follow-up
 
-Further remote pushes are held. Local implementation, isolated tests and commits
-continue. No rollback, trigger edit, token-scope change, production data repair,
-production database inspection or live workflow test is performed.
+The final local roadmap repairs are committed and verified. Further remote
+pushes await approval for their Cloudflare deployment effect or a verified
+nondeploying publication path. No rollback, trigger edit, token-scope change,
+production data repair, production database inspection or live workflow test is
+performed.
 
 The existing Wrangler OAuth profile can read Worker metadata and code, but
 Cloudflare rejects Builds logs/trigger reads and cancellation with HTTP 403.
@@ -60,10 +64,11 @@ with an authentication error and made no successful change. This is a Cloudflare
 permission failure, not an automatic approval-review rejection.
 
 Before publishing more source, verify the Cloudflare branch filters and build,
-preview and deployment commands. Arrange an explicitly approved configuration
-that prevents this audit branch from deploying. If recovery is needed, review the
-current version and previous deployment before requesting approval; a Worker code
-rollback does not establish that connected data or migrations are rolled back.
+preview and deployment commands. Verification-only publication requires a path
+that does not deploy; publishing through the existing deployment trigger needs
+explicit approval for the new source. Configuration changes and recovery actions
+require their own approval. A Worker code rollback would not establish that
+connected data or migrations were rolled back.
 
 Cloudflare documents commit-message skip flags for Pages, but the inspected
 Workers Builds documentation does not establish the same guarantee for this

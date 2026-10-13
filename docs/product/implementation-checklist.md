@@ -9,8 +9,9 @@ Local browser fixtures never certify OAuth, live provider entitlement, or stagin
 
 ## Current remaining-roadmap continuation from `bb93af37`
 
-**Current external gate:** publishing more source is held after an observed
-automatic Cloudflare production deployment following audit-branch publication. Source
+**Current external gate:** the user confirmed the observed automatic Cloudflare
+deployment after audit publication was intentional. Publishing later local
+repairs awaits approval for its deployment effect or a verified nondeploying path. Source
 `3ece2362` passed both GitHub verification workflows; that does not certify the
 Cloudflare trigger or production behavior. See `../audits/publication-gate.md`.
 Latest local source/test head: `ff2e0530`. Canonical empty Citation/SERP and cold

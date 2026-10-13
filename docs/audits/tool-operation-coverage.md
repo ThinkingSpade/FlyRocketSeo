@@ -135,9 +135,10 @@ to the previous frozen 82-case total; the full fresh 83-case suite passes separa
 - **Blocked:** real provider/OAuth/billing and deployed job acceptance remains
   blocked as listed above; absent credentials never count as an integration
   pass. An automatic Cloudflare production deployment following the audit push
-  is confirmed by the exact commit/build/version linkage; the user was informed.
-  Further source publication is held pending a safe publication path and
-  production review in `publication-gate.md`. Rollback or trigger changes need
+  is confirmed by the exact commit/build/version linkage; the user confirmed it
+  was intentional. Publishing later local repairs awaits approval for its
+  deployment effect or a verified nondeploying path in `publication-gate.md`.
+  Rollback or trigger changes need
   approval; verification-only GitHub jobs do not establish that an audit-branch
   push cannot trigger deployment.
 - The inherited 51 unique verified browser cases remain historical evidence;

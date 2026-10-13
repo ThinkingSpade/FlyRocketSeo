@@ -44,8 +44,9 @@ requires verified datasets, demonstrated demand and explicit cost approval; no
 new dataset or invented observation will substitute for those prerequisites.
 
 Exact commit/build/version linkage confirms an automatic Cloudflare production
-deployment following audit-branch publication; the user was informed. Further
-source publication is held pending a safe publication path and production review.
+deployment following audit-branch publication; the user confirmed it was intentional.
+Publishing later source awaits approval for its deployment effect or a verified
+nondeploying path.
 Verification-only GitHub jobs do not certify the external trigger's behavior.
 Local implementation, isolated tests and commits may continue; rollback,
 production repair or trigger/configuration changes require approval. See

@@ -9,9 +9,10 @@ Prior native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e
 
 **Publication gate:** source `3ece2362` passed both remote verification workflows,
 but its Cloudflare check and direct Worker metadata confirm an automatic
-production deployment after publication. The Builds API denies the existing
-profile; further pushes are held pending a safe publication path and production
-review. See `publication-gate.md`. The latest local source/test head is
+production deployment after publication, which the user confirmed was
+intentional. The Builds API denies the existing profile. Further pushes await
+approval for deployment of the later local repairs or a verified nondeploying
+publication path. See `publication-gate.md`. The latest local source/test head is
 `ff2e0530`; its native, PostgreSQL, static, build and complete **83-case browser**
 checks pass. The browser result is one fresh-state run, not a union of earlier
 focused cases or the previous 82-case run.
