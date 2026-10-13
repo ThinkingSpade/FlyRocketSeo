@@ -142,7 +142,22 @@ function DomainKeywordsTableComponent({
   const table = useAppTable({
     data: rows,
     columns,
-    state: { rowSelection },
+    manualSorting: true,
+    state: {
+      rowSelection,
+      sorting: [
+        {
+          id: {
+            rank: "position",
+            volume: "searchVolume",
+            traffic: "traffic",
+            cpc: "cpc",
+            score: "keywordDifficulty",
+          }[sortMode],
+          desc: currentSortOrder === "desc",
+        },
+      ],
+    },
     onRowSelectionChange: (updater) => {
       const next =
         typeof updater === "function" ? updater(rowSelection) : updater;

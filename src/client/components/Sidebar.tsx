@@ -1,7 +1,8 @@
 import { Link, useLocation, useNavigate } from "@tanstack/react-router";
 import type { LinkOptions } from "@tanstack/react-router";
-import { useEffect, useState, type ComponentType } from "react";
+import { useEffect, useId, useState, type ComponentType } from "react";
 import {
+  CaretDown,
   Question,
   CreditCard,
   SquaresFour,
@@ -30,12 +31,17 @@ import { BILLING_ROUTE } from "@/shared/billing";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Tabs } from "@cloudflare/kumo/components/tabs";
 import { DropdownMenu } from "@cloudflare/kumo/components/dropdown";
+import {
+  readCollapsedGroups,
+  writeCollapsedGroups,
+} from "@/client/navigation/navigationPreferences";
 import { Kbd } from "@/client/components/Kbd";
 
 interface SidebarProps {
   projectId: string | null;
   onNavigate?: () => void;
   onClose?: () => void;
+  onOpenCommand?: () => void;
 }
 
 const navItemBaseClass =
@@ -85,7 +91,12 @@ function SidebarNavLink({
   );
 }
 
-export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
+export function Sidebar({
+  projectId,
+  onNavigate,
+  onClose,
+  onOpenCommand,
+}: SidebarProps) {
   const navGroups = [
     ...(projectId ? getProjectNavGroups(projectId) : []),
     connectNavGroup,
@@ -93,6 +104,57 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const onSamRoute = location.pathname.includes("/sam");
+
+  const navId = useId();
+  const [collapsed, setCollapsed] = useState<string[]>(() => {
+    try {
+      return readCollapsedGroups(
+        window.localStorage,
+        navGroups.map((group) => group.label),
+      );
+    } catch {
+      return [];
+    }
+  });
+  const activeGroup = navGroups.find((group) =>
+    group.items.some((item) => {
+      const path = item.to.replace("$projectId", projectId ?? "");
+      return (
+        location.pathname === path ||
+        (item.to !== "/p/$projectId" &&
+          location.pathname.startsWith(`${path}/`))
+      );
+    }),
+  )?.label;
+  useEffect(() => {
+    if (activeGroup)
+      setCollapsed((previous) =>
+        previous.filter((label) => label !== activeGroup),
+      );
+  }, [activeGroup, location.pathname]);
+  useEffect(() => {
+    const sync = (event: Event) => {
+      if (event instanceof CustomEvent && Array.isArray(event.detail))
+        setCollapsed(event.detail);
+    };
+    window.addEventListener("flyrocketseo:navigation-layout", sync);
+    return () =>
+      window.removeEventListener("flyrocketseo:navigation-layout", sync);
+  }, []);
+  const toggleGroup = (label: string) => {
+    const next = collapsed.includes(label)
+      ? collapsed.filter((value) => value !== label)
+      : [...collapsed, label];
+    setCollapsed(next);
+    try {
+      writeCollapsedGroups(window.localStorage, next);
+    } catch {
+      /* Storage can itself be denied. */
+    }
+    window.dispatchEvent(
+      new CustomEvent("flyrocketseo:navigation-layout", { detail: next }),
+    );
+  };
 
   // PostHog-style sidebar tabs: Browse shows the regular nav, Chat shows the
   // SAM chat history. The tab is view state (switching to Browse leaves the
@@ -119,7 +181,10 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
   };
 
   return (
-    <div className="flex h-full w-60 flex-col bg-base-200">
+    <aside
+      aria-label="Workspace sidebar"
+      className="flex h-full w-60 flex-col bg-base-200"
+    >
       <div className="flex items-center justify-between px-4 pb-2 pt-3">
         <Link
           to="/"
@@ -203,35 +268,59 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
       {view === "chat" && projectId ? (
         <SamSidebarPanel projectId={projectId} onNavigate={onNavigate} />
       ) : (
-        <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
+        <nav
+          aria-label="Project navigation"
+          className="min-h-0 flex-1 overflow-y-auto px-2 py-2"
+        >
           {navGroups.map((group) => (
             <div key={group.label} className="mb-1">
-              <div className="px-3 pb-1 pt-3 text-xs font-semibold uppercase tracking-wider text-kumo-subtle">
+              <button
+                type="button"
+                aria-expanded={!collapsed.includes(group.label)}
+                aria-controls={`${navId}-${group.label}`}
+                onClick={() => toggleGroup(group.label)}
+                className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-kumo-subtle transition-colors hover:bg-base-300/40 hover:text-base-content"
+              >
                 {group.label}
+                <CaretDown
+                  aria-hidden="true"
+                  className={`size-3 transition-transform duration-150 motion-reduce:transition-none ${collapsed.includes(group.label) ? "-rotate-90" : ""}`}
+                />
+              </button>
+              <div
+                id={`${navId}-${group.label}`}
+                hidden={collapsed.includes(group.label)}
+              >
+                {group.items.map((item) => {
+                  const { icon, label, ...linkProps } = item;
+                  return (
+                    <SidebarNavLink
+                      key={linkProps.to}
+                      icon={icon}
+                      label={label}
+                      onNavigate={onNavigate}
+                      linkProps={linkProps}
+                    />
+                  );
+                })}
               </div>
-              {group.items.map((item) => {
-                const { icon, label, ...linkProps } = item;
-                return (
-                  <SidebarNavLink
-                    key={linkProps.to}
-                    icon={icon}
-                    label={label}
-                    onNavigate={onNavigate}
-                    linkProps={linkProps}
-                  />
-                );
-              })}
             </div>
           ))}
         </nav>
       )}
 
-      <SidebarFooter onNavigate={onNavigate} />
-    </div>
+      <SidebarFooter onNavigate={onNavigate} onOpenCommand={onOpenCommand} />
+    </aside>
   );
 }
 
-function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
+function SidebarFooter({
+  onNavigate,
+  onOpenCommand,
+}: {
+  onNavigate?: () => void;
+  onOpenCommand?: () => void;
+}) {
   const { data: session } = useSession();
   const isHostedMode = isHostedClientAuthMode();
   const billingMode = useBillingMode();
@@ -241,14 +330,17 @@ function SidebarFooter({ onNavigate }: { onNavigate?: () => void }) {
     <div className="shrink-0 border-t border-base-300 px-2 py-2 pb-safe">
       <button
         type="button"
-        onClick={openCommandPalette}
+        onClick={onOpenCommand ?? openCommandPalette}
         className={`${navItemClass} w-full`}
         aria-label="Open command menu"
       >
         <MagnifyingGlass className="h-4 w-4 shrink-0" />
         <span className="truncate">Search</span>
         <Kbd size="xs" className="ml-auto">
-          ⌘K
+          {typeof navigator !== "undefined" &&
+          /Mac|iPhone|iPad/.test(navigator.platform)
+            ? "⌘K"
+            : "Ctrl K"}
         </Kbd>
       </button>
 

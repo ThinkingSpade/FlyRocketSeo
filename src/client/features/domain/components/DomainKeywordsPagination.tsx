@@ -46,17 +46,23 @@ export function DomainKeywordsPagination({
   return (
     <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2 text-sm text-base-content/70 tabular-nums">
-        <span>{formatRange(page, pageSize, totalCount)}</span>
+        <span role="status" aria-live="polite" aria-atomic="true">
+          {formatRange(page, pageSize, totalCount)}
+        </span>
         {isLoading ? <Loader size="sm" /> : null}
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
         <label className="flex items-center gap-2 text-sm text-base-content/70">
           <span className="whitespace-nowrap">Rows per page</span>
           <select
             className="app-select app-select-sm w-20"
             value={pageSize}
-            onChange={(event) => onPageSizeChange(Number(event.target.value))}
+            disabled={isLoading}
+            onChange={(event) => {
+              const next = Number(event.target.value);
+              if (!isLoading && next !== pageSize) onPageSizeChange(next);
+            }}
           >
             {DOMAIN_KEYWORDS_PAGE_SIZES.map((size) => (
               <option key={size} value={size}>
@@ -118,12 +124,13 @@ function PageLink({
       })}
       aria-label={label}
       aria-disabled={disabled}
+      tabIndex={disabled ? -1 : undefined}
       // A router Link, not a button, so it takes the class string rather than
       // the component. `btn-disabled` has no Kumo equivalent because Kumo's
       // disabled styling comes from the real `disabled` attribute, which an
       // anchor cannot carry — aria-disabled above plus the click guard below
       // are what actually disable this, and the opacity now says so.
-      className={`${buttonVariants({ variant: "ghost", size: "sm", shape: "square" })} ${
+      className={`app-touch-target ${buttonVariants({ variant: "ghost", size: "sm", shape: "square" })} ${
         disabled ? "pointer-events-none opacity-50" : ""
       }`}
       onClick={(event) => {

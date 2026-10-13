@@ -200,7 +200,31 @@ export function AppDataTable<TData>({
                 // getRowClassName callbacks already paint it per table. Wiring
                 // both would mean two sources of truth for one visual state.
                 onClick={rowProps?.onClick}
-                className={[getRowClassName?.(row), rowProps?.className]
+                tabIndex={rowProps?.onClick ? 0 : undefined}
+                onKeyDown={
+                  rowProps?.onClick
+                    ? (event) => {
+                        // Nested links, buttons and checkboxes own their keystrokes.
+                        if (
+                          event.target !== event.currentTarget ||
+                          event.repeat
+                        )
+                          return;
+                        if (event.key === "Enter" || event.key === " ") {
+                          event.preventDefault();
+                          event.currentTarget.click();
+                        }
+                      }
+                    : undefined
+                }
+                className={[
+                  "transition-colors duration-150 hover:bg-base-200/60",
+                  rowProps?.onClick
+                    ? "cursor-pointer focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary"
+                    : undefined,
+                  getRowClassName?.(row),
+                  rowProps?.className,
+                ]
                   .filter(Boolean)
                   .join(" ")}
               >
@@ -245,9 +269,20 @@ function HeaderCell<TData>({
 }) {
   const meta = header.column.columnDef.meta;
   return (
-    <KumoTable.Head
+    <th
+      scope="col"
+      aria-sort={
+        header.column.getCanSort()
+          ? header.column.getIsSorted() === "asc"
+            ? "ascending"
+            : header.column.getIsSorted() === "desc"
+              ? "descending"
+              : "none"
+          : undefined
+      }
       className={[
-        stickyHeader ? "bg-base-200" : undefined,
+        "group",
+        stickyHeader ? "sticky top-0 z-10 bg-base-200" : undefined,
         meta?.headerClassName,
       ]
         .filter(Boolean)
@@ -257,6 +292,6 @@ function HeaderCell<TData>({
       {header.isPlaceholder
         ? null
         : flexRender(header.column.columnDef.header, header.getContext())}
-    </KumoTable.Head>
+    </th>
   );
 }

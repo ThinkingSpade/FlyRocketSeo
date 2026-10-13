@@ -1,4 +1,5 @@
 import {
+  useId,
   useCallback,
   useEffect,
   useMemo,
@@ -10,7 +11,6 @@ import { useNavigate, useParams } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   Robot,
-  ArrowElbowDownLeft,
   Folder,
   FolderSimpleUser,
   Keyboard,
@@ -19,6 +19,7 @@ import {
   MagnifyingGlass,
   Gear,
   Sun,
+  X,
 } from "@phosphor-icons/react";
 import { openKeyboardShortcuts } from "@/client/components/KeyboardShortcutsHelp";
 import { getProjectNavGroups } from "@/client/navigation/items";
@@ -29,6 +30,10 @@ import {
 } from "@/client/lib/active-project";
 import { useThemePreference } from "@/client/lib/theme";
 import { useSession } from "@/lib/auth-client";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { canUseWorkspaceShortcuts } from "@/client/navigation/workspaceShortcuts";
+import { Dialog } from "@base-ui/react/dialog";
+import { CommandPaletteFooter } from "./CommandPaletteFooter";
 import { Kbd } from "@/client/components/Kbd";
 
 // Module-level open channel: the global keydown listener lives inside the
@@ -85,7 +90,10 @@ function detectIsMac(): boolean {
 export function CommandPalette() {
   const { data: session } = useSession();
   // Don't mount the listener or overlay on signed-out pages.
-  if (!session?.user) return null;
+  if (
+    !canUseWorkspaceShortcuts(isHostedClientAuthMode(), Boolean(session?.user))
+  )
+    return null;
   return <CommandPaletteImpl />;
 }
 
@@ -97,6 +105,7 @@ function CommandPaletteImpl() {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
 
+  const listId = useId();
   const inputRef = useRef<HTMLInputElement | null>(null);
   const previouslyFocusedRef = useRef<HTMLElement | null>(null);
   const activeRowRef = useRef<HTMLButtonElement | null>(null);
@@ -152,10 +161,6 @@ function CommandPaletteImpl() {
         }
         return;
       }
-      if (open && event.key === "Escape") {
-        event.preventDefault();
-        close();
-      }
     };
     const onOpenEvent = () => {
       if (!open) requestOpen();
@@ -175,9 +180,6 @@ function CommandPaletteImpl() {
     if (open) {
       setQuery("");
       setActiveIndex(0);
-      inputRef.current?.focus();
-    } else {
-      previouslyFocusedRef.current?.focus?.();
     }
   }, [open]);
 
@@ -323,115 +325,122 @@ function CommandPaletteImpl() {
     }
   };
 
-  if (!open) return null;
-
   return (
-    <div
-      className="fixed inset-0 z-[60] flex justify-center bg-black/50 pt-[12vh]"
-      onClick={close}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="Command menu"
-        className="flex max-h-[70vh] w-full max-w-lg flex-col overflow-hidden rounded-box border border-base-300 bg-base-100 shadow-xl"
-        onClick={(event) => event.stopPropagation()}
-      >
-        <div className="flex items-center gap-2.5 border-b border-base-300 px-3">
-          <MagnifyingGlass className="h-4 w-4 shrink-0 text-base-content/40" />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(event) => {
-              setQuery(event.target.value);
-              setActiveIndex(0);
-            }}
-            onKeyDown={onInputKeyDown}
-            aria-label="Command menu"
-            placeholder="Search sections, projects, settings…"
-            className="w-full bg-transparent py-3 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none"
-            autoComplete="off"
-            autoCorrect="off"
-            spellCheck={false}
-          />
-          <Kbd className="shrink-0">{isMac ? "⌘K" : "Ctrl K"}</Kbd>
-        </div>
-
-        <ul
-          role="listbox"
-          aria-label="Commands"
-          className="flex flex-col flex-wrap p-2 text-sm min-h-0 flex-1 flex-nowrap gap-0 overflow-y-auto p-2"
+    <Dialog.Root open={open} onOpenChange={setOpen}>
+      <Dialog.Portal>
+        <Dialog.Backdrop className="app-dialog-backdrop" />
+        <Dialog.Popup
+          aria-label="Command menu"
+          initialFocus={inputRef}
+          finalFocus={() =>
+            previouslyFocusedRef.current?.isConnected
+              ? previouslyFocusedRef.current
+              : document.getElementById("main-content")
+          }
+          className="app-dialog-panel app-command-menu max-w-lg"
         >
-          {flatCommands.length === 0 ? (
-            <li className="px-3 py-6 text-center text-sm text-base-content/50">
-              No results
-            </li>
-          ) : (
-            filteredSections.map((section) => (
-              <li key={section.heading} className="">
-                <ul className="gap-0.5 px-0">
-                  <li
-                    role="presentation"
-                    className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-base-content/40"
-                  >
-                    {section.heading}
-                  </li>
-                  {section.commands.map((command) => {
-                    const index = indexById.get(command.id) ?? -1;
-                    const isActive = index === activeIndex;
-                    const Icon = command.icon;
-                    return (
-                      <li key={command.id}>
-                        <button
-                          type="button"
-                          role="option"
-                          aria-selected={isActive}
-                          ref={isActive ? activeRowRef : undefined}
-                          onClick={() => activate(command)}
-                          onMouseMove={() => setActiveIndex(index)}
-                          className={`flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
-                            isActive
-                              ? "bg-base-300/50 text-base-content"
-                              : "text-base-content/70"
-                          }`}
-                        >
-                          <Icon className="h-4 w-4 shrink-0" />
-                          <span className="flex min-w-0 flex-1 flex-col text-left">
-                            <span className="truncate">{command.label}</span>
-                            {command.sublabel ? (
-                              <span className="truncate text-xs text-base-content/50">
-                                {command.sublabel}
-                              </span>
-                            ) : null}
-                          </span>
-                        </button>
-                      </li>
-                    );
-                  })}
-                </ul>
-              </li>
-            ))
-          )}
-        </ul>
+          <div className="flex items-center gap-2.5 border-b border-base-300 px-3">
+            <MagnifyingGlass className="h-4 w-4 shrink-0 text-base-content/40" />
+            <input
+              ref={inputRef}
+              value={query}
+              onChange={(event) => {
+                setQuery(event.target.value);
+                setActiveIndex(0);
+              }}
+              onKeyDown={onInputKeyDown}
+              role="combobox"
+              aria-label="Search commands"
+              aria-expanded={open}
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={
+                flatCommands[activeIndex]
+                  ? `${listId}-${activeIndex}`
+                  : undefined
+              }
+              placeholder="Search sections, projects, settings…"
+              className="w-full bg-transparent py-3 text-sm text-base-content placeholder:text-base-content/40 focus:outline-none"
+              autoComplete="off"
+              autoCorrect="off"
+              spellCheck={false}
+            />
+            <Kbd className="shrink-0">{isMac ? "⌘K" : "Ctrl K"}</Kbd>
+            <Dialog.Close
+              aria-label="Close command menu"
+              className="app-touch-target rounded p-1.5 text-base-content/60 hover:bg-base-200"
+            >
+              <X aria-hidden="true" className="size-4" />
+            </Dialog.Close>
+          </div>
 
-        <div className="flex items-center gap-3 border-t border-base-300 px-3 py-2 text-xs text-base-content/50">
-          <span className="flex items-center gap-1">
-            <Kbd size="xs">↑</Kbd>
-            <Kbd size="xs">↓</Kbd>
-            to navigate
-          </span>
-          <span className="flex items-center gap-1">
-            <Kbd size="xs">
-              <ArrowElbowDownLeft className="h-3 w-3" />
-            </Kbd>
-            to select
-          </span>
-          <span className="flex items-center gap-1">
-            <Kbd size="xs">Esc</Kbd>
-            to close
-          </span>
-        </div>
-      </div>
-    </div>
+          <ul
+            id={listId}
+            role="listbox"
+            aria-label="Commands"
+            className="flex min-h-0 flex-1 flex-col gap-0 overflow-y-auto p-2 text-sm"
+          >
+            {flatCommands.length === 0 ? (
+              <li className="px-3 py-6 text-center text-sm text-base-content/50">
+                No results
+              </li>
+            ) : (
+              filteredSections.map((section) => (
+                <li key={section.heading} role="presentation">
+                  <ul
+                    role="group"
+                    aria-label={section.heading}
+                    className="gap-0.5 px-0"
+                  >
+                    <li
+                      role="presentation"
+                      className="px-3 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-base-content/40"
+                    >
+                      {section.heading}
+                    </li>
+                    {section.commands.map((command) => {
+                      const index = indexById.get(command.id) ?? -1;
+                      const isActive = index === activeIndex;
+                      const Icon = command.icon;
+                      return (
+                        <li key={command.id} role="presentation">
+                          <button
+                            type="button"
+                            id={`${listId}-${index}`}
+                            tabIndex={-1}
+                            role="option"
+                            aria-selected={isActive}
+                            ref={isActive ? activeRowRef : undefined}
+                            onClick={() => activate(command)}
+                            onMouseMove={() => setActiveIndex(index)}
+                            className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm ${
+                              isActive
+                                ? "bg-base-300/50 text-base-content"
+                                : "text-base-content/70"
+                            }`}
+                          >
+                            <Icon className="h-4 w-4 shrink-0" />
+                            <span className="flex min-w-0 flex-1 flex-col text-left">
+                              <span className="truncate">{command.label}</span>
+                              {command.sublabel ? (
+                                <span className="truncate text-xs text-base-content/50">
+                                  {command.sublabel}
+                                </span>
+                              ) : null}
+                            </span>
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </li>
+              ))
+            )}
+          </ul>
+
+          <CommandPaletteFooter />
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }

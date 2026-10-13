@@ -3,7 +3,6 @@ import { Link, useLocation } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { List } from "@phosphor-icons/react";
 import {
-  MissingSeoSetupModal,
   MobileSidebarDrawer,
   SeoApiStatusBanners,
 } from "@/client/layout/AppShellParts";
@@ -14,8 +13,6 @@ import { getSeoApiKeyStatus } from "@/serverFunctions/config";
 import { getProjects } from "@/serverFunctions/projects";
 import { getLastProjectId } from "@/client/lib/active-project";
 import { Button } from "@cloudflare/kumo/components/button";
-
-const DATAFORSEO_HELP_PATH = "/help/dataforseo-api-key";
 
 export function AuthenticatedAppLayout({
   children,
@@ -28,9 +25,7 @@ export function AuthenticatedAppLayout({
 }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
-  const setupModalRef = React.useRef<HTMLDivElement | null>(null);
-  const [showMissingSeoApiKeyModal, setShowMissingSeoApiKeyModal] =
-    React.useState(false);
+  const menuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
   // On non-project pages (e.g. /settings) there's no projectId in the URL, so
   // derive one for the nav/switcher: prefer the last-visited project, else the
   // most recent. The whole app tree is client-only (see root ClientOnly), so we
@@ -69,60 +64,39 @@ export function AuthenticatedAppLayout({
   const seoApiKeyStatusError =
     shouldCheckSeoApiKeyStatus && seoApiKeyStatusQuery.isError;
 
-  React.useEffect(() => {
-    if (!shouldCheckSeoApiKeyStatus) {
-      setShowMissingSeoApiKeyModal(false);
-      return;
-    }
-
-    if (seoApiKeyStatusQuery.isError) {
-      setShowMissingSeoApiKeyModal(false);
-      return;
-    }
-
-    if (!seoApiKeyStatusQuery.isSuccess) return;
-    setShowMissingSeoApiKeyModal(!seoApiKeyStatusQuery.data.configured);
-  }, [
-    location.pathname,
-    seoApiKeyStatusQuery.data,
-    seoApiKeyStatusQuery.isError,
-    seoApiKeyStatusQuery.isSuccess,
-    shouldCheckSeoApiKeyStatus,
-  ]);
-
-  const shouldShowMissingSeoApiKeyModal =
-    showMissingSeoApiKeyModal && location.pathname !== DATAFORSEO_HELP_PATH;
-
   const shouldShowSeoApiWarning =
-    !seoApiKeyStatusError &&
-    isSeoApiKeyConfigured === false &&
-    !shouldShowMissingSeoApiKeyModal;
+    !seoApiKeyStatusError && isSeoApiKeyConfigured === false;
 
+  // Route changes and responsive transitions must never leave an invisible
+  // focus trap behind the desktop sidebar.
   React.useEffect(() => {
-    if (!shouldShowMissingSeoApiKeyModal) return;
-
-    setupModalRef.current?.focus();
-
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") {
-        setShowMissingSeoApiKeyModal(false);
-      }
+    setDrawerOpen(false);
+  }, [location.pathname]);
+  React.useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setDrawerOpen(false);
     };
-
-    window.addEventListener("keydown", onKeyDown);
-    return () => {
-      window.removeEventListener("keydown", onKeyDown);
-    };
-  }, [shouldShowMissingSeoApiKeyModal]);
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
 
   return (
-    <div className="flex h-[100dvh] bg-base-200">
+    <div className="app-shell flex h-[100dvh] bg-base-200">
+      <a
+        className="app-skip-link"
+        href="#main-content"
+        onClick={() => document.getElementById("main-content")?.focus()}
+      >
+        Skip to content
+      </a>
       <div className="hidden shrink-0 md:block">
         <Sidebar projectId={sidebarProjectId} />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar
+          triggerRef={menuTriggerRef}
           drawerOpen={drawerOpen}
           onOpenDrawer={() => setDrawerOpen(true)}
         />
@@ -138,35 +112,38 @@ export function AuthenticatedAppLayout({
 
             {banner}
 
-            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="app-main min-h-0 min-w-0 flex-1 overflow-auto"
+            >
+              {children}
+            </main>
           </div>
         </div>
       </div>
 
       <MobileSidebarDrawer
         open={drawerOpen}
+        finalFocus={menuTriggerRef}
         projectId={sidebarProjectId}
         onClose={() => setDrawerOpen(false)}
       />
 
-      <MissingSeoSetupModal
-        ref={setupModalRef}
-        isOpen={shouldShowMissingSeoApiKeyModal}
-        onClose={() => setShowMissingSeoApiKeyModal(false)}
-      />
-
       <GscReEngagementModal
         projectId={sidebarProjectId}
-        suppressed={shouldShowMissingSeoApiKeyModal}
+        suppressed={drawerOpen}
       />
     </div>
   );
 }
 
 function MobileTopBar({
+  triggerRef,
   drawerOpen,
   onOpenDrawer,
 }: {
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
   drawerOpen: boolean;
   onOpenDrawer: () => void;
 }) {
@@ -177,6 +154,10 @@ function MobileTopBar({
         shape="square"
         variant="ghost"
         size="sm"
+        ref={triggerRef}
+        className="app-touch-target"
+        aria-haspopup="dialog"
+        aria-controls={drawerOpen ? "mobile-navigation" : undefined}
         aria-label="Toggle sidebar"
         aria-expanded={drawerOpen}
         onClick={onOpenDrawer}

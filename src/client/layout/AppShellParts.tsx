@@ -1,149 +1,81 @@
-import * as React from "react";
+import { useRef, type RefObject } from "react";
+import { openCommandPalette } from "@/client/components/CommandPalette";
 import { Link } from "@tanstack/react-router";
-import { Warning, ArrowSquareOut } from "@phosphor-icons/react";
+import { Dialog } from "@base-ui/react/dialog";
+import { Info, WarningCircle } from "@phosphor-icons/react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
-import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
-import { Banner } from "@cloudflare/kumo/components/banner";
 
-function SeoApiStatusBanners({
+export function SeoApiStatusBanners({
   shouldShowSeoApiWarning,
   seoApiKeyStatusError,
 }: {
   shouldShowSeoApiWarning: boolean;
   seoApiKeyStatusError: boolean;
 }) {
+  if (!shouldShowSeoApiWarning && !seoApiKeyStatusError) return null;
+  const Icon = seoApiKeyStatusError ? WarningCircle : Info;
   return (
-    <>
-      {shouldShowSeoApiWarning ? (
-        <div className="shrink-0 px-4 py-2.5 md:px-6">
-          <div className="mx-auto max-w-7xl">
-            <Banner variant="alert">
-              <Warning className="size-4 shrink-0" />
-              <span className="text-sm">
-                Setup needed: add your DataForSEO API key to use FlyRocketSEO
-                features. See the quick steps on the{" "}
-                <Link
-                  {...dataforseoHelpLinkOptions}
-                  className="app-link font-medium"
-                >
-                  help page
-                </Link>
-                .
-              </span>
-            </Banner>
-          </div>
-        </div>
-      ) : null}
-
-      {seoApiKeyStatusError ? (
-        <div className="shrink-0 px-4 py-2.5 md:px-6">
-          <div className="mx-auto max-w-7xl">
-            <Banner variant="default">
-              <Warning className="size-4 shrink-0" />
-              <span className="text-sm">
-                We could not verify your DataForSEO setup. If features are not
-                working, check the setup steps on the{" "}
-                <Link
-                  {...dataforseoHelpLinkOptions}
-                  className="app-link font-medium"
-                >
-                  help page
-                </Link>
-                .
-              </span>
-            </Banner>
-          </div>
-        </div>
-      ) : null}
-    </>
+    <div className="flex shrink-0 items-start gap-2 border-b border-base-300 bg-base-200/40 px-4 py-2 text-xs text-base-content/70 md:px-6">
+      <Icon aria-hidden="true" className="mt-0.5 size-3.5 shrink-0" />
+      <p className="min-w-0">
+        {seoApiKeyStatusError
+          ? "Data provider status is unavailable. You can keep using connected-site tools. "
+          : "Research data is not connected. Search Console and site audits are still available. "}
+        <Link {...dataforseoHelpLinkOptions} className="app-link font-medium">
+          {seoApiKeyStatusError
+            ? "Check provider setup"
+            : "Set up research data"}
+        </Link>
+      </p>
+    </div>
   );
 }
 
-function MobileSidebarDrawer({
+export function MobileSidebarDrawer({
   open,
   projectId,
   onClose,
+  finalFocus,
 }: {
   open: boolean;
   projectId: string | null;
   onClose: () => void;
+  finalFocus: RefObject<HTMLButtonElement | null>;
 }) {
-  if (!open) return null;
-
+  const commandRequested = useRef(false);
   return (
-    <div className="fixed inset-0 z-50 md:hidden">
-      <button
-        type="button"
-        aria-label="Close sidebar"
-        className="absolute inset-0 bg-black/45"
-        onClick={onClose}
-      />
-      <div className="absolute left-0 top-0 h-full shadow-xl">
-        <Sidebar projectId={projectId} onNavigate={onClose} onClose={onClose} />
-      </div>
-    </div>
+    <Dialog.Root
+      onOpenChangeComplete={(next) => {
+        if (!next && commandRequested.current) {
+          commandRequested.current = false;
+          requestAnimationFrame(openCommandPalette);
+        }
+      }}
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) onClose();
+      }}
+    >
+      <Dialog.Portal>
+        <Dialog.Backdrop className="app-dialog-backdrop" />
+        <Dialog.Popup
+          id="mobile-navigation"
+          aria-label="Navigation"
+          finalFocus={finalFocus}
+          className="app-navigation-drawer"
+        >
+          <Sidebar
+            projectId={projectId}
+            onNavigate={onClose}
+            onClose={onClose}
+            onOpenCommand={() => {
+              commandRequested.current = true;
+              onClose();
+            }}
+          />
+        </Dialog.Popup>
+      </Dialog.Portal>
+    </Dialog.Root>
   );
 }
-
-const MissingSeoSetupModal = React.forwardRef<
-  HTMLDivElement,
-  {
-    isOpen: boolean;
-    onClose: () => void;
-  }
->(({ isOpen, onClose }, ref) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dataforseo-setup-title"
-        aria-describedby="dataforseo-setup-description"
-        tabIndex={-1}
-        className="w-full max-w-lg rounded-xl border border-base-300 bg-base-100 p-5 shadow-2xl"
-      >
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-warning/20 p-2 text-warning">
-            <Warning className="size-5" />
-          </div>
-          <div className="space-y-2">
-            <h2
-              id="dataforseo-setup-title"
-              className="text-lg font-semibold text-base-content"
-            >
-              One quick setup step
-            </h2>
-            <p
-              id="dataforseo-setup-description"
-              className="text-sm text-base-content/75"
-            >
-              Add your DataForSEO API key to start using FlyRocketSEO.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Dismiss
-          </Button>
-          <Link
-            {...dataforseoHelpLinkOptions}
-            className={buttonVariants({ variant: "primary" })}
-            onClick={onClose}
-          >
-            Open setup guide
-            <ArrowSquareOut className="size-4" />
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-MissingSeoSetupModal.displayName = "MissingSeoSetupModal";
-
-export { MissingSeoSetupModal, MobileSidebarDrawer, SeoApiStatusBanners };
