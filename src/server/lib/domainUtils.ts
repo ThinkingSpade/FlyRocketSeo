@@ -1,4 +1,3 @@
-import { getDomain } from "tldts";
 import { AppError } from "@/server/lib/errors";
 import { isValidDomainHost } from "@/types/schemas/domain";
 
@@ -15,7 +14,7 @@ export function toRelativePath(url: string | null | undefined): string | null {
 
 export function normalizeDomainInput(
   input: string,
-  includeSubdomains: boolean,
+  _includeSubdomains: boolean,
 ): string {
   const trimmed = input.trim().toLowerCase();
   if (!trimmed) {
@@ -46,11 +45,9 @@ export function normalizeDomainInput(
     );
   }
 
-  if (includeSubdomains) {
-    return host;
-  }
-
-  return getDomain(host) ?? host;
+  // Subdomain inclusion belongs to the provider request/filter contract. It
+  // must never change the identity of the hostname the user asked to analyze.
+  return host;
 }
 
 /**

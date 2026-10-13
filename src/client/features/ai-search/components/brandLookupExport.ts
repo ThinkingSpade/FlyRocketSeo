@@ -11,7 +11,30 @@ export function buildBrandLookupExport(
   tab: CitationTab,
   sortedPages: PageRow[],
   sortedQueries: QueryRow[],
+  result: BrandLookupResult,
 ): { headers: string[]; rows: CsvValue[][] } {
+  const observationHeaders = [
+    "Source",
+    "Captured at",
+    "Target",
+    "Location code",
+    "Language code",
+  ];
+  const observation = (platform: PageRow["platform"]): CsvValue[] => [
+    result.source ?? "Legacy saved observation",
+    result.fetchedAt,
+    result.resolvedTarget,
+    result.contractVersion === 2
+      ? platform === "chat_gpt"
+        ? 2840
+        : (result.scope?.locationCode ?? "")
+      : "",
+    result.contractVersion === 2
+      ? platform === "chat_gpt"
+        ? "en"
+        : (result.scope?.languageCode ?? "")
+      : "",
+  ];
   if (tab === "pages") {
     return {
       headers: [
@@ -21,6 +44,7 @@ export function buildBrandLookupExport(
         "Source mentions",
         "Source AI search volume",
         "Fetched-sample prompt examples",
+        ...observationHeaders,
       ],
       rows: sortedPages.map((row) => [
         row.url,
@@ -29,6 +53,7 @@ export function buildBrandLookupExport(
         row.mentions ?? "",
         row.capturedVolume ?? "",
         row.keywords.map((keyword) => keyword.question).join("; "),
+        ...observation(row.platform),
       ]),
     };
   }
@@ -39,6 +64,7 @@ export function buildBrandLookupExport(
       "AI search volume",
       "First seen",
       "Last seen",
+      ...observationHeaders,
     ],
     rows: sortedQueries.map((row) => [
       row.question,
@@ -46,6 +72,7 @@ export function buildBrandLookupExport(
       row.aiSearchVolume ?? "",
       row.firstSeenAt ?? "",
       row.lastSeenAt ?? "",
+      ...observation(row.platform),
     ]),
   };
 }

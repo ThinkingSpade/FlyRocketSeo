@@ -19,6 +19,10 @@ import {
 } from "@/server/features/ai-search/services/shareOfVoice";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import type { detectTarget } from "@/shared/targetDetection";
+import {
+  providerCount,
+  providerTimestamp,
+} from "@/shared/provider-observations";
 
 const TOP_QUERIES_PER_PLATFORM = 25;
 const TOP_SOURCES_PER_PLATFORM = 10;
@@ -73,9 +77,11 @@ export function shapeResult(args: ShapeArgs): BrandLookupResult {
         aiSearchVolume: null,
       };
     }
-    const platformGroup = outcome.bundle.aggregated.platform?.find(
+    const matchingGroups = outcome.bundle.aggregated.platform?.filter(
       (entry) => entry.key === outcome.platform,
     );
+    const platformGroup =
+      matchingGroups?.length === 1 ? matchingGroups[0] : undefined;
     return {
       platform: outcome.platform,
       status: "success" as const,
@@ -87,12 +93,14 @@ export function shapeResult(args: ShapeArgs): BrandLookupResult {
   const aggregatablePlatforms = perPlatform.filter(
     (p) => chatGptLocaleMatches || p.platform !== "chat_gpt",
   );
-  const totalMentions = sumNullable(
-    aggregatablePlatforms.map((p) => p.mentions),
-  );
-  const totalAiSearchVolume = sumNullable(
-    aggregatablePlatforms.map((p) => p.aiSearchVolume),
-  );
+  const totalMentions = aggregatablePlatforms.every((p) => p.mentions !== null)
+    ? sumNullable(aggregatablePlatforms.map((p) => p.mentions))
+    : null;
+  const totalAiSearchVolume = aggregatablePlatforms.every(
+    (p) => p.aiSearchVolume !== null,
+  )
+    ? sumNullable(aggregatablePlatforms.map((p) => p.aiSearchVolume))
+    : null;
 
   const topPages = deriveCitedSources(
     successfulBundles.map((bundle) => ({
@@ -120,7 +128,8 @@ export function shapeResult(args: ShapeArgs): BrandLookupResult {
   );
 
   const hasData =
-    (totalMentions ?? 0) > 0 ||
+    totalMentions !== null ||
+    totalAiSearchVolume !== null ||
     topPages.length > 0 ||
     topQueries.length > 0 ||
     monthlyVolume.length > 0 ||
@@ -128,6 +137,12 @@ export function shapeResult(args: ShapeArgs): BrandLookupResult {
 
   return {
     query: args.query,
+    contractVersion: 2,
+    source: "DataForSEO AI Optimization",
+    scope: {
+      locationCode: args.userLocationCode,
+      languageCode: args.userLanguageCode,
+    },
     detectedTargetType: args.detected.type,
     resolvedTarget: args.detected.value,
     fetchedAt: new Date().toISOString(),
@@ -136,7 +151,16 @@ export function shapeResult(args: ShapeArgs): BrandLookupResult {
     // rejected sub-call into an empty array is renderable but incomplete, and
     // the UI must not turn that into "no mentions found".
     partialPlatforms: successfulBundles
-      .filter((b) => !b.bundle.complete)
+      .filter(
+        (b) =>
+          !b.bundle.complete ||
+          !b.bundle.aggregated.platform?.some(
+            (entry) =>
+              entry.key === b.platform &&
+              providerCount(entry.mentions) !== null &&
+              providerCount(entry.ai_search_volume) !== null,
+          ),
+      )
       .map((b) => b.platform),
     totalMentions,
     totalAiSearchVolume,
@@ -163,8 +187,8 @@ function shapeTopQueries(
             question: truncate(item.question, MAX_QUESTION_LENGTH),
             platform: bundle.platform,
             aiSearchVolume: roundOrNull(item.ai_search_volume),
-            firstSeenAt: item.first_response_at ?? null,
-            lastSeenAt: item.last_response_at ?? null,
+            firstSeenAt: providerTimestamp(item.first_response_at),
+            lastSeenAt: providerTimestamp(item.last_response_at),
             citedSources: shapeQuerySources(item),
             brandsMentioned: (item.brand_entities ?? [])
               .map((entity) => entity.title ?? "")
@@ -202,23 +226,45 @@ function shapeQuerySources(
 function aggregateMonthlyVolume(
   bundles: Array<PlatformOutcome & { bundle: PlatformBundle }>,
 ): BrandLookupResult["monthlyVolume"] {
-  const totals = new Map<string, number>();
-  for (const outcome of bundles) {
-    for (const mention of outcome.bundle.mentions) {
-      for (const monthly of mention.monthly_searches ?? []) {
-        if (monthly.search_volume == null) continue;
-        const key = `${monthly.year}-${monthly.month}`;
-        totals.set(key, (totals.get(key) ?? 0) + monthly.search_volume);
-      }
+  const sampledPrompts = bundles.flatMap((outcome) => outcome.bundle.mentions);
+  const totals = new Map<string, number | null>();
+  for (const mention of sampledPrompts) {
+    for (const monthly of mention.monthly_searches ?? []) {
+      if (
+        !Number.isInteger(monthly.year) ||
+        monthly.year < 1970 ||
+        monthly.year > 9999 ||
+        !Number.isInteger(monthly.month) ||
+        monthly.month < 1 ||
+        monthly.month > 12
+      )
+        continue;
+      const key = `${monthly.year}-${monthly.month}`;
+      const observed = providerCount(monthly.search_volume);
+      const previous = totals.get(key);
+      totals.set(
+        key,
+        observed === null || previous === null
+          ? null
+          : providerCount((previous ?? 0) + observed),
+      );
     }
   }
-
   const entries = Array.from(totals.entries()).map(([key, volume]) => {
     const [yearStr, monthStr] = key.split("-");
+    const complete = sampledPrompts.every((prompt) => {
+      const matches = (prompt.monthly_searches ?? []).filter(
+        (month) =>
+          month.year === Number(yearStr) && month.month === Number(monthStr),
+      );
+      return (
+        matches.length === 1 && providerCount(matches[0].search_volume) !== null
+      );
+    });
     return {
       year: Number(yearStr),
       month: Number(monthStr),
-      volume: Math.round(volume),
+      volume: complete ? volume : null,
     };
   });
 

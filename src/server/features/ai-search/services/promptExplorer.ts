@@ -5,6 +5,7 @@ import type { LlmResponseResult } from "@/server/lib/dataforseoLlmSchemas";
 import { AppError } from "@/server/lib/errors";
 import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import { safeHostname, safeHttpUrl } from "@/server/features/ai-search/safeUrl";
+import { providerCount } from "@/shared/provider-observations";
 import {
   promptExplorerModelResultSchema,
   type PromptExplorerCitation,
@@ -72,7 +73,16 @@ export async function explorePrompt(
   return {
     prompt: input.prompt,
     highlightBrand,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: results.every(
+      (result) => result.status === "success" && result.capturedAt,
+    )
+      ? (results
+          .map((result) =>
+            result.status === "success" ? result.capturedAt! : "",
+          )
+          .toSorted()
+          .at(-1) ?? null)
+      : null,
     results,
   };
 }
@@ -112,7 +122,7 @@ async function runModel(
   }
 
   const rawResponse = await fetchModelResponse(args);
-  const shaped = shapeSuccess(args.model, rawResponse);
+  const shaped = shapeSuccess(args.model, rawResponse, args.input);
 
   waitUntil(
     setCached(cacheKey, shaped, PROMPT_RESPONSE_TTL_SECONDS).catch((err) => {
@@ -153,6 +163,7 @@ function fetchModelResponse(args: RunModelArgs): Promise<LlmResponseResult> {
 function shapeSuccess(
   model: PromptExplorerModel,
   response: LlmResponseResult,
+  input: PromptExplorerInput,
 ): PromptExplorerModelResult {
   const text = extractText(response);
   const citations = extractCitations(response);
@@ -161,16 +172,23 @@ function shapeSuccess(
   return {
     status: "success" as const,
     model,
+    capturedAt: new Date().toISOString(),
+    source: "DataForSEO LLM Responses",
+    scope: {
+      webSearch: input.webSearch,
+      // Gemini's endpoint does not accept the country field.
+      webSearchCountryCode:
+        model === "gemini" || !input.webSearch
+          ? null
+          : (input.webSearchCountryCode ?? null),
+    },
     modelName: response.model_name ?? null,
     text,
     citations,
     fanOutQueries,
     brandMentioned: null,
-    outputTokens:
-      response.output_tokens != null
-        ? Math.round(response.output_tokens)
-        : null,
-    webSearch: response.web_search ?? false,
+    outputTokens: providerCount(response.output_tokens),
+    webSearch: response.web_search ?? null,
   };
 }
 

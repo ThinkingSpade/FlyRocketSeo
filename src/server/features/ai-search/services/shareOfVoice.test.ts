@@ -21,7 +21,7 @@ function crossItem(
 }
 
 describe("computeShareOfVoice", () => {
-  it("sums requested rows, excludes nulls, and ignores unrequested provider rows", () => {
+  it("preserves requested counts but suppresses shares when a requested group is unknown", () => {
     const outcomes: CrossOutcome[] = [
       {
         platform: "google",
@@ -45,8 +45,16 @@ describe("computeShareOfVoice", () => {
       "rival",
       "ghost",
     ]);
-    expect(entries[0]).toMatchObject({ label: "acme", sharePct: 75 });
-    expect(entries[1]).toMatchObject({ label: "rival", sharePct: 25 });
+    expect(entries[0]).toMatchObject({
+      label: "acme",
+      mentions: 30,
+      sharePct: null,
+    });
+    expect(entries[1]).toMatchObject({
+      label: "rival",
+      mentions: 10,
+      sharePct: null,
+    });
     expect(entries[2]).toMatchObject({ mentions: null, sharePct: null });
   });
 

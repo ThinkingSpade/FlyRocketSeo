@@ -20,7 +20,7 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
   const { labels, values } = useMemo(() => {
     const rows = result.monthlyVolume.map((entry) => ({
       label: `${entry.year}-${String(entry.month).padStart(2, "0")}`,
-      volume: entry.volume ?? 0,
+      volume: entry.volume,
     }));
     return {
       labels: rows.map((row) => row.label),
@@ -42,7 +42,7 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
           if (!first) return "";
           return [
             `<div style="font-size:11px;opacity:0.6">${first.axisValue}</div>`,
-            `<div style="font-size:13px;font-weight:500">${formatCount(first.value ?? 0)} mentions</div>`,
+            `<div style="font-size:13px;font-weight:500">${first.value === null ? "Unknown" : formatCount(first.value)} sampled AI search volume</div>`,
           ].join("");
         },
       },
@@ -64,6 +64,7 @@ export function BrandLookupMentionTrendCard({ result }: Props) {
         {
           type: "line" as const,
           data: values,
+          connectNulls: false,
           smooth: true,
           symbol: "none" as const,
           lineStyle: { width: 2, color: theme.brand },

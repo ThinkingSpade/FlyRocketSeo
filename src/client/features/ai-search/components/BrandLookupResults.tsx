@@ -44,6 +44,13 @@ export function BrandLookupResults({ result, projectId }: Props) {
     // would have found it failed" are opposite conclusions to act on.
     const incomplete = [
       ...erroredPlatforms.map((p) => formatPlatformLabel(p.platform)),
+      ...result.perPlatform
+        .filter(
+          (p) =>
+            p.status === "success" &&
+            (p.mentions === null || p.aiSearchVolume === null),
+        )
+        .map((p) => formatPlatformLabel(p.platform)),
       ...result.partialPlatforms.map((platform) =>
         formatPlatformLabel(platform),
       ),
@@ -52,10 +59,10 @@ export function BrandLookupResults({ result, projectId }: Props) {
     if (incomplete.length > 0) {
       return (
         <div className="rounded-lg border border-warning/30 bg-warning/10 p-4 text-sm">
-          No AI mentions found for <strong>{result.resolvedTarget}</strong> in
-          what came back — but {incomplete.join(" and ")}{" "}
-          {incomplete.length === 1 ? "did not answer" : "did not answer"} in
-          full, so this is not a confirmed absence. Try again shortly.
+          AI mention coverage is incomplete for{" "}
+          <strong>{result.resolvedTarget}</strong>.{" "}
+          {[...new Set(incomplete)].join(" and ")} observations are unavailable.
+          Missing observations do not establish zero mentions.
         </div>
       );
     }
@@ -103,7 +110,16 @@ function BrandHeader({ result }: { result: BrandLookupResult }) {
         <Badge variant="neutral">{result.detectedTargetType}</Badge>
       </div>
       <p className="text-xs text-base-content/50">
-        Updated {formatRelative(result.fetchedAt)}
+        {result.source ?? "DataForSEO AI Optimization"} · Captured{" "}
+        {result.fetchedAt.slice(0, 10)} (UTC)
+        {result.contractVersion !== 2
+          ? " · Legacy capture: derived totals, trends and shares unavailable"
+          : null}
+        {result.scope
+          ? ` · Market ${result.scope.locationCode}/${result.scope.languageCode}; ChatGPT observations use US/en`
+          : " · Legacy saved scope unavailable"}
+        {" · "}
+        {formatRelative(result.fetchedAt)}
       </p>
     </section>
   );

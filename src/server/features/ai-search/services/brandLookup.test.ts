@@ -105,9 +105,11 @@ function resetBrandLookupMocks(): void {
   vi.clearAllMocks();
   cacheMock.getCached.mockResolvedValue(null);
   cacheMock.setCached.mockResolvedValue(undefined);
-  dataforseoClientMock.aiSearch.aggregatedMetrics.mockResolvedValue({
-    platform: [{ key: "google", mentions: 5, ai_search_volume: 50 }],
-  });
+  dataforseoClientMock.aiSearch.aggregatedMetrics.mockImplementation(
+    async ({ platform }: { platform: "google" | "chat_gpt" }) => ({
+      platform: [{ key: platform, mentions: 5, ai_search_volume: 50 }],
+    }),
+  );
   dataforseoClientMock.aiSearch.topPages.mockImplementation(
     async ({ platform }: { platform: "chat_gpt" | "google" }) => [
       topPage(`https://${platform}.example/source`, platform, 3, 300),
@@ -198,7 +200,7 @@ describe("getBrandLookup", () => {
 
     expect(result.query).toBe("nike");
     expect(cacheMock.buildCacheKey).toHaveBeenCalledWith(
-      "ai-search:brand-lookup",
+      "ai-search:brand-lookup:v2",
       expect.objectContaining({
         targetValue: "nike",
         competitors: "adidas",

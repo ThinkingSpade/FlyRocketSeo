@@ -121,6 +121,7 @@ export function CitationTabsCard({
     activeTab,
     pagesTable.getSortedRowModel().rows.map((row) => row.original),
     queriesTable.getSortedRowModel().rows.map((row) => row.original),
+    result,
   );
 
   // No explicit menu close in either handler — Kumo's menu closes itself on

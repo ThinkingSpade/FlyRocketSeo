@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { firstResult, listResult } from "./ai-contracts";
 import type { LlmTarget } from "@/server/lib/dataforseoAiTarget";
 import {
   AiOptimizationChatGptLlmResponsesLiveRequestInfo,
@@ -31,10 +32,10 @@ import { AppError } from "@/server/lib/errors";
 import { aiOptimizationApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
+  DataforseoChargedTaskError,
   buildTaskBilling,
   isRecord,
   type DataforseoApiResponse,
-  type DataforseoTaskLike,
 } from "@/server/lib/dataforseo/envelope";
 
 export type LlmPlatform = "chat_gpt" | "google";
@@ -66,11 +67,6 @@ function targetList(
       ? new AiOptimizationLLmMentionsDomainElement(target)
       : new AiOptimizationLLmMentionsKeywordElement(target),
   ];
-}
-
-function firstResult(task: DataforseoTaskLike): Record<string, unknown> | null {
-  const first = task.result?.[0];
-  return isRecord(first) ? first : null;
 }
 
 // ---------------------------------------------------------------------------
@@ -106,11 +102,11 @@ export async function fetchLlmMentionsSearch(
 
   const items = z
     .array(llmMentionItemSchema)
-    .safeParse(firstResult(task)?.items ?? []);
+    .safeParse(listResult(task, input));
   if (!items.success) {
-    throw new AppError(
-      "INTERNAL_ERROR",
+    throw new DataforseoChargedTaskError(
       "DataForSEO llm_mentions/search returned an invalid mention items shape",
+      buildTaskBilling(task),
     );
   }
   return { data: items.data, billing: buildTaskBilling(task) };
@@ -148,12 +144,12 @@ export async function fetchLlmAggregatedMetrics(
   );
 
   const total = llmAggregatedTotalSchema.safeParse(
-    firstResult(task)?.total ?? {},
+    firstResult(task, input)?.total,
   );
   if (!total.success) {
-    throw new AppError(
-      "INTERNAL_ERROR",
+    throw new DataforseoChargedTaskError(
       "DataForSEO llm_mentions/aggregated_metrics returned an invalid shape",
+      buildTaskBilling(task),
     );
   }
   return { data: total.data, billing: buildTaskBilling(task) };
@@ -194,11 +190,11 @@ export async function fetchLlmTopPages(
 
   const items = z
     .array(llmTopPagesItemSchema)
-    .safeParse(firstResult(task)?.items ?? []);
+    .safeParse(listResult(task, input));
   if (!items.success) {
-    throw new AppError(
-      "INTERNAL_ERROR",
+    throw new DataforseoChargedTaskError(
       "DataForSEO llm_mentions/top_pages returned an invalid shape",
+      buildTaskBilling(task),
     );
   }
   return { data: items.data, billing: buildTaskBilling(task) };
@@ -254,11 +250,11 @@ export async function fetchLlmCrossAggregatedMetrics(
 
   const items = z
     .array(llmCrossAggregatedItemSchema)
-    .safeParse(firstResult(task)?.items ?? []);
+    .safeParse(listResult(task, input));
   if (!items.success) {
-    throw new AppError(
-      "INTERNAL_ERROR",
+    throw new DataforseoChargedTaskError(
       "DataForSEO llm_mentions/cross_aggregated_metrics returned an invalid shape",
+      buildTaskBilling(task),
     );
   }
   return { data: items.data, billing: buildTaskBilling(task) };
@@ -373,11 +369,13 @@ export async function fetchLlmResponse(
     assertOptions(`/v3/ai_optimization/${input.modelSlug}/llm_responses/live`),
   );
 
-  const result = llmResponseResultSchema.safeParse(firstResult(task) ?? {});
+  const result = llmResponseResultSchema.safeParse(
+    firstResult(task, input) ?? {},
+  );
   if (!result.success) {
-    throw new AppError(
-      "INTERNAL_ERROR",
+    throw new DataforseoChargedTaskError(
       "DataForSEO llm_responses returned an invalid response shape",
+      buildTaskBilling(task),
     );
   }
   return { data: result.data, billing: buildTaskBilling(task) };

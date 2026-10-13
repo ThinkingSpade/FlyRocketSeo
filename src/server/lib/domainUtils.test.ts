@@ -20,6 +20,11 @@ describe("isValidDomainHost", () => {
 });
 
 describe("normalizeDomainInput", () => {
+  it("does not widen a requested subdomain when subdomains are excluded", () => {
+    expect(
+      normalizeDomainInput("https://blog.example.com/article", false),
+    ).toBe("blog.example.com");
+  });
   it("normalizes a valid domain, stripping protocol/www/path", () => {
     expect(
       normalizeDomainInput("https://www.Example.com/path?q=1", false),

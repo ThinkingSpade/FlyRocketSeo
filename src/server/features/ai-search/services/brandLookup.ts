@@ -57,7 +57,7 @@ export async function getBrandLookup(
   // Changing this key's param set orphans every pre-deploy cache entry; with a
   // 24h TTL that's at most one re-charged lookup per cached target — accepted
   // rather than maintaining parallel legacy-shape parsing.
-  const cacheKey = await buildCacheKey("ai-search:brand-lookup", {
+  const cacheKey = await buildCacheKey("ai-search:brand-lookup:v2", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     targetType: detected.type,
@@ -74,7 +74,7 @@ export async function getBrandLookup(
   });
 
   const cached = brandLookupResultSchema.safeParse(await getCached(cacheKey));
-  if (cached.success) {
+  if (cached.success && cached.data.contractVersion === 2) {
     return {
       ...cached.data,
       query: input.query,
@@ -140,7 +140,7 @@ export async function getBrandLookup(
     platformBundles.every(
       (b) => b.status === "success" && b.bundle?.complete,
     ) && crossOutcomes.every((c) => c.status === "success");
-  if (allSucceeded && result.hasData) {
+  if (allSucceeded && result.hasData && result.partialPlatforms.length === 0) {
     waitUntil(
       setCached(cacheKey, result, BRAND_LOOKUP_TTL_SECONDS).catch((err) => {
         console.error("ai-search.brand-lookup.cache-write failed:", err);

@@ -65,7 +65,7 @@ const brandShareOfVoiceSchema = z.object({
       label: z.string().max(BRAND_LOOKUP_MAX_INPUT_LENGTH),
       isTarget: z.boolean(),
       mentions: z.number().int().nonnegative().nullable(),
-      sharePct: z.number().nullable(),
+      sharePct: z.number().min(0).max(100).nullable(),
     }),
   ),
 });
@@ -111,40 +111,70 @@ const brandMonthlyVolumeSchema = z.object({
   volume: z.number().int().nonnegative().nullable(),
 });
 
-export const brandLookupResultSchema = z.object({
-  query: z.string(),
-  detectedTargetType: z.enum(["domain", "keyword"]),
-  resolvedTarget: z.string(),
-  fetchedAt: z.string(),
-  hasData: z.boolean(),
-  /**
-   * Platforms whose bundle came back with a failed sub-call swallowed into
-   * empty fallback data.
-   *
-   * The server already computed this to decide cacheability -- a partial result
-   * must not be frozen for 24h -- but then dropped it, so the client could not
-   * tell "this brand has no AI mentions" from "some of the calls that would
-   * have found them failed". Those are opposite conclusions about a business.
-   *
-   * Defaulted, not required: existing R2 cache entries predate this field, and
-   * a required field would fail safeParse on every one of them -- turning each
-   * cached lookup into a fresh PAID DataForSEO call. `[]` is also the correct
-   * value for them, because the server only ever cached a result when every
-   * sub-call succeeded (see `allSucceeded` in brandLookup.ts).
-   */
-  partialPlatforms: z.array(z.enum(["chat_gpt", "google"])).default([]),
-  totalMentions: z.number().int().nonnegative().nullable(),
-  totalAiSearchVolume: z.number().int().nonnegative().nullable(),
-  perPlatform: z.array(brandPlatformBreakdownSchema),
-  // Competitor Share of Voice — null when no competitors were supplied or both
-  // cross_aggregated calls failed. No legacy-cache shim: pre-SoV cache entries
-  // are unreachable anyway (the cache key's param set changed), see the
-  // buildCacheKey comment in brandLookup.ts.
-  shareOfVoice: brandShareOfVoiceSchema.nullable(),
-  topPages: z.array(brandTopPageSchema).max(40),
-  topQueries: z.array(brandTopQuerySchema).max(50),
-  monthlyVolume: z.array(brandMonthlyVolumeSchema),
-});
+export const brandLookupResultSchema = z
+  .object({
+    contractVersion: z.literal(2).optional(),
+    source: z.literal("DataForSEO AI Optimization").optional(),
+    scope: z
+      .object({
+        locationCode: z.number().int().positive(),
+        languageCode: z.string().min(1),
+      })
+      .optional(),
+    query: z.string(),
+    detectedTargetType: z.enum(["domain", "keyword"]),
+    resolvedTarget: z.string(),
+    fetchedAt: z.iso.datetime({ offset: true }),
+    hasData: z.boolean(),
+    /**
+     * Platforms whose bundle came back with a failed sub-call swallowed into
+     * empty fallback data.
+     *
+     * The server already computed this to decide cacheability -- a partial result
+     * must not be frozen for 24h -- but then dropped it, so the client could not
+     * tell "this brand has no AI mentions" from "some of the calls that would
+     * have found them failed". Those are opposite conclusions about a business.
+     *
+     * Defaulted, not required: existing R2 cache entries predate this field, and
+     * a required field would fail safeParse on every one of them -- turning each
+     * cached lookup into a fresh PAID DataForSEO call. `[]` is also the correct
+     * value for them, because the server only ever cached a result when every
+     * sub-call succeeded (see `allSucceeded` in brandLookup.ts).
+     */
+    partialPlatforms: z.array(z.enum(["chat_gpt", "google"])).default([]),
+    totalMentions: z.number().int().nonnegative().nullable(),
+    totalAiSearchVolume: z.number().int().nonnegative().nullable(),
+    perPlatform: z.array(brandPlatformBreakdownSchema),
+    // Competitor Share of Voice — null when no competitors were supplied or both
+    // cross_aggregated calls failed. No legacy-cache shim: pre-SoV cache entries
+    // are unreachable anyway (the cache key's param set changed), see the
+    // buildCacheKey comment in brandLookup.ts.
+    shareOfVoice: brandShareOfVoiceSchema.nullable(),
+    topPages: z.array(brandTopPageSchema).max(40),
+    topQueries: z.array(brandTopQuerySchema).max(50),
+    monthlyVolume: z.array(brandMonthlyVolumeSchema),
+  })
+  .transform((result) =>
+    result.contractVersion === 2
+      ? result
+      : {
+          ...result,
+          // Preserve the stored answers and original date; old code rounded counts,
+          // added incomplete totals and filled trend gaps with zero.
+          totalMentions: null,
+          totalAiSearchVolume: null,
+          monthlyVolume: [],
+          shareOfVoice: result.shareOfVoice
+            ? {
+                ...result.shareOfVoice,
+                entries: result.shareOfVoice.entries.map((entry) => ({
+                  ...entry,
+                  sharePct: null,
+                })),
+              }
+            : null,
+        },
+  );
 
 export type BrandLookupResult = z.infer<typeof brandLookupResultSchema>;
 
@@ -233,13 +263,21 @@ export const promptExplorerModelResultSchema = z.discriminatedUnion("status", [
   z.object({
     status: z.literal("success"),
     model: promptExplorerModelSchema,
+    capturedAt: z.iso.datetime({ offset: true }).optional(),
+    source: z.literal("DataForSEO LLM Responses").optional(),
+    scope: z
+      .object({
+        webSearch: z.boolean(),
+        webSearchCountryCode: z.string().nullable(),
+      })
+      .optional(),
     modelName: z.string().nullable(),
     text: z.string(),
     citations: z.array(promptExplorerCitationSchema),
     fanOutQueries: z.array(z.string()),
     brandMentioned: z.boolean().nullable(),
     outputTokens: z.number().int().nonnegative().nullable(),
-    webSearch: z.boolean(),
+    webSearch: z.boolean().nullable(),
   }),
   z.object({
     status: z.literal("error"),
@@ -256,7 +294,7 @@ export type PromptExplorerModelResult = z.infer<
 export const promptExplorerResultSchema = z.object({
   prompt: z.string(),
   highlightBrand: z.string().nullable(),
-  fetchedAt: z.string(),
+  fetchedAt: z.iso.datetime({ offset: true }).nullable(),
   results: z.array(promptExplorerModelResultSchema),
 });
 

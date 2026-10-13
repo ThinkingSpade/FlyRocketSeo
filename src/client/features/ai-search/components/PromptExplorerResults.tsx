@@ -79,7 +79,18 @@ function ModelResultCard({
         highlightBrand={highlightBrand}
         status="success"
       />
-
+      <p className="border-b border-base-200 px-5 py-2 text-xs text-base-content/60">
+        {modelResult.source ?? "Saved provider answer"} ·{" "}
+        {modelResult.capturedAt
+          ? `Captured ${modelResult.capturedAt.slice(0, 10)} (UTC)`
+          : "Original capture date unavailable"}
+        {modelResult.scope?.webSearch
+          ? ` · Search country: ${modelResult.scope.webSearchCountryCode ?? "no country filter"}`
+          : null}
+        {modelResult.webSearch === null
+          ? " · Web search use not reported"
+          : null}
+      </p>
       <div className="px-5 py-5">
         <MarkdownAnswer text={modelResult.text} />
       </div>
@@ -151,7 +162,7 @@ function ModelHeader({
   model: PromptExplorerModelResult["model"];
   modelName: string | null;
   tokens: number | null;
-  webSearch: boolean;
+  webSearch: boolean | null;
   brandMentioned: boolean | null;
   highlightBrand: string | null;
   status: "success" | "error";

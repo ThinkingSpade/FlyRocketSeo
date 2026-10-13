@@ -3,6 +3,7 @@ import type { LlmCrossAggregatedItem } from "@/server/lib/dataforseoLlmSchemas";
 import type { LlmPlatform } from "@/server/lib/dataforseo";
 import type { BrandLookupResult } from "@/types/schemas/ai-search";
 import { detectTarget } from "@/shared/targetDetection";
+import { providerCount } from "@/shared/provider-observations";
 
 export type CrossOutcome = {
   platform: LlmPlatform;
@@ -79,23 +80,28 @@ export function computeShareOfVoice(
     requestedKeys.map((key) => [key.toLowerCase(), null]),
   );
 
-  for (const outcome of successful) {
-    for (const item of outcome.items) {
-      if (item.key == null) continue;
-      const key = item.key.toLowerCase();
-      // The provider should echo only requested aggregation keys. If it ever
-      // returns extra rows, do not let them alter requested share percentages.
-      if (!labelByKey.has(key)) continue;
-      const platformMentions = sumNullable(
-        (item.platform ?? []).map((entry) => roundOrNull(entry.mentions)),
+  for (const key of labelByKey.keys()) {
+    const values = successful.map((outcome) => {
+      const matches = outcome.items.filter(
+        (item) => item.key?.toLowerCase() === key,
       );
-      const prior = mentionsByKey.get(key) ?? null;
-      // null + null stays null ("no data"); null + n = n; m + n = m + n.
-      mentionsByKey.set(key, sumNullable([prior, platformMentions]));
-    }
+      if (matches.length !== 1) return null;
+      const platforms = (matches[0].platform ?? []).filter(
+        (entry) => entry.key === outcome.platform,
+      );
+      return platforms.length === 1 ? roundOrNull(platforms[0].mentions) : null;
+    });
+    mentionsByKey.set(
+      key,
+      values.every((value) => value !== null) ? sumNullable(values) : null,
+    );
   }
 
-  const denominator = sumNullable(Array.from(mentionsByKey.values())) ?? 0;
+  const denominator = Array.from(mentionsByKey.values()).every(
+    (value) => value !== null,
+  )
+    ? sumNullable(Array.from(mentionsByKey.values()))
+    : null;
   const targetLower = targetKey.toLowerCase();
 
   const entries = sortBy(
@@ -104,7 +110,7 @@ export function computeShareOfVoice(
       isTarget: key === targetLower,
       mentions,
       sharePct:
-        mentions == null || denominator <= 0
+        mentions == null || denominator == null || denominator <= 0
           ? null
           : (mentions / denominator) * 100,
     })),
@@ -123,10 +129,9 @@ export function sumNullable(values: Array<number | null>): number | null {
       hasValue = true;
     }
   }
-  return hasValue ? total : null;
+  return hasValue ? providerCount(total) : null;
 }
 
 export function roundOrNull(value: number | null | undefined): number | null {
-  if (value == null) return null;
-  return Math.round(value);
+  return providerCount(value);
 }

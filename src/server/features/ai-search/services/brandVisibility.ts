@@ -26,11 +26,6 @@ import { detectTarget } from "@/shared/targetDetection";
  * the tab, and the Client Report. Only `analyze` spends — it's the metered path.
  */
 
-/** UTC capture date, so the daily-upsert key is stable within a day. */
-function captureDate(): string {
-  return new Date().toISOString().slice(0, 10);
-}
-
 function parseStoredResult(resultJson: string): BrandLookupResult | null {
   try {
     const parsed = brandLookupResultSchema.safeParse(JSON.parse(resultJson));
@@ -78,7 +73,10 @@ async function analyze(
     try {
       await BrandVisibilitySnapshotRepository.upsertDaily(
         projectId,
-        snapshotFromResult(result, captureDate()),
+        snapshotFromResult(
+          result,
+          new Date(result.fetchedAt).toISOString().slice(0, 10),
+        ),
       );
     } catch (error) {
       console.error("ai-search.brand-visibility.snapshot-write failed:", error);
@@ -111,6 +109,13 @@ const EMPTY_HISTORY: BrandVisibilityHistory = {
  * Scoped to the project's CURRENT domain, so changing the project's domain never
  * mixes a previous target's snapshots into the trend, deltas, or report.
  */
+const comparisonKeys = (result: BrandLookupResult) =>
+  JSON.stringify(
+    result.shareOfVoice?.entries
+      .map((entry) => entry.label.toLowerCase())
+      .toSorted() ?? [],
+  );
+
 async function history(projectId: string): Promise<BrandVisibilityHistory> {
   const project = await ProjectRepository.getProjectById(projectId);
   const domain = project?.domain?.trim();
@@ -120,21 +125,53 @@ async function history(projectId: string): Promise<BrandVisibilityHistory> {
   const rows = (
     await BrandVisibilitySnapshotRepository.listForProject(projectId)
   ).filter((row) => row.target === currentTarget);
-  const trendRows: TrendInputRow[] = rows.map((row) => ({
-    capturedOn: row.capturedOn,
-    totalMentions: row.totalMentions,
-    chatgptMentions: row.chatgptMentions,
-    googleMentions: row.googleMentions,
-    targetSharePct: row.targetSharePct,
-  }));
-  const latest = rows.at(-1) ?? null;
-  const latestResult = latest ? parseStoredResult(latest.resultJson) : null;
+  const parsed = rows
+    .map((row) => parseStoredResult(row.resultJson))
+    .filter((result): result is BrandLookupResult => result !== null);
+  const scoped = parsed
+    .filter(
+      (result) =>
+        result.contractVersion === 2 &&
+        result.scope?.locationCode === project.locationCode &&
+        result.scope?.languageCode.toLowerCase() ===
+          project.languageCode.toLowerCase(),
+    )
+    .toSorted((a, b) => Date.parse(a.fetchedAt) - Date.parse(b.fetchedAt));
+  const latestResult =
+    scoped.at(-1) ??
+    parsed.filter((result) => result.contractVersion !== 2).at(-1) ??
+    null;
+  const latestComparison = latestResult ? comparisonKeys(latestResult) : null;
+  // Earlier releases copied cached captures into multiple calendar rows. Read
+  // the immutable result date and metrics, not those denormalized columns.
+  const byDay = new Map<string, TrendInputRow>();
+  for (const result of scoped) {
+    const capturedOn = new Date(result.fetchedAt).toISOString().slice(0, 10);
+    byDay.set(capturedOn, {
+      capturedOn,
+      totalMentions: result.totalMentions,
+      chatgptMentions:
+        result.perPlatform.find((entry) => entry.platform === "chat_gpt")
+          ?.mentions ?? null,
+      googleMentions:
+        result.perPlatform.find((entry) => entry.platform === "google")
+          ?.mentions ?? null,
+      targetSharePct:
+        comparisonKeys(result) === latestComparison
+          ? (result.shareOfVoice?.entries.find((entry) => entry.isTarget)
+              ?.sharePct ?? null)
+          : null,
+    });
+  }
+  const trendRows = [...byDay.values()];
 
   return {
     target: currentTarget,
     trend: buildTrend(trendRows),
     latestResult,
-    latestCapturedOn: latest?.capturedOn ?? null,
+    latestCapturedOn: latestResult
+      ? new Date(latestResult.fetchedAt).toISOString().slice(0, 10)
+      : null,
     opportunities: latestResult ? buildOpportunities(latestResult) : [],
   };
 }

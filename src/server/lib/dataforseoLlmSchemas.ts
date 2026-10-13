@@ -1,4 +1,18 @@
 import { z } from "zod";
+import {
+  providerCount,
+  providerTimestamp,
+} from "@/shared/provider-observations";
+const countObservation = z
+  .number()
+  .nullable()
+  .transform((value) => (value == null ? value : providerCount(value)))
+  .optional();
+const timeObservation = z
+  .string()
+  .nullable()
+  .transform((value) => (value == null ? value : providerTimestamp(value)))
+  .optional();
 
 /**
  * Zod schemas for DataForSEO AI Optimization endpoints.
@@ -16,7 +30,7 @@ const monthlyVolumeSchema = z
   .object({
     year: z.number().int(),
     month: z.number().int().min(1).max(12),
-    search_volume: z.number().nullable().optional(),
+    search_volume: countObservation,
   })
   .passthrough();
 
@@ -43,10 +57,10 @@ export const llmMentionItemSchema = z
   .object({
     question: z.string().nullable().optional(),
     sources: z.array(mentionSourceSchema).nullable().optional(),
-    ai_search_volume: z.number().nullable().optional(),
+    ai_search_volume: countObservation,
     monthly_searches: z.array(monthlyVolumeSchema).nullable().optional(),
-    first_response_at: z.string().nullable().optional(),
-    last_response_at: z.string().nullable().optional(),
+    first_response_at: timeObservation,
+    last_response_at: timeObservation,
     brand_entities: z.array(brandEntitySchema).nullable().optional(),
   })
   .passthrough();
@@ -62,9 +76,9 @@ const groupElementSchema = z
   .object({
     type: z.string().nullable().optional(),
     key: z.string().nullable().optional(),
-    mentions: z.number().nullable().optional(),
-    ai_search_volume: z.number().nullable().optional(),
-    impressions: z.number().nullable().optional(),
+    mentions: countObservation,
+    ai_search_volume: countObservation,
+    impressions: countObservation,
   })
   .passthrough();
 
@@ -142,7 +156,7 @@ const responseItemSchema = z
 export const llmResponseResultSchema = z
   .object({
     model_name: z.string().nullable().optional(),
-    output_tokens: z.number().nullable().optional(),
+    output_tokens: countObservation,
     web_search: z.boolean().nullable().optional(),
     items: z.array(responseItemSchema).nullable().optional(),
     fan_out_queries: z.array(z.string()).nullable().optional(),
