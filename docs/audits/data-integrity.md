@@ -15,8 +15,8 @@ A suggested shared envelope contains `value`, `unit`, `source`, `observedFrom`, 
 - Opportunity click scenarios: internal, uncalibrated assumptions in `opportunityModel.ts`; ranking scenarios use an assumed 11% target CTR and consolidation assumes 30% recovery of split share. They are not forecasts, measured losses, or additive traffic. The branch labels scenarios, shows the evidence window, rejects invalid numeric inputs, and uses the largest single scenario as the headline rather than a sum.
 - Opportunity counts: detector output after overlap merging and project-profile exclusions, not an external SEO fact. Preserve separate action types and disclose omitted profile matches. Counts remain unknown when required GSC evidence is unavailable.
 - Keyword volume, difficulty, CPC, and competition: provider-derived values through DataForSEO keyword/Labs adapters and research mapping. Keep market, language, provider unit/scale, and capture time. Do not relabel advertising competition as organic ranking difficulty or compare different vendors' difficulty scales as equivalent.
-- Organic domain traffic and keyword counts: DataForSEO Labs estimates (`DomainService.ts`, `domainRankHistory.ts`), not analytics visits. Historical points are mapped from returned year/month records, not generated demo trends. Partial top-three buckets require further missing-field verification.
-- Backlinks, referring domains, link history, and provider rank: DataForSEO backlink services/mappers. Index coverage is provider-specific. `backlinksTimeline.ts` currently defaults absent new/lost fields to zero; this remains an explicit unresolved null-semantics issue, not a repaired claim.
+- Organic domain traffic and keyword counts: DataForSEO Labs estimates (`DomainService.ts`, `domainRankHistory.ts`), not analytics visits. Historical points are mapped from valid returned year/month records. The continuation preserves missing/partial top-three buckets as unknown and versions mapped cache contracts; fixture verification is described below.
+- Backlinks, referring domains, link history, and provider rank: DataForSEO backlink services/mappers. Index coverage is provider-specific. The continuation repairs absent new/lost event fields, unsupported pre-May-2021 placeholders and invalid values to null, while preserving genuine reported zero. Live entitlement remains unverified.
 - Ahrefs Domain Rating: `server/lib/ahrefsDomainRating.ts` and `shared/ahrefsRating.ts`. Keep it named as Ahrefs DR, distinct from provider domain rank and Google signals. The existing mapper deliberately preserves returned DR 0 while null means no usable answer. Availability of this free endpoint is not an API service-level guarantee.
 - Backlink spam score: `client/lib/spamScore.ts` treats it as a review signal, not proof that disavowal is appropriate. No disavowal automation was introduced.
 - Rank tracking and fluctuation: stored run observations and configured search depth/market/device, not a backfilled history. Missing/failed checks and outside-depth results must remain distinguishable. Existing scheduler/run guards and billing were not altered.
@@ -45,6 +45,14 @@ Additional providers should require a demonstrated unmet dataset need, documente
 ## Open integrity work
 
 Expand the register into field-level contracts and golden fixtures for every provider envelope. Test null/zero/partial/truncated/stale/invalid states, missing date buckets, current-target changes, and two-organization isolation. Add source/freshness metadata consistently to exports as well as screens.
+
+### Exact-page and persisted evidence continuation
+
+Page Investigation requests independent current/prior exact-page final-data observations and supporting query rows. Property/connector changes, invalid values, unrelated targets and provider-clamped date windows fail their contract. Missing daily observations display Unknown; genuine observed zero remains zero. Partial daily coverage and top-query limits are visible.
+
+Saved work retains the full evidence scope and capture time in content-addressed snapshots. Pacific GSC calendar dates govern baseline exclusion and observation lag. Comparable sufficient results record observed changes with seasonality/concurrent-work limitations; missing or incomparable observations remain pending. Reruns preserve human progress and past comparisons. Complete captured existing-link evidence can reconcile one pair without calling it fixed; partial/failed captures cannot.
+
+These contracts passed native/service/real SQLite checks and are exercised through the isolated authenticated application. Live Google/provider responses, PostgreSQL runtime and storage deletion/retention cleanup remain unverified release gates. See `verification-results.md` and `../product/implementation-checklist.md`.
 
 ### History contract repair, continuation on 2026-10-13
 

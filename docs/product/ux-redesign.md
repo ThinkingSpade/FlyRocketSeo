@@ -1,8 +1,18 @@
 # UX direction: performance, next action, evidence, result
 
-Date: 2026-10-13. This document distinguishes implemented changes from the proposed next product increment. No complete dashboard rebuild or route deletion is claimed.
+Date: 2026-10-13. The first action-first dashboard, unified page investigation and persisted work flow are implemented on the audit branch. Existing routes and safeguards are preserved. Wider proposals and human usability review remain separate from application test evidence.
 
-## Implemented in this branch
+## Continuation implementation
+
+Overview now places independent performance and next-action cards before recorded changes and progress/results, with advanced tools below. Page Investigation defaults to first-party evidence and matching stored crawl data; the existing Page Explorer remains in the explicitly metered Provider research view. URL/date/market/device/search context belongs to the investigation URL and query key. Supporting tools receive their accepted URL or query parameter.
+
+Missing DataForSEO setup no longer opens a blocking modal on pathname changes. The sidebar exposes primary workflows and expandable specialist destinations; related-tool tabs preserve old deep links and active context. Keyword discovery in Trends requires a deliberate metered action. Restored data keeps its capture time and does not authorize a refresh.
+
+Persisted work is reachable from both Overview and Opportunities: save an evidence-backed action, record progress/assignment/notes, report implementation, and compare aligned after observations. History and earlier measurements remain reachable through bounded pagination. No status update changes the website.
+
+Application acceptance covers real local hosted sign-in, desktop/mobile navigation and the investigation-to-work-to-results journey using isolated provider fixtures. This verifies application interaction, not live OAuth/provider entitlement, production performance or human usability. Exact results and remaining gates are in `implementation-checklist.md` and `../audits/verification-results.md`.
+
+## Inherited navigation and reliability repairs
 
 The sidebar now groups the existing 24 destinations under Overview, Research, Optimize, Track, and Manage. Overview and SEO Opportunities are first; GSC Insights is renamed Search Performance. Existing route URLs, icons, deep links, and selected-project parameters remain intact. Tests check the full destination set, uniqueness, ordering, and two project IDs.
 

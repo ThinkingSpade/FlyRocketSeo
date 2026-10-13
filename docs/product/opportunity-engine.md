@@ -1,12 +1,30 @@
 # Evidence-backed opportunity engine
 
-Date: 2026-10-13. Status: bounded existing-engine repairs implemented; persisted multi-detector workflow below is proposed, not deployed or migrated.
+Date: 2026-10-13. Status: the first persisted decline/internal-link workflow is implemented on the audit branch and tested with isolated data. It is not deployed or migrated in production. Wider detector/causal-analysis proposals below remain design directions.
 
-## What exists and what changed
+## Implemented persisted workflow
+
+`serverFunctions/opportunities.ts` uses the existing project middleware for every read/write. The shared scope includes organization, project, current target, GSC property and connecting account, country, device and search type. D1/PG storage holds work, evidence snapshots, events and runs. A content hash retains validated evidence plus raw query/content capture in immutable R2; a failed retention write stops the state change.
+
+Stable identity excludes detector version and preserves status, assignee, locked baseline and implementation date across reruns. Revision checks reject stale edits. Complete comparable decline reruns can record no-longer-observed; failed, capped or partial runs cannot. For internal links, only positive captured evidence that the destination is already linked reconciles the exact examined pair, retaining that capture and preserving progress. This does not certify implementation.
+
+Users can save a page investigation, assign work, record notes/dismissal reasons and an implementation date, then request after observations. One saved action tracks one implementation baseline and repeated follow-up comparisons. Measurements retain prior results in event history and require unchanged scope, equal weekday windows, sufficient final-data observations, Pacific calendar separation and a seven-day observation lag. Missing observations remain insufficient; ordinary before/after results remain association.
+
+Declines require at least 20 prior clicks, 100 prior impressions, a loss of 10 clicks and 20%, with complete compatible evidence. Runs save at most 25 supported declines; capped runs explicitly skip absence reconciliation. Internal links require matching query evidence for both pages, own-site successful bounded HTML capture, actual unlinked source text and an existing-link graph, including HTML base-URL resolution. No automated publishing follows.
+
+## Evidence retention and release policy
+
+Evidence and events are immutable and retained for the saved work's lifetime; reruns do not overwrite baselines or prior measurement results. The work list returns at most 100 prioritized tasks, with coverage disclosure; each history response returns at most 50 events and a scoped cursor to older retained entries. Real SQLite tests verify pagination and target/organization isolation.
+
+Work-list status filters run before the page limit, so terminal work outside the first 100 rows remains reachable. Previous/Next controls page through retained work, with target, page and status in query identity. Offset pages use current ordering; concurrent updates can move work between pages.
+
+SQL project deletion cascades were verified by independent review. R2 expiration and cleanup of deleted-project/orphan objects are not implemented; no destructive cleanup is scheduled. Production migration/release remains gated on an approved retention/deletion policy, verified R2 cleanup and PostgreSQL execution where that backend is used. Keeping an immutable baseline is deliberate; this is not a claim of complete storage lifecycle management.
+
+## Inherited engine and bounded repairs
 
 The primary Opportunities page derives candidates from the 28-day GSC report, link/cannibalization insights, and the latest completed audit. `opportunityModel.ts` merges overlapping ranking/CTR signals, keeps consolidation as a separate action, and applies project-profile exclusions. AI visibility has its own snapshot/opportunity services; it is not already the shared lifecycle requested in the brief.
 
-This branch adds explicit technical-evidence state resolution and an independently testable `summarizeTechnicalIssues` detector summary. It deduplicates exact affected URLs, distinguishes response evidence, and avoids metadata diagnoses on failed fetches. Click scenarios are labeled as assumptions and no longer summed into an additive headline. These are real repairs; assignment, persisted progress, automatic implementation, decline detection, and causal impact measurement are not claimed complete.
+The earlier increment added explicit technical-evidence state resolution and an independently testable `summarizeTechnicalIssues` detector summary. It deduplicates exact affected URLs, distinguishes response evidence, and avoids metadata diagnoses on failed fetches. Click scenarios are labeled as assumptions and no longer summed into an additive headline. The continuation above adds assignment, persisted progress and decline detection; automatic implementation and causal impact measurement remain outside the implementation.
 
 ## Proposed architecture using existing infrastructure
 
@@ -52,4 +70,4 @@ Before/after measurement should keep property, URL identity, market/device/searc
 
 No automatic content publishing, redirect creation, page deletion, backlink disavowal, GBP write, or paid provider call follows merely from a detector result. Review and authorize real changes separately. Keep fetched content untrusted: it cannot issue instructions to the application or its agents.
 
-Required tests include deterministic replay; duplicate evidence; overlapping actions; invalid/partial/stale data; changed domains; project/organization isolation; status preservation across reruns; schema/version upgrades; missing integrations; and a full authenticated investigation-to-task-to-measurement workflow. The current branch verifies a subset of computation and UI-control behavior, not this entire proposed architecture.
+Required tests include deterministic replay; duplicate evidence; overlapping actions; invalid/partial/stale data; changed domains; project/organization isolation; status preservation across reruns; schema/version upgrades; missing integrations; and a full authenticated investigation-to-task-to-measurement workflow. Native tests, real SQLite service tests and the isolated hosted-auth application suite exercise the implemented first version. They do not certify the entire wider architecture or live integrations.

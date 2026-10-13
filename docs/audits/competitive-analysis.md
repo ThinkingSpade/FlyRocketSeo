@@ -2,6 +2,12 @@
 
 Research date: 2026-10-13. Basis: current official vendor documentation and public product pages, not a hands-on authenticated evaluation of paid accounts. Product recommendations below are design judgments, not claims of verified feature parity.
 
+The audit-branch continuation now implements progressive navigation and the first
+evidence-to-work-to-results flow. The comparisons below remain product direction,
+not certification of parity or live datasets. Current application verification and
+remaining gates are in `verification-results.md` and
+`../product/implementation-checklist.md`.
+
 ## What the benchmarks actually show
 
 Ahrefs' Opportunities documentation, updated September 3, 2026, describes content, link, and technical opportunities that open supporting reports. Examples include nearby ranking opportunities, content gaps, declining content, and potential cannibalization. Its overlap guidance calls for checking search intent and page similarity before consolidation [A1]. The useful pattern is an evidence-linked investigation, not simply a higher metric count.

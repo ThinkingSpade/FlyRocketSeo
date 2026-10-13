@@ -2,6 +2,14 @@
 
 Date: 2026-10-13. Original baseline: `49096606273eaeaeff7b82e49b1a767a48e65eca`. Repair branch: `audit/flyrocketseo-reliability-2026-10-13`.
 
+Continuation status: the inventory below records the original audit and inherited
+repairs. The continuation implements provider-history contracts, optional setup,
+progressive tools, the action-first dashboard, unified page investigation and
+persisted work/results. Actual isolated hosted-app browser journeys now cover the
+implemented flow; they do not certify live providers. Read
+`../product/implementation-checklist.md` and `verification-results.md` for current
+implemented/verified/blocked status before relying on historical inventory labels.
+
 ## Executive finding and scope
 
 The repository contains substantial real implementation, not simply placeholder screens: project-scoped server functions, provider adapters, persisted analyses, crawls, rank-check workflows, and independent dashboard cards. The immediate problem is that availability, error recovery, estimated opportunity value, and navigation are not consistently communicated. A compiling application can still mislead a user or strand them in a loading state.

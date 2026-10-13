@@ -3,7 +3,98 @@
 Date: 2026-10-13. Repository: `ThinkingSpade/FlyRocketSeo`.
 Branch: `audit/flyrocketseo-reliability-2026-10-13`.
 Original baseline: `49096606273eaeaeff7b82e49b1a767a48e65eca`.
-Native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e141c9`.
+Prior native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e141c9`.
+
+## Continuation verification on 2026-10-13
+
+Starting checkout: `f28cfe15`. New incremental commits include `b775587e`
+(provider history), `eb3377fe` (first-party page scope and project market
+preferences), and `fbb1dfa0` (persisted work/evidence/results). Further UI and
+application-test commits are recorded in `../product/implementation-checklist.md`.
+
+Fresh local native suite: **3,366/3,366 tests in 337 files**, with four workers,
+including the final stored-post connection-error repair. Code/test head:
+`59aa3f1f`. This run took 110.98 seconds; an earlier full run also passed before
+that final error-path adjustment.
+TypeScript, Knip and global type-aware Oxlint pass; Oxlint reports zero warnings
+and errors. Production client/server compilation, root prerender and SPA loading
+shell assertion passed locally. The existing large-chunk advisory remains; no
+loading-performance improvement is claimed. Final formatting/build outcomes and
+application browser results are recorded in the execution ledger.
+
+The inherited Opportunities contract harness passes **20/20** and the project
+access harness passes. Its new persisted-work child is an explicit inert test
+double: this controlled harness still covers the original recommendation cards,
+not storage/authentication. Persisted work is tested separately with real SQLite
+and actual application browser journeys.
+
+The dedicated acceptance runner executes the actual React/TanStack/Cloudflare
+application with hosted Better Auth email/password sessions, real middleware,
+isolated local D1/R2/KV and two accounts/organizations. A dedicated empty envDir,
+subprocess environment allowlist, fake OAuth configuration and outbound guard
+prevent production access or provider spend. GSC, owned-site HTML/DNS, and the
+existing development-only domain/keyword research payloads are explicit fixtures;
+the application controllers, storage, router and authorization are real.
+No local-noauth bypass is used. Browser diagnostics reject unexpected application
+errors, server 500 responses and external requests.
+
+Final actual-application run: **44/44 passed**, with **zero failures, flaky cases
+or skipped cases**, in **200.77 seconds**, starting **2026-10-13 10:39:19 UTC**.
+This includes 24 destination landings with settled-request diagnostics, desktop
+and mobile navigation, loaded mobile evidence/opacity/overflow checks, two
+accounts/organizations, session invalidation, foreign-project and history RPC
+denial, transient access Retry, explicit metered consent, exact date/type/device/
+country controls, contextual source capture, saved work/progress/reload/
+implementation/measurement, 50-event history paging, 121-task work paging and
+server-side status filters, and research search/filter/sort/CSV/save interactions.
+
+The final JSON is `test-results/acceptance-summary.json`; the exact server log is
+`test-results/acceptance-final-server.log`. All 24 landing diagnostic attachments
+report no unexpected runtime errors, external requests or server failures. The
+server log contains no blocked external-request marker. Unexpected requests fail
+the tests; the known connection-503 and access-503 injections are asserted as
+controlled recovery cases. These generated artifacts are ignored and recreated
+by the runner; CI archives them when the workflow is executed. The new workflow
+has not been run remotely in this continuation.
+
+Steady desktop/mobile Overview, saved work and scoped Evidence screenshots were
+visually inspected. The stable Evidence captures show the actual custom window,
+image search type, mobile device and country. An initial transient animation
+capture was rejected and replaced after confirming all content was visible; no
+unsupported persistent blank-page repair is claimed.
+
+Browser reproductions found the pathname-driven blocking provider modal, an
+automatic Trends paid-discovery attempt, and an initial concurrent GBP report
+handler failure. The modal is removed, discovery requires explicit metered consent,
+and the report waits for its initial connection read to settle before reading
+stored posts, including when disconnected or when that independent connection
+read fails. A targeted actual-browser regression injected a connection 503 and
+verified the real stored-post handler still returned 200. Missing credentials
+never count as a successful provider integration.
+
+A further deterministic browser reproduction delayed the real project-settings
+read, typed a keyword draft and released a changed country default. The original
+form reset erased the draft. The repaired form updates untouched settings while
+preserving draft/dirty metadata; intentional URL/tab changes still replace the
+controls. Browser research/filter/sort/CSV/save and the delayed-settings case pass.
+
+Independent review found unknown page observations displayed as zero, missing
+HTML base-URL resolution, UTC/Pacific baseline overlap, and lost investigation
+handoff parameters. All four were repaired with regression evidence. History
+reads are now bounded/paginated; old measurement results remain in retained events.
+Complete existing-link captures reconcile only the examined pair.
+
+The user confirms **no staging access**. Real OAuth renewal, provider entitlement,
+live GBP actions and deployed background-job recovery are **blocked**, not passing.
+PostgreSQL runtime execution, production migrations and approved R2
+expiration/deleted-project/orphan cleanup remain release gates. No merge,
+deployment, production write, paid request or new paid service occurred.
+
+## Prior increment evidence (historical)
+
+The remaining sections describe the previous increment at the prior verified
+commit. Their missing-feature statements are historical; the current ledger and
+continuation section above take precedence for this checkout.
 
 ## Native verification: passed
 
