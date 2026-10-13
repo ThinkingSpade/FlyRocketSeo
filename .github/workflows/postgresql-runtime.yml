@@ -1,0 +1,50 @@
+name: Isolated PostgreSQL runtime
+
+on:
+  pull_request:
+    paths:
+      - "src/db/**"
+      - "src/server/features/opportunities/**"
+      - "src/serverFunctions/evidence-storage.ts"
+      - "drizzle-pg/**"
+      - "e2e/postgres/**"
+      - "e2e/postgres.config.ts"
+      - "scripts/postgres-runtime*.mjs"
+      - ".github/workflows/postgresql-runtime.yml"
+      - "pnpm-lock.yaml"
+      - "package.json"
+  push:
+    branches:
+      - audit/flyrocketseo-reliability-2026-10-13
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  postgres:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Install locked dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Verify real PostgreSQL using a disposable loopback container
+        run: node scripts/postgres-runtime.mjs
+      - name: Archive runtime evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: isolated-postgresql-runtime
+          path: |
+            test-results/postgres-runtime
+            .tmp/postgres-runtime/runs/*/runtime.json
+            .tmp/postgres-runtime/runs/*/server.log
+          retention-days: 7

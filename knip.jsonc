@@ -22,6 +22,9 @@
     "e2e/acceptance/worker.ts",
     "e2e/acceptance/gsc-client.ts",
     "e2e/acceptance/seed.ts",
+    "e2e/postgres.config.ts",
+    "e2e/postgres/**/*.runtime.ts",
+    "e2e/postgres/worker-env.ts",
     // Complete, working component whose consumer is a deliberately separate,
     // not-yet-started plan (tab wiring + a confirmation banner) -- see
     // docs/superpowers/specs/2026-07-27-local-geo-targeting-design.md's
