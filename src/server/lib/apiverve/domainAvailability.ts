@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { apiverveGet } from "@/server/lib/apiverve/client";
 import type { ExpirationCache } from "@/server/lib/apiverve/domainExpiration";
-import { normalizeDomainInput } from "@/server/lib/domainUtils";
+import { normalizeRegistrableDomainInput } from "@/server/lib/domainUtils";
 
 export const AVAILABILITY_CACHE_PREFIX = "apiverve-domain-avail:v1:";
 /**
@@ -36,7 +36,7 @@ export async function resolveDomainAvailability(
   // Same choke point as the expiry resolver: registration belongs to the
   // registrable domain, so a subdomain must not open a second cache entry or a
   // second charge.
-  const domain = normalizeDomainInput(rawDomain, false);
+  const domain = normalizeRegistrableDomainInput(rawDomain);
   const cacheKey = `${AVAILABILITY_CACHE_PREFIX}${domain}`;
 
   const cached = await cache.get(cacheKey);

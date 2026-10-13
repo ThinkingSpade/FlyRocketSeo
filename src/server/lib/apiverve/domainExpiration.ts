@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { apiverveGet } from "@/server/lib/apiverve/client";
-import { normalizeDomainInput } from "@/server/lib/domainUtils";
+import { normalizeRegistrableDomainInput } from "@/server/lib/domainUtils";
 import { AppError } from "@/server/lib/errors";
 import {
   deriveDomainExpiration,
@@ -59,7 +59,7 @@ export async function resolveDomainExpiration(
   // billed call. When each caller normalized for itself the MCP tool forgot to,
   // which split the cache key and double-charged for the same domain. A choke
   // point makes that unrepresentable.
-  const domain = normalizeDomainInput(rawDomain, false);
+  const domain = normalizeRegistrableDomainInput(rawDomain);
   const cacheKey = `${CACHE_PREFIX}${domain}`;
 
   const cached = await cache.get(cacheKey);
@@ -142,7 +142,7 @@ export async function resolveDomainExpirations(
     ...new Set(
       domains.map((domain) => {
         try {
-          return normalizeDomainInput(domain, false);
+          return normalizeRegistrableDomainInput(domain);
         } catch {
           return "";
         }

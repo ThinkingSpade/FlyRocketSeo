@@ -1,4 +1,5 @@
 import { AppError } from "@/server/lib/errors";
+import { getDomain } from "tldts";
 import { isValidDomainHost } from "@/types/schemas/domain";
 
 export function toRelativePath(url: string | null | undefined): string | null {
@@ -48,6 +49,18 @@ export function normalizeDomainInput(
   // Subdomain inclusion belongs to the provider request/filter contract. It
   // must never change the identity of the hostname the user asked to analyze.
   return host;
+}
+
+/** Registration/WHOIS describe a registrable domain, rather than an SEO host. */
+export function normalizeRegistrableDomainInput(input: string): string {
+  const host = normalizeDomainInput(input, true);
+  const domain = getDomain(host);
+  if (!domain)
+    throw new AppError(
+      "VALIDATION_ERROR",
+      "Enter a registrable domain like example.com",
+    );
+  return domain;
 }
 
 /**

@@ -6,7 +6,7 @@ const adapters = vi.hoisted(() => ({
   domain: vi.fn().mockResolvedValue({ source: "normal-domain-adapter" }),
   keywords: vi.fn().mockResolvedValue({ source: "normal-keyword-adapter" }),
   domainFixture: vi.fn(),
-  keywordFixture: vi.fn().mockResolvedValue({ source: "keyword-fixture" }),
+  keywordFixture: vi.fn(),
 }));
 
 const validDomainFixture = {
@@ -18,6 +18,12 @@ const validDomainFixture = {
   positionBuckets: null,
   hasData: true,
   fetchedAt: "2026-10-01T00:00:00.000Z",
+};
+const validKeywordFixture = {
+  rows: [],
+  source: "suggestions",
+  usedFallback: false,
+  diagnostics: { requestedMode: "auto", threshold: 3, sourceAttempts: [] },
 };
 
 // Exercise actual handler selection; adapters are inert and auth is covered
@@ -82,7 +88,7 @@ beforeEach(() => {
   adapters.domain.mockResolvedValue({ source: "normal-domain-adapter" });
   adapters.keywords.mockResolvedValue({ source: "normal-keyword-adapter" });
   adapters.domainFixture.mockReturnValue(validDomainFixture);
-  adapters.keywordFixture.mockResolvedValue({ source: "keyword-fixture" });
+  adapters.keywordFixture.mockReturnValue(validKeywordFixture);
 });
 afterEach(() => vi.unstubAllEnvs());
 
@@ -133,7 +139,7 @@ describe("local provider fixture boundary", () => {
       },
     });
     await expect(researchKeywords(keywordRequest)).resolves.toMatchObject({
-      source: "keyword-fixture",
+      source: "suggestions",
     });
     expect(adapters.domain).not.toHaveBeenCalled();
     expect(adapters.keywords).not.toHaveBeenCalled();
