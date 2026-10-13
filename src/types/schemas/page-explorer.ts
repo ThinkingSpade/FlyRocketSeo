@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { investigationScopeShape } from "./page-investigation";
 
 export const pageExplorerRequestSchema = z.object({
   projectId: z.string().uuid(),
@@ -13,6 +14,11 @@ export const pageExplorerRequestSchema = z.object({
 export const pageExplorerSearchSchema = z.object({
   u: z.string().optional(),
   loc: z.number().int().positive().optional(),
+  pageView: z
+    .enum(["evidence", "research"])
+    .default("evidence")
+    .catch("evidence"),
+  ...investigationScopeShape,
 });
 
 const pageKeywordSchema = z.object({

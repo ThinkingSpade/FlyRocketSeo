@@ -11,6 +11,8 @@ import { RankTrackingCard } from "./RankTrackingCard";
 import { SearchPerformanceCard } from "./SearchPerformanceCard";
 import { SiteAuditCard } from "./SiteAuditCard";
 import { AppPageShell } from "@/client/components/AppPageShell";
+import { DashboardActions, DashboardChanges } from "./DashboardActionSections";
+import { OpportunityWork } from "@/client/features/opportunities/OpportunityWork";
 
 export function ProjectDashboardPage({ projectId }: { projectId: string }) {
   const projectsQuery = useQuery({
@@ -55,30 +57,48 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
         </div>
       )}
 
-      {/* Needs `domain`, so it legitimately waits — rendered in place rather
-          than moved, to keep the layout from reflowing when it arrives. */}
-      {projectsQuery.isPending ? (
-        <div className="skeleton h-32 w-full" />
-      ) : (
-        <AnalyzeProjectCard projectId={projectId} domain={domain} />
-      )}
-
-      {/* Each card owns its own query, so one failing source degrades
-          just that card and never blanks the dashboard. */}
-      <GettingStartedCard projectId={projectId} />
-      <QuickActionsCard projectId={projectId} />
-      <RankTrackingCard projectId={projectId} />
-      <RankChangesCard projectId={projectId} />
-      <SearchPerformanceCard projectId={projectId} />
-      <ProjectKeywordsCard projectId={projectId} />
-      <div className="grid gap-4 lg:grid-cols-2">
-        <SiteAuditCard projectId={projectId} />
-        {projectsQuery.isPending ? (
-          <div className="skeleton h-32 w-full" />
-        ) : (
-          <BacklinksCard projectId={projectId} domain={domain} />
-        )}
+      <p className="text-sm text-base-content/60">
+        Performance and actions · GSC web search, all countries and devices ·
+        last 28 days. Each source keeps its own evidence and availability.
+      </p>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <SearchPerformanceCard projectId={projectId} />
+        <DashboardActions projectId={projectId} domain={domain} />
       </div>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <DashboardChanges projectId={projectId} domain={domain} />
+        <OpportunityWork projectId={projectId} compact />
+      </div>
+      <GettingStartedCard projectId={projectId} />
+      <details className="rounded-xl border border-base-300 p-4">
+        <summary className="cursor-pointer text-lg font-medium">
+          Research tools and full reports
+        </summary>
+        <div className="mt-4 space-y-4">
+          {/* Needs `domain`, so it legitimately waits — rendered in place rather
+          than moved, to keep the layout from reflowing when it arrives. */}
+          {projectsQuery.isPending ? (
+            <div className="skeleton h-32 w-full" />
+          ) : (
+            <AnalyzeProjectCard projectId={projectId} domain={domain} />
+          )}
+
+          {/* Each card owns its own query, so one failing source degrades
+          just that card and never blanks the dashboard. */}
+          <QuickActionsCard projectId={projectId} />
+          <RankTrackingCard projectId={projectId} />
+          <RankChangesCard projectId={projectId} />
+          <ProjectKeywordsCard projectId={projectId} />
+          <div className="grid gap-4 lg:grid-cols-2">
+            <SiteAuditCard projectId={projectId} />
+            {projectsQuery.isPending ? (
+              <div className="skeleton h-32 w-full" />
+            ) : (
+              <BacklinksCard projectId={projectId} domain={domain} />
+            )}
+          </div>
+        </div>
+      </details>
     </AppPageShell>
   );
 }

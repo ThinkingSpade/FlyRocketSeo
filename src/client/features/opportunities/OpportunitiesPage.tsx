@@ -33,6 +33,7 @@ import { Badge } from "@cloudflare/kumo/components/badge";
 import { Loader } from "@cloudflare/kumo/components/loader";
 import { buttonVariants } from "@cloudflare/kumo/components/button";
 import { Table } from "@cloudflare/kumo/components/table";
+import { OpportunityWork } from "./OpportunityWork";
 
 const SEVERITY_CLASS = {
   high: "error",
@@ -140,6 +141,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
       </div>
 
       <ProjectProfileCard projectId={projectId} />
+      <OpportunityWork projectId={projectId} />
 
       <OpportunityTiles
         opportunities={ranked}
@@ -262,6 +264,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
                     key={`${row.kind}-${row.query}-${row.page}`}
                     row={row}
                     projectId={projectId}
+                    window={report.range}
                   />
                 ))}
               </Table.Body>

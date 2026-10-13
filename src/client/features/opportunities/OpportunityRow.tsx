@@ -56,9 +56,11 @@ type SearchParams = Record<string, string>;
 export function OpportunityRow({
   row,
   projectId,
+  window,
 }: {
   row: Opportunity;
   projectId: string;
+  window?: { startDate: string; endDate: string };
 }) {
   const meta = KIND_META[row.kind];
   const action = ACTION[row.kind];
@@ -80,14 +82,18 @@ export function OpportunityRow({
         </span>
       </Table.Cell>
       <Table.Cell className="max-w-72">
-        <a
-          href={row.page}
-          target="_blank"
-          rel="noreferrer"
+        <Link
+          to="/p/$projectId/page"
+          params={{ projectId }}
+          search={{
+            u: row.page,
+            startDate: window?.startDate,
+            endDate: window?.endDate,
+          }}
           className="line-clamp-1 text-xs hover:underline"
         >
           {toPath(row.page)}
-        </a>
+        </Link>
       </Table.Cell>
       <Table.Cell className="text-right tabular-nums">
         {row.impressions.toLocaleString()}

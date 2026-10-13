@@ -133,6 +133,9 @@ export function createHarness(state = fixture()) {
       useKeywordFit: () => new Map(),
     },
     "./OpportunityRow": { OpportunityRow: "OpportunityRow" },
+    // This controlled harness covers the inherited recommendation cards.
+    // Persisted work/auth/storage are exercised by the application acceptance suite.
+    "./OpportunityWork": { OpportunityWork: "OpportunityWork" },
     "@cloudflare/kumo/components/badge": { Badge: "Badge" },
     "@cloudflare/kumo/components/loader": { Loader: "Loader" },
     "@cloudflare/kumo/components/button": { buttonVariants: () => "button" },
