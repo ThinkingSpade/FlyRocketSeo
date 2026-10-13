@@ -16,7 +16,9 @@ import { KeywordResearchService } from "@/server/features/keywords/services/Keyw
 import { requireProjectContext } from "@/serverFunctions/middleware";
 
 function shouldUseKeywordE2eFixtures() {
-  return import.meta.env.VITE_E2E_KEYWORD_FIXTURES === "1";
+  return (
+    import.meta.env.DEV && import.meta.env.VITE_E2E_KEYWORD_FIXTURES === "1"
+  );
 }
 
 async function getKeywordE2eFixtures() {

@@ -1,0 +1,63 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "flyrocketseo-acceptance",
+  "main": "worker.ts",
+  "compatibility_date": "2025-09-02",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "vars": {
+    "AUTH_MODE": "hosted",
+    "BETTER_AUTH_URL": "http://localhost:3102",
+    "BETTER_AUTH_SECRET": "acceptance-only-secret-never-use-outside-local-tests",
+    "GOOGLE_CLIENT_ID": "acceptance-not-a-real-oauth-client",
+    "GOOGLE_CLIENT_SECRET": "acceptance-not-a-real-oauth-secret",
+    "BYPASS_EMAIL_VERIFICATION": "true",
+    "HOSTED_ALLOWED_EMAILS": "acceptance-a@example.com,acceptance-b@example.com",
+    "DATAFORSEO_API_KEY": "",
+    "OPENROUTER_API_KEY": "",
+    "AUTUMN_SECRET_KEY": "",
+    "POSTHOG_PUBLIC_KEY": "",
+    "LOOPS_API_KEY": "",
+    "APIVERVE_API_KEY": "",
+    "WHOISFREAKS_API_KEY": "",
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "acceptance",
+      "database_id": "00000000-0000-0000-0000-000000000001",
+      "migrations_dir": "../../drizzle",
+      "remote": false,
+    },
+  ],
+  "r2_buckets": [
+    { "binding": "R2", "bucket_name": "acceptance", "remote": false },
+  ],
+  "kv_namespaces": [
+    { "binding": "KV", "id": "acceptance-kv", "remote": false },
+    { "binding": "OAUTH_KV", "id": "acceptance-oauth-kv", "remote": false },
+  ],
+  "workflows": [
+    {
+      "name": "acceptance-site-audit",
+      "binding": "SITE_AUDIT_WORKFLOW",
+      "class_name": "SiteAuditWorkflow",
+    },
+    {
+      "name": "acceptance-rank-check",
+      "binding": "RANK_CHECK_WORKFLOW",
+      "class_name": "RankCheckWorkflow",
+    },
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "ONBOARDING_CHAT", "class_name": "OnboardingChatAgent" },
+      { "name": "SAM_CHAT", "class_name": "SamChatAgent" },
+    ],
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["OnboardingChatAgent", "SamChatAgent"],
+    },
+  ],
+}

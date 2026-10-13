@@ -25,6 +25,8 @@ dist-sourcemaps/
 /public/build# Sentry Config File
 .env.sentry-build-plugin
 /test-results/
+/e2e/test-results/
+.tmp/
 /playwright-report/
 /blob-report/
 /playwright/.cache/

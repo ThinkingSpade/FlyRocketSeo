@@ -7,8 +7,20 @@ import tailwindcss from "@tailwindcss/vite";
 import { cloudflare } from "@cloudflare/vite-plugin";
 import { devtools } from "@tanstack/devtools-vite";
 
-export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+export default defineConfig(({ mode, command }) => {
+  const acceptance = mode === "acceptance";
+  if (
+    acceptance &&
+    (command !== "serve" || process.env.FLYROCKET_ACCEPTANCE !== "1")
+  ) {
+    throw new Error(
+      "Acceptance mode is restricted to the isolated local test runner",
+    );
+  }
+  const envDirectory = acceptance
+    ? fileURLToPath(new URL("./e2e/acceptance/", import.meta.url))
+    : process.cwd();
+  const env = loadEnv(mode, envDirectory, "");
   const port = process.env.PORT
     ? Number(process.env.PORT)
     : env.PORT
@@ -22,8 +34,21 @@ export default defineConfig(({ mode }) => {
   const emitSourcemaps = env.POSTHOG_SOURCEMAPS === "true";
 
   return {
+    envDir: envDirectory,
+    ...(acceptance
+      ? {
+          cacheDir: `node_modules/.cache/acceptance-vite/${process.env.FLYROCKET_ACCEPTANCE_STATE?.split(/[\\/]/).at(-1)}`,
+        }
+      : {}),
     resolve: {
       alias: {
+        ...(acceptance
+          ? {
+              "@/server/lib/gscClient": fileURLToPath(
+                new URL("./e2e/acceptance/gsc-client.ts", import.meta.url),
+              ),
+            }
+          : {}),
         // TODO: Remove this workaround once @cloudflare/think stops eagerly
         // importing just-bash at module init
         // (https://github.com/cloudflare/agents/issues/1673).
@@ -72,7 +97,17 @@ export default defineConfig(({ mode }) => {
             },
           })
         : null,
-      cloudflare({ inspectorPort: false, viteEnvironment: { name: "ssr" } }),
+      cloudflare({
+        inspectorPort: false,
+        viteEnvironment: { name: "ssr" },
+        ...(acceptance
+          ? {
+              configPath: "e2e/acceptance/wrangler.jsonc",
+              persistState: { path: process.env.FLYROCKET_ACCEPTANCE_STATE! },
+              remoteBindings: false,
+            }
+          : {}),
+      }),
       tsConfigPaths(),
       // SPA mode: prerender a static shell (the RootDocument, whose <body> is
       // already ClientOnly so SSR renders no page content anyway) to

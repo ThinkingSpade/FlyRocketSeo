@@ -3,7 +3,7 @@ import type { BacklinksHistoryItem } from "@/server/lib/dataforseo/backlinks";
 // Pure mapping for the backlinks history timeline (no I/O), split out so the
 // field fallbacks are unit-testable.
 
-export type BacklinksTimelinePoint = {
+type BacklinksTimelinePoint = {
   /** ISO date of the observation DataForSEO reports. */
   date: string;
   referringDomains: number | null;

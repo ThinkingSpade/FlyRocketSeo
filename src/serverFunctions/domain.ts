@@ -10,7 +10,9 @@ import {
 import { DomainService } from "@/server/features/domain/services/DomainService";
 
 function shouldUseDomainE2eFixtures() {
-  return import.meta.env.VITE_E2E_DOMAIN_FIXTURES === "1";
+  return (
+    import.meta.env.DEV && import.meta.env.VITE_E2E_DOMAIN_FIXTURES === "1"
+  );
 }
 
 async function getDomainE2eFixtures() {

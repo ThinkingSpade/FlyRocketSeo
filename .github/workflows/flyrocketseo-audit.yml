@@ -79,6 +79,18 @@ jobs:
           else
             echo 'Baseline: focused contract harness not yet committed.' | tee /tmp/flyrocketseo-audit/logs/contracts.txt
           fi
+      - name: Install isolated application test browser
+        id: browser_install
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm exec playwright install --with-deps chromium 2>&1 | tee /tmp/flyrocketseo-audit/logs/browser-install.txt
+      - name: Authenticated application acceptance with isolated fixtures
+        id: browser
+        if: steps.browser_install.outcome == 'success'
+        continue-on-error: true
+        env:
+          PLAYWRIGHT_CHANNEL: chromium
+        run: pnpm run test:e2e:acceptance 2>&1 | tee /tmp/flyrocketseo-audit/logs/browser.txt
       - name: Record exact outcomes
         if: always()
         env:
@@ -87,14 +99,20 @@ jobs:
           TESTS: ${{ steps.tests.outcome }}
           BUILD: ${{ steps.build.outcome }}
           CONTRACTS: ${{ steps.contracts.outcome }}
+          BROWSER_INSTALL: ${{ steps.browser_install.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
         run: |
-          printf 'Install: %s\nStatic: %s\nTests: %s\nBuild: %s\nContracts: %s\n' "$INSTALL" "$STATIC" "$TESTS" "$BUILD" "$CONTRACTS" > /tmp/flyrocketseo-audit/logs/outcomes.txt
+          printf 'Install: %s\nStatic: %s\nTests: %s\nBuild: %s\nContracts: %s\nBrowser install: %s\nIsolated authenticated browser: %s\n' "$INSTALL" "$STATIC" "$TESTS" "$BUILD" "$CONTRACTS" "$BROWSER_INSTALL" "$BROWSER" > /tmp/flyrocketseo-audit/logs/outcomes.txt
           cat /tmp/flyrocketseo-audit/logs/outcomes.txt >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: flyrocketseo-verification-logs
-          path: /tmp/flyrocketseo-audit/logs
+          path: |
+            /tmp/flyrocketseo-audit/logs
+            test-results/acceptance
+            test-results/acceptance-summary.json
+            test-results/acceptance-server.log
           retention-days: 7
       - name: Fail the check for any unsuccessful required verification
         if: always()
@@ -104,9 +122,13 @@ jobs:
           TESTS: ${{ steps.tests.outcome }}
           BUILD: ${{ steps.build.outcome }}
           CONTRACTS: ${{ steps.contracts.outcome }}
+          BROWSER_INSTALL: ${{ steps.browser_install.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
         run: |
           test "$INSTALL" = success
           test "$STATIC" = success
           test "$TESTS" = success
           test "$BUILD" = success
           test "$CONTRACTS" = success
+          test "$BROWSER_INSTALL" = success
+          test "$BROWSER" = success

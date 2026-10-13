@@ -17,6 +17,11 @@
     "src/db/pg/schema.ts",
     // Standalone CLI/dev scripts, invoked via package.json scripts
     "scripts/**",
+    // Test-only Worker/provider entrypoints and seed script are loaded by
+    // the isolated browser launcher and Vite configuration.
+    "e2e/acceptance/worker.ts",
+    "e2e/acceptance/gsc-client.ts",
+    "e2e/acceptance/seed.ts",
     // Complete, working component whose consumer is a deliberately separate,
     // not-yet-started plan (tab wiring + a confirmation banner) -- see
     // docs/superpowers/specs/2026-07-27-local-geo-targeting-design.md's
