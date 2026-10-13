@@ -16,13 +16,12 @@ jobs:
         with:
           ref: ${{ github.sha }}
           fetch-depth: 0
-      - name: Verify transport and apply only to the preserved UX base
+      - name: Prepare the verified candidate without changing the product branch
         run: |
+          cp scripts/ux/followup.py ../ux-followup.py
           python - <<'PY'
           import base64, gzip, hashlib, pathlib
           encoded = base64.b64encode(pathlib.Path('scripts/ux/refinement.patch.gz').read_bytes()).decode()
-          # Correct four transcription errors in the transport, never in source.
-          # The resulting source patch must match the locally tested SHA-256.
           fixes = [(2310,2311,''),(2399,2400,''),(4641,4642,'+'),(12692,12693,'8'),(17886,17888,'')]
           for start,end,value in reversed(fixes):
               encoded = encoded[:start] + value + encoded[end:]
@@ -32,6 +31,7 @@ jobs:
           PY
           git checkout --detach 1db6093128bf320abec956a7bbea717af4afae02
           git apply --index ../verified-refinement.patch
+          python ../ux-followup.py
           mkdir -p ux-checks ux-evidence
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
@@ -39,6 +39,25 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - name: Format and export exact candidate source
+        run: |
+          git add src/client scripts/ux/browser-review.mjs
+          git diff --cached --name-only -z | xargs -0 pnpm exec prettier --write
+          git add src/client scripts/ux/browser-review.mjs
+          git diff --cached --binary > ux-checks/verified-code.patch
+          git diff --cached --stat > ux-checks/changed-files.txt
+          sha256sum ux-checks/verified-code.patch > ux-checks/patch.sha256
+          cp ../ux-followup.py ux-checks/followup.py
+          tar -czf ux-checks/source-files.tar.gz $(git diff --cached --name-only)
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ux-candidate-source
+          path: |
+            ux-checks/verified-code.patch
+            ux-checks/patch.sha256
+            ux-checks/source-files.tar.gz
+            ux-checks/followup.py
+          retention-days: 7
       - name: Static checks
         id: static
         continue-on-error: true
@@ -68,6 +87,16 @@ jobs:
           pnpm exec vite dev --host 127.0.0.1 --strictPort > ux-evidence/server.log 2>&1 &
           for i in {1..80}; do if curl -s http://127.0.0.1:3101/ > /dev/null; then break; fi; sleep 2; done
           node scripts/ux/browser-review.mjs 2>&1 | tee ux-checks/browser.log
+      - name: Record acceptance outcomes
+        if: always()
+        env:
+          STATIC: ${{ steps.static.outcome }}
+          UNIT: ${{ steps.unit.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          BROWSER: ${{ steps.browser.outcome }}
+        run: |
+          mkdir -p ux-checks
+          printf 'static=%s\nunit=%s\nbuild=%s\nbrowser=%s\n' "$STATIC" "$UNIT" "$BUILD" "$BROWSER" > ux-checks/outcomes.txt
       - uses: actions/upload-artifact@v4
         if: always()
         with:
