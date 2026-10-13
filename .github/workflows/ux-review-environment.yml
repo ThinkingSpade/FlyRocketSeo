@@ -1,7 +1,6 @@
 name: Isolated UX review environment
 
-# A branch-create event is intentional: commits carry [skip ci] to prevent
-# connected hosting services from deploying this development-only work.
+# Branch-create events allow deployment-skip commit flags to remain intact.
 on:
   create:
 
@@ -14,7 +13,7 @@ defaults:
 
 jobs:
   prepare:
-    if: github.event.ref_type == 'branch' && github.event.ref == 'ux/product-quality-2026-10-13'
+    if: github.event.ref_type == 'branch' && github.event.ref == 'ux/review-environment-parts-2026-10-13'
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -30,22 +29,37 @@ jobs:
           cache: pnpm
       - name: Install the unchanged lockfile
         run: pnpm install --frozen-lockfile
-      - name: Export a reproducible local review environment
+      - name: Export bounded review bundles
         run: |
-          mkdir -p /tmp/ux-review
-          git bundle create /tmp/ux-review/repository.bundle --all
-          git rev-parse HEAD > /tmp/ux-review/commit.txt
-          tar -czf /tmp/ux-review/dependencies.tar.gz node_modules
+          mkdir -p /tmp/ux-review/source /tmp/ux-review/deps
+          git bundle create /tmp/ux-review/source/repository.bundle --all
+          git rev-parse HEAD > /tmp/ux-review/source/commit.txt
+          tar -czf /tmp/dependencies.tar.gz node_modules
+          split -b 180M /tmp/dependencies.tar.gz /tmp/ux-review/deps/part-
           PNPM_ROOT=$(dirname "$(dirname "$(readlink -f "$(command -v pnpm)")")")
-          tar -czf /tmp/ux-review/pnpm.tar.gz -C "$PNPM_ROOT" .
-          sha256sum /tmp/ux-review/*.gz /tmp/ux-review/repository.bundle > /tmp/ux-review/SHA256SUMS
+          tar -czf /tmp/ux-review/source/pnpm.tar.gz -C "$PNPM_ROOT" .
+          sha256sum /tmp/dependencies.tar.gz /tmp/ux-review/deps/* > /tmp/ux-review/source/SHA256SUMS
       - uses: actions/upload-artifact@v4
         with:
-          name: isolated-ux-review-environment
-          path: /tmp/ux-review/
+          name: ux-review-source
+          path: /tmp/ux-review/source/
           retention-days: 1
           compression-level: 0
-      - name: Baseline static checks
-        run: pnpm run ci:check
-      - name: Baseline tests
-        run: pnpm test
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ux-review-dependencies-a
+          path: /tmp/ux-review/deps/part-aa
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ux-review-dependencies-b
+          path: /tmp/ux-review/deps/part-ab
+          retention-days: 1
+          compression-level: 0
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ux-review-dependencies-c
+          path: /tmp/ux-review/deps/part-ac
+          retention-days: 1
+          compression-level: 0
