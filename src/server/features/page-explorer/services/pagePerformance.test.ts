@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/server/features/gsc/services/GscService", () => ({
   GscService: { getAnalyticsPerformance: vi.fn() },
@@ -38,19 +38,32 @@ const pull = (
   rows,
 });
 
+function mockPageReads(rows: Parameters<typeof pull>[0] = []) {
+  read.mockImplementation(async (request) => ({
+    ...pull(rows),
+    request: {
+      ...pull().request,
+      startDate: request.startDate ?? input.startDate,
+      endDate: request.endDate ?? input.endDate,
+    },
+  }));
+}
+beforeEach(() => {
+  read.mockReset();
+  mockPageReads();
+});
+
 describe("own-site page performance", () => {
   it("keeps exact page, property, device, country and equal final windows", async () => {
-    read.mockResolvedValue(
-      pull([
-        {
-          keys: ["2026-09-01"],
-          clicks: 3,
-          impressions: 30,
-          ctr: 0.1,
-          position: 9,
-        },
-      ]),
-    );
+    mockPageReads([
+      {
+        keys: ["2026-09-01"],
+        clicks: 3,
+        impressions: 30,
+        ctr: 0.1,
+        position: 9,
+      },
+    ]);
     const result = await getPagePerformance(input, "example.com");
     expect(result.connected).toBe(true);
     if (!result.connected) throw new Error("No report");
@@ -98,7 +111,7 @@ describe("own-site page performance", () => {
     );
   });
   it("preserves real observed zero and capture metadata", async () => {
-    read.mockResolvedValue(pull());
+    mockPageReads();
     const result = await getPagePerformance(input, "example.com");
     expect(result.connected).toBe(true);
     if (!result.connected) return;
@@ -136,6 +149,22 @@ describe("own-site page performance", () => {
     );
     await expect(getPagePerformance(input, "example.com")).rejects.toThrow(
       /invalid/i,
+    );
+  });
+  it("refuses a clamped previous request instead of labelling unequal evidence windows", async () => {
+    read.mockImplementation(async (request) => ({
+      ...pull(),
+      request: {
+        ...pull().request,
+        startDate:
+          request.startDate === "2026-08-04"
+            ? "2026-08-10"
+            : (request.startDate ?? input.startDate),
+        endDate: request.endDate ?? input.endDate,
+      },
+    }));
+    await expect(getPagePerformance(input, "example.com")).rejects.toThrow(
+      /window/i,
     );
   });
 });

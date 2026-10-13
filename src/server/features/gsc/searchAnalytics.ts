@@ -111,7 +111,7 @@ function formatDate(date: Date): string {
  * for the seven or eight hours between Pacific midnight and UTC midnight, every
  * convenience range was a day ahead of the calendar Google was using.
  */
-function pacificCalendarDate(instant: Date): Date {
+export function pacificCalendarDate(instant: Date): Date {
   // en-CA renders as YYYY-MM-DD, which is the format GSC wants anyway.
   const pacific = new Intl.DateTimeFormat("en-CA", {
     timeZone: "America/Los_Angeles",

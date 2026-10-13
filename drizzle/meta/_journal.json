@@ -309,6 +309,27 @@
       "when": 1787289924202,
       "tag": "0043_hot_riptide",
       "breakpoints": true
+    },
+    {
+      "idx": 44,
+      "version": "6",
+      "when": 1791882014514,
+      "tag": "0044_omniscient_kree",
+      "breakpoints": true
+    },
+    {
+      "idx": 45,
+      "version": "6",
+      "when": 1791882961262,
+      "tag": "0045_fat_bloodaxe",
+      "breakpoints": true
+    },
+    {
+      "idx": 46,
+      "version": "6",
+      "when": 1791883916063,
+      "tag": "0046_flashy_corsair",
+      "breakpoints": true
     }
   ]
 }

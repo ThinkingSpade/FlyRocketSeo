@@ -9,6 +9,8 @@ import * as pgSam from "./pg/sam.schema";
 import * as pgAuth from "./pg/better-auth-schema";
 import * as pgBilling from "./pg/billing.schema";
 import * as pgGsc from "./pg/gsc.schema";
+import * as sqliteOpportunities from "./opportunities.schema";
+import * as pgOpportunities from "./pg/opportunities.schema";
 
 // Canonical schema barrel. Repositories import their tables from here and the
 // provider-aware `db` from "@/db", so each repository is written ONCE for both
@@ -24,17 +26,26 @@ type AppSchema = typeof sqliteApp &
   typeof sqliteSam &
   typeof sqliteAuth &
   typeof sqliteBilling &
-  typeof sqliteGsc;
+  typeof sqliteGsc &
+  typeof sqliteOpportunities;
 
 const runtimeSchema =
   getDatabaseProvider() === "postgres"
-    ? { ...pgApp, ...pgSam, ...pgAuth, ...pgBilling, ...pgGsc }
+    ? {
+        ...pgApp,
+        ...pgSam,
+        ...pgAuth,
+        ...pgBilling,
+        ...pgGsc,
+        ...pgOpportunities,
+      }
     : {
         ...sqliteApp,
         ...sqliteSam,
         ...sqliteAuth,
         ...sqliteBilling,
         ...sqliteGsc,
+        ...sqliteOpportunities,
       };
 
 // oxlint-disable-next-line typescript/no-unsafe-type-assertion -- guarded by schema-parity.test.ts
@@ -78,4 +89,8 @@ export const {
   keywordFitVerdicts,
   gbpConnections,
   gbpScheduledPosts,
+  opportunities,
+  opportunitySnapshots,
+  opportunityEvents,
+  opportunityRuns,
 } = schema;

@@ -14,6 +14,8 @@ import * as pgSam from "./pg/sam.schema";
 import * as pgAuth from "./pg/better-auth-schema";
 import * as pgBilling from "./pg/billing.schema";
 import * as pgGsc from "./pg/gsc.schema";
+import * as sqliteOpportunities from "./opportunities.schema";
+import * as pgOpportunities from "./pg/opportunities.schema";
 
 // Guards the ONE structural artifact `db:generate` does not regenerate: the
 // hand-written Postgres schema. The provider-aware `db`/`@/db/schema` barrel
@@ -168,8 +170,9 @@ const sqliteAppTables = tablesFrom(
   sqliteSam,
   sqliteBilling,
   sqliteGsc,
+  sqliteOpportunities,
 );
-const pgAppTables = tablesFrom(pgApp, pgSam, pgBilling, pgGsc);
+const pgAppTables = tablesFrom(pgApp, pgSam, pgBilling, pgGsc, pgOpportunities);
 const sqliteAuthTables = tablesFrom(sqliteAuth);
 const pgAuthTables = tablesFrom(pgAuth);
 

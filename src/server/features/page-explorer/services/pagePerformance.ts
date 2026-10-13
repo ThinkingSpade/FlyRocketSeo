@@ -133,6 +133,19 @@ export async function getPagePerformance(
         "Search Console property or account changed during this read. Reload the evidence.",
       );
     }
+    if (
+      current.request.startDate !== range.startDate ||
+      current.request.endDate !== range.endDate ||
+      queries.request.startDate !== range.startDate ||
+      queries.request.endDate !== range.endDate ||
+      prior.request.startDate !== previous.startDate ||
+      prior.request.endDate !== previous.endDate
+    ) {
+      throw new AppError(
+        "VALIDATION_ERROR",
+        "Search Console changed a requested evidence window. Select complete comparable windows within the available history.",
+      );
+    }
     return {
       connected: true as const,
       source: "Google Search Console" as const,
