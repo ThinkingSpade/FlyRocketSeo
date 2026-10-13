@@ -23,9 +23,19 @@ Acceptance run `38443982692` verified that latter code against the locked depend
 
 Screenshot inspection found that geometry and visibility checks did not establish whether a menu item could receive a pointer action. A new real-component browser regression reproduced the selection toolbar covering the CSV option in both 320px and 390px touch configurations. The two mouse configurations passed before the fix; both touch configurations failed on intercepted pointer events. This was not a mock assertion or an intentionally forced click.
 
-The repair sets the bulk export menu's portaled positioner above the toolbar and below modal dialogs. All four configurations then passed actual clicks/taps on both menu items, callback counts, closing behavior and Escape focus restoration. Local tests also reran the baseline's full 3,266-test suite successfully. Final branch verification must include the new component regression in addition to the existing full-application suite.
+The repair sets the bulk export menu's portaled positioner above the toolbar and below modal dialogs. All four configurations then passed actual clicks/taps on both menu items, callback counts, closing behavior and Escape focus restoration. Local tests also reran the baseline's full 3,266-test suite successfully. The fresh acceptance run below includes the new component regression in addition to the existing full-application suite.
 
 The six documents in this directory describe actual changes and remaining gaps. Earlier `docs/audits/verification-results.md` describes the earlier reliability stage; this document supplements it rather than retroactively changing that stage's evidence.
+
+## Final code acceptance
+
+Read-only GitHub Actions run `38471687005` tested commit `631f662396a4f2e663df949d45604bfdae99318f`. All five gates passed: static checks, the complete native test suite, production build, real-component mouse/touch regression and full-application browser checks. The downloaded `ux-closeout-evidence` artifact (`11851769863`) contains the exact tested SHA, gate outcomes, logs, JSON and screenshots.
+
+The final results are 3,266 tests in 330 files, 16 application interaction checks and 43 application captures, plus four component viewport/input configurations with eight component captures. No page JavaScript exceptions, capture errors or document overflow were recorded. The network summary preserves 37 known local-noauth session-endpoint 404s and reports no other captured HTTP failures. The real-application mobile export screenshot now shows the previously covered CSV option above the toolbar.
+
+The local index exactly matched GitHub source tree `c1dff43cd512264f8599275ed448ec847736fbe0` before this run. Local static checks, all 3,266 native tests and all four final component configurations also passed. The preserved opportunity harness passed 20 cases and the project-access recovery harness passed. The non-fatal Knip hint and build large-chunk advisory remain.
+
+This verification-document update follows the tested commit and changes documentation only. Its formatting and whitespace are checked separately; it is not presented as a second full CI run. The product branch contains the source, regression script and all six UX documents. No merge, deployment, remote database migration or paid lookup was performed during this closeout.
 
 ## Reproduce without deploying
 
