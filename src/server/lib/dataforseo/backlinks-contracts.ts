@@ -31,6 +31,31 @@ function targetIdentity(value: string): string {
     : trimmed.toLowerCase().replace(/^www\./, "");
 }
 
+function matchesIndexedTargets(raw: unknown, targets: string[]): boolean {
+  if (!isRecord(raw) || Object.keys(raw).length !== targets.length)
+    return false;
+  return Object.entries(raw).every(
+    ([key, target]) =>
+      /^[1-9]\d*$/.test(key) &&
+      Number(key) <= targets.length &&
+      typeof target === "string" &&
+      targetIdentity(target) === targetIdentity(targets[Number(key) - 1]),
+  );
+}
+
+function matchesExcludedTargets(raw: unknown, targets: string[]): boolean {
+  if (!Array.isArray(raw)) return false;
+  const values: unknown[] = raw;
+  if (!values.every((target): target is string => typeof target === "string"))
+    return false;
+  const expected = new Set(targets.map(targetIdentity));
+  const actual = new Set(values.map(targetIdentity));
+  return (
+    actual.size === expected.size &&
+    [...actual].every((target) => expected.has(target))
+  );
+}
+
 export function parseScopedBacklinksItems<T extends z.ZodType>(
   endpoint: string,
   task: DataforseoTaskLike,
@@ -38,6 +63,10 @@ export function parseScopedBacklinksItems<T extends z.ZodType>(
   scope: {
     target?: string;
     targets?: string[];
+    excludeTargets?: string[];
+    includeSubdomains?: boolean;
+    excludeInternalBacklinks?: boolean;
+    rankScale?: "one_hundred";
     intersection?: boolean;
     dateFrom?: string;
     dateTo?: string;
@@ -83,16 +112,33 @@ export function parseScopedBacklinksItems<T extends z.ZodType>(
       )
         throw fail("returned an unrequested intersection index");
     }
-    if (isRecord(first.targets)) {
-      for (const [key, target] of Object.entries(first.targets)) {
+    // Both declared request metadata and result metadata bind the index-to-
+    // target mapping. Exclusions define the owned target's link gap, so a
+    // different exclusion cannot be saved as evidence of missing owned links.
+    for (const reported of [task.data, first].filter(isRecord)) {
+      for (const [field, expected] of [
+        ["include_subdomains", scope.includeSubdomains],
+        ["exclude_internal_backlinks", scope.excludeInternalBacklinks],
+        ["rank_scale", scope.rankScale],
+      ] as const) {
         if (
-          !indexes.has(key) ||
-          typeof target !== "string" ||
-          targetIdentity(target) !==
-            targetIdentity(scope.targets[Number(key) - 1])
+          expected !== undefined &&
+          reported[field] != null &&
+          reported[field] !== expected
         )
-          throw fail("returned a mismatched intersection scope");
+          throw fail(`returned mismatched ${field}`);
       }
+      if (
+        reported.targets != null &&
+        !matchesIndexedTargets(reported.targets, scope.targets)
+      )
+        throw fail("returned a mismatched intersection scope");
+      if (
+        scope.excludeTargets &&
+        reported.exclude_targets != null &&
+        !matchesExcludedTargets(reported.exclude_targets, scope.excludeTargets)
+      )
+        throw fail("returned mismatched excluded targets");
     }
   } else if (scope.targets) {
     const requested = new Set(scope.targets.map(targetIdentity));
