@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getProjectNavGroups } from "./items";
+import { getProjectNavGroups, getProjectSidebarGroups } from "./items";
 
 const destinations = [
   "",
@@ -29,6 +29,21 @@ const destinations = [
 ].map((suffix) => `/p/$projectId${suffix}`);
 
 describe("workflow navigation", () => {
+  it("shows fewer primary links while retaining every tool as a related destination", () => {
+    const groups = getProjectSidebarGroups("project-a");
+    const primary = groups.flatMap((group) => group.items);
+    expect(primary.length).toBeLessThanOrEqual(12);
+    const paths = groups.flatMap((group) =>
+      [...group.items, ...group.relatedItems].map((item) => item.to),
+    );
+    expect(paths.toSorted()).toEqual(destinations.toSorted());
+    expect(new Set(paths).size).toBe(24);
+    expect(
+      groups
+        .flatMap((group) => group.relatedItems)
+        .every((item) => item.params.projectId === "project-a"),
+    ).toBe(true);
+  });
   it("puts the overview and next actions before specialist research tools", () => {
     const groups = getProjectNavGroups("project-a");
     expect(groups.map((group) => group.label)).toEqual([

@@ -55,7 +55,7 @@ const projectNavItems = [
   },
   {
     to: "/p/$projectId/page" as const,
-    label: "Page Explorer",
+    label: "Page Investigation",
     icon: FileMagnifyingGlass,
   },
   {
@@ -225,6 +225,30 @@ export function getProjectNavGroups(projectId: string) {
       items: [byPath("/p/$projectId/report")],
     },
   ];
+}
+
+// Main workflows stay visible; specialist tools remain discoverable beside
+// their related workflow and retain their original routes.
+export function getProjectSidebarGroups(projectId: string) {
+  const mainDestinations = new Set([
+    "/p/$projectId",
+    "/p/$projectId/opportunities",
+    "/p/$projectId/keywords",
+    "/p/$projectId/domain",
+    "/p/$projectId/competitors",
+    "/p/$projectId/audit",
+    "/p/$projectId/page",
+    "/p/$projectId/content",
+    "/p/$projectId/search-performance",
+    "/p/$projectId/rank-tracking",
+    "/p/$projectId/local",
+    "/p/$projectId/report",
+  ]);
+  return getProjectNavGroups(projectId).map((group) => ({
+    ...group,
+    items: group.items.filter((item) => mainDestinations.has(item.to)),
+    relatedItems: group.items.filter((item) => !mainDestinations.has(item.to)),
+  }));
 }
 
 export const dataforseoHelpLinkOptions = linkOptions({

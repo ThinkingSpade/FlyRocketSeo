@@ -1,9 +1,7 @@
-import * as React from "react";
 import { Link } from "@tanstack/react-router";
-import { Warning, ArrowSquareOut } from "@phosphor-icons/react";
+import { Warning } from "@phosphor-icons/react";
 import { Sidebar } from "@/client/components/Sidebar";
 import { dataforseoHelpLinkOptions } from "@/client/navigation/items";
-import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
 import { Banner } from "@cloudflare/kumo/components/banner";
 
 function SeoApiStatusBanners({
@@ -18,11 +16,12 @@ function SeoApiStatusBanners({
       {shouldShowSeoApiWarning ? (
         <div className="shrink-0 px-4 py-2.5 md:px-6">
           <div className="mx-auto max-w-7xl">
-            <Banner variant="alert">
+            <Banner variant="default">
               <Warning className="size-4 shrink-0" />
               <span className="text-sm">
-                Setup needed: add your DataForSEO API key to use FlyRocketSEO
-                features. See the quick steps on the{" "}
+                Provider research is optional. Search Console and stored site
+                evidence remain available. Add a DataForSEO API key when you
+                need provider research; see the{" "}
                 <Link
                   {...dataforseoHelpLinkOptions}
                   className="app-link font-medium"
@@ -86,64 +85,4 @@ function MobileSidebarDrawer({
   );
 }
 
-const MissingSeoSetupModal = React.forwardRef<
-  HTMLDivElement,
-  {
-    isOpen: boolean;
-    onClose: () => void;
-  }
->(({ isOpen, onClose }, ref) => {
-  if (!isOpen) return null;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div
-        ref={ref}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dataforseo-setup-title"
-        aria-describedby="dataforseo-setup-description"
-        tabIndex={-1}
-        className="w-full max-w-lg rounded-xl border border-base-300 bg-base-100 p-5 shadow-2xl"
-      >
-        <div className="flex items-start gap-3">
-          <div className="rounded-full bg-warning/20 p-2 text-warning">
-            <Warning className="size-5" />
-          </div>
-          <div className="space-y-2">
-            <h2
-              id="dataforseo-setup-title"
-              className="text-lg font-semibold text-base-content"
-            >
-              One quick setup step
-            </h2>
-            <p
-              id="dataforseo-setup-description"
-              className="text-sm text-base-content/75"
-            >
-              Add your DataForSEO API key to start using FlyRocketSEO.
-            </p>
-          </div>
-        </div>
-
-        <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
-          <Button type="button" variant="ghost" onClick={onClose}>
-            Dismiss
-          </Button>
-          <Link
-            {...dataforseoHelpLinkOptions}
-            className={buttonVariants({ variant: "primary" })}
-            onClick={onClose}
-          >
-            Open setup guide
-            <ArrowSquareOut className="size-4" />
-          </Link>
-        </div>
-      </div>
-    </div>
-  );
-});
-
-MissingSeoSetupModal.displayName = "MissingSeoSetupModal";
-
-export { MissingSeoSetupModal, MobileSidebarDrawer, SeoApiStatusBanners };
+export { MobileSidebarDrawer, SeoApiStatusBanners };

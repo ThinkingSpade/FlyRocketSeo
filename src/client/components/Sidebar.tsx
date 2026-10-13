@@ -16,7 +16,7 @@ import {
 import { openCommandPalette } from "@/client/components/CommandPalette";
 import {
   connectNavGroup,
-  getProjectNavGroups,
+  getProjectSidebarGroups,
 } from "@/client/navigation/items";
 import { ProjectSwitcher } from "@/client/features/projects/ProjectSwitcher";
 import { WorkspaceSwitcher } from "@/client/features/workspaces/WorkspaceSwitcher";
@@ -87,8 +87,8 @@ function SidebarNavLink({
 
 export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
   const navGroups = [
-    ...(projectId ? getProjectNavGroups(projectId) : []),
-    connectNavGroup,
+    ...(projectId ? getProjectSidebarGroups(projectId) : []),
+    { ...connectNavGroup, relatedItems: [] },
   ];
   const navigate = useNavigate();
   const location = useLocation();
@@ -221,6 +221,35 @@ export function Sidebar({ projectId, onNavigate, onClose }: SidebarProps) {
                   />
                 );
               })}
+              {group.relatedItems.length > 0 ? (
+                <details
+                  key={`${group.label}-${location.pathname}`}
+                  open={
+                    group.relatedItems.some(
+                      (item) =>
+                        location.pathname ===
+                        item.to.replace("$projectId", projectId ?? ""),
+                    ) || undefined
+                  }
+                  className="mt-1"
+                >
+                  <summary className="cursor-pointer rounded-md px-3 py-1.5 text-xs text-base-content/65 hover:bg-base-300/50">
+                    More {group.label.toLowerCase()} tools
+                  </summary>
+                  {group.relatedItems.map((item) => {
+                    const { icon, label, ...linkProps } = item;
+                    return (
+                      <SidebarNavLink
+                        key={linkProps.to}
+                        icon={icon}
+                        label={label}
+                        onNavigate={onNavigate}
+                        linkProps={linkProps}
+                      />
+                    );
+                  })}
+                </details>
+              ) : null}
             </div>
           ))}
         </nav>
