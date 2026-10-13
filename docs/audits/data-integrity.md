@@ -44,7 +44,36 @@ Additional providers should require a demonstrated unmet dataset need, documente
 
 ## Open integrity work
 
-Expand the register into field-level contracts and golden fixtures for every provider envelope. Test null/zero/partial/truncated/stale/invalid states, missing date buckets, current-target changes, and two-organization isolation. Add source/freshness metadata consistently to exports as well as screens. The unresolved backlinks and partial rank-history fields are first in that queue.
+Expand the register into field-level contracts and golden fixtures for every provider envelope. Test null/zero/partial/truncated/stale/invalid states, missing date buckets, current-target changes, and two-organization isolation. Add source/freshness metadata consistently to exports as well as screens.
+
+### History contract repair, continuation on 2026-10-13
+
+Backlinks monthly `referring_domains`, `new_referring_domains` (including the
+provider's misspelled alias), `lost_referring_domains`, `new_backlinks` and
+`lost_backlinks` now accept only nonnegative safe integer observations. Missing,
+invalid and negative fields map to null; reported zero remains zero. Invalid
+calendar observations are omitted, without adding replacement months. The
+chart preserves null gaps and shows unavailable event coverage. A velocity
+average requires reported gain and loss counts in every returned month.
+DataForSEO documents event counts before May 2021 as unsupported placeholders;
+those historical zeros remain null. Aggregate counts also reject overflow.
+See the [provider's history field contract](https://docs.dataforseo.com/v3/backlinks/history/live/).
+
+Domain rank history `count`, `pos_1` and `pos_2_3` require nonnegative integer
+observations; `etv` permits nonnegative finite estimates. Top-three keywords
+are known only when both component buckets are known. Missing buckets and
+invalid dates remain unknown. These values remain DataForSEO estimates, with
+the original capture date visible in the screen.
+See [historical rank fields](https://docs.dataforseo.com/v3/dataforseo_labs/google/historical_rank_overview/live/).
+
+Both ephemeral history cache envelopes use `contractVersion: 2`; older mapped
+zeros cannot reveal whether the source field was present, so they are not
+certified observations. A correct cached result retains its original capture
+time and scopes. Refresh remains explicitly metered. The saved Backlinks
+overview payload and existing row CSV exports use their existing separate
+contracts; no historical values or synthetic observations are added to them.
+Golden provider fixtures and cache/UI/export regressions exercise this repair.
+Live entitlement and responses remain blocked without approved test access.
 
 ## Primary references
 

@@ -14,6 +14,7 @@ import {
 } from "@/client/lib/useMeteredQuery";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 
 const KEYWORDS_COLOR = "#2563eb";
 
@@ -79,7 +80,7 @@ export function DomainVisibilityTrend({
           if (!first) return "";
           return [
             `<div style="font-size:11px;font-weight:500">${formatMonth(first.axisValue)}</div>`,
-            `<div style="font-size:12px">${(first.value ?? 0).toLocaleString()} keywords</div>`,
+            `<div style="font-size:12px">${first.value == null ? "Not reported" : `${first.value.toLocaleString()} keywords`}</div>`,
           ].join("");
         },
       },
@@ -138,8 +139,13 @@ export function DomainVisibilityTrend({
         <div>
           <h2 className="text-sm font-semibold">Organic Visibility Trend</h2>
           <p className="text-xs text-base-content/50">
-            Monthly ranking keywords over time
+            DataForSEO estimates · Monthly ranking keywords over time
           </p>
+          {query.data ? (
+            <p className="text-xs text-base-content/50">
+              Captured {query.data.fetchedAt.slice(0, 10)} (UTC).
+            </p>
+          ) : null}
         </div>
         {query.isFetching ? <Loader size="sm" /> : null}
       </div>
@@ -160,9 +166,20 @@ export function DomainVisibilityTrend({
           <div className="flex items-center justify-center py-12">
             <Loader />
           </div>
+        ) : query.isError ? (
+          <InlineQueryError
+            message="The historical visibility data could not be loaded."
+            retrying={query.isFetching}
+            retryLabel="Retry (uses credits)"
+            onRetry={() => void query.refetch()}
+          />
         ) : points.length === 0 ? (
           <p className="py-8 text-center text-sm text-base-content/50">
             No historical visibility data available for this domain.
+          </p>
+        ) : points.every((point) => point.organicKeywords == null) ? (
+          <p className="py-8 text-center text-sm text-base-content/50">
+            Historical ranking keyword counts weren’t reported for this domain.
           </p>
         ) : (
           <Chart

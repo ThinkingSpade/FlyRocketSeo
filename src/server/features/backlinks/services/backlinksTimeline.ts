@@ -4,13 +4,13 @@ import type { BacklinksHistoryItem } from "@/server/lib/dataforseo/backlinks";
 // field fallbacks are unit-testable.
 
 export type BacklinksTimelinePoint = {
-  /** ISO date (first day of the period DataForSEO reports). */
+  /** ISO date of the observation DataForSEO reports. */
   date: string;
   referringDomains: number | null;
-  newReferringDomains: number;
-  lostReferringDomains: number;
-  newBacklinks: number;
-  lostBacklinks: number;
+  newReferringDomains: number | null;
+  lostReferringDomains: number | null;
+  newBacklinks: number | null;
+  lostBacklinks: number | null;
 };
 
 /**
@@ -24,18 +24,38 @@ export function mapBacklinksTimeline(
   return items
     .map((item) => {
       const date = item.date?.slice(0, 10);
-      if (!date) return null;
+      if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+      const parsed = new Date(`${date}T00:00:00Z`);
+      if (
+        !Number.isFinite(parsed.getTime()) ||
+        parsed.toISOString().slice(0, 10) !== date
+      )
+        return null;
+      // The provider documents pre-May-2021 event counts as unavailable and
+      // returns placeholder zeroes: those cannot establish zero movement.
+      // https://docs.dataforseo.com/v3/backlinks/history/live/
+      const eventsAvailable = date >= "2021-05-01";
       return {
         date,
-        referringDomains: item.referring_domains ?? null,
-        newReferringDomains:
-          item.new_referring_domains ?? item.new_reffering_domains ?? 0,
-        lostReferringDomains:
-          item.lost_referring_domains ?? item.lost_reffering_domains ?? 0,
-        newBacklinks: item.new_backlinks ?? 0,
-        lostBacklinks: item.lost_backlinks ?? 0,
+        referringDomains: readCount(item.referring_domains),
+        newReferringDomains: eventsAvailable
+          ? readCount(item.new_referring_domains ?? item.new_reffering_domains)
+          : null,
+        lostReferringDomains: eventsAvailable
+          ? readCount(
+              item.lost_referring_domains ?? item.lost_reffering_domains,
+            )
+          : null,
+        newBacklinks: eventsAvailable ? readCount(item.new_backlinks) : null,
+        lostBacklinks: eventsAvailable ? readCount(item.lost_backlinks) : null,
       };
     })
     .filter((point): point is BacklinksTimelinePoint => point != null)
     .toSorted((a, b) => a.date.localeCompare(b.date));
+}
+
+function readCount(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : null;
 }

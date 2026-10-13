@@ -11,14 +11,16 @@ const RANK_HISTORY_TTL_SECONDS = 24 * 60 * 60;
 
 const rankHistoryPointSchema = z.object({
   date: z.string(),
-  organicKeywords: z.number().nullable(),
-  organicTraffic: z.number().nullable(),
-  top3: z.number().nullable(),
+  organicKeywords: z.number().int().nonnegative().nullable(),
+  organicTraffic: z.number().nonnegative().nullable(),
+  top3: z.number().int().nonnegative().nullable(),
 });
 
 type RankHistoryPoint = z.infer<typeof rankHistoryPointSchema>;
 
 const rankHistoryResultSchema = z.object({
+  // Legacy mapped caches cannot reveal which partial buckets were defaulted.
+  contractVersion: z.literal(2),
   points: z.array(rankHistoryPointSchema),
   fetchedAt: z.string(),
 });
@@ -35,15 +37,26 @@ function readOrganicMetric(
   const organic = metrics.organic;
   if (!isRecord(organic)) return null;
   const value = organic[key];
-  return typeof value === "number" ? value : null;
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0)
+    return null;
+  return key === "etv" || Number.isSafeInteger(value) ? value : null;
 }
 
 function mapPoint(item: HistoricalRankOverviewItem): RankHistoryPoint | null {
   if (item.year == null || item.month == null) return null;
+  if (
+    !Number.isInteger(item.year) ||
+    item.year < 1000 ||
+    item.year > 9999 ||
+    !Number.isInteger(item.month) ||
+    item.month < 1 ||
+    item.month > 12
+  )
+    return null;
   const pos1 = readOrganicMetric(item, "pos_1");
   const pos23 = readOrganicMetric(item, "pos_2_3");
-  const top3 =
-    pos1 == null && pos23 == null ? null : (pos1 ?? 0) + (pos23 ?? 0);
+  const total = pos1 == null || pos23 == null ? null : pos1 + pos23;
+  const top3 = total != null && Number.isSafeInteger(total) ? total : null;
   return {
     date: `${item.year}-${String(item.month).padStart(2, "0")}`,
     organicKeywords: readOrganicMetric(item, "count"),
@@ -90,6 +103,7 @@ export async function getRankHistory(
     .toSorted((a, b) => a.date.localeCompare(b.date));
 
   const result: RankHistoryResult = {
+    contractVersion: 2,
     points,
     fetchedAt: new Date().toISOString(),
   };

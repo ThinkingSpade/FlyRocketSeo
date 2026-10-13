@@ -50,4 +50,39 @@ describe("computeLinkVelocity", () => {
     expect(velocity?.latestNet).toBe(-8);
     expect(velocity?.netPerMonth).toBe(1);
   });
+
+  it("does not call missing monthly evidence flat or include it as zero movement", () => {
+    const unknown = { ...month(0, 0), newReferringDomains: null };
+    expect(computeLinkVelocity([unknown])).toBeNull();
+    expect(computeLinkVelocity([month(10, 2), unknown])).toBeNull();
+    expect(
+      computeLinkVelocity([{ ...month(0, 0), lostReferringDomains: null }]),
+    ).toBeNull();
+  });
+
+  it("keeps an observed zero month as real evidence", () => {
+    expect(computeLinkVelocity([month(0, 0)])).toMatchObject({
+      months: 1,
+      netPerMonth: 0,
+      latestNet: 0,
+      direction: "flat",
+    });
+  });
+
+  it.each([Number.NaN, Number.POSITIVE_INFINITY, -1, 0.5])(
+    "does not derive velocity from invalid referring-domain counts (%s)",
+    (count) => {
+      expect(computeLinkVelocity([month(count, 0)])).toBeNull();
+      expect(computeLinkVelocity([month(0, count)])).toBeNull();
+    },
+  );
+
+  it("does not derive a plausible average when event totals overflow exact integers", () => {
+    expect(
+      computeLinkVelocity([month(Number.MAX_SAFE_INTEGER, 0), month(1, 0)]),
+    ).toBeNull();
+    expect(
+      computeLinkVelocity([month(0, Number.MAX_SAFE_INTEGER), month(0, 1)]),
+    ).toBeNull();
+  });
 });

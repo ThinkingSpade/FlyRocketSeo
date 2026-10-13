@@ -39,11 +39,24 @@ export function computeLinkVelocity(
 
   let gained = 0;
   let lost = 0;
-  // Months the provider has no figure for count as zero movement rather than
-  // being dropped: a quiet month is real signal for a velocity average.
+  // A window average requires both event counts for every returned month.
+  // Missing counts are unknown, while observed zero counts are quiet months.
   for (const row of trends) {
-    gained += row.newReferringDomains ?? 0;
-    lost += row.lostReferringDomains ?? 0;
+    const newDomains = row.newReferringDomains;
+    const lostDomains = row.lostReferringDomains;
+    if (
+      newDomains == null ||
+      lostDomains == null ||
+      !Number.isSafeInteger(newDomains) ||
+      newDomains < 0 ||
+      !Number.isSafeInteger(lostDomains) ||
+      lostDomains < 0
+    )
+      return null;
+    gained += newDomains;
+    lost += lostDomains;
+    if (!Number.isSafeInteger(gained) || !Number.isSafeInteger(lost))
+      return null;
   }
 
   const months = trends.length;
@@ -53,9 +66,11 @@ export function computeLinkVelocity(
 
   const latest = trends.at(-1);
   const latestNet =
-    latest == null
+    latest == null ||
+    latest.newReferringDomains == null ||
+    latest.lostReferringDomains == null
       ? null
-      : (latest.newReferringDomains ?? 0) - (latest.lostReferringDomains ?? 0);
+      : latest.newReferringDomains - latest.lostReferringDomains;
 
   const flatBand = Math.max(
     FLAT_FLOOR,

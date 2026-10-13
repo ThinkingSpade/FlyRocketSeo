@@ -24,10 +24,10 @@ const TOTAL_COLOR = "#2563eb";
 
 type TimelineRow = {
   label: string;
-  gained: number;
+  gained: number | null;
   /** Negative for the diverging bar. */
-  lostNegative: number;
-  lost: number;
+  lostNegative: number | null;
+  lost: number | null;
   referringDomains: number | null;
 };
 
@@ -76,7 +76,10 @@ export function BacklinksTimelineSection({
       points.map((point) => ({
         label: monthLabel(point.date),
         gained: point.newReferringDomains,
-        lostNegative: -point.lostReferringDomains,
+        lostNegative:
+          point.lostReferringDomains == null
+            ? null
+            : -point.lostReferringDomains,
         lost: point.lostReferringDomains,
         referringDomains: point.referringDomains,
       })),
@@ -92,19 +95,35 @@ export function BacklinksTimelineSection({
   );
   const hasRecordedActivity =
     isActivitySeries(gainedInformation) || isActivitySeries(lostInformation);
+  const eventsComplete = rows.every(
+    (row) => row.gained != null && row.lost != null,
+  );
   const emptyPresentation =
-    gainedInformation.kind === "insufficient"
+    gainedInformation.kind === "all-null" &&
+    lostInformation.kind === "all-null" &&
+    totalInformation.kind !== "varying"
       ? {
-          title: "Not enough history",
-          description: "At least 2 monthly snapshots are needed.",
+          title:
+            "Historical referring-domain gains and losses weren’t reported.",
+          description: undefined,
         }
-      : !hasRecordedActivity && totalInformation.kind !== "varying"
+      : !hasRecordedActivity &&
+          totalInformation.kind !== "varying" &&
+          (gainedInformation.kind === "insufficient" ||
+            lostInformation.kind === "insufficient")
         ? {
-            title:
-              "No referring-domain gains or losses were recorded in this period.",
-            description: undefined,
+            title: "Not enough history",
+            description:
+              "At least 2 reported monthly values are needed. Missing values remain unknown.",
           }
-        : null;
+        : !hasRecordedActivity && totalInformation.kind !== "varying"
+          ? {
+              title: eventsComplete
+                ? "No referring-domain gains or losses were recorded in this period."
+                : "Historical referring-domain gains and losses weren’t reported for every month.",
+              description: undefined,
+            }
+          : null;
 
   const options = useMemo(
     () => ({
@@ -141,8 +160,8 @@ export function BacklinksTimelineSection({
           if (!row) return "";
           return [
             `<div style="font-size:12px;font-weight:500;padding-bottom:2px">${row.label}</div>`,
-            `<div style="font-size:12px;color:var(--color-success)">+${row.gained} won</div>`,
-            `<div style="font-size:12px;color:var(--color-error)">−${row.lost} lost</div>`,
+            `<div style="font-size:12px;color:var(--color-success)">${row.gained == null ? "Not reported" : `+${row.gained}`} won</div>`,
+            `<div style="font-size:12px;color:var(--color-error)">${row.lost == null ? "Not reported" : `−${row.lost}`} lost</div>`,
             row.referringDomains == null
               ? ""
               : `<div style="font-size:12px;opacity:0.6">${row.referringDomains.toLocaleString()} referring domains total</div>`,
@@ -201,7 +220,7 @@ export function BacklinksTimelineSection({
           data: rows.map((row) => row.referringDomains),
           smooth: true,
           symbol: "none" as const,
-          connectNulls: true,
+          connectNulls: false,
           lineStyle: { width: 2, color: TOTAL_COLOR },
           itemStyle: { color: TOTAL_COLOR },
           animation: false,
@@ -221,6 +240,13 @@ export function BacklinksTimelineSection({
         Monthly gains (green) and losses (red) over the last year, with total
         referring domains as the line.
       </p>
+      {timelineQuery.data ? (
+        <p className="mt-1 text-xs text-base-content/50">
+          DataForSEO backlink index · Captured{" "}
+          {timelineQuery.data.fetchedAt.slice(0, 10)} (UTC). Missing values
+          remain unknown.
+        </p>
+      ) : null}
       {timelineQuery.isPending ? (
         <div className="flex items-center justify-center py-14">
           <Loader size="sm" />
@@ -230,6 +256,7 @@ export function BacklinksTimelineSection({
           className="mt-3"
           message="The backlink timeline could not be loaded."
           retrying={timelineQuery.isFetching}
+          retryLabel="Retry (uses credits)"
           onRetry={() => void timelineQuery.refetch()}
         />
       ) : emptyPresentation ? (

@@ -2,10 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { AnalysisRunService } from "@/server/features/analysis-runs/services/analysisRuns";
 import { BacklinksService } from "@/server/features/backlinks/services/BacklinksService";
-import {
-  mapBacklinksTimeline,
-  type BacklinksTimelinePoint,
-} from "@/server/features/backlinks/services/backlinksTimeline";
+import { mapBacklinksTimeline } from "@/server/features/backlinks/services/backlinksTimeline";
 import {
   createDataforseoClient,
   normalizeBacklinksTarget,
@@ -151,15 +148,17 @@ const TIMELINE_TTL_SECONDS = 24 * 60 * 60;
 const TIMELINE_MONTHS = 12;
 
 const timelinePointSchema = z.object({
-  date: z.string(),
-  referringDomains: z.number().nullable(),
-  newReferringDomains: z.number(),
-  lostReferringDomains: z.number(),
-  newBacklinks: z.number(),
-  lostBacklinks: z.number(),
+  date: z.iso.date(),
+  referringDomains: z.number().int().nonnegative().nullable(),
+  newReferringDomains: z.number().int().nonnegative().nullable(),
+  lostReferringDomains: z.number().int().nonnegative().nullable(),
+  newBacklinks: z.number().int().nonnegative().nullable(),
+  lostBacklinks: z.number().int().nonnegative().nullable(),
 });
 
 const timelineResultSchema = z.object({
+  // Legacy zeros may be fabricated, so they cannot satisfy this contract.
+  contractVersion: z.literal(2),
   points: z.array(timelinePointSchema),
   fetchedAt: z.string(),
 });
@@ -208,7 +207,8 @@ export const getBacklinksTimeline = createServerFn({ method: "POST" })
       dateTo: toIso,
     });
 
-    const result: { points: BacklinksTimelinePoint[]; fetchedAt: string } = {
+    const result: z.infer<typeof timelineResultSchema> = {
+      contractVersion: 2,
       points: mapBacklinksTimeline(items),
       fetchedAt: new Date().toISOString(),
     };
