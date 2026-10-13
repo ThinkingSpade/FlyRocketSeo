@@ -3,6 +3,7 @@ import { requireProjectContext } from "@/serverFunctions/middleware";
 import { OpportunityService } from "@/server/features/opportunities/OpportunityService";
 import {
   opportunityProjectInputSchema,
+  listOpportunitiesInputSchema,
   opportunityHistoryInputSchema,
   refreshOpportunitiesInputSchema,
   savePageOpportunityInputSchema,
@@ -16,8 +17,8 @@ import { scoped } from "@/server/features/opportunities/opportunityEvidence";
 
 export const listOpportunities = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
-  .validator(opportunityProjectInputSchema)
-  .handler(({ context }) => OpportunityService.list(context));
+  .validator(listOpportunitiesInputSchema)
+  .handler(({ data, context }) => OpportunityService.list(context, data));
 export const getOpportunityHistory = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(opportunityHistoryInputSchema)

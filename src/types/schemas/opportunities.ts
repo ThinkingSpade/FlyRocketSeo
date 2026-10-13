@@ -16,6 +16,11 @@ export const opportunityStatusSchema = z.enum([
 export const opportunityProjectInputSchema = z.object({
   projectId: z.string().min(1),
 });
+export const listOpportunitiesInputSchema =
+  opportunityProjectInputSchema.extend({
+    page: z.number().int().nonnegative().max(1_000_000).default(0),
+    status: opportunityStatusSchema.optional(),
+  });
 export const opportunityHistoryInputSchema =
   opportunityProjectInputSchema.extend({
     opportunityId: z.string().min(1),
@@ -154,6 +159,9 @@ export const saveInternalLinkOpportunityInputSchema =
   });
 export type RefreshOpportunitiesInput = z.infer<
   typeof refreshOpportunitiesInputSchema
+>;
+export type ListOpportunitiesInput = z.infer<
+  typeof listOpportunitiesInputSchema
 >;
 export type SavePageOpportunityInput = z.infer<
   typeof savePageOpportunityInputSchema

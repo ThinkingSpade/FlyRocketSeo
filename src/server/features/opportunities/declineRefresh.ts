@@ -11,7 +11,11 @@ import { pullWasTruncated } from "@/server/features/gsc/fetchAllRows";
 import { AppError } from "@/server/lib/errors";
 import type { GscSearchAnalyticsRow } from "@/server/lib/gscClient";
 import type { EvidenceSnapshot, OpportunityRun } from "@/shared/opportunities";
-import type { RefreshOpportunitiesInput } from "@/types/schemas/opportunities";
+import {
+  listOpportunitiesInputSchema,
+  type ListOpportunitiesInput,
+  type RefreshOpportunitiesInput,
+} from "@/types/schemas/opportunities";
 import { OpportunityRepository } from "./OpportunityRepository";
 import { detectDecliningPages, matchingWeekdays } from "./detectors";
 import {
@@ -22,17 +26,30 @@ import {
   DETECTOR_VERSION,
   type OpportunityContext,
 } from "./opportunityEvidence";
-export async function list(context: OpportunityContext) {
+export async function list(
+  context: OpportunityContext,
+  input: Partial<Pick<ListOpportunitiesInput, "page" | "status">> = {},
+) {
+  const { page, status } = listOpportunitiesInputSchema.parse({
+    ...input,
+    projectId: context.projectId,
+  });
   const scope = scoped(context);
   const [opportunities, latestRun] = await Promise.all([
-    OpportunityRepository.list(scope, 101),
+    OpportunityRepository.list(scope, 101, { offset: page * 100, status }),
     OpportunityRepository.latestRun(scope),
   ]);
   return {
     target: scope.target,
     opportunities: opportunities.slice(0, 100),
     latestRun,
-    coverage: { limit: 100, hasMore: opportunities.length > 100 },
+    coverage: {
+      limit: 100,
+      page,
+      status: status ?? null,
+      hasMore: opportunities.length > 100,
+      hasPrevious: page > 0,
+    },
   };
 }
 

@@ -19,6 +19,7 @@ import type {
   Opportunity,
   OpportunityRun,
   OpportunityHistory,
+  OpportunityStatus,
 } from "@/shared/opportunities";
 import type { Scope, Row } from "./repositoryTypes";
 import { readHistory, readHistories } from "./historyQueries";
@@ -107,11 +108,22 @@ export async function history(
   if (!(await getRow(scope, id))) throw new AppError("NOT_FOUND");
   return readHistory(scope, id, beforeRevision);
 }
-export async function list(scope: Scope, limit = 100): Promise<Opportunity[]> {
+export async function list(
+  scope: Scope,
+  limit = 100,
+  options: { offset?: number; status?: OpportunityStatus } = {},
+): Promise<Opportunity[]> {
   const rows = await db
     .select()
     .from(opportunities)
-    .where(scopeWhere(scope))
+    .where(
+      and(
+        scopeWhere(scope),
+        options.status === undefined
+          ? undefined
+          : eq(opportunities.status, options.status),
+      ),
+    )
     .orderBy(
       sql`CASE WHEN ${opportunities.status} IN ('dismissed','measured') THEN 1 ELSE 0 END`,
       sql`CASE WHEN ${opportunities.observationState}='no_longer_observed' THEN 1 ELSE 0 END`,
@@ -119,7 +131,8 @@ export async function list(scope: Scope, limit = 100): Promise<Opportunity[]> {
       desc(opportunities.lastSeenAt),
       opportunities.id,
     )
-    .limit(Math.min(limit, 101));
+    .limit(Math.min(limit, 101))
+    .offset(options.offset ?? 0);
   if (!rows.length) return [];
   const snapshots = new Map<string, EvidenceSnapshot>();
   const histories = new Map<string, OpportunityHistory>();
