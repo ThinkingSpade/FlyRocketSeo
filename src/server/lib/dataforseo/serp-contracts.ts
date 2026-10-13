@@ -90,14 +90,14 @@ export function requireSerpScope(
   task: DataforseoTaskLike,
   expected: Record<string, unknown>,
 ): void {
-  const first = task.result?.[0];
-  if (!isRecord(first)) return;
-  for (const [key, value] of Object.entries(expected)) {
-    if (first[key] != null && first[key] !== value) {
-      throw new DataforseoChargedTaskError(
-        `DataForSEO SERP returned mismatched ${key}`,
-        buildTaskBilling(task),
-      );
+  for (const echoed of [task.data, task.result?.[0]].filter(isRecord)) {
+    for (const [key, value] of Object.entries(expected)) {
+      if (echoed[key] != null && echoed[key] !== value) {
+        throw new DataforseoChargedTaskError(
+          `DataForSEO SERP returned mismatched ${key}`,
+          buildTaskBilling(task),
+        );
+      }
     }
   }
 }

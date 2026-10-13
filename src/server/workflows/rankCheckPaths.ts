@@ -207,6 +207,10 @@ async function collectQueuedRound(
           keywordId: task.keywordId,
           keyword: task.keyword,
           targetDomain: ctx.domain,
+          locationCode: ctx.locationCode,
+          languageCode: ctx.languageCode,
+          device: task.device,
+          depth: ctx.serpDepth,
         }),
       ),
     );

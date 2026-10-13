@@ -19,6 +19,7 @@ import { serpApi } from "@/server/lib/dataforseo/core";
 import {
   assertOk,
   buildTaskBilling,
+  DataforseoChargedTaskError,
   isNoResultsTask,
   parseTaskItems,
   type DataforseoApiResponse,
@@ -272,6 +273,10 @@ export async function fetchRankCheckTaskResult(input: {
   keywordId: string;
   keyword: string;
   targetDomain: string;
+  locationCode: number;
+  languageCode: string;
+  device: "desktop" | "mobile";
+  depth: number;
 }): Promise<RankCheckTaskOutcome> {
   const response = await serpApi().googleOrganicTaskGetAdvanced(input.taskId);
   const task = response?.tasks?.[0];
@@ -281,6 +286,23 @@ export async function fetchRankCheckTaskResult(input: {
       response?.status_message || "DataForSEO task_get failed",
     );
   }
+
+  // The task ID and reported scope belong to the queued observation, not the
+  // current configuration. Validate before even an empty result can become a
+  // successful snapshot. This collector remains a free GET outside metering.
+  if (task.id != null && task.id !== input.taskId) {
+    throw new DataforseoChargedTaskError(
+      "DataForSEO queued SERP returned a different task ID",
+      buildTaskBilling(task),
+    );
+  }
+  requireSerpScope(task, {
+    keyword: input.keyword,
+    location_code: input.locationCode,
+    language_code: input.languageCode,
+    device: input.device,
+    depth: clampSerpDepth(input.depth),
+  });
 
   if (
     task.status_code !== undefined &&
@@ -306,7 +328,6 @@ export async function fetchRankCheckTaskResult(input: {
   }
 
   requireSerpItems(task);
-  requireSerpScope(task, { keyword: input.keyword });
   const items = parseTaskItems(
     "google-organic-task-get-advanced",
     task,

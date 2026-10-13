@@ -125,6 +125,10 @@ describe("rank check task queue", () => {
       keywordId: "kw-1",
       keyword: "alpha",
       targetDomain: "example.com",
+      locationCode: 2840,
+      languageCode: "en",
+      device: "desktop",
+      depth: 20,
     });
 
     expect(outcome).toEqual({ status: "pending" });
@@ -164,6 +168,10 @@ describe("rank check task queue", () => {
       keywordId: "kw-1",
       keyword: "alpha",
       targetDomain: "example.com",
+      locationCode: 2840,
+      languageCode: "en",
+      device: "desktop",
+      depth: 20,
     });
 
     expect(outcome).toEqual({
@@ -195,8 +203,38 @@ function liveResponse(items: unknown) {
 
 describe("SERP observation contracts", () => {
   it("preserves estimate precision and actual count zero while invalid SERP enrichment fields remain unknown", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(liveResponse([{ type: "organic", domain: "example.com", rank_absolute: 1, etv: -1, estimated_paid_traffic_cost: 1.25, backlinks_info: { referring_domains: 0, backlinks: 0.5 }, rank_changes: { previous_rank_absolute: 0 } }])));
-    expect((await fetchLiveSerp({ keyword: "alpha", locationCode: 2840, languageCode: "en" })).data[0]).toMatchObject({ etv: null, estimated_paid_traffic_cost: 1.25, backlinks_info: { referring_domains: 0, backlinks: null }, rank_changes: { previous_rank_absolute: null } });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(
+          liveResponse([
+            {
+              type: "organic",
+              domain: "example.com",
+              rank_absolute: 1,
+              etv: -1,
+              estimated_paid_traffic_cost: 1.25,
+              backlinks_info: { referring_domains: 0, backlinks: 0.5 },
+              rank_changes: { previous_rank_absolute: 0 },
+            },
+          ]),
+        ),
+    );
+    expect(
+      (
+        await fetchLiveSerp({
+          keyword: "alpha",
+          locationCode: 2840,
+          languageCode: "en",
+        })
+      ).data[0],
+    ).toMatchObject({
+      etv: null,
+      estimated_paid_traffic_cost: 1.25,
+      backlinks_info: { referring_domains: 0, backlinks: null },
+      rank_changes: { previous_rank_absolute: null },
+    });
   });
   beforeEach(() => vi.restoreAllMocks());
 
