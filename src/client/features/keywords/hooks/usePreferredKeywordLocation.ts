@@ -1,29 +1,9 @@
 import { useEffect, useState } from "react";
-import { z } from "zod";
 import { isSupportedLocationCode } from "@/client/features/keywords/locations";
-
-const STORAGE_KEY = "keyword-preferred-location";
-const locationCodeSchema = z.number().int().positive();
-
-function loadPreferredLocationCode() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return null;
-
-    const parsed = locationCodeSchema.parse(JSON.parse(raw));
-    return isSupportedLocationCode(parsed) ? parsed : null;
-  } catch {
-    return null;
-  }
-}
-
-function savePreferredLocationCode(locationCode: number) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(locationCode));
-  } catch {
-    // storage full or unavailable - silently ignore
-  }
-}
+import {
+  readProjectKeywordLocation,
+  writeProjectKeywordLocation,
+} from "./preferredKeywordLocationStore";
 
 /**
  * A saved preference always outranks the fallback -- it is an explicit user
@@ -49,7 +29,10 @@ export function resolvePreferredLocationCode(
  * Once a preference is saved, `savedLocationCode` is non-null and the
  * fallback -- however it changes after that -- no longer matters.
  */
-export function usePreferredKeywordLocation(fallbackLocationCode: number) {
+export function usePreferredKeywordLocation(
+  projectId: string,
+  fallbackLocationCode: number,
+) {
   // Starts `null` on both server and first client render -- localStorage is
   // unreachable during SSR, and reading it eagerly via a lazy `useState`
   // initializer would make the client's first render (which hydration
@@ -62,8 +45,8 @@ export function usePreferredKeywordLocation(fallbackLocationCode: number) {
   >(null);
 
   useEffect(() => {
-    setSavedLocationCodeState(loadPreferredLocationCode());
-  }, []);
+    setSavedLocationCodeState(readProjectKeywordLocation(projectId));
+  }, [projectId]);
 
   const preferredLocationCode = resolvePreferredLocationCode(
     savedLocationCode,
@@ -73,7 +56,7 @@ export function usePreferredKeywordLocation(fallbackLocationCode: number) {
   function setPreferredLocationCode(locationCode: number) {
     if (!isSupportedLocationCode(locationCode)) return;
     setSavedLocationCodeState(locationCode);
-    savePreferredLocationCode(locationCode);
+    writeProjectKeywordLocation(projectId, locationCode);
   }
 
   return { preferredLocationCode, setPreferredLocationCode };

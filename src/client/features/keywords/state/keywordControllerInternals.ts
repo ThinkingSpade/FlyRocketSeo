@@ -17,7 +17,7 @@ export function useResolvedKeywordLocation(
   // project has none configured, so this hook never sees an undefined value.
   const projectMarket = useProjectMarket(input.projectId);
   const { preferredLocationCode, setPreferredLocationCode } =
-    usePreferredKeywordLocation(projectMarket.locationCode);
+    usePreferredKeywordLocation(input.projectId, projectMarket.locationCode);
   const locationCode =
     !input.hasExplicitLocationCode && input.keywordInput === ""
       ? preferredLocationCode

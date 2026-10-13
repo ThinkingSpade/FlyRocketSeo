@@ -116,10 +116,11 @@ describe("backlinks history cache contract", () => {
       data: { ...request.data, target: "example.com" },
     });
     expect(mocks.history).toHaveBeenCalledTimes(1);
-    await invoke({
+    const otherOrganizationRequest = {
       ...request,
       context: { ...context, organizationId: "organization-2" },
-    });
+    };
+    await invoke(otherOrganizationRequest);
     await invoke({
       ...request,
       data: { ...request.data, target: "other.com" },
