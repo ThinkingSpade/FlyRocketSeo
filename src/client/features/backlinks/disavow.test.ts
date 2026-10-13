@@ -31,6 +31,32 @@ describe("normalizeDisavowDomain", () => {
 });
 
 describe("auditToxicDomains", () => {
+  it("preserves unknown backlink counts and suppresses an incomplete aggregate", () => {
+    const audit = auditToxicDomains([
+      row("unknown.com", 90, null),
+      row("zero.com", 90, 0),
+      row("known.com", 90, 3),
+    ]);
+    expect(audit.candidates.map((c) => [c.domain, c.backlinks])).toEqual([
+      ["known.com", 3],
+      ["zero.com", 0],
+      ["unknown.com", null],
+    ]);
+    expect(audit.affectedBacklinks).toBeNull();
+    const file = buildDisavowFile(audit, "example.com", new Date("2026-10-13"));
+    expect(file).toContain("total backlink count unknown");
+    expect(file).toContain("Backlink count unknown.");
+    expect(file).toContain("0 backlinks.");
+    expect(file).not.toContain("null backlinks");
+  });
+  it("does not publish an overflowed aggregate as an exact count", () => {
+    expect(
+      auditToxicDomains([
+        row("a.com", 90, Number.MAX_SAFE_INTEGER),
+        row("b.com", 90, 1),
+      ]).affectedBacklinks,
+    ).toBeNull();
+  });
   it("keeps only rows at or above the threshold", () => {
     const audit = auditToxicDomains([
       row("clean.com", 10),

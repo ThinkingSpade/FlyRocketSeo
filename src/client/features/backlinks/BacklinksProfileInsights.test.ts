@@ -9,6 +9,29 @@ import {
 } from "./BacklinksProfileInsights";
 import type { BacklinksOverviewResult } from "@/types/schemas/backlinks-results";
 
+it("renders unknown toxic-link counts without presenting a false zero total", () => {
+  const markup = renderToStaticMarkup(
+    createElement(ToxicLinksCard, {
+      target: "example.com",
+      referringDomains: page([
+        {
+          domain: "unknown.example",
+          backlinks: null,
+          rank: 10,
+          spamScore: 90,
+          firstSeen: null,
+          brokenBacklinks: null,
+          brokenPages: null,
+          referringPages: null,
+        },
+      ]),
+    }),
+  );
+  expect(markup).toContain("Total backlink count unknown");
+  expect(markup).toContain("Unknown</td>");
+  expect(markup).not.toContain("carrying");
+});
+
 /**
  * Render checks for the derived cards. They exist because each card returns
  * null on missing data by design, and a silent null is indistinguishable from

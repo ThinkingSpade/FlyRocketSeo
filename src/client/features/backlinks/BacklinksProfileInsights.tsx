@@ -305,12 +305,20 @@ export function ToxicLinksCard({
           {formatNumber(audit.candidates.length)}
         </span>{" "}
         {audit.candidates.length === 1 ? "domain" : "domains"} scored in the
-        High-risk signal tier, carrying{" "}
-        <span className="font-medium text-base-content/80">
-          {formatNumber(audit.affectedBacklinks)}
-        </span>{" "}
-        {audit.affectedBacklinks === 1 ? "backlink" : "backlinks"}. The download
-        is a Google-format disavow file —{" "}
+        High-risk signal tier.
+        {audit.affectedBacklinks === null ? (
+          " Total backlink count unknown: some counts are unreported or exceed the supported range."
+        ) : (
+          <>
+            {" "}
+            Carrying{" "}
+            <span className="font-medium text-base-content/80">
+              {formatNumber(audit.affectedBacklinks)}
+            </span>{" "}
+            {audit.affectedBacklinks === 1 ? "backlink" : "backlinks"}.
+          </>
+        )}{" "}
+        The download is a Google-format disavow file —{" "}
         <span className="font-medium">review every line before uploading</span>,
         since disavowing a good link costs ranking.
       </p>
@@ -344,7 +352,9 @@ export function ToxicLinksCard({
                     {candidate.rank ?? "—"}
                   </Table.Cell>
                   <Table.Cell className="text-right tabular-nums text-base-content/60">
-                    {formatNumber(candidate.backlinks)}
+                    {candidate.backlinks === null
+                      ? "Unknown"
+                      : formatNumber(candidate.backlinks)}
                   </Table.Cell>
                 </Table.Row>
               );
