@@ -1,0 +1,107 @@
+name: FlyRocketSEO audit verification
+
+on:
+  push:
+    branches:
+      - audit/flyrocketseo-reliability-2026-10-13
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: flyrocketseo-audit-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - name: Archive committed source for reproducible review
+        run: |
+          mkdir -p /tmp/flyrocketseo-audit/logs
+          git archive --format=tar.gz HEAD > /tmp/flyrocketseo-audit/source.tar.gz
+          git rev-parse HEAD > /tmp/flyrocketseo-audit/commit.txt
+      - name: Install locked dependencies
+        id: install
+        continue-on-error: true
+        run: pnpm install --frozen-lockfile 2>&1 | tee /tmp/flyrocketseo-audit/logs/install.txt
+      - name: Export the installed formatter for offline review
+        if: steps.install.outcome == 'success'
+        run: |
+          FORMATTER_DIR=$(node -p 'require("node:path").dirname(require.resolve("prettier/package.json"))')
+          tar -C "$FORMATTER_DIR" -czf /tmp/flyrocketseo-audit/prettier.tar.gz .
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flyrocketseo-review-source
+          path: |
+            /tmp/flyrocketseo-audit/source.tar.gz
+            /tmp/flyrocketseo-audit/prettier.tar.gz
+            /tmp/flyrocketseo-audit/commit.txt
+          retention-days: 7
+      - name: Repository static checks
+        id: static
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm run ci:check 2>&1 | tee /tmp/flyrocketseo-audit/logs/static.txt
+      - name: Full unit test suite
+        id: tests
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm test 2>&1 | tee /tmp/flyrocketseo-audit/logs/tests.txt
+      - name: Production build only; never deploy
+        id: build
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: pnpm run build 2>&1 | tee /tmp/flyrocketseo-audit/logs/build.txt
+      - name: Focused component contracts
+        id: contracts
+        if: steps.install.outcome == 'success'
+        continue-on-error: true
+        run: |
+          if test -f scripts/audit/verify-opportunities.mjs; then
+            node --test scripts/audit/verify-opportunities.mjs 2>&1 | tee /tmp/flyrocketseo-audit/logs/contracts.txt
+          else
+            echo 'Baseline: focused contract harness not yet committed.' | tee /tmp/flyrocketseo-audit/logs/contracts.txt
+          fi
+      - name: Record exact outcomes
+        if: always()
+        env:
+          INSTALL: ${{ steps.install.outcome }}
+          STATIC: ${{ steps.static.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          CONTRACTS: ${{ steps.contracts.outcome }}
+        run: |
+          printf 'Install: %s\nStatic: %s\nTests: %s\nBuild: %s\nContracts: %s\n' "$INSTALL" "$STATIC" "$TESTS" "$BUILD" "$CONTRACTS" > /tmp/flyrocketseo-audit/logs/outcomes.txt
+          cat /tmp/flyrocketseo-audit/logs/outcomes.txt >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: flyrocketseo-verification-logs
+          path: /tmp/flyrocketseo-audit/logs
+          retention-days: 7
+      - name: Fail the check for any unsuccessful required verification
+        if: always()
+        env:
+          INSTALL: ${{ steps.install.outcome }}
+          STATIC: ${{ steps.static.outcome }}
+          TESTS: ${{ steps.tests.outcome }}
+          BUILD: ${{ steps.build.outcome }}
+          CONTRACTS: ${{ steps.contracts.outcome }}
+        run: |
+          test "$INSTALL" = success
+          test "$STATIC" = success
+          test "$TESTS" = success
+          test "$BUILD" = success
+          test "$CONTRACTS" = success
