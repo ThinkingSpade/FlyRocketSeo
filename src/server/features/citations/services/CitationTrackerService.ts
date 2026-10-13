@@ -54,13 +54,17 @@ async function getCitationReport(
   const languageCode = input.languageCode ?? getLanguageCode(locationCode);
   const query = buildCitationSearchQuery({ businessName, city, phone });
 
-  const cacheKey = await buildCacheKey("citations:tracker", {
+  const scope = {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     query,
+    businessName,
+    city,
+    phone,
     locationCode,
     languageCode,
-  });
+  };
+  const cacheKey = await buildCacheKey("citations:tracker:v2", scope);
 
   const recordRun = () =>
     AnalysisRunService.record({
@@ -74,7 +78,11 @@ async function getCitationReport(
   const cached = citationTrackerResultSchema.safeParse(
     await getCached(cacheKey),
   );
-  if (cached.success && cached.data.results.length > 0) {
+  if (
+    cached.success &&
+    cached.data.contractVersion === 2 &&
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope)
+  ) {
     await recordRun();
     return cached.data;
   }
@@ -92,6 +100,9 @@ async function getCitationReport(
   });
 
   const result: CitationTrackerResult = {
+    contractVersion: 2,
+    source: "DataForSEO Google Organic SERP",
+    scope,
     query,
     businessName,
     city,
@@ -113,12 +124,17 @@ async function getCitationReport(
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, CITATION_TRACKER_TTL_SECONDS).catch(
-    (error) => {
+  const persisted = await setCached(
+    cacheKey,
+    result,
+    CITATION_TRACKER_TTL_SECONDS,
+  )
+    .then(() => true)
+    .catch((error) => {
       console.error("citations:tracker cache-write failed:", error);
-    },
-  );
-  await recordRun();
+      return false;
+    });
+  if (persisted) await recordRun();
 
   return result;
 }
