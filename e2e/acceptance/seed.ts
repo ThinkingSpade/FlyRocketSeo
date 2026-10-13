@@ -1,3 +1,5 @@
+import { seedEvidenceStorage } from "./seed-evidence-storage";
+import { seedProviderRuns } from "./seed-provider-runs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { getPlatformProxy } from "wrangler";
@@ -20,6 +22,7 @@ import {
   PROJECT_A2,
   PROJECT_B,
   PROJECT_PAGING,
+  CLEANUP_BASELINE_KEY,
 } from "./data";
 
 const statePath = process.env.FLYROCKET_ACCEPTANCE_STATE;
@@ -202,10 +205,7 @@ try {
     nextSteps: ["Review work history."],
     evidence: historyEvidence,
   };
-  await env.R2.put(
-    "acceptance/history-evidence.json",
-    JSON.stringify(historyEvidence),
-  );
+  await env.R2.put(CLEANUP_BASELINE_KEY, JSON.stringify(historyEvidence));
   await db.insert(work.opportunitySnapshots).values({
     id: "acceptance-history-snapshot",
     organizationId: ORG_A,
@@ -214,7 +214,7 @@ try {
     schemaVersion: 1,
     contentHash: "acceptance-history-content-hash",
     payloadJson: JSON.stringify(historyEvidence),
-    r2Key: "acceptance/history-evidence.json",
+    r2Key: CLEANUP_BASELINE_KEY,
     fetchedAt: historyEvidence.fetchedAt,
   });
   await db.insert(work.opportunities).values({
@@ -261,6 +261,8 @@ try {
       .insert(work.opportunityEvents)
       .values(historyEvents.slice(offset, offset + 8));
   }
+  await seedEvidenceStorage(db, env.R2, historyFinding, env.DB);
+  await seedProviderRuns(db, env.R2);
   const pagingEvidence: EvidenceSnapshot = {
     ...historyEvidence,
     scope: {

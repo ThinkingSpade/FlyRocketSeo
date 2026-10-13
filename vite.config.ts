@@ -47,6 +47,13 @@ export default defineConfig(({ mode, command }) => {
               "@/server/lib/gscClient": fileURLToPath(
                 new URL("./e2e/acceptance/gsc-client.ts", import.meta.url),
               ),
+              "@/server/features/opportunities/evidenceCleanupPolicy":
+                fileURLToPath(
+                  new URL(
+                    "./e2e/acceptance/evidence-cleanup-policy.ts",
+                    import.meta.url,
+                  ),
+                ),
             }
           : {}),
         // TODO: Remove this workaround once @cloudflare/think stops eagerly

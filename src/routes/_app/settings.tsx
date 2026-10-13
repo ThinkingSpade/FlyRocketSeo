@@ -17,6 +17,7 @@ import { GeoLocationSeedSection } from "@/client/features/geo/GeoLocationSeedSec
 import { Button } from "@cloudflare/kumo/components/button";
 import { Switch } from "@cloudflare/kumo/components/switch";
 import { useReveal } from "@/client/hooks/useReveal";
+import { EvidenceStorageSection } from "@/client/features/evidence-storage/EvidenceStorageSection";
 
 export const Route = createFileRoute("/_app/settings")({
   component: SettingsPage,
@@ -185,6 +186,10 @@ function SettingsPage() {
             </div>
           </section>
         ) : null}
+
+        <EvidenceStorageSection
+          key={session?.session.activeOrganizationId ?? "local"}
+        />
       </div>
     </div>
   );

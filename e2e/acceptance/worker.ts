@@ -41,4 +41,24 @@ globalThis.fetch = async (input, init) => {
   return nativeFetch(input, init);
 };
 
-export default app;
+export default {
+  ...app,
+  async fetch(request: Request, bindings: Env, context: ExecutionContext) {
+    const url = new URL(request.url);
+    if (
+      url.pathname === "/__acceptance/release-cleanup-fault" &&
+      request.method === "POST" &&
+      ["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) &&
+      request.headers.get("x-acceptance-control") === "local-fixture" &&
+      bindings.BETTER_AUTH_SECRET ===
+        "acceptance-only-secret-never-use-outside-local-tests" &&
+      bindings.BETTER_AUTH_URL === "http://localhost:3102"
+    ) {
+      await bindings.DB.prepare(
+        "DROP TRIGGER IF EXISTS acceptance_evidence_cleanup_retry",
+      ).run();
+      return Response.json({ released: true });
+    }
+    return app.fetch(request, bindings, context);
+  },
+};

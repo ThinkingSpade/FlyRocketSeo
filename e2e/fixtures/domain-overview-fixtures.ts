@@ -1,4 +1,22 @@
 export function getFixtureOverview(domain: string) {
+  if (domain === "partial.example.com") {
+    return {
+      domain,
+      organicTraffic: 12.5,
+      organicKeywords: 12,
+      backlinks: null,
+      referringDomains: null,
+      positionBuckets: {
+        top3: null,
+        pos4to10: 0,
+        pos11to20: 4,
+        pos21to50: null,
+        pos51plus: null,
+      },
+      hasData: true,
+      fetchedAt: "2026-05-19T00:00:00.000Z",
+    };
+  }
   return {
     domain,
     organicTraffic: 373,
