@@ -49,7 +49,7 @@ function normalizePageUrlInput(value: string): string {
 const PAGE_ANALYZE_PREVIEW: AnalyzePreviewItem[] = [
   {
     icon: Key,
-    title: "Every keyword it ranks for",
+    title: "A sample of ranking keywords",
     description: "Positions, volume, difficulty and estimated traffic",
   },
   {
@@ -169,8 +169,8 @@ export function PageExplorerPage({
           Page Explorer
         </h1>
         <p className="text-sm text-base-content/60">
-          Inspect any URL — yours or a competitor&rsquo;s: every keyword it
-          ranks for, its estimated traffic, and its backlink profile.
+          Inspect any URL — yours or a competitor&rsquo;s: sampled ranking
+          keywords, captured traffic estimates and its backlink profile.
         </p>
       </div>
 

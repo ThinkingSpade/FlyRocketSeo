@@ -10,6 +10,10 @@ import {
 } from "@/shared/keyword-locations";
 import { mapKeywordItem } from "@/server/features/domain/services/domainKeywordMapper";
 import { pageExplorerSchema } from "@/types/schemas/page-explorer";
+import {
+  providerCount,
+  providerHundredScore,
+} from "@/shared/provider-observations";
 
 /** Labs ranked-keyword data refreshes roughly monthly; a day of cache keeps
  *  repeat inspections free without meaningful staleness. */
@@ -46,32 +50,40 @@ async function getPageExplorer(
   billingCustomer: BillingCustomerContext,
 ): Promise<PageExplorerResult> {
   const parsedUrl = new URL(input.url);
-  const domain = parsedUrl.hostname.replace(/^www\./, "");
+  parsedUrl.hash = "";
+  const url = parsedUrl.href;
+  const domain = parsedUrl.hostname;
   const path = parsedUrl.pathname || "/";
   const locationCode = input.locationCode ?? DEFAULT_LOCATION_CODE;
   const languageCode = getLanguageCode(locationCode);
 
-  const cacheKey = await buildCacheKey("page-explorer", {
+  const scope = {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
+    url,
     domain,
     path,
     locationCode,
     languageCode,
-  });
+  };
+  const cacheKey = await buildCacheKey("page-explorer:v2", scope);
   // Records this analysis for the tab's history / auto-restore. Free and best
   // effort: one row pointing at the cache key this result already lives under.
   const recordRun = () =>
     AnalysisRunService.record({
       projectId: input.projectId,
       feature: RUN_FEATURES.pageExplorer,
-      params: { url: input.url, locationCode },
+      params: { url, locationCode },
       cacheKey,
       label: `${domain}${path}`,
     });
 
   const cached = pageExplorerSchema.safeParse(await getCached(cacheKey));
-  if (cached.success) {
+  if (
+    cached.success &&
+    cached.data.contractVersion === 2 &&
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope)
+  ) {
     await recordRun();
     return cached.data;
   }
@@ -112,13 +124,13 @@ async function getPageExplorer(
   // data" apart from "we failed to ask". Both used to render as two dashes.
   let backlinksStatus: PageExplorerResult["backlinksStatus"] = "no-data";
   try {
-    const summary = await dataforseo.backlinks.summary({ target: input.url });
+    const summary = await dataforseo.backlinks.summary({ target: url });
     const parsed = summaryItemSchema.safeParse(summary);
     if (parsed.success) {
       backlinks = {
-        rank: parsed.data.rank ?? null,
-        backlinks: parsed.data.backlinks ?? null,
-        referringDomains: parsed.data.referring_domains ?? null,
+        rank: providerHundredScore(parsed.data.rank),
+        backlinks: providerCount(parsed.data.backlinks),
+        referringDomains: providerCount(parsed.data.referring_domains),
       };
       backlinksStatus = "available";
     } else {
@@ -132,25 +144,38 @@ async function getPageExplorer(
   }
 
   const result: PageExplorerResult = {
-    url: input.url,
+    contractVersion: 2,
+    source: "DataForSEO Labs and Backlinks",
+    scope,
+    url,
     domain,
     path,
     locationCode,
     languageCode,
     keywords,
-    totalKeywords: rankedPage.totalCount,
-    estimatedTraffic: Math.round(
-      keywords.reduce((sum, item) => sum + (item.traffic ?? 0), 0),
-    ),
+    totalKeywords: providerCount(rankedPage.totalCount),
+    estimatedTraffic:
+      keywords.length !== rankedPage.items.length ||
+      keywords.some((item) => item.traffic === null)
+        ? null
+        : keywords.reduce((sum, item) => sum + (item.traffic ?? 0), 0),
     backlinks,
     backlinksStatus,
     fetchedAt: new Date().toISOString(),
   };
 
-  void setCached(cacheKey, result, PAGE_EXPLORER_TTL_SECONDS).catch((error) => {
-    console.error("page-explorer cache-write failed:", error);
-  });
-  await recordRun();
+  if (
+    result.estimatedTraffic !== null &&
+    !Number.isFinite(result.estimatedTraffic)
+  )
+    result.estimatedTraffic = null;
+  const persisted = await setCached(cacheKey, result, PAGE_EXPLORER_TTL_SECONDS)
+    .then(() => true)
+    .catch((error) => {
+      console.error("page-explorer cache-write failed:", error);
+      return false;
+    });
+  if (persisted) await recordRun();
 
   return result;
 }

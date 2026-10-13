@@ -21,7 +21,7 @@ export function TrafficConcentrationCard({
   estimatedTraffic,
 }: {
   keywords: PageKeyword[];
-  estimatedTraffic: number;
+  estimatedTraffic: number | null;
 }) {
   const concentration = computeTrafficConcentration(keywords, estimatedTraffic);
   if (!concentration) return null;
@@ -60,7 +60,7 @@ export function TrafficConcentrationCard({
         <p className="text-xs text-base-content/50">
           These {concentration.rows.length} keywords drive{" "}
           {Math.round(concentration.topShare * 100)}% of the page&rsquo;s
-          estimated traffic.
+          displayed keyword traffic estimates.
         </p>
       </div>
     </div>
@@ -84,8 +84,9 @@ export function StrikingDistanceCard({
           Striking distance
         </h2>
         <p className="-mt-1 text-xs text-base-content/50">
-          Ranked #4–15 — the keywords a content refresh moves onto page-one
-          money spots.
+          Observed positions #4–15 in the returned sample. Review intent and
+          content before choosing a change; improved rankings are not
+          guaranteed.
         </p>
         <Table>
           <Table.Header>
@@ -122,5 +123,12 @@ export function PageDistributionCard({
 }: {
   keywords: PageKeyword[];
 }) {
+  if (keywords.some((item) => item.position === null))
+    return (
+      <p className="text-sm text-base-content/60">
+        Position distribution is unknown because some displayed ranks were not
+        reported.
+      </p>
+    );
   return <PositionDistribution buckets={computePositionBuckets(keywords)} />;
 }

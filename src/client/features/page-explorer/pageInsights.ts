@@ -78,10 +78,16 @@ type TrafficConcentration = {
 /** The top keywords by traffic and how much of the page's traffic they carry. */
 export function computeTrafficConcentration(
   keywords: PageKeyword[],
-  estimatedTraffic: number,
+  estimatedTraffic: number | null,
   limit = 5,
 ): TrafficConcentration | null {
-  if (estimatedTraffic <= 0) return null;
+  if (
+    estimatedTraffic === null ||
+    !Number.isFinite(estimatedTraffic) ||
+    estimatedTraffic <= 0 ||
+    keywords.some((item) => item.traffic === null)
+  )
+    return null;
   const rows = keywords
     .filter((item) => (item.traffic ?? 0) > 0)
     .toSorted((a, b) => (b.traffic ?? 0) - (a.traffic ?? 0))

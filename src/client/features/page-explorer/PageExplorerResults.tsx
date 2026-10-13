@@ -25,7 +25,8 @@ type PageExplorerData = NonNullable<
 type SnapshotData = Awaited<ReturnType<typeof analyzeContentCompetitor>> | null;
 
 function formatCount(value: number | null | undefined): string {
-  if (value == null) return "—";
+  if (value == null) return "Unknown";
+  if (value > 0 && value < 1) return "<1";
   return Math.round(value).toLocaleString();
 }
 
@@ -37,22 +38,25 @@ export function PageExplorerResults({
   snapshot: SnapshotData;
 }) {
   const realEstate = computePageRealEstate(result.keywords);
+  const positionsKnown = result.keywords.every(
+    (item) => item.position !== null,
+  );
 
   return (
     <>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 2xl:grid-cols-8">
         <InsightTile
           icon={TrendUp}
-          label="Est. monthly traffic"
+          label="Est. sample traffic"
           value={formatCount(result.estimatedTraffic)}
-          hint="Sum of keyword-level estimates"
+          hint="Sum of reported estimates in the displayed sample; unknown when incomplete"
           tone="primary"
         />
         <InsightTile
           icon={Key}
           label="Ranking keywords"
-          value={formatCount(result.totalKeywords ?? result.keywords.length)}
-          hint={`Top ${result.keywords.length} shown`}
+          value={formatCount(result.totalKeywords)}
+          hint={`${result.keywords.length} shown; provider total is separate`}
           tone="info"
         />
         {/* The backlink lookup is a separate best-effort subcall, so these two
@@ -82,21 +86,25 @@ export function PageExplorerResults({
         <InsightTile
           icon={Trophy}
           label="#1 rankings"
-          value={realEstate.numberOne}
+          value={positionsKnown ? realEstate.numberOne : "Unknown"}
           tone={realEstate.numberOne > 0 ? "success" : "neutral"}
         />
         <InsightTile
           icon={Medal}
           label="Top 3"
-          value={realEstate.top3}
+          value={positionsKnown ? realEstate.top3 : "Unknown"}
           tone={realEstate.top3 > 0 ? "success" : "neutral"}
         />
-        <InsightTile icon={Medal} label="Top 10" value={realEstate.top10} />
+        <InsightTile
+          icon={Medal}
+          label="Top 10"
+          value={positionsKnown ? realEstate.top10 : "Unknown"}
+        />
         <InsightTile
           icon={Target}
           label="Striking distance"
-          value={realEstate.strikingDistance}
-          hint="Ranked #4–15"
+          value={positionsKnown ? realEstate.strikingDistance : "Unknown"}
+          hint="Ranks #4–15 in displayed sample"
           tone={realEstate.strikingDistance > 0 ? "warning" : "neutral"}
         />
       </div>
@@ -145,8 +153,8 @@ export function PageExplorerResults({
                         colSpan={6}
                         className="py-8 text-center text-sm text-base-content/50"
                       >
-                        No ranked keywords found for this exact page in this
-                        location.
+                        No ranked keywords returned for the requested hostname
+                        and path variants in this market.
                       </Table.Cell>
                     </Table.Row>
                   ) : null}
@@ -194,7 +202,14 @@ export function PageExplorerResults({
       </div>
 
       <p className="text-xs text-base-content/40">
-        {result.url} · fetched {new Date(result.fetchedAt).toLocaleString()}
+        {result.url} · captured {result.fetchedAt} ·{" "}
+        {result.source ?? "Legacy provider capture"} · location{" "}
+        {result.locationCode} / {result.languageCode}. Keyword estimates match
+        path variants on the requested hostname; URL query parameters do not
+        constrain Labs rows. Backlinks use the captured full URL.
+        {!result.scope
+          ? " Original account/project scope is unavailable for this legacy capture; derived traffic is not certified."
+          : null}
       </p>
     </>
   );
