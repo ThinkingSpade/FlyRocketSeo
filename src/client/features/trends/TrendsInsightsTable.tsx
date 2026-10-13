@@ -93,7 +93,9 @@ export function TrendsInsightsTable({
             <Table.Header>
               <Table.Row>
                 <Table.Head>Keyword</Table.Head>
-                <Table.Head className="text-right">Interest now</Table.Head>
+                <Table.Head className="text-right">
+                  Latest bucket interest
+                </Table.Head>
                 <Table.Head
                   className="text-right"
                   title="Average interest over the last 90 days vs the 90 days before"

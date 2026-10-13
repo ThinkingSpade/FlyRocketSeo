@@ -5,7 +5,12 @@ import { buildCacheKey, getCached, setCached } from "@/server/lib/r2-cache";
 import type { BillingCustomerContext } from "@/server/billing/subscription";
 import { createDataforseoClient } from "@/server/lib/dataforseo";
 import type { TrendsGraphItem } from "@/server/lib/dataforseo/trends";
-import { trendsResultSchema, type TrendsPoint } from "@/types/schemas/trends";
+import {
+  trendsCalendarDateSchema,
+  trendsResultSchema,
+  type TrendsPoint,
+} from "@/types/schemas/trends";
+import { AppError } from "@/server/lib/errors";
 
 /** Trend curves shift slowly; refresh daily. */
 const TRENDS_TTL_SECONDS = 24 * 60 * 60;
@@ -19,7 +24,7 @@ type TrendsResult = z.infer<typeof trendsResultSchema>;
 function mapGraphItem(
   requestedKeywords: string[],
   item: TrendsGraphItem | undefined,
-): Omit<TrendsResult, "fetchedAt"> {
+): Pick<TrendsResult, "keywords" | "averages" | "points"> {
   const keywords = item?.keywords ?? requestedKeywords;
   const points = (item?.data ?? [])
     .map((point) => {
@@ -27,7 +32,9 @@ function mapGraphItem(
       return {
         timestamp: point.timestamp * 1000,
         date: point.date_from,
-        values: keywords.map((_, index) => point.values?.[index] ?? null),
+        values: keywords.map((_, index) =>
+          point.missing_data ? null : (point.values?.[index] ?? null),
+        ),
       };
     })
     .filter((point): point is TrendsPoint => point != null);
@@ -54,18 +61,39 @@ async function getTrends(
   },
   billingCustomer: BillingCustomerContext,
 ): Promise<TrendsResult> {
-  const keywords = input.keywords.map((keyword) =>
-    keyword.trim().toLowerCase(),
-  );
+  const keywords = [
+    ...new Set(input.keywords.map((keyword) => keyword.trim().toLowerCase())),
+  ];
+  const capturedAt = new Date();
+  const previousYear = new Date(capturedAt);
+  previousYear.setUTCFullYear(previousYear.getUTCFullYear() - 1);
+  // Clamp February 29 to February 28 in a non-leap preceding year.
+  if (previousYear.getUTCMonth() !== capturedAt.getUTCMonth())
+    previousYear.setUTCDate(0);
+  const dateFrom = input.dateFrom ?? previousYear.toISOString().slice(0, 10);
+  const dateTo = input.dateTo ?? capturedAt.toISOString().slice(0, 10);
+  if (
+    !trendsCalendarDateSchema.safeParse(dateFrom).success ||
+    !trendsCalendarDateSchema.safeParse(dateTo).success ||
+    dateFrom > dateTo
+  )
+    throw new AppError("VALIDATION_ERROR", "Invalid trend date window");
+  const scope = {
+    projectId: input.projectId,
+    locationCode: input.locationCode ?? null,
+    languageCode: input.languageCode,
+    dateFrom,
+    dateTo,
+  };
 
-  const cacheKey = await buildCacheKey("trends:explore", {
+  const cacheKey = await buildCacheKey("trends:explore:v2", {
     organizationId: billingCustomer.organizationId,
     projectId: input.projectId,
     keywords,
     locationCode: input.locationCode ?? null,
     languageCode: input.languageCode,
-    dateFrom: input.dateFrom ?? null,
-    dateTo: input.dateTo ?? null,
+    dateFrom,
+    dateTo,
   });
 
   const recordRun = () =>
@@ -76,6 +104,9 @@ async function getTrends(
         keywords,
         locationCode: input.locationCode ?? null,
         languageCode: input.languageCode,
+        dateFrom,
+        dateTo,
+        contractVersion: 2,
         geo: input.geo ?? null,
       },
       cacheKey,
@@ -83,7 +114,12 @@ async function getTrends(
     });
 
   const cached = trendsResultSchema.safeParse(await getCached(cacheKey));
-  if (cached.success && cached.data.points.length > 0) {
+  if (
+    cached.success &&
+    cached.data.contractVersion === 2 &&
+    JSON.stringify(cached.data.scope) === JSON.stringify(scope) &&
+    JSON.stringify(cached.data.keywords) === JSON.stringify(keywords)
+  ) {
     await recordRun();
     return cached.data;
   }
@@ -93,22 +129,26 @@ async function getTrends(
     keywords,
     locationCode: input.locationCode,
     languageCode: input.languageCode,
-    dateFrom: input.dateFrom,
-    dateTo: input.dateTo,
+    dateFrom,
+    dateTo,
   });
 
   const graph = items.find((item) => item.type === "google_trends_graph");
-  const result: TrendsResult = {
+  const result = trendsResultSchema.parse({
     ...mapGraphItem(keywords, graph),
+    contractVersion: 2,
+    dataSource: "DataForSEO Google Trends",
+    scope,
     fetchedAt: new Date().toISOString(),
-  };
+  });
 
-  if (result.points.length > 0) {
-    void setCached(cacheKey, result, TRENDS_TTL_SECONDS).catch((error) => {
+  const written = await setCached(cacheKey, result, TRENDS_TTL_SECONDS)
+    .then(() => true)
+    .catch((error) => {
       console.error("trends.explore.cache-write failed:", error);
+      return false;
     });
-    await recordRun();
-  }
+  if (written) await recordRun();
 
   return result;
 }

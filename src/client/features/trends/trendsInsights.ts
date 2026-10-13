@@ -10,7 +10,7 @@ export type TrendMomentum = "rising" | "stable" | "falling";
 
 export type KeywordTrendInsight = {
   keyword: string;
-  /** Most recent non-null interest value. */
+  /** Interest in the latest bucket; an unavailable bucket remains unknown. */
   latest: number | null;
   /** Percent change: last 90 days vs the 90 days before, or null. */
   momentumPercent: number | null;
@@ -63,7 +63,8 @@ export function computeMonthlyInterest(
     const byMonth = new Map<number, number[]>();
     for (const point of points) {
       const value = point.values[index];
-      if (value == null) continue;
+      // Google Trends documents zero as insufficient data, not measured demand.
+      if (value == null || value === 0) continue;
       const month = new Date(point.timestamp).getUTCMonth();
       const bucket = byMonth.get(month) ?? [];
       bucket.push(value);
@@ -98,10 +99,10 @@ export function computeTrendInsights(
       }))
       .filter(
         (point): point is { timestamp: number; value: number } =>
-          point.value != null,
+          point.value != null && point.value > 0,
       );
 
-    const latest = series[series.length - 1]?.value ?? null;
+    const latest = sorted[sorted.length - 1]?.values[index] ?? null;
 
     // Momentum: last 90 days vs the 90 days before that.
     const recent = series.filter(
@@ -133,7 +134,7 @@ export function computeTrendInsights(
     // Year over year: latest vs the point closest to a year before the series
     // end (±3 weeks tolerance).
     let yoyPercent: number | null = null;
-    if (latest != null) {
+    if (latest != null && latest > 0) {
       const target = maxTs - 365 * DAY_MS;
       const tolerance = 21 * DAY_MS;
       let best: { distance: number; value: number } | null = null;

@@ -23,6 +23,7 @@ import {
   TrendsSeasonalHeatmap,
 } from "@/client/features/trends/TrendsInsightsTable";
 import { computeMonthlyInterest } from "@/client/features/trends/trendsInsights";
+import { TrendsObservationDetails } from "./TrendsObservationDetails";
 import {
   createMeteredRunKey,
   useAuthorizedRun,
@@ -442,6 +443,18 @@ export function TrendsPage({
               replace: false,
             });
           }}
+        />
+      ) : null}
+
+      {result ? (
+        <TrendsObservationDetails
+          result={result}
+          regionLabel={
+            result.scope?.locationCode != null &&
+            result.scope.locationCode === effectiveGeo?.locationCode
+              ? effectiveGeo.label
+              : null
+          }
         />
       ) : null}
 

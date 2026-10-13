@@ -101,7 +101,23 @@ describe("computeTrendInsights", () => {
         values: [index % 2 === 0 ? null : 50, 50],
       })),
     );
-    expect(insights[0].latest).toBe(50);
+    // The newest bucket for a is null; b's current observation still survives.
+    expect(insights[0].latest).toBeNull();
+    expect(insights[0].yoyPercent).toBeNull();
     expect(insights[1].momentum).toBe("stable");
+  });
+  it("does not turn documented insufficient-data zero scores into seasonal demand or a measured decline", () => {
+    const empty = weeklySeries(() => 0);
+    expect(computeMonthlyInterest(["thin"], empty)?.[0].months).toEqual(
+      Array(12).fill(null),
+    );
+    expect(computeTrendInsights(["thin"], empty)[0]).toMatchObject({
+      latest: 0,
+      momentum: null,
+      peakMonth: null,
+      lowMonth: null,
+    });
+    const endingZero = weeklySeries((weeksAgo) => (weeksAgo === 0 ? 0 : 50));
+    expect(computeTrendInsights(["thin"], endingZero)[0].yoyPercent).toBeNull();
   });
 });
