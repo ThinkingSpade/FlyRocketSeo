@@ -11,6 +11,7 @@ import type {
 import type { RefreshOpportunitiesInput } from "@/types/schemas/opportunities";
 import { evidenceSnapshotSchema } from "@/types/schemas/opportunities";
 import { OpportunityRepository } from "./OpportunityRepository";
+import { claimEvidenceWrite, releaseEvidenceWrite } from "./evidenceOwnership";
 export type OpportunityContext = {
   organizationId: string;
   projectId: string;
@@ -67,20 +68,26 @@ export function opportunityDedupeKey(
 }
 
 /** Immutable content-addressed evidence. R2 failure must stop task creation. */
-export async function retainEvidence(
+export async function retainEvidence<T>(
   evidence: EvidenceSnapshot,
-  raw: unknown = null,
-): Promise<string> {
+  raw: unknown,
+  attach: (hash: string) => Promise<T>,
+): Promise<T> {
   const value = evidenceSnapshotSchema.parse(evidence);
   const payload = JSON.stringify({ schemaVersion: 1, evidence: value, raw });
   const hash = await digest({ schemaVersion: 1, evidence: value, raw });
   const key = `opportunity-evidence/${encodeURIComponent(value.scope.organizationId)}/${encodeURIComponent(value.scope.projectId)}/${hash}.json`;
-  await env.R2.put(key, payload, {
-    onlyIf: { etagDoesNotMatch: "*" },
-    httpMetadata: { contentType: "application/json" },
-  });
-  await OpportunityRepository.putSnapshot(value, hash, key);
-  return hash;
+  const ownerToken = await claimEvidenceWrite(value.scope, key, hash);
+  try {
+    await env.R2.put(key, payload, {
+      onlyIf: { etagDoesNotMatch: "*" },
+      httpMetadata: { contentType: "application/json" },
+    });
+    await OpportunityRepository.putSnapshot(value, hash, key);
+    return await attach(hash);
+  } finally {
+    await releaseEvidenceWrite(key, ownerToken);
+  }
 }
 export async function persistFinding(
   finding: OpportunityFinding,
@@ -96,17 +103,18 @@ export async function persistFinding(
     finding.url,
     finding.assetRefs,
   );
-  const snapshotId = await retainEvidence(finding.evidence, raw);
-  return OpportunityRepository.upsertFinding({
-    scope,
-    scopeKey,
-    dedupeKey,
-    detectorId,
-    detectorVersion: DETECTOR_VERSION,
-    finding,
-    snapshotId,
-    actorUserId: context.userId,
-  });
+  return retainEvidence(finding.evidence, raw, (snapshotId) =>
+    OpportunityRepository.upsertFinding({
+      scope,
+      scopeKey,
+      dedupeKey,
+      detectorId,
+      detectorVersion: DETECTOR_VERSION,
+      finding,
+      snapshotId,
+      actorUserId: context.userId,
+    }),
+  );
 }
 
 type PagePerformance = Extract<

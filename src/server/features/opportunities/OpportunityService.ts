@@ -102,16 +102,20 @@ async function measure(
       "Search Console evidence is currently unavailable.",
     );
   const after = snapshotFromPage(report, context);
-  const afterSnapshotId = await retainEvidence(after, {
-    queries: report.queries,
-    coverage: report.coverage,
-  });
-  return OpportunityRepository.storeMeasurement(
-    scoped(context),
-    input.opportunityId,
-    input.expectedRevision,
-    afterSnapshotId,
-    context.userId,
+  return retainEvidence(
+    after,
+    {
+      queries: report.queries,
+      coverage: report.coverage,
+    },
+    (afterSnapshotId) =>
+      OpportunityRepository.storeMeasurement(
+        scoped(context),
+        input.opportunityId,
+        input.expectedRevision,
+        afterSnapshotId,
+        context.userId,
+      ),
   );
 }
 export const OpportunityService = {

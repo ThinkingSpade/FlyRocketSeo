@@ -8,6 +8,31 @@ import {
 import { projects } from "./app.schema";
 import { organization } from "./better-auth-schema";
 
+// No cascade: ownership and retired-key fences must survive project deletion.
+export const opportunityEvidenceObjects = sqliteTable(
+  "opportunity_evidence_objects",
+  {
+    key: text("key").primaryKey(),
+    organizationId: text("organization_id").notNull(),
+    projectId: text("project_id").notNull(),
+    contentHash: text("content_hash").notNull(),
+    state: text("state", {
+      enum: ["writing", "ready", "deleting", "deleted"],
+    }).notNull(),
+    ownerToken: text("owner_token"),
+    createdAt: text("created_at").notNull(),
+    touchedAt: text("touched_at").notNull(),
+    lastActorUserId: text("last_actor_user_id"),
+  },
+  (table) => [
+    index("opportunity_evidence_objects_scope_idx").on(
+      table.organizationId,
+      table.projectId,
+      table.state,
+    ),
+  ],
+);
+
 export const opportunitySnapshots = sqliteTable(
   "opportunity_snapshots",
   {

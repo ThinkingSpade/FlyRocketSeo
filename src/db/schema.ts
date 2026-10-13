@@ -93,4 +93,5 @@ export const {
   opportunitySnapshots,
   opportunityEvents,
   opportunityRuns,
+  opportunityEvidenceObjects,
 } = schema;

@@ -150,29 +150,30 @@ export async function saveInternalLink(
     ) {
       // A successful capture can disprove this one pair. It says nothing about
       // other links, and does not verify who implemented the observed link.
-      const evidenceSnapshotId = await retainEvidence(
+      await retainEvidence(
         {
           ...evidence,
           source: "Google Search Console and captured HTML",
           fetchedAt: captured.capturedAt,
         },
         raw,
+        async (evidenceSnapshotId) =>
+          OpportunityRepository.reconcileObserved(scoped(context), {
+            scopeKey: await digest(evidence.scope),
+            detectorId: "content-internal-link",
+            observedDedupeKeys: [],
+            examinedDedupeKey: await opportunityDedupeKey(
+              evidence.scope,
+              "internal_link",
+              input.sourceUrl,
+              [input.sourceUrl, input.targetUrl],
+            ),
+            evidenceSnapshotId,
+            complete: true,
+            fetchedAt: captured.capturedAt,
+            window: evidence.window,
+          }),
       );
-      await OpportunityRepository.reconcileObserved(scoped(context), {
-        scopeKey: await digest(evidence.scope),
-        detectorId: "content-internal-link",
-        observedDedupeKeys: [],
-        examinedDedupeKey: await opportunityDedupeKey(
-          evidence.scope,
-          "internal_link",
-          input.sourceUrl,
-          [input.sourceUrl, input.targetUrl],
-        ),
-        evidenceSnapshotId,
-        complete: true,
-        fetchedAt: captured.capturedAt,
-        window: evidence.window,
-      });
       return {
         availability: "no_longer_observed" as const,
         reasons: [
