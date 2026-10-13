@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildComparison } from "./backlinksComparison";
+import { backlinksCompareResultSchema } from "@/types/schemas/backlinks-compare";
 import {
   mapIntersectionRows,
   summarizeNetworks,
@@ -14,6 +15,54 @@ const empty = {
   newLost: [],
   spamScores: [],
 };
+it("does not call a site the leader when another requested site has no observed count", () => {
+  const result = buildComparison({
+    ...empty,
+    competitors: ["rival.example", "missing.example"],
+    referringDomains: [
+      { target: "example.com", referring_domains: 10 },
+      { target: "rival.example", referring_domains: 0 },
+    ],
+  });
+  expect(result).toMatchObject({
+    leader: null,
+    gapToLeader: null,
+    yourPosition: null,
+  });
+  expect(result.rows).toHaveLength(3);
+});
+it("sanitizes legacy cached observations and recomputes unsupported net counts", () => {
+  const result = backlinksCompareResultSchema.parse({
+    rows: [
+      {
+        target: "example.com",
+        isYou: true,
+        rank: 101,
+        backlinks: 1.5,
+        referringDomains: null,
+        referringDomainsNofollow: null,
+        spamScore: -1,
+        newReferringDomains: 0,
+        lostReferringDomains: null,
+        netReferringDomains: 0,
+      },
+    ],
+    yourPosition: 1,
+    totalTargets: 1,
+    leader: "example.com",
+    gapToLeader: 0,
+    since: "2026-09-01",
+    fetchedAt: "2026-10-01T00:00:00Z",
+  });
+  expect(result.rows[0]).toMatchObject({
+    rank: null,
+    backlinks: null,
+    spamScore: null,
+    newReferringDomains: 0,
+    netReferringDomains: null,
+  });
+  expect(result.yourPosition).toBeNull();
+});
 it("does not subtract an unreported new/lost count from an assumed zero", () => {
   const result = buildComparison({
     ...empty,

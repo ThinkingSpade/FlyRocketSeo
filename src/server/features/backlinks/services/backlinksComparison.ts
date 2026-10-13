@@ -123,13 +123,14 @@ export function buildComparison(inputs: ComparisonInputs): ComparisonResult {
     );
 
   const ranked = rows.filter((row) => row.referringDomains != null);
+  const complete = ranked.length === rows.length;
   const yourRow = rows.find((row) => row.isYou);
   const leaderRow = ranked[0] ?? null;
   // Standard competition ranking: everyone on the same count shares a place.
   // Using the array index instead would break ties alphabetically and report
   // "#2 of 2, 0 behind" for two sites that are actually level.
   const yourPosition =
-    yourRow && yourRow.referringDomains != null
+    complete && yourRow && yourRow.referringDomains != null
       ? ranked.filter(
           (row) =>
             (row.referringDomains ?? 0) > (yourRow.referringDomains ?? 0),
@@ -140,9 +141,11 @@ export function buildComparison(inputs: ComparisonInputs): ComparisonResult {
     rows,
     yourPosition,
     totalTargets: ranked.length,
-    leader: leaderRow?.target ?? null,
+    leader: complete ? (leaderRow?.target ?? null) : null,
     gapToLeader:
-      leaderRow?.referringDomains != null && yourRow?.referringDomains != null
+      complete &&
+      leaderRow?.referringDomains != null &&
+      yourRow?.referringDomains != null
         ? leaderRow.referringDomains - yourRow.referringDomains
         : null,
   };

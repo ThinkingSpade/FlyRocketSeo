@@ -58,14 +58,14 @@ async function readCache<T>(
   return parsed.success && parsed.data ? parsed.data : null;
 }
 
-function writeCache(key: string, value: unknown, label: string) {
-  void setCached(key, value, COMPARE_TTL_SECONDS).catch((error) => {
+async function writeCache(key: string, value: unknown, label: string) {
+  await setCached(key, value, COMPARE_TTL_SECONDS).catch((error) => {
     console.error(`backlinks.${label}.cache-write failed:`, error);
   });
 }
 
 async function compareProfiles(
-  input: { target: string; competitors: string[] },
+  input: { projectId: string; target: string; competitors: string[] },
   billingCustomer: BillingCustomerContext,
 ): Promise<BacklinksCompareResult> {
   const target = toApiTarget(input.target);
@@ -73,6 +73,8 @@ async function compareProfiles(
   // Sorted so the same set entered in a different order reuses one cache entry.
   const cacheKey = await buildCacheKey("backlinks:compare", {
     organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    contractVersion: 2,
     target,
     competitors: [...competitors].toSorted().join(","),
   });
@@ -115,7 +117,7 @@ async function compareProfiles(
     fetchedAt: now.toISOString(),
   };
 
-  if (result.rows.length > 0) writeCache(cacheKey, result, "compare");
+  await writeCache(cacheKey, result, "compare");
 
   return result;
 }
@@ -165,7 +167,12 @@ async function fetchIntersectionPage(
  * competitors each domain covers.
  */
 async function linkIntersect(
-  input: { target: string; competitors: string[]; page: number },
+  input: {
+    projectId: string;
+    target: string;
+    competitors: string[];
+    page: number;
+  },
   billingCustomer: BillingCustomerContext,
 ): Promise<LinkIntersectResult> {
   const target = toApiTarget(input.target);
@@ -186,6 +193,8 @@ async function linkIntersect(
 
   const cacheKey = await buildCacheKey("backlinks:link-intersect", {
     organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    contractVersion: 2,
     target,
     competitors: [...competitors].toSorted().join(","),
     page: input.page,
@@ -219,19 +228,21 @@ async function linkIntersect(
     fetchedAt: new Date().toISOString(),
   };
 
-  if (rows.length > 0) writeCache(cacheKey, result, "link-intersect");
+  await writeCache(cacheKey, result, "link-intersect");
 
   return result;
 }
 
 /** Sites that share the most referring domains with the target. */
 async function competingDomains(
-  input: { target: string },
+  input: { projectId: string; target: string },
   billingCustomer: BillingCustomerContext,
 ): Promise<CompetingDomainsResult> {
   const target = toApiTarget(input.target);
   const cacheKey = await buildCacheKey("backlinks:competing-domains", {
     organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    contractVersion: 2,
     target,
   });
 
@@ -262,19 +273,21 @@ async function competingDomains(
     fetchedAt: new Date().toISOString(),
   };
 
-  if (result.rows.length > 0) writeCache(cacheKey, result, "competing-domains");
+  await writeCache(cacheKey, result, "competing-domains");
 
   return result;
 }
 
 /** Referring links grouped by subnet, to expose network concentration. */
 async function referringNetworks(
-  input: { target: string },
+  input: { projectId: string; target: string },
   billingCustomer: BillingCustomerContext,
 ): Promise<ReferringNetworksResult> {
   const target = toApiTarget(input.target);
   const cacheKey = await buildCacheKey("backlinks:referring-networks:v2", {
     organizationId: billingCustomer.organizationId,
+    projectId: input.projectId,
+    contractVersion: 2,
     target,
   });
 
@@ -294,9 +307,7 @@ async function referringNetworks(
     fetchedAt: new Date().toISOString(),
   };
 
-  if (result.rows.length > 0) {
-    writeCache(cacheKey, result, "referring-networks");
-  }
+  await writeCache(cacheKey, result, "referring-networks");
 
   return result;
 }

@@ -1,4 +1,10 @@
 import { z } from "zod";
+import {
+  providerCount,
+  providerHundredScore,
+} from "@/shared/provider-observations";
+const countObservation = z.number().nullable().transform(providerCount);
+const scoreObservation = z.number().nullable().transform(providerHundredScore);
 
 /**
  * Requests and results for the competitive half of the Backlinks tab:
@@ -25,29 +31,43 @@ export const backlinksCompareRequestSchema = z.object({
     .max(MAX_COMPARE_COMPETITORS),
 });
 
-const comparisonRowSchema = z.object({
-  target: z.string(),
-  isYou: z.boolean(),
-  rank: z.number().nullable(),
-  backlinks: z.number().nullable(),
-  referringDomains: z.number().nullable(),
-  referringDomainsNofollow: z.number().nullable(),
-  spamScore: z.number().nullable(),
-  newReferringDomains: z.number().nullable(),
-  lostReferringDomains: z.number().nullable(),
-  netReferringDomains: z.number().nullable(),
-});
+const comparisonRowSchema = z
+  .object({
+    target: z.string(),
+    isYou: z.boolean(),
+    rank: scoreObservation,
+    backlinks: countObservation,
+    referringDomains: countObservation,
+    referringDomainsNofollow: countObservation,
+    spamScore: scoreObservation,
+    newReferringDomains: countObservation,
+    lostReferringDomains: countObservation,
+    netReferringDomains: z.number().nullable(),
+  })
+  .transform((row) => ({
+    ...row,
+    netReferringDomains:
+      row.newReferringDomains !== null && row.lostReferringDomains !== null
+        ? row.newReferringDomains - row.lostReferringDomains
+        : null,
+  }));
 
-export const backlinksCompareResultSchema = z.object({
-  rows: z.array(comparisonRowSchema),
-  yourPosition: z.number().nullable(),
-  totalTargets: z.number(),
-  gapToLeader: z.number().nullable(),
-  leader: z.string().nullable(),
-  /** Start of the new/lost window, echoed so the UI can label the column. */
-  since: z.string(),
-  fetchedAt: z.string(),
-});
+export const backlinksCompareResultSchema = z
+  .object({
+    rows: z.array(comparisonRowSchema),
+    yourPosition: z.number().nullable(),
+    totalTargets: z.number(),
+    gapToLeader: z.number().nullable(),
+    leader: z.string().nullable(),
+    /** Start of the new/lost window, echoed so the UI can label the column. */
+    since: z.string(),
+    fetchedAt: z.iso.datetime({ offset: true }),
+  })
+  .transform((result) =>
+    result.rows.every((row) => row.referringDomains !== null)
+      ? result
+      : { ...result, yourPosition: null, leader: null, gapToLeader: null },
+  );
 
 export type BacklinksCompareResult = z.infer<
   typeof backlinksCompareResultSchema

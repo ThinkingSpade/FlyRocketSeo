@@ -107,7 +107,11 @@ export const getBacklinksComparison = createServerFn({ method: "POST" })
   .validator(backlinksCompareRequestSchema)
   .handler(({ data, context }) =>
     BacklinksCompareService.compareProfiles(
-      { target: data.target, competitors: data.competitors },
+      {
+        projectId: data.projectId,
+        target: data.target,
+        competitors: data.competitors,
+      },
       context,
     ),
   );
@@ -119,6 +123,7 @@ export const getBacklinksLinkIntersect = createServerFn({ method: "POST" })
   .handler(({ data, context }) =>
     BacklinksCompareService.linkIntersect(
       {
+        projectId: data.projectId,
         target: data.target,
         competitors: data.competitors,
         page: data.page,
@@ -132,7 +137,10 @@ export const getBacklinksCompetingDomains = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(competingDomainsRequestSchema)
   .handler(({ data, context }) =>
-    BacklinksCompareService.competingDomains({ target: data.target }, context),
+    BacklinksCompareService.competingDomains(
+      { projectId: data.projectId, target: data.target },
+      context,
+    ),
   );
 
 /** Referring links grouped by subnet, to expose network concentration. */
@@ -140,7 +148,10 @@ export const getBacklinksReferringNetworks = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(referringNetworksRequestSchema)
   .handler(({ data, context }) =>
-    BacklinksCompareService.referringNetworks({ target: data.target }, context),
+    BacklinksCompareService.referringNetworks(
+      { projectId: data.projectId, target: data.target },
+      context,
+    ),
   );
 
 /** Timelines shift monthly; a day of cache keeps repeat views free. */
