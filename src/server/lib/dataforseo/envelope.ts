@@ -112,8 +112,8 @@ function describeInvalidField(
 }
 
 /**
- * DataForSEO's "No Search Results" (40501) — a successful empty result, not a
- * failure. Match on the status message, not the code alone: 40501 also covers
+ * DataForSEO's "No Search Results" (40102) — a successful empty result, not a
+ * failure. Preserve legacy message recognition without accepting 40501
  * validation rejections like "Invalid Field: 'target'.", which are real charged
  * failures we must surface rather than mask as empty results.
  */
@@ -128,7 +128,7 @@ type AssertOkOptions = {
   classify?: DataforseoErrorClassifier;
   /** Request path string handed to the classifier (e.g. "/v3/backlinks/summary/live"). */
   classifyPath?: string;
-  /** Treat DataForSEO's "no search results" (40501) as an empty success. */
+  /** Treat DataForSEO's "no search results" (40102) as an empty success. */
   treatNoResultsAsEmpty?: boolean;
 };
 

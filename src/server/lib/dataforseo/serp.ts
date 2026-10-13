@@ -21,6 +21,7 @@ import {
   buildTaskBilling,
   DataforseoChargedTaskError,
   isNoResultsTask,
+  isRecord,
   parseTaskItems,
   type DataforseoApiResponse,
 } from "@/server/lib/dataforseo/envelope";
@@ -66,7 +67,29 @@ export async function fetchLiveSerp(input: {
       depth: 100,
     }),
   ]);
-  const task = assertOk(response);
+  const task = assertOk(response, { treatNoResultsAsEmpty: true });
+  if (isNoResultsTask(task)) {
+    // The documented 40102 response retains metadata with null items and zero
+    // counts. Legacy explicit empty arrays also establish absence; missing
+    // payloads still lack evidence.
+    const first = task.result?.[0];
+    const isEmpty = Array.isArray(task.result) && task.result.length === 0;
+    const hasEmptyMetadata =
+      isRecord(first) &&
+      first.items === null &&
+      first.items_count === 0 &&
+      first.se_results_count === 0;
+    if (
+      !isEmpty &&
+      !hasEmptyMetadata &&
+      (!isRecord(first) || !Array.isArray(first.items))
+    ) {
+      throw new DataforseoChargedTaskError(
+        "DataForSEO SERP returned missing observation items",
+        buildTaskBilling(task),
+      );
+    }
+  }
   requireSerpItems(task);
   requireSerpScope(task, {
     keyword: input.keyword,
@@ -136,7 +159,7 @@ export async function fetchRankCheckSerp(input: {
     }),
   ]);
 
-  // "No Search Results" (40501) is valid for obscure/new keywords — treat as an
+  // "No Search Results" (40102) is valid for obscure/new keywords — treat as an
   // empty result set rather than failing the whole rank-tracking run.
   const task = assertOk(response, { treatNoResultsAsEmpty: true });
   requireSerpItems(task);

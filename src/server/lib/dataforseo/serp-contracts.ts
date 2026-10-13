@@ -86,13 +86,36 @@ export function requireSerpItems(task: DataforseoTaskLike): void {
   }
 }
 
+function matchesSerpScopeField(
+  key: string,
+  actual: unknown,
+  expected: unknown,
+): boolean {
+  if (actual === expected) return true;
+  // DataForSEO can echo numeric POST fields as decimal strings. Accept only
+  // canonical safe integers for these declared numeric fields, not coercion
+  // of keywords, device, language, or coordinate strings.
+  return (
+    (key === "location_code" || key === "depth") &&
+    typeof expected === "number" &&
+    Number.isSafeInteger(expected) &&
+    typeof actual === "string" &&
+    /^(0|[1-9]\d*)$/.test(actual) &&
+    Number.isSafeInteger(Number(actual)) &&
+    Number(actual) === expected
+  );
+}
+
 export function requireSerpScope(
   task: DataforseoTaskLike,
   expected: Record<string, unknown>,
 ): void {
   for (const echoed of [task.data, task.result?.[0]].filter(isRecord)) {
     for (const [key, value] of Object.entries(expected)) {
-      if (echoed[key] != null && echoed[key] !== value) {
+      if (
+        echoed[key] != null &&
+        !matchesSerpScopeField(key, echoed[key], value)
+      ) {
         throw new DataforseoChargedTaskError(
           `DataForSEO SERP returned mismatched ${key}`,
           buildTaskBilling(task),
