@@ -1,40 +1,64 @@
 # FlyRocketSEO implementation roadmap
 
-Date: 2026-10-13. Baseline: `49096606273eaeaeff7b82e49b1a767a48e65eca`.
+Date: 2026-10-13. Original baseline: `49096606273eaeaeff7b82e49b1a767a48e65eca`.
 Branch: `audit/flyrocketseo-reliability-2026-10-13`.
 
 ## Goal and boundaries
 
-Make existing workflows reliable before expanding the product. Preserve project-scoped authorization, explicit paid-request consent, saved analysis reuse, and the existing React/TanStack/Cloudflare architecture. No production deployment, merge, production data mutation, paid subscription, or infrastructure migration is part of this branch.
+Preserve the existing React/TanStack/Cloudflare architecture, project-scoped authorization, explicit paid-request consent, and saved analysis reuse. No deployment, main merge, production data mutation, paid subscription, or infrastructure migration is authorized by this branch.
 
-The supplied product brief is the target vision, not a statement that the existing platform has been fully verified. This first increment repairs independently reproducible Opportunities defects and records an evidence-based inventory and handoff for the wider transformation. Code inspection, deterministic execution, mocked component checks, and authenticated end-to-end verification must be reported separately.
+The full product brief remains the destination. This increment includes a repository-wide inventory, targeted verified repairs, and product designs; it does not certify every deployed feature or complete the dashboard and persisted opportunity lifecycle.
 
-## First increment: audit evidence and loading correctness
+## Implemented increment
 
-Files: `src/client/features/opportunities/opportunityModel.ts`, `OpportunitiesPage.tsx`, `OpportunityTiles.tsx`, focused regression tests, and a small pure audit-state helper if needed.
+Opportunities now resolves audit prerequisites before dependent pending states, distinguishes missing/empty/failed evidence from genuine zero findings, counts unique affected URLs, avoids metadata diagnoses from failed captures, rejects invalid numeric scenarios, and presents nonadditive click scenarios with explicit assumptions.
 
-1. Reproduce the disabled audit query's perpetual loading state when no completed audit exists. Test the actual page branch with controlled query results. Show a useful no-audit action instead; do not enable a fetch with an empty audit ID.
-2. Reproduce false zero technical metrics during loading, missing results, and no-audit states. Distinguish unavailable, failed, loading, no completed audit, empty crawl, and usable evidence. Preserve genuine zero findings when evaluated pages are available.
-3. Reproduce overcounted affected pages. Count distinct affected URLs across all issue categories, not the sum of category counts or the limited example URLs.
-4. Reproduce metadata findings on failed or unknown fetches. Limit metadata checks to successful captured pages; describe redirects and short content as review signals rather than automatic ranking failures.
-5. Label click figures as hypothetical scenarios over the input GSC window, not promised extra monthly traffic. Preserve separate actions while avoiding overlapping headline totals.
-6. Add regression tests before implementation, run targeted verification, and record exact limitations. Do not claim the full suite or live browser workflow passed without execution.
+Navigation retains all 24 destinations under Overview, Research, Optimize, Track, and Manage. Project-access failures are retryable unless they are definitive authentication/authorization or missing-project errors. Previously implemented server authorization and project-remount safeguards remain intact.
 
-## Later increments, in priority order
+Regression coverage includes native Vitest tests, controlled component/route contracts, and isolated Chromium computation checks. A branch-only workflow runs locked installation, static checks, the full unit suite, and a production build without deployment. An initial logging pipeline masked a formatting failure; explicit Bash pipefail and corrected formatting are required before relying on its final status. Consult `../audits/verification-results.md` for exact tested commits and outcomes, not an earlier green badge.
 
-| Priority | Work | Impact | Complexity | Dependencies / acceptance |
-| --- | --- | --- | --- | --- |
-| P0 | Trace every feature from route to provider/cache/error handling | High | Large | Authenticated staging and provider fixtures; success, empty, error, restore and cross-project tests per workflow |
-| P0 | Project-access error recovery | High | Small/medium | Confirm real authorization error codes; transient failures stay retryable without weakening server authorization |
-| P0 | Audit billing/auth modes and metered request entry points | High | Medium | Verify deployed mode; opening or switching tabs must not incur spend |
-| P1 | Reorganize navigation around Overview, Research, Optimize, Track and Manage | High | Medium | Preserve deep links; test desktop/mobile navigation and active project retention |
-| P1 | Connected page-detail workflow and shared evidence context | High | Large | Project, account, date, country, device and source keys consistently scoped |
-| P2 | Persistent opportunity lifecycle and evidence snapshots | High | Large | Tenant-scoped schema and migration review; detector versioning; no silent duplicate tasks |
-| P2 | Decline/recovery, internal links and measured outcomes | High | Large | Comparable GSC windows, crawl coverage, content inspection and measurement caveats |
-| P3 | Competitor gaps and AI visibility expansion | Conditional | Large | Verified provider coverage, explicit spend authorization and honest limitations |
+## Next work, ordered by priority
 
-## Verification and release gate
+### P0: Provider and evidence contracts
 
-The execution environment currently cannot resolve GitHub/package download hosts, so source is read through the GitHub connector and focused files are reconstructed with matching Git blob hashes. No production credentials are available. Attempt the repository-native test/build commands when a full checkout is available; record blocked checks rather than inventing results.
+Impact: high. Complexity: medium per provider family. Dependencies: representative successful, partial, empty, missing-field, stale, and failed provider fixtures; tenant-scoped test projects.
 
-Before approval to merge: `pnpm install --frozen-lockfile`, `pnpm run ci:check`, `pnpm test`, `pnpm run build`, then the relevant Playwright suites in an isolated test deployment with synthetic data, two project contexts and provider calls mocked or explicitly budget-approved. No deployment command should be run merely to verify this branch.
+Start with `backlinksTimeline.ts` new/lost events defaulting absent values to zero and `domainRankHistory.ts` partial top-three buckets. Establish documented semantics before changing types. Then extend the metric register field by field, including exports, saved runs, cache identity, and captured dates. Acceptance: unknown stays unknown; genuine zero remains zero; no synthetic history; project, account, target, market, device, and time window remain consistent.
+
+### P0: Authenticated workflow acceptance
+
+Impact: high. Complexity: large across the product. Dependencies: an existing isolated staging environment, test accounts, provider mocks or explicitly approved spending, and OAuth test access.
+
+Exercise every inventoried tool through navigation, search, filters, sorting, loading, errors, empty states, restored results, and exports. Test two organizations and two projects, revoked access, expired sessions, project switching, paid-request confirmation, and background-job recovery. Acceptance: no cross-project leakage, duplicate paid requests, silent redirects on transient errors, or successful-looking missing data.
+
+### P1: Nonblocking onboarding and progressive navigation
+
+Impact: high. Complexity: small/medium. Dependencies: authenticated browser reproduction of AppShell's pathname-driven missing-provider modal.
+
+Keep free connected-site workflows usable without mandatory DataForSEO setup. Consolidate overlapping tools into tabs/drill-downs while retaining existing deep links. Validate keyboard focus, mobile navigation, active-state labels, and context retention. The current regrouping is not the end of the UX work.
+
+### P1: Dashboard and unified page investigation
+
+Impact: high. Complexity: large. Dependencies: consistent source envelopes, date scopes, and partial-source states.
+
+Implement the proposed performance/actions/changes/results dashboard from `ux-redesign.md`. Reuse independent cards and existing Page Explorer, GSC, audit, and content services rather than creating a single fragile fetch waterfall. Acceptance: users can investigate a specific page, see supporting evidence, choose an action, and retain context without restarting research.
+
+### P2: Persisted opportunity lifecycle
+
+Impact: high. Complexity: large. Dependencies: reviewed tenant-scoped schema changes, evidence retention policy, and deterministic detector contracts.
+
+Implement `opportunity-engine.md`: stable deduplication, versioned evidence snapshots, defensible priority/confidence, reviewed recommendations, persistent progress, and comparable before/after observations. Add decline recovery and content-aware internal linking first. Acceptance: reruns do not duplicate tasks or erase progress; disappearing evidence is not called a fix; outcomes distinguish correlation from causation.
+
+### P3: Dataset-dependent intelligence
+
+Impact: conditional. Complexity: large. Dependencies: verified provider coverage, explicit cost approval, and demonstrated user demand.
+
+Evaluate competitor gaps, wider historical analysis, and AI/local visibility expansion. Own-site crawling and GSC cannot substitute for global competitor/backlink datasets. No new paid provider is assumed.
+
+## Reproduction and release gate
+
+The complete source was obtained through a GitHub Actions artifact after direct local downloads failed. Local controlled tests and Chromium checks are supplemental; native dependency-backed verification runs in the branch workflow.
+
+From a complete checkout: `pnpm install --frozen-lockfile`, `pnpm run ci:check`, `pnpm test`, `pnpm run build`, `node --test scripts/audit/verify-opportunities.mjs`, and `node scripts/audit/verify-project-access.mjs`. Run the existing authenticated Playwright suites only against isolated test data with authorized credentials. No deployment command is necessary merely to inspect or test this branch.
+
+Next implementer: read the seven audit/product documents, verify the current branch and commit, reproduce the remaining P0 cases, and proceed in small tested commits. Do not merge or deploy on the strength of unit tests alone.

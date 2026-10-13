@@ -9,6 +9,11 @@ on:
 permissions:
   contents: read
 
+# Explicit bash enables pipefail, so tee cannot mask a failed check.
+defaults:
+  run:
+    shell: bash
+
 concurrency:
   group: flyrocketseo-audit-${{ github.ref }}
   cancel-in-progress: true
