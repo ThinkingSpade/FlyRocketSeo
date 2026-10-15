@@ -169,6 +169,13 @@
       "when": 1791902545010,
       "tag": "0023_rank_keyword_metric_scope",
       "breakpoints": true
+    },
+    {
+      "idx": 24,
+      "version": "7",
+      "when": 1792052000530,
+      "tag": "0024_harvest_net_and_grading",
+      "breakpoints": true
     }
   ]
 }
