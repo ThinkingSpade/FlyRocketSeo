@@ -43,10 +43,12 @@ migrations still require authorized release access. Conditional P3 intelligence
 requires verified datasets, demonstrated demand and explicit cost approval; no
 new dataset or invented observation will substitute for those prerequisites.
 
-Exact commit/build/version linkage confirms an automatic Cloudflare production
-deployment following audit-branch publication; the user confirmed it was intentional.
-Publishing later source awaits approval for its deployment effect or a verified
-nondeploying path.
+The user authorized deploying the completed repairs. Release commit `2d2676f3`
+is published and serves 100% of production as Cloudflare version `f6e341e3`.
+Six reviewed additive D1 migrations applied; all 50 committed migrations and
+three older harvest entries are recorded. Public HTTP and settled sign-in/email
+form browser smoke checks pass. Full release evidence and final CI status are in
+`../audits/publication-gate.md`.
 Verification-only GitHub jobs do not certify the external trigger's behavior.
 Local implementation, isolated tests and commits may continue; rollback,
 production repair or trigger/configuration changes require approval. See
@@ -102,7 +104,8 @@ production repair or trigger/configuration changes require approval. See
   `.logs/evidence/acceptance-final-83/`; frozen CI and focused cases are not
   combined or relabelled as that run.
 - Remaining external gates: live integrations and approved release verification
-  remain blocked as described above, and remote publication is held until the
-  Cloudflare trigger/deployment boundary is established. Conditional P3 datasets
+  remain blocked as described above. The approved D1 production release is
+  deployed; live authenticated provider/OAuth and deployed job/storage acceptance
+  still require test-account access. Conditional P3 datasets
   and later detector, implementation-cycle and causal-analysis extensions are
   future work rather than missing first-version implementation.

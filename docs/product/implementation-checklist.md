@@ -9,11 +9,13 @@ Local browser fixtures never certify OAuth, live provider entitlement, or stagin
 
 ## Current remaining-roadmap continuation from `bb93af37`
 
-**Current external gate:** the user confirmed the observed automatic Cloudflare
-deployment after audit publication was intentional. Publishing later local
-repairs awaits approval for its deployment effect or a verified nondeploying path. Source
-`3ece2362` passed both GitHub verification workflows; that does not certify the
-Cloudflare trigger or production behavior. See `../audits/publication-gate.md`.
+**Approved production release:** the user requested deployment. Release commit
+`2d2676f3` is published; Cloudflare version `f6e341e3` serves 100% of production
+traffic with binding identities and hosted auth mode unchanged. Six pending
+additive D1 migrations applied; all 50 committed migrations are recorded, with
+three older harvest entries retained. Public HTTP and settled sign-in/email-form
+browser smoke checks pass. Docker PostgreSQL CI passes; final audit CI is running.
+Live authenticated integrations remain blocked. See `../audits/publication-gate.md`.
 Latest local source/test head: `ff2e0530`. Canonical empty Citation/SERP and cold
 GSC initialization repairs pass their strict browser regression and complete
 native/static/build/PostgreSQL checks. The complete fresh-state application run
@@ -53,8 +55,9 @@ retained separately and are never added together as a passing complete suite.
 
 Frozen source `3ece2362` passes inspected Linux audit and Docker PostgreSQL CI,
 including the complete 82-case suite. Its artifacts remain separate from the
-latest local repairs. Live/deployed behavior and human task-based usability are
-not certified by fixtures. Latest-source remote publication remains held.
+latest local repairs. Live authenticated provider/job behavior and human task-based
+usability are not certified by fixtures. The approved latest-source release is
+published; exact-source Docker CI passes and audit CI is finishing.
 
 Current coverage registers: `../audits/keyword-contract-coverage.md`,
 `../audits/rank-local-contract-coverage.md`,
@@ -119,9 +122,9 @@ Current coverage registers: `../audits/keyword-contract-coverage.md`,
 ## Explicit remaining gates
 
 - **Blocked live integrations:** no staging access, test OAuth renewal/revocation, authorized provider responses/entitlement, GBP writes or deployed background-job recovery. Fixture navigation or a missing-key state is never an integration pass.
-- **Release gates:** review/apply migrations and deploy only after approval. Local PostgreSQL and R2 cleanup are verified; deployed Hyperdrive, R2 permissions/configuration, older writer quiescence and crash recovery remain separate release checks. No automatic task/history expiration or stranded-writer expiry is introduced. Local Docker is unavailable; remote CI status is recorded separately.
+- **Approved release:** D1 migrations and production deployment are complete, with schema-only checks and public HTTP/browser smoke verification. Local PostgreSQL/R2 cleanup and Docker PostgreSQL CI are verified; deployed R2 read/write recovery, older writer quiescence and crash recovery remain separate acceptance checks. PostgreSQL/Hyperdrive is unused in this D1 release. No automatic task/history expiration or stranded-writer expiry is introduced. Final audit CI status is recorded separately.
 - **First-version limitations:** one implementation baseline per saved action; repeated follow-up observations are retained. Multiple implementation cycles, prior-year/controlled causal analysis and broader detector families are future work. Legacy records retain useful observations while unrecorded original scope/provenance is explicitly unavailable; restoring cannot reconstruct that evidence.
-- **Preserved application boundaries:** no automatic website publishing, paid request or new paid service. Existing authorization, saved-run restoration and in-flight metered guards remain in use. Merge, production migration and deployment require approval. The external automatic deployment after the audit push is disclosed in `../audits/publication-gate.md`; further pushes remain held.
+- **Preserved application boundaries:** no automatic website publishing, paid request or new paid service. Existing authorization, saved-run restoration and in-flight metered guards remain in use. This release's publication, deployment and additive migrations were approved; no merge occurred. Exact evidence is in `../audits/publication-gate.md`.
 - **Human review:** desktop/mobile interactions and settled visual checks pass, but the brief task-based human usability review is not certified by automated tests.
 
 ## Incremental commits

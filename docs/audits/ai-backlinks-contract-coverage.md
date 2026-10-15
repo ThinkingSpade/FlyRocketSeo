@@ -53,8 +53,8 @@ and [task status codes](https://docs.dataforseo.com/v3/appendix/errors/).
 The existing aggregate endpoint is retained; new datasets or paid services are
 not introduced by this work.
 
-Live provider entitlement, responses, OAuth, deployed jobs and production
-configuration remain **blocked** because staging access is unavailable. No
+Live provider entitlement, responses, OAuth and deployed job/storage acceptance
+remain **blocked** because test-account access is unavailable. No
 production data or real paid provider response was used for these tests. The
-external deployment observed after publication is recorded in
-`publication-gate.md`; further pushes and release remain held.
+approved release and exact production version are recorded in
+`publication-gate.md`; live authenticated provider/OAuth acceptance remains blocked.

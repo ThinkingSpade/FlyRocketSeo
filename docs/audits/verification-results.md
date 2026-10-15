@@ -7,12 +7,14 @@ Prior native-verified code/workflow commit: `144b1552b4504dd969f4fcc784c5c57731e
 
 ## Current remaining-roadmap verification
 
-**Publication gate:** source `3ece2362` passed both remote verification workflows,
-but its Cloudflare check and direct Worker metadata confirm an automatic
-production deployment after publication, which the user confirmed was
-intentional. The Builds API denies the existing profile. Further pushes await
-approval for deployment of the later local repairs or a verified nondeploying
-publication path. See `publication-gate.md`. The latest local source/test head is
+**Approved production release:** the user requested deployment. Commit
+`2d2676f3` is published; Cloudflare build `33d5a35a` and direct metadata confirm
+version `f6e341e3` serves 100% of production traffic. Six reviewed additive D1
+migrations applied, with all 50 committed names and three older harvest entries
+retained. Public HTTP and settled browser sign-in/email-form smoke checks pass;
+no credentials or form submission were used. Docker PostgreSQL CI passes and
+final audit CI is running. Full evidence and limitations: `publication-gate.md`.
+The latest application/test source head is
 `ff2e0530`; its native, PostgreSQL, static, build and complete **83-case browser**
 checks pass. The browser result is one fresh-state run, not a union of earlier
 focused cases or the previous 82-case run.
@@ -105,11 +107,11 @@ describe the finite fixture boundaries.
 
 No staging access is available. Live OAuth renewal/revocation, provider/model
 entitlement and responses, GBP publishing, Sheets OAuth, deployed jobs/chat,
-Hyperdrive/R2 configuration and production migration/release remain blocked or
-approval-gated. Local fixtures never certify them. No merge, production-data
-test, paid call or new paid service is used for this work. The external automatic
-deployment after publication is disclosed in `publication-gate.md`; production
-data/migration effects were not inspected and are not certified.
+and R2 read/write recovery remain blocked without test-account access. Local
+fixtures never certify them. The approved D1 release and schema/migration
+readiness are verified separately in `publication-gate.md`; PostgreSQL/Hyperdrive
+is not used by this production deployment. No production application records,
+paid provider calls or new services were used for the smoke checks. No merge occurred.
 
 Current application/test head: `ff2e0530`. Independent final review found no
 blocking regression in `3ece2362..ff2e0530` or the narrow PostgreSQL artifact flag.
@@ -122,9 +124,8 @@ and [Docker PostgreSQL workflow](https://github.com/ThinkingSpade/FlyRocketSeo/a
 3,780 native cases, 82 actual browser cases, 20 controlled contracts, all static/
 build checks and 17 PostgreSQL cases/all 24 migrations. Complete logs/artifacts
 are in `.logs/evidence/ci-3ece2362/`. That source's CI is not relabelled as a run
-of later local repairs. Latest-source remote CI/publication remains held by the
-external Cloudflare gate. Merge, production migrations and deployment remain
-unauthorized.
+of later repairs. The later approved release `2d2676f3` is deployed and its
+exact-source CI is tracked separately in `publication-gate.md`. No merge occurred.
 
 ## Storage/provider continuation from `317d915b` (historical)
 
