@@ -7,6 +7,8 @@ vi.mock("cloudflare:workers", () => ({ env: {} }));
 
 const mocks = vi.hoisted(() => ({
   claimForDraft: vi.fn(),
+  reclaimFailedDraft:
+    vi.fn<(projectId: string, cutoffIso: string) => Promise<boolean>>(),
   applyDraft: vi.fn(),
   draftFromSite: vi.fn(),
 }));
@@ -16,6 +18,7 @@ vi.mock(
   () => ({
     ProjectProfileRepository: {
       claimForDraft: mocks.claimForDraft,
+      reclaimFailedDraft: mocks.reclaimFailedDraft,
       applyDraft: mocks.applyDraft,
     },
   }),
@@ -38,6 +41,7 @@ const DRAFT = {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.claimForDraft.mockResolvedValue(true);
+  mocks.reclaimFailedDraft.mockResolvedValue(false);
   mocks.draftFromSite.mockResolvedValue(DRAFT);
   mocks.applyDraft.mockResolvedValue(undefined);
 });
@@ -80,6 +84,30 @@ describe("ProfileAutoDraftService.run", () => {
     // mounting the card must cost one insert attempt, not one draft.
     expect(mocks.draftFromSite).not.toHaveBeenCalled();
     expect(mocks.applyDraft).not.toHaveBeenCalled();
+  });
+
+  it("retries a draft an earlier attempt claimed and left empty", async () => {
+    // Every production auto-draft before this ended as an empty claimed row
+    // that nothing ever retried, which left those projects with no harvest
+    // vocabulary for good.
+    mocks.claimForDraft.mockResolvedValue(false);
+    mocks.reclaimFailedDraft.mockResolvedValue(true);
+
+    const result = await ProfileAutoDraftService.run({
+      projectId: "p1",
+      domain: "deliotx.com",
+    });
+
+    expect(result).toEqual({ status: "drafted", profile: DRAFT });
+    const [projectId, cutoffIso] = mocks.reclaimFailedDraft.mock.calls[0] ?? [
+      "",
+      "",
+    ];
+    expect(projectId).toBe("p1");
+    // Only rows claimed at least a day ago are eligible.
+    expect(Date.now() - Date.parse(cutoffIso)).toBeGreaterThanOrEqual(
+      24 * 60 * 60 * 1000 - 1_000,
+    );
   });
 
   it("never claims anything for a project with no site to read", async () => {

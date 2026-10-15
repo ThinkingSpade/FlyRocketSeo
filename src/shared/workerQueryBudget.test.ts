@@ -14,7 +14,9 @@ describe("expired-domain Worker query budget", () => {
     expect(MAX_DOMAIN_RATING_LOOKUPS).toBe(8);
     // A lost completion can consume both the completion write and a fenced
     // release, so the true worst-case harvest is one above the happy path.
-    expect(MAX_SCHEDULED_HARVEST_SUBREQUESTS).toBe(24);
+    // 25 since the fleet read also loads tracked keywords, which is what lets
+    // the cron skip projects that have nothing to match.
+    expect(MAX_SCHEDULED_HARVEST_SUBREQUESTS).toBe(25);
     expect(MAX_SCHEDULED_HARVEST_SUBREQUESTS).toBeLessThanOrEqual(
       WORKER_QUERY_BUDGET,
     );

@@ -36,7 +36,7 @@ export function ExpiredDomainsPage({ projectId }: { projectId: string }) {
           {/* The feed-driven shortlist first: it is the widest source and the
               only one that reaches domains with no connection to this
               project's existing link graph. */}
-          <HarvestedDomainsPanel projectId={projectId} />
+          <HarvestedDomainsPanel projectId={projectId} domain={domain} />
           <ExpiredDomainsPanel projectId={projectId} domain={domain} />
         </>
       ) : (

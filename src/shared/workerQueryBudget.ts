@@ -13,10 +13,11 @@ export const MAX_DOMAIN_RATING_ATTEMPTS = 3;
 /** Five inserted values plus the bound attempts default keep 15 rows under 100 params. */
 export const HARVEST_INSERT_ROWS_PER_QUERY = 15;
 
-// One fleet read; three preparation reads; two KV reads; claim, feed, ownership,
-// completion, and a possible fenced release after a lost completion response.
-// Nine more queries remain as explicit safety headroom.
-const HARVEST_NON_INSERT_SUBREQUESTS = 11;
+// Two fleet reads (projects with runs and profiles, then tracked keywords);
+// three preparation reads; two KV reads; claim, feed, ownership, completion,
+// and a possible fenced release after a lost completion response. Nine more
+// queries remain as explicit safety headroom.
+const HARVEST_NON_INSERT_SUBREQUESTS = 12;
 const HARVEST_QUERY_HEADROOM = 9;
 const MAX_HARVEST_INSERT_QUERIES = Math.max(
   0,

@@ -13,6 +13,8 @@ import {
 } from "@/shared/expiredDomains";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { Table } from "@cloudflare/kumo/components/table";
+import { DomainVetLinks } from "@/client/features/expired-domains/DomainVetLinks";
 import { useMemo, useState } from "react";
 import { useAutoRestoredRun } from "@/client/features/analysis-runs/useAutoRestoredRun";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
@@ -216,32 +218,42 @@ export function ExpiredDomainsPanel({
 
             {visibleRows.length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Domain</th>
-                      <th>Status</th>
-                      <th>Days</th>
-                      <th>Availability</th>
-                      <th>Why it is here</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <Table>
+                  <Table.Header>
+                    <Table.Row>
+                      <Table.Head>Domain</Table.Head>
+                      <Table.Head>Status</Table.Head>
+                      <Table.Head className="text-right">Days</Table.Head>
+                      <Table.Head>Availability</Table.Head>
+                      <Table.Head>Why it is here</Table.Head>
+                      <Table.Head>Research</Table.Head>
+                    </Table.Row>
+                  </Table.Header>
+                  <Table.Body>
                     {visibleRows.map((row) => (
-                      <tr key={row.domain}>
-                        <td className="font-medium">{row.domain}</td>
-                        <td className={STATUS_CLASSES[row.status]}>
+                      <Table.Row key={row.domain}>
+                        <Table.Cell className="font-medium">
+                          {row.domain}
+                        </Table.Cell>
+                        <Table.Cell className={STATUS_CLASSES[row.status]}>
                           {STATUS_LABELS[row.status]}
-                        </td>
-                        <td>{formatDays(row.expiration.daysToExpiration)}</td>
-                        <td>{availabilityLabel(row.available)}</td>
-                        <td className="text-base-content/70">
+                        </Table.Cell>
+                        <Table.Cell className="text-right tabular-nums">
+                          {formatDays(row.expiration.daysToExpiration)}
+                        </Table.Cell>
+                        <Table.Cell>
+                          {availabilityLabel(row.available)}
+                        </Table.Cell>
+                        <Table.Cell className="text-base-content/70">
                           {reasonFor(row.evidence)}
-                        </td>
-                      </tr>
+                        </Table.Cell>
+                        <Table.Cell>
+                          <DomainVetLinks domain={row.domain} />
+                        </Table.Cell>
+                      </Table.Row>
                     ))}
-                  </tbody>
-                </table>
+                  </Table.Body>
+                </Table>
               </div>
             ) : result.rows.length > 0 ? (
               // Filtered to nothing is a different message from found nothing.

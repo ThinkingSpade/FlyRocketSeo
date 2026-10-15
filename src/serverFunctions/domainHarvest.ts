@@ -12,6 +12,7 @@ import type { ExpirationCache } from "@/server/lib/apiverve/domainExpiration";
 import { AppError } from "@/server/lib/errors";
 import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 import { resolveHarvestVocabulary } from "@/server/features/expired-domains/harvestVocabulary";
+import { harvestReadiness } from "@/server/features/expired-domains/harvestReadiness";
 import { refreshHarvestedAvailability } from "@/server/features/expired-domains/harvestAvailability";
 import { requireProjectContext } from "@/serverFunctions/middleware";
 import { MAX_HARVEST_AVAILABILITY_BATCH } from "@/shared/harvestAvailability";
@@ -36,11 +37,17 @@ export const getHarvestedDomains = createServerFn({ method: "POST" })
   .middleware(requireProjectContext)
   .validator(projectInput)
   .handler(async ({ context }) => {
-    const [rows, dates] = await Promise.all([
+    const [rows, dates, profile, keywords] = await Promise.all([
       HarvestedDomainRepository.listForProject(context.projectId, MAX_ROWS),
       HarvestedDomainRepository.listHarvestRunDates(context.projectId),
+      ProjectProfileRepository.getByProject(context.projectId),
+      collectTrackedKeywords(context.projectId),
     ]);
     return {
+      // Lets an empty panel say WHY it is empty. "Nothing harvested yet, click
+      // Harvest" was shown to a project with no vocabulary, where clicking
+      // could only ever fail.
+      readiness: harvestReadiness({ keywords, profile, nowMs: Date.now() }),
       rows: rows.map((row) => ({
         domain: row.domain,
         matchedTerm: row.matchedTerm,
@@ -80,7 +87,26 @@ export const runHarvestNow = createServerFn({ method: "POST" })
       collectTrackedKeywords(context.projectId),
     ]);
 
-    return runManualDomainHarvest({
+    const readiness = harvestReadiness({
+      keywords,
+      profile,
+      nowMs: Date.now(),
+    });
+    if (readiness.kind !== "ready") {
+      // Answered before any claim or feed request: there is nothing to match
+      // a day's file against, so the honest result is "no vocabulary", not a
+      // failed date.
+      return {
+        matched: 0,
+        harvestedDates: [],
+        skippedDates: [],
+        failedDates: [],
+        terms: [],
+        noVocabulary: true,
+      };
+    }
+
+    const result = await runManualDomainHarvest({
       projectId: context.projectId,
       projectDomain,
       competitorDomains: competitors.map((row) => row.domain),
@@ -116,6 +142,7 @@ export const runHarvestNow = createServerFn({ method: "POST" })
             HarvestedDomainRepository.releaseRun(claimId),
         }),
     });
+    return { ...result, noVocabulary: false };
   });
 
 const availabilityInput = z.object({

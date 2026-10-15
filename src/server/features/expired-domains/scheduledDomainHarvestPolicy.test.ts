@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import {
+  isGradingReservedTick,
   runScheduledDomainWork,
   selectScheduledHarvestCandidate,
   type ScheduledHarvestProjectState,
@@ -15,9 +16,22 @@ import {
 const SLOT_MS = 15 * 60 * 1_000;
 const PUBLISHED_DATE = "2026-08-21";
 
-function project(id: string): ScheduledHarvestProjectState {
-  return { id, domain: `${id}.example`, completedDates: [] };
+function project(
+  id: string,
+  readiness: ScheduledHarvestProjectState["readiness"] = "ready",
+): ScheduledHarvestProjectState {
+  return { id, domain: `${id}.example`, completedDates: [], readiness };
 }
+
+const FULL_WEEK = [
+  "2026-08-20",
+  "2026-08-19",
+  "2026-08-18",
+  "2026-08-17",
+  "2026-08-16",
+  "2026-08-15",
+  "2026-08-14",
+];
 
 describe("scheduled expired-domain work", () => {
   it("rotates three equally old projects across consecutive ticks", () => {
@@ -56,7 +70,8 @@ describe("scheduled expired-domain work", () => {
       },
       {
         listProjectStates: () => {
-          subrequests += 1;
+          // Two fleet reads: projects with runs and profiles, then keywords.
+          subrequests += 2;
           return Promise.resolve([
             project("project-a"),
             project("project-b"),
@@ -74,6 +89,7 @@ describe("scheduled expired-domain work", () => {
           harvested.push(candidate.projectId);
           return Promise.resolve();
         },
+        draftProfile: () => Promise.resolve(),
         grade,
       },
     );
@@ -113,6 +129,7 @@ describe("scheduled expired-domain work", () => {
           ]);
         },
         harvestProject,
+        draftProfile: () => Promise.resolve(),
         grade: () => {
           subrequests += MAX_GRADING_SUBREQUESTS;
           return Promise.resolve();
@@ -137,10 +154,147 @@ describe("scheduled expired-domain work", () => {
         {
           listProjectStates: () => Promise.resolve([project("project-a")]),
           harvestProject: () => Promise.reject(new Error("feed failed")),
+          draftProfile: () => Promise.resolve(),
           grade,
         },
       ),
     ).rejects.toThrow("feed failed");
     expect(grade).not.toHaveBeenCalled();
+  });
+
+  it("never selects a project with no vocabulary for harvesting", () => {
+    // Measured in production on 2026-10-15: a project with an empty profile
+    // and no tracked keywords was chosen on every tick, failed, and kept
+    // Domain Rating grading from ever running.
+    const selected = selectScheduledHarvestCandidate({
+      projects: [project("no-words", "draft-waiting")],
+      publishedDate: PUBLISHED_DATE,
+      scheduledAtMs: Date.parse("2026-08-21T00:30:00.000Z"),
+    });
+    expect(selected).toBeNull();
+  });
+
+  it("drafts a profile for a project without vocabulary once nothing waits to harvest", async () => {
+    const drafted: string[] = [];
+    const grade = vi.fn(() => Promise.resolve());
+    const harvestProject = vi.fn(() => Promise.resolve());
+
+    const unit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T00:30:00.000Z"),
+      },
+      {
+        listProjectStates: () =>
+          Promise.resolve([
+            { ...project("complete"), completedDates: FULL_WEEK },
+            project("new-project", "draft-due"),
+          ]),
+        harvestProject,
+        draftProfile: (candidate) => {
+          drafted.push(candidate.projectId);
+          return Promise.resolve();
+        },
+        grade,
+      },
+    );
+
+    expect(unit).toBe("draft");
+    expect(drafted).toEqual(["new-project"]);
+    expect(harvestProject).not.toHaveBeenCalled();
+    expect(grade).not.toHaveBeenCalled();
+  });
+
+  it("harvests a pending date before drafting anyone's profile", async () => {
+    const draftProfile = vi.fn(() => Promise.resolve());
+
+    const unit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T00:30:00.000Z"),
+      },
+      {
+        listProjectStates: () =>
+          Promise.resolve([
+            project("pending"),
+            project("new-project", "draft-due"),
+          ]),
+        harvestProject: () => Promise.resolve(),
+        draftProfile,
+        grade: () => Promise.resolve(),
+      },
+    );
+
+    expect(unit).toBe("harvest");
+    expect(draftProfile).not.toHaveBeenCalled();
+  });
+
+  it("grades instead of retrying a draft that is still inside its retry window", async () => {
+    const draftProfile = vi.fn(() => Promise.resolve());
+    const grade = vi.fn(() => Promise.resolve());
+
+    const unit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T00:30:00.000Z"),
+      },
+      {
+        listProjectStates: () =>
+          Promise.resolve([
+            project("failed-today", "draft-waiting"),
+            project("blank-saved-profile", "needs-input"),
+          ]),
+        harvestProject: () => Promise.resolve(),
+        draftProfile,
+        grade,
+      },
+    );
+
+    expect(unit).toBe("grade");
+    expect(draftProfile).not.toHaveBeenCalled();
+    expect(grade).toHaveBeenCalledOnce();
+  });
+
+  it("grades on the :45 tick even while harvest work is pending", async () => {
+    const harvestProject = vi.fn(() => Promise.resolve());
+    const listProjectStates = vi.fn(() =>
+      Promise.resolve([project("pending")]),
+    );
+    const grade = vi.fn(() => Promise.resolve());
+
+    const unit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T00:45:00.000Z"),
+      },
+      {
+        listProjectStates,
+        harvestProject,
+        draftProfile: () => Promise.resolve(),
+        grade,
+      },
+    );
+
+    expect(unit).toBe("grade");
+    expect(harvestProject).not.toHaveBeenCalled();
+    // The reserved tick spends nothing on the fleet read it does not need.
+    expect(listProjectStates).not.toHaveBeenCalled();
+    expect(grade).toHaveBeenCalledOnce();
+  });
+
+  it("reserves only the :45 tick for grading", () => {
+    expect(isGradingReservedTick(Date.parse("2026-08-21T03:15:00.000Z"))).toBe(
+      false,
+    );
+    expect(isGradingReservedTick(Date.parse("2026-08-21T03:30:00.000Z"))).toBe(
+      false,
+    );
+    expect(isGradingReservedTick(Date.parse("2026-08-21T03:45:00.000Z"))).toBe(
+      true,
+    );
   });
 });

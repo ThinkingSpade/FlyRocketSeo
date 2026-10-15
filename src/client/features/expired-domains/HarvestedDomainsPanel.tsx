@@ -18,8 +18,9 @@ import {
 import { describeHarvestResult } from "@/client/features/expired-domains/harvestResultNotices";
 import { Button } from "@cloudflare/kumo/components/button";
 import { Loader } from "@cloudflare/kumo/components/loader";
+import { EmptyHarvestNotice } from "@/client/features/expired-domains/EmptyHarvestNotice";
+import { HarvestedDomainsTable } from "@/client/features/expired-domains/HarvestedDomainsTable";
 import {
-  formatHarvestAvailabilityAge,
   HARVEST_AVAILABILITY_RECHECK_MS,
   MAX_HARVEST_AVAILABILITY_BATCH,
   selectDueHarvestAvailabilityDomains,
@@ -29,19 +30,6 @@ import {
 const CREDITS_PER_CHECK = 5;
 const RECHECK_HOURS = HARVEST_AVAILABILITY_RECHECK_MS / (60 * 60 * 1_000);
 
-function ratingLabel(rating: number | null): string {
-  // null is NOT YET GRADED, not "no authority" -- a real 0 shows as 0.
-  return rating === null ? "—" : String(rating);
-}
-
-function availabilityLabel(
-  value: boolean | null,
-  checkedAtIso: string | null,
-): string {
-  if (value === null) return checkedAtIso === null ? "Not checked" : "Unknown";
-  return value ? "Available" : "Taken";
-}
-
 /**
  * The shortlist harvested from the daily deleted-domain feed.
  *
@@ -50,7 +38,13 @@ function availabilityLabel(
  * than a metered API, so there is nothing to gate. Availability is the one
  * billed action here and it stays behind an explicit click with its cost shown.
  */
-export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
+export function HarvestedDomainsPanel({
+  projectId,
+  domain,
+}: {
+  projectId: string;
+  domain: string;
+}) {
   const queryClient = useQueryClient();
   const [minRating, setMinRating] = useState(0);
   const [gradingProgress, setGradingProgress] =
@@ -83,6 +77,8 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
   // Read straight off query data: a `?? []` default allocates a new array on
   // every render, which would make the memo below recompute every time.
   const rows = harvestQuery.data?.rows;
+  const readiness = harvestQuery.data?.readiness;
+  const canHarvest = readiness?.kind === "ready";
   const visible = useMemo(
     () =>
       (rows ?? []).filter(
@@ -233,7 +229,11 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
               type="button"
               variant="secondary"
               size="sm"
-              disabled={harvestNow.isPending || gradeNow.isPending}
+              // Disabled without vocabulary: a click could only fail, and the
+              // empty-state line below says why.
+              disabled={
+                harvestNow.isPending || gradeNow.isPending || !canHarvest
+              }
               onClick={() => harvestNow.mutate()}
             >
               {harvestNow.isPending ? "Harvesting…" : "Harvest next day"}
@@ -273,12 +273,13 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
             onRetry={() => void harvestQuery.refetch()}
           />
         ) : (rows?.length ?? 0) === 0 ? (
-          // Says what to do rather than rendering an empty box.
-          <p className="py-4 text-base-content/70">
-            Nothing harvested yet. Click <strong>Harvest next day</strong> to
-            pull the most recent day of dropped domains — it is included in your
-            subscription and costs nothing extra.
-          </p>
+          readiness ? (
+            <EmptyHarvestNotice
+              readiness={readiness}
+              projectId={projectId}
+              domain={domain}
+            />
+          ) : null
         ) : (
           <>
             <div className="flex flex-wrap items-center gap-2">
@@ -317,62 +318,7 @@ export function HarvestedDomainsPanel({ projectId }: { projectId: string }) {
               can be re-checked after {RECHECK_HOURS} hours.
             </p>
 
-            <div className="overflow-x-auto">
-              <table className="table table-sm">
-                <thead>
-                  <tr>
-                    <th>Domain</th>
-                    <th>DR</th>
-                    <th>Availability</th>
-                    <th>Matched</th>
-                    <th>Dropped</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {visible.map((row) => {
-                    const checkedAge = formatHarvestAvailabilityAge(
-                      row.availabilityCheckedAt,
-                      nowMs,
-                    );
-                    return (
-                      <tr key={row.domain}>
-                        <td className="font-medium">{row.domain}</td>
-                        <td className="tabular-nums">
-                          {ratingLabel(row.domainRating)}
-                        </td>
-                        <td>
-                          <div className="flex flex-col">
-                            <span>
-                              {availabilityLabel(
-                                row.isAvailable,
-                                row.availabilityCheckedAt,
-                              )}
-                            </span>
-                            {checkedAge ? (
-                              <time
-                                dateTime={
-                                  row.availabilityCheckedAt ?? undefined
-                                }
-                                title={row.availabilityCheckedAt ?? undefined}
-                                className="text-xs text-base-content/60"
-                              >
-                                Checked {checkedAge}
-                              </time>
-                            ) : null}
-                          </div>
-                        </td>
-                        <td className="text-base-content/70">
-                          {row.matchedTerm}
-                        </td>
-                        <td className="text-base-content/70">
-                          {row.droppedOn}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+            <HarvestedDomainsTable rows={visible} nowMs={nowMs} />
 
             <p className="text-xs text-base-content/60">
               {rows?.length ?? 0} harvested from{" "}

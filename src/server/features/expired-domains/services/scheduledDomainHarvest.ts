@@ -6,6 +6,8 @@ import { RankTrackingRepository } from "@/server/features/rank-tracking/reposito
 import { type RatingCache } from "@/server/lib/ahrefsDomainRating";
 import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
+import { AppError } from "@/server/lib/errors";
+import { harvestReadiness } from "@/server/features/expired-domains/harvestReadiness";
 import { harvestDroppedDomains } from "@/server/features/expired-domains/domainHarvest";
 import { resolveHarvestVocabulary } from "@/server/features/expired-domains/harvestVocabulary";
 import { gradeStoredDomainRatings } from "@/server/features/expired-domains/services/gradeStoredDomainRatings";
@@ -53,7 +55,35 @@ export async function runScheduledDomainHarvest(
       scheduledAtMs: scheduledAt.getTime(),
     },
     {
-      listProjectStates: () => listHarvestProjectStates(publishedDate),
+      listProjectStates: () =>
+        listHarvestProjectStates(publishedDate, scheduledAt.getTime()),
+      draftProfile: async (candidate) => {
+        // A new project has no vocabulary until its profile exists, so this is
+        // what makes "add a domain" enough for the harvest to start. One crawl
+        // and one model call per project; a failed draft retries once a day.
+        try {
+          const { ProfileAutoDraftService } =
+            await import("@/server/features/profiles/services/ProfileAutoDraftService");
+          const result = await ProfileAutoDraftService.run({
+            projectId: candidate.projectId,
+            domain: candidate.domain,
+          });
+          console.log(
+            `[cron] profile-draft ${candidate.projectId} status=${result.status}` +
+              (result.status === "drafted"
+                ? ` offerChars=${result.profile.offer.length}`
+                : ""),
+          );
+        } catch (error) {
+          // The code is logged on its own because it is what tells a site
+          // that refused the Worker apart from a model failure.
+          console.error(
+            `expired-domains.profile-draft failed for ${candidate.projectId}` +
+              ` code=${error instanceof AppError ? error.code : "UNKNOWN"}:`,
+            error,
+          );
+        }
+      },
       harvestProject: async (candidate) => {
         // A completed-but-empty result (claimed nothing, matched nothing) is
         // not an exception, so it needs its own log line -- otherwise a tick
@@ -116,16 +146,29 @@ type PreparedHarvest = {
 };
 
 /**
- * Projects worth harvesting for: those with a domain set.
+ * Projects worth considering: those with a domain set, plus whether each has
+ * the vocabulary a harvest needs.
  *
- * Deliberately narrow. A project with no domain has no vocabulary to match
- * against, so pulling a 2 MB file for it would be a guaranteed zero.
+ * A project with no domain has no site to draft from and nothing to match, so
+ * it is left out entirely. A project WITH a domain but no vocabulary is kept,
+ * because the policy drafts its profile -- but it is never a harvest
+ * candidate, which is what used to starve grading.
+ *
+ * Two fleet reads: projects joined to their completed runs and profile, then
+ * every active tracked keyword in one query rather than one per project.
  */
 async function listHarvestProjectStates(
   publishedDate: string,
+  nowMs: number,
 ): Promise<ScheduledHarvestProjectState[]> {
   const { db } = await import("@/db");
-  const { harvestRuns, projects } = await import("@/db/schema");
+  const {
+    harvestRuns,
+    projectProfiles,
+    projects,
+    rankTrackingConfigs,
+    rankTrackingKeywords,
+  } = await import("@/db/schema");
   const { and, eq, gte, isNotNull, isNull } = await import("drizzle-orm");
   const oldestRelevantDate = new Date(
     Date.parse(`${publishedDate}T00:00:00.000Z`) - BACKFILL_DAYS * 86_400_000,
@@ -138,6 +181,14 @@ async function listHarvestProjectStates(
       id: projects.id,
       domain: projects.domain,
       completedDate: harvestRuns.droppedOn,
+      profileId: projectProfiles.id,
+      offer: projectProfiles.offer,
+      customer: projectProfiles.customer,
+      exclusions: projectProfiles.exclusions,
+      brandTerms: projectProfiles.brandTerms,
+      source: projectProfiles.source,
+      confirmedAt: projectProfiles.confirmedAt,
+      draftedAt: projectProfiles.draftedAt,
     })
     .from(projects)
     .leftJoin(
@@ -148,7 +199,26 @@ async function listHarvestProjectStates(
         isNull(harvestRuns.leaseExpiresAt),
       ),
     )
+    .leftJoin(projectProfiles, eq(projectProfiles.projectId, projects.id))
     .where(and(isNotNull(projects.domain), isNull(projects.archivedAt)));
+
+  const keywordRows = await db
+    .select({
+      projectId: rankTrackingConfigs.projectId,
+      keyword: rankTrackingKeywords.keyword,
+    })
+    .from(rankTrackingKeywords)
+    .innerJoin(
+      rankTrackingConfigs,
+      eq(rankTrackingKeywords.configId, rankTrackingConfigs.id),
+    )
+    .where(eq(rankTrackingConfigs.isActive, true));
+  const keywordsByProject = new Map<string, string[]>();
+  for (const row of keywordRows) {
+    const list = keywordsByProject.get(row.projectId) ?? [];
+    list.push(row.keyword);
+    keywordsByProject.set(row.projectId, list);
+  }
 
   const states = new Map<string, ScheduledHarvestProjectState>();
   for (const row of rows) {
@@ -157,6 +227,22 @@ async function listHarvestProjectStates(
       id: row.id,
       domain: row.domain,
       completedDates: [],
+      readiness: harvestReadiness({
+        keywords: keywordsByProject.get(row.id) ?? [],
+        profile:
+          row.profileId && row.source
+            ? {
+                offer: row.offer ?? "",
+                customer: row.customer ?? "",
+                exclusions: row.exclusions ?? "",
+                brandTerms: row.brandTerms ?? "",
+                source: row.source,
+                confirmedAt: row.confirmedAt ?? null,
+                draftedAt: row.draftedAt ?? null,
+              }
+            : null,
+        nowMs,
+      }).kind,
     };
     if (row.completedDate) state.completedDates.push(row.completedDate);
     states.set(row.id, state);

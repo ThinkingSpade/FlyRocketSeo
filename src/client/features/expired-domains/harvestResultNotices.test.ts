@@ -45,4 +45,22 @@ describe("describeHarvestResult", () => {
       },
     ]);
   });
+
+  it("says there is nothing to match instead of claiming the list is up to date", () => {
+    expect(
+      describeHarvestResult({
+        matched: 0,
+        harvestedDates: [],
+        skippedDates: [],
+        failedDates: [],
+        noVocabulary: true,
+      }),
+    ).toEqual([
+      {
+        kind: "info",
+        message:
+          "Nothing to match yet — this project needs a business profile or tracked keywords first.",
+      },
+    ]);
+  });
 });

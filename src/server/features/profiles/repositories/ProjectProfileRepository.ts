@@ -8,7 +8,7 @@
  * caller-side existence check — two callers racing the profile editor would
  * otherwise hit the unique index instead of the second simply winning.
  */
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, lt, or } from "drizzle-orm";
 import { db } from "@/db";
 import { runBatch } from "@/db/runBatch";
 import { keywordFitVerdicts, projectProfiles } from "@/db/schema";
@@ -119,6 +119,44 @@ async function claimForDraft(projectId: string): Promise<boolean> {
     .onConflictDoNothing({ target: projectProfiles.projectId })
     .returning({ id: projectProfiles.id });
   return claimed.length > 0;
+}
+
+/**
+ * Re-claims a draft that was claimed before `claimedBeforeIso` and left empty.
+ *
+ * The same compare-and-set idea as `claimForDraft`, as one guarded UPDATE: the
+ * WHERE clause is the eligibility rule (`isEmptyAutoDraft` plus the age
+ * cutoff), so two concurrent callers cannot both win -- the first moves
+ * `draftedAt` forward and the second no longer matches. A row anyone saved,
+ * or that a draft actually filled, is never touched.
+ */
+async function reclaimFailedDraft(
+  projectId: string,
+  claimedBeforeIso: string,
+): Promise<boolean> {
+  const now = new Date().toISOString();
+  const reclaimed = await db
+    .update(projectProfiles)
+    .set({ draftedAt: now, updatedAt: now })
+    .where(
+      and(
+        eq(projectProfiles.projectId, projectId),
+        eq(projectProfiles.source, "ai"),
+        isNull(projectProfiles.confirmedAt),
+        eq(projectProfiles.offer, ""),
+        eq(projectProfiles.customer, ""),
+        eq(projectProfiles.exclusions, ""),
+        eq(projectProfiles.brandTerms, ""),
+        // NULL counts as due, matching `isAutoDraftDue`: `<` alone never
+        // matches NULL in either dialect, which would strand such a row.
+        or(
+          isNull(projectProfiles.draftedAt),
+          lt(projectProfiles.draftedAt, claimedBeforeIso),
+        ),
+      ),
+    )
+    .returning({ id: projectProfiles.id });
+  return reclaimed.length > 0;
 }
 
 type DraftFields = {
@@ -241,6 +279,7 @@ export const ProjectProfileRepository = {
   getByProject,
   upsert,
   claimForDraft,
+  reclaimFailedDraft,
   applyDraft,
   listVerdicts,
   upsertVerdicts,

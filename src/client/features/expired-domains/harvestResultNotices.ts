@@ -3,6 +3,8 @@ type HarvestResult = {
   harvestedDates: string[];
   skippedDates: string[];
   failedDates: string[];
+  /** True when the project has nothing to match a day's file against. */
+  noVocabulary?: boolean;
 };
 
 type HarvestResultNotice = {
@@ -15,6 +17,18 @@ export function describeHarvestResult(
   result: HarvestResult,
 ): HarvestResultNotice[] {
   const notices: HarvestResultNotice[] = [];
+
+  // Checked first and alone: with no vocabulary nothing was attempted, so
+  // "already up to date" below would be a false all-clear.
+  if (result.noVocabulary) {
+    return [
+      {
+        kind: "info",
+        message:
+          "Nothing to match yet — this project needs a business profile or tracked keywords first.",
+      },
+    ];
+  }
 
   if (result.failedDates.length > 0) {
     notices.push({

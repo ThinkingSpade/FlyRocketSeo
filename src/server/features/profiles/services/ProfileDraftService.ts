@@ -1,7 +1,7 @@
 import { generateText } from "ai";
 import { z } from "zod";
 import { AppError } from "@/server/lib/errors";
-import { getChatAgentModel } from "@/server/lib/openrouter";
+import { getPinnedTaskModel } from "@/server/lib/openrouter";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 import { SERVICE_AREA_KINDS } from "@/shared/keyword-fit/profileTypes";
 import { applyServiceAreaToSeeds } from "@/shared/keyword-fit/seedGeo";
@@ -114,7 +114,7 @@ async function draftFromSite(input: {
     );
   }
 
-  const model = await getChatAgentModel();
+  const model = await getPinnedTaskModel();
   const { text } = await generateText({
     model,
     maxOutputTokens: DRAFT_MAX_OUTPUT_TOKENS,
@@ -157,7 +157,7 @@ async function generateSeeds(input: {
 }): Promise<string[]> {
   requireKey(await isDraftingAvailable());
 
-  const model = await getChatAgentModel();
+  const model = await getPinnedTaskModel();
   const { text } = await generateText({
     model,
     maxOutputTokens: SEED_MAX_OUTPUT_TOKENS,

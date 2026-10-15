@@ -40,6 +40,21 @@ export async function getChatAgentModel(): Promise<LanguageModelV3> {
 }
 
 /**
+ * The model for a one-shot task that must keep working unattended.
+ *
+ * Same builder as the chat agents, but it ignores OPENROUTER_MODEL. That
+ * override exists to swap the CHAT model, and in production it is the one
+ * input that differs from local: the harvest's adjacent-term call threw
+ * "Missing Authentication header" there while succeeding locally, and was
+ * fixed by pinning (2026-08-21). A task the cron runs with nobody watching
+ * cannot afford to depend on it.
+ */
+export async function getPinnedTaskModel(): Promise<LanguageModelV3> {
+  const apiKey = await getRequiredEnvValue("OPENROUTER_API_KEY");
+  return buildChatAgentModel(apiKey, DEFAULT_CHAT_AGENT_MODEL);
+}
+
+/**
  * Synchronous variant for callers that already hold the env values. Think's
  * `getModel()` hook is sync and runs on every turn, so the SAM agent reads the
  * key/model from its DO env and builds the model here.
