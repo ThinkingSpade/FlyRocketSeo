@@ -37,16 +37,19 @@ export function MobileSidebarDrawer({
   projectId,
   onClose,
   finalFocus,
+  onCloseComplete,
 }: {
   open: boolean;
   projectId: string | null;
   onClose: () => void;
   finalFocus: RefObject<HTMLButtonElement | null>;
+  onCloseComplete?: () => void;
 }) {
   const commandRequested = useRef(false);
   return (
     <Dialog.Root
       onOpenChangeComplete={(next) => {
+        if (!next) onCloseComplete?.();
         if (!next && commandRequested.current) {
           commandRequested.current = false;
           requestAnimationFrame(openCommandPalette);

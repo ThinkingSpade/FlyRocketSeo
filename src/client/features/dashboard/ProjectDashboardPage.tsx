@@ -36,11 +36,11 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
             {project?.name ?? "Your project"}
           </p>
           <h1 className="text-2xl font-semibold">Overview</h1>
-          {/* A null domain only means "no website" once projects have loaded;
-              while pending or failed it is unknown, not absent. */}
+          {/* A null domain only means "no website" for a project record we
+              actually have; pending, failed or missing is unknown, not absent. */}
           {projectsQuery.isPending ? (
             <div className="skeleton mt-1 h-4 w-40" />
-          ) : projectsQuery.isSuccess ? (
+          ) : project ? (
             <p className="mt-1 text-sm text-base-content/70">
               {domain ??
                 "Add your website to build an evidence-backed SEO workflow."}

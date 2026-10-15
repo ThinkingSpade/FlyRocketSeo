@@ -228,12 +228,12 @@ export function Sidebar({
           aria-label="Project navigation"
           className="min-h-0 flex-1 overflow-y-auto px-2 py-2"
         >
-          {navGroups.map((group) => (
+          {navGroups.map((group, groupIndex) => (
             <div key={group.label} className="mb-1">
               <button
                 type="button"
                 aria-expanded={!collapsed.includes(group.label)}
-                aria-controls={`${navId}-${group.label}`}
+                aria-controls={`${navId}-group-${groupIndex}`}
                 onClick={() => toggleGroup(group.label)}
                 className="flex w-full items-center justify-between rounded-md px-3 py-2 text-xs font-semibold uppercase tracking-wider text-kumo-subtle transition-colors hover:bg-base-300/40 hover:text-base-content"
               >
@@ -244,7 +244,7 @@ export function Sidebar({
                 />
               </button>
               <div
-                id={`${navId}-${group.label}`}
+                id={`${navId}-group-${groupIndex}`}
                 hidden={collapsed.includes(group.label)}
               >
                 {group.items.map((item) => {

@@ -27,6 +27,10 @@ export function AuthenticatedAppLayout({
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
   const menuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
+  // A close caused by widening the window cannot return focus to the menu
+  // button (hidden at desktop width), so it goes to the main content -- once
+  // the drawer has finished closing, or its focus trap would pull it back.
+  const closedForDesktop = React.useRef(false);
   // On non-project pages (e.g. /settings) there's no projectId in the URL, so
   // derive one for the nav/switcher: prefer the last-visited project, else the
   // most recent. The whole app tree is client-only (see root ClientOnly), so we
@@ -76,7 +80,9 @@ export function AuthenticatedAppLayout({
   React.useEffect(() => {
     const desktop = window.matchMedia("(min-width: 768px)");
     const closeOnDesktop = () => {
-      if (desktop.matches) setDrawerOpen(false);
+      if (!desktop.matches) return;
+      closedForDesktop.current = true;
+      setDrawerOpen(false);
     };
     desktop.addEventListener("change", closeOnDesktop);
     return () => desktop.removeEventListener("change", closeOnDesktop);
@@ -128,6 +134,11 @@ export function AuthenticatedAppLayout({
       <MobileSidebarDrawer
         open={drawerOpen}
         finalFocus={menuTriggerRef}
+        onCloseComplete={() => {
+          if (!closedForDesktop.current) return;
+          closedForDesktop.current = false;
+          document.getElementById("main-content")?.focus();
+        }}
         projectId={sidebarProjectId}
         onClose={() => setDrawerOpen(false)}
       />

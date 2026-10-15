@@ -35,10 +35,10 @@ test.describe("Expired domains panel", () => {
     });
 
     await page.goto("/");
-    await page.waitForURL(/\/p\/([^/]+)\/keywords(?:\?.*)?$/, {
+    await page.waitForURL(/\/p\/([^/?]+)\/?(?:\?.*)?$/, {
       timeout: 30_000,
     });
-    const match = page.url().match(/\/p\/([^/]+)\/keywords/);
+    const match = page.url().match(/\/p\/([^/?]+)/);
     if (!match) throw new Error(`Could not read project id from ${page.url()}`);
 
     await page.goto(`/p/${match[1]}/expired-domains`);
@@ -78,7 +78,7 @@ test.describe("Expired domains panel", () => {
 
   test("is reachable from the Research nav", async ({ page }) => {
     await page.goto("/");
-    await page.waitForURL(/\/p\/([^/]+)\/keywords(?:\?.*)?$/, {
+    await page.waitForURL(/\/p\/([^/?]+)\/?(?:\?.*)?$/, {
       timeout: 30_000,
     });
 
