@@ -241,7 +241,6 @@ export function useKeywordResearchData(
       return keywordResearchQueryFn(request);
     },
     enabled: request !== null,
-    gcTime: KEYWORD_RESEARCH_STALE_TIME_MS,
   });
 
   const shown = resolveShownRequest(request, {

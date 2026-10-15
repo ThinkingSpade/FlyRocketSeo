@@ -89,6 +89,19 @@ describe("metered query request multiplication", () => {
     expect(options.retryOnMount).toBe(false);
   });
 
+  it("keeps a paid result for the life of the page, so returning to it never refetches", () => {
+    // An enabled observer that finds nothing cached fetches. If a paid result
+    // could be garbage-collected, coming back to its still-authorized view
+    // (a search tab, a sort, a card) after gcTime would silently re-bill it.
+    const options = buildMeteredQueryOptions({
+      authorized: true,
+      queryKey: ["domain-overview", "p_1", "example.com"],
+      queryFn: () => Promise.resolve(null),
+    });
+
+    expect(options.gcTime).toBe(Infinity);
+  });
+
   it("stays disabled until an in-session authorization, so nothing fires on mount", () => {
     const options = buildMeteredQueryOptions({
       queryKey: ["backlinksRows", "example.com"],

@@ -7,8 +7,6 @@ import {
   type UseQueryResult,
 } from "@tanstack/react-query";
 
-const METERED_QUERY_GC_TIME_MS = 60 * 60_000;
-
 type MeteredQueryOptions<
   TQueryFnData = unknown,
   TError = DefaultError,
@@ -26,7 +24,6 @@ type MeteredQueryOptions<
 > & {
   authorized?: boolean;
   enabled?: boolean;
-  gcTime?: number;
   runNonce?: number;
 };
 
@@ -47,6 +44,12 @@ type MeteredQueryOptions<
  * TanStack re-runs a query sitting in error with no data whenever an observer
  * attaches to it -- a remount, or a component switching its key back to that
  * query (say, returning to the search tab whose paid run failed).
+ *
+ * `gcTime` is Infinity, and not configurable, for the same reason: an enabled
+ * observer that finds nothing cached fetches. A paid result that could be
+ * garbage-collected would be silently re-bought by coming back to the view
+ * still authorized for it (a search tab, a sort, a card) after gcTime. A
+ * result the user paid for is kept for the life of the page instead.
  */
 export function useMeteredQuery<
   TQueryFnData = unknown,
@@ -72,7 +75,6 @@ export function buildMeteredQueryOptions<
   const {
     authorized = false,
     enabled = true,
-    gcTime = METERED_QUERY_GC_TIME_MS,
     runNonce,
     ...queryOptions
   } = options;
@@ -82,7 +84,7 @@ export function buildMeteredQueryOptions<
     queryKey: withMeteredRunNonce(queryOptions.queryKey, runNonce),
     enabled: isMeteredQueryEnabled(authorized, enabled),
     staleTime: Infinity,
-    gcTime,
+    gcTime: Infinity,
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
     refetchOnMount: false,

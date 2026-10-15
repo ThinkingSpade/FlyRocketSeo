@@ -101,10 +101,6 @@ type UseBacklinksPageDataArgs = {
   runNonce: number;
 };
 
-// Five-minute client staleness on top of the server's 6h R2 cache, so window
-// refocus doesn't re-run the server functions for bytes that can't change.
-const BACKLINKS_QUERY_STALE_TIME_MS = 5 * 60 * 1000;
-
 function getBacklinksErrorMessage(
   error: unknown,
   fallback: string,
@@ -162,7 +158,6 @@ export function useBacklinksPageData({
     runNonce,
     queryKey: ["backlinksOverview", ...baseQueryKeyParts],
     enabled: hasTarget,
-    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () => getBacklinksOverview({ data: { projectId, target, scope } }),
   });
 
@@ -190,7 +185,6 @@ export function useBacklinksPageData({
       rowsMode,
     ],
     enabled: hasTarget && rowsReleased && tab === "backlinks",
-    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksRows({
         data: {
@@ -226,7 +220,6 @@ export function useBacklinksPageData({
       domainsFilters,
     ],
     enabled: hasTarget && rowsReleased && tab === "domains",
-    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksReferringDomains({
         data: {
@@ -261,7 +254,6 @@ export function useBacklinksPageData({
       pagesFilters,
     ],
     enabled: hasTarget && rowsReleased && tab === "pages",
-    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksTopPages({
         data: {
@@ -296,7 +288,6 @@ export function useBacklinksPageData({
       anchorsFilters,
     ],
     enabled: hasTarget && rowsReleased && tab === "anchors",
-    gcTime: BACKLINKS_QUERY_STALE_TIME_MS,
     queryFn: () =>
       getBacklinksAnchors({
         data: {

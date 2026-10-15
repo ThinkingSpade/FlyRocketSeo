@@ -47,6 +47,12 @@ import {
   getDomainSearchValidationErrors,
 } from "@/client/features/domain/domainSearchValidation";
 import { useDomainOverviewQuery } from "@/client/features/domain/hooks/useDomainOverviewQuery";
+import {
+  findDomainSessionRun,
+  recordDomainSessionRun,
+  storedDomainAnswers,
+  type DomainSessionRun,
+} from "@/client/features/domain/domainSessionRuns";
 import { DomainOverviewLoadingState } from "@/client/features/domain/components/DomainOverviewLoadingState";
 import { DomainHistorySection } from "@/client/features/domain/components/DomainHistorySection";
 import { DomainSearchCard } from "@/client/features/domain/components/DomainSearchCard";
@@ -235,8 +241,6 @@ function useDomainOverviewState({
   routeState: DomainOverviewRouteState;
   projectId: string;
 }) {
-  const lastTrackedKey = useRef<string>("");
-
   const {
     history,
     isLoaded: historyLoaded,
@@ -337,39 +341,110 @@ function useDomainOverviewState({
   );
 
   const languageCode = getLanguageCode(routeState.locationCode);
-  const [runInput, setRunInput] = useState<{
-    domain: string;
-    includeSubdomains: boolean;
-    locationCode: number;
-    languageCode: string;
-  } | null>(null);
-  const [runNonce, setRunNonce] = useState(0);
+  // Every overview submitted this session, each with the nonce its (metered)
+  // query is cached under. The URL -- the active tab -- picks which one is on
+  // screen; see domainSessionRuns.ts. (Following only the last submit put one
+  // domain's numbers under another domain's tab.)
+  const [sessionRuns, setSessionRuns] = useState<DomainSessionRun[]>([]);
+  const lastRunNonceRef = useRef(0);
+  // Set by "Recent searches": the user asked for the list, so a stored past
+  // run must not be auto-restored over it.
+  const [autoRestoreDismissed, setAutoRestoreDismissed] = useState(false);
+  const dismissAutoRestore = useCallback(
+    () => setAutoRestoreDismissed(true),
+    [],
+  );
+  const matchedRun = useMemo(
+    () =>
+      findDomainSessionRun(
+        sessionRuns,
+        routeState.domain.trim()
+          ? {
+              domain: routeState.domain,
+              includeSubdomains: routeState.subdomains,
+              locationCode: routeState.locationCode,
+            }
+          : null,
+      ),
+    [
+      sessionRuns,
+      routeState.domain,
+      routeState.subdomains,
+      routeState.locationCode,
+    ],
+  );
+  // Only the run just submitted may fetch. An earlier tab's query stays
+  // disabled and shows what the cache holds -- switching tabs never spends.
+  const isLiveRun =
+    matchedRun !== null && matchedRun.nonce === sessionRuns.at(-1)?.nonce;
   const overviewQuery = useDomainOverviewQuery({
     projectId,
-    domain: runInput?.domain ?? "",
-    includeSubdomains: runInput?.includeSubdomains ?? routeState.subdomains,
-    locationCode: runInput?.locationCode ?? routeState.locationCode,
-    languageCode: runInput?.languageCode ?? languageCode,
-    authorized: runInput != null,
-    runNonce,
+    domain: matchedRun?.input.domain ?? "",
+    includeSubdomains:
+      matchedRun?.input.includeSubdomains ?? routeState.subdomains,
+    locationCode: matchedRun?.input.locationCode ?? routeState.locationCode,
+    languageCode: matchedRun?.input.languageCode ?? languageCode,
+    authorized: isLiveRun,
+    runNonce: matchedRun?.nonce ?? 0,
   });
-  // With no domain in the URL the live query above stays disabled, so the tab
-  // would otherwise show a blank prompt. Restoring the project's last run fills
-  // it in for free: it reads a stored row plus the R2 object that run already
-  // paid for, and can never trigger a metered fetch.
+  // On screen for the run the URL names: the live run, or an earlier run's
+  // cached result, error or in-flight fetch. With none of those the tab is not
+  // loaded -- never filled with another domain's overview.
+  const showsRun =
+    matchedRun !== null &&
+    (isLiveRun ||
+      overviewQuery.data !== undefined ||
+      overviewQuery.isError ||
+      overviewQuery.isFetching);
+
+  // With nothing run for the URL's search, restoring the project's last run
+  // fills the tab in for free: it reads a stored row plus the R2 object that
+  // run already paid for, and can never trigger a metered fetch. Automatic
+  // only before this session's first search and not after "Recent searches";
+  // a run picked from the list belongs to the view it was picked in.
   // Which past run the user is looking at; null means "the most recent".
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  useEffect(() => {
+    setSelectedRunId(null);
+  }, [routeState.domain]);
+  const restoreEnabled =
+    !showsRun &&
+    (selectedRunId !== null ||
+      (sessionRuns.length === 0 && !autoRestoreDismissed));
   const { restored, expired: restoreExpired } = useAutoRestoredRun({
     projectId,
     feature: RUN_FEATURES.domainOverview,
     schema: domainOverviewResultSchema,
-    enabled: runInput == null,
+    enabled: restoreEnabled,
     runId: selectedRunId,
   });
+  // An AUTOMATIC restore never puts another domain's stored overview under the
+  // domain the URL names; a run picked from the list shows as picked.
+  const restoredRun =
+    restoreEnabled &&
+    restored &&
+    (selectedRunId !== null ||
+      storedDomainAnswers(
+        { domain: routeState.domain, locationCode: routeState.locationCode },
+        {
+          domain: restored.result.domain,
+          locationCode: restored.result.scope?.locationCode ?? null,
+        },
+      ))
+      ? restored
+      : null;
 
-  const overview = overviewQuery.data ?? restored?.result ?? null;
-  const restoredRun = overviewQuery.data == null ? restored : null;
-  const isLoading = runInput != null && overviewQuery.isLoading;
+  const overview = showsRun
+    ? (overviewQuery.data ?? null)
+    : (restoredRun?.result ?? null);
+  const isLoading = showsRun && overviewQuery.isLoading;
+  // The URL names a domain, yet nothing is on screen, loading or failed for
+  // it: not loaded, and the page asks before running a metered overview.
+  const searchNotLoaded =
+    routeState.domain.trim() !== "" &&
+    overview === null &&
+    !isLoading &&
+    !(showsRun && overviewQuery.isError);
 
   const controlsForm = useForm({
     defaultValues: {
@@ -391,13 +466,17 @@ function useDomainOverviewState({
       const target = normalizeDomainTarget(value.domain);
       if (!target) return;
       formApi.setFieldValue("domain", target);
-      setRunInput({
-        domain: target,
-        includeSubdomains: value.subdomains,
-        locationCode: value.locationCode,
-        languageCode: getLanguageCode(value.locationCode),
-      });
-      setRunNonce((previous) => previous + 1);
+      lastRunNonceRef.current += 1;
+      const run: DomainSessionRun = {
+        input: {
+          domain: target,
+          includeSubdomains: value.subdomains,
+          locationCode: value.locationCode,
+          languageCode: getLanguageCode(value.locationCode),
+        },
+        nonce: lastRunNonceRef.current,
+      };
+      setSessionRuns((runs) => recordDomainSessionRun(runs, run));
       // Covers a fresh search, the "Analyze <domain>" prompt, and "Run again"
       // alike -- all three funnel through this one `onSubmit` (they each just
       // set the form's `domain` field first), and all three are equally "a
@@ -506,11 +585,14 @@ function useDomainOverviewState({
     });
   }, [controlsForm, overviewQuery.error]);
 
+  // Recorded once per RUN: revisiting a tab re-presents a success that was
+  // already recorded, while a deliberate re-run is a new (paid) run.
+  const recordedRunNoncesRef = useRef(new Set<number>());
   useEffect(() => {
-    if (!overviewQuery.isSuccess || !overview) return;
-    const key = `${routeState.domain}|${routeState.subdomains}|${routeState.locationCode}`;
-    if (lastTrackedKey.current === key) return;
-    lastTrackedKey.current = key;
+    if (!showsRun || !matchedRun || !overviewQuery.isSuccess || !overview)
+      return;
+    if (recordedRunNoncesRef.current.has(matchedRun.nonce)) return;
+    recordedRunNoncesRef.current.add(matchedRun.nonce);
 
     captureClientEvent("domain_overview:search_complete", {
       sort_mode: routeState.sort,
@@ -530,19 +612,16 @@ function useDomainOverviewState({
     }
   }, [
     addSearch,
+    matchedRun,
     overview,
     overviewQuery.isSuccess,
+    showsRun,
     routeState.domain,
     routeState.locationCode,
     routeState.sort,
     routeState.subdomains,
     routeState.tab,
   ]);
-
-  useEffect(() => {
-    if (routeState.domain.trim() !== "") return;
-    lastTrackedKey.current = "";
-  }, [routeState.domain]);
 
   const controlsLocationCode = useStore(
     controlsForm.store,
@@ -568,6 +647,9 @@ function useDomainOverviewState({
     controlsForm,
     isLoading,
     overview,
+    /** The URL names a domain this session has nothing on screen for. */
+    searchNotLoaded,
+    dismissAutoRestore,
     /** Set when `overview` came from a stored past run rather than a live one. */
     restoredRun,
     /** Set when a past run EXISTS but its stored result has aged out. */
@@ -727,6 +809,8 @@ export function DomainOverviewPage({
           className="px-0 text-base-content/70 hover:bg-transparent"
           onClick={() => {
             searchTabs.setActiveTab(null);
+            // The user asked for the list: don't restore a stored run over it.
+            state.dismissAutoRestore();
             onShowRecentSearches();
           }}
         >
@@ -780,6 +864,21 @@ export function DomainOverviewPage({
           {tabControls}
           <DomainOverviewLoadingState />
         </>
+      ) : state.searchNotLoaded ? (
+        <div className="space-y-4 pt-1">
+          {tabControls}
+          <AnalyzeDomainPrompt
+            domain={routeState.domain}
+            title={`Results for ${routeState.domain} are not loaded in this session`}
+            description="Running it again requests fresh data from your provider. This may incur a charge."
+            preview={DOMAIN_ANALYZE_PREVIEW}
+            onAnalyze={() => {
+              state.controlsForm.setFieldValue("domain", routeState.domain);
+              void state.controlsForm.handleSubmit();
+            }}
+            isBusy={state.isLoading}
+          />
+        </div>
       ) : state.overview === null ? (
         <div className="space-y-4 pt-1">
           <AnalyzeDomainPrompt
