@@ -20,6 +20,7 @@ import {
   MagnifyingGlass,
   Sparkle,
   ArrowsSplit,
+  Buildings,
   TrendUp,
   Users,
   Graph,
@@ -148,6 +149,11 @@ const projectNavItems = [
     label: "Local SEO",
     icon: MapPin,
   },
+  {
+    to: "/p/$projectId/city-sites" as const,
+    label: "City Sites",
+    icon: Buildings,
+  },
 ] as const;
 
 const aiNavItem = linkOptions({
@@ -218,6 +224,7 @@ export function getProjectNavGroups(projectId: string) {
         byPath("/p/$projectId/prompt-explorer"),
         byPath("/p/$projectId/local"),
         byPath("/p/$projectId/local-grid"),
+        byPath("/p/$projectId/city-sites"),
       ],
     },
     {

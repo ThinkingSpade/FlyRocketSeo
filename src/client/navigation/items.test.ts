@@ -16,6 +16,7 @@ const destinations = [
   "/links",
   "/cannibalization",
   "/local-grid",
+  "/city-sites",
   "/domain",
   "/backlinks",
   "/expired-domains",
@@ -37,7 +38,7 @@ describe("workflow navigation", () => {
       [...group.items, ...group.relatedItems].map((item) => item.to),
     );
     expect(paths.toSorted()).toEqual(destinations.toSorted());
-    expect(new Set(paths).size).toBe(24);
+    expect(new Set(paths).size).toBe(25);
     expect(
       groups
         .flatMap((group) => group.relatedItems)
@@ -59,12 +60,12 @@ describe("workflow navigation", () => {
     ]);
   });
 
-  it("retains all 24 destinations exactly once without changing deep links", () => {
+  it("retains all 25 destinations exactly once without changing deep links", () => {
     const paths = getProjectNavGroups("project-a").flatMap((group) =>
       group.items.map((item) => item.to),
     );
     expect(paths.toSorted()).toEqual(destinations.toSorted());
-    expect(new Set(paths).size).toBe(24);
+    expect(new Set(paths).size).toBe(25);
   });
 
   it("builds every link with the selected project without leaking an earlier one", () => {

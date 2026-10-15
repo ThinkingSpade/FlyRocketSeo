@@ -1,7 +1,10 @@
 import { Link } from "@tanstack/react-router";
 import { CircleNotch } from "@phosphor-icons/react";
 import { MIN_PAGES } from "@/client/features/audit/launch/types";
+import { buildProjectStartUrl } from "@/client/features/audit/launch/projectStartUrl";
 import type { useLaunchController } from "@/client/features/audit/launch/useLaunchController";
+import { HostSuggestions } from "@/client/features/projects/HostSuggestions";
+import { useProjectHostOptions } from "@/client/features/projects/useProjectSubdomains";
 import { getFieldError, getFormError } from "@/client/lib/forms";
 import { PAID_MAX_AUDIT_PAGES } from "@/shared/audit-limits";
 import { SUBSCRIBE_ROUTE } from "@/shared/billing";
@@ -16,11 +19,24 @@ type Props = {
   maxPagesLimit: number;
 };
 
+// `LaunchOptions` below is typed as `Props` too, and it has no use for a
+// project id -- so the card extends the shared shape rather than widening it.
+type LaunchFormCardProps = Props & { projectId: string };
+
+const HOST_SUGGESTIONS_ID = "audit-start-url-hosts";
+
 export function LaunchFormCard({
   commitMaxPagesInput,
   launchForm,
   maxPagesLimit,
-}: Props) {
+  projectId,
+}: LaunchFormCardProps) {
+  // The crawler is host-scoped -- `isSameOrigin` treats only apex and www as
+  // one boundary -- so a subdomain is never reached by auditing the apex and
+  // needs its own run. Suggesting the project's hosts here is what turns that
+  // into picking from a list instead of recalling a URL.
+  const hostOptions = useProjectHostOptions(projectId);
+
   return (
     <div className="relative flex flex-col rounded-xl bg-base-100 border border-base-300">
       <div className="flex flex-auto flex-col gap-4 p-6 text-sm">
@@ -40,19 +56,32 @@ export function LaunchFormCard({
               return (
                 // DaisyUI 5 styled the <label> as the field and left the inner
                 // <input> bare. Kumo styles the input itself, so the wrapper
-                // has nothing left to do.
-                <Input
-                  className="w-full lg:col-span-9"
-                  variant={urlError ? "error" : "default"}
-                  placeholder="https://example.com"
-                  value={field.state.value}
-                  onChange={(event) => {
-                    field.handleChange(event.target.value);
-                    if (launchForm.state.errorMap.onSubmit) {
-                      launchForm.setErrorMap({ onSubmit: undefined });
-                    }
-                  }}
-                />
+                // has nothing left to do — and a <datalist> binds by id from
+                // anywhere in the document, so it no longer needs to be nested
+                // inside the field to reach it.
+                <>
+                  <Input
+                    className="w-full lg:col-span-9"
+                    variant={urlError ? "error" : "default"}
+                    placeholder="https://example.com"
+                    list={HOST_SUGGESTIONS_ID}
+                    value={field.state.value}
+                    onChange={(event) => {
+                      field.handleChange(event.target.value);
+                      if (launchForm.state.errorMap.onSubmit) {
+                        launchForm.setErrorMap({ onSubmit: undefined });
+                      }
+                    }}
+                  />
+                  <HostSuggestions
+                    id={HOST_SUGGESTIONS_ID}
+                    hosts={hostOptions}
+                    // The field takes a full URL; `buildProjectStartUrl` is the
+                    // same normalizer the prefill uses, so a picked suggestion
+                    // and the default land on an identical value.
+                    toValue={(host) => buildProjectStartUrl(host) ?? host}
+                  />
+                </>
               );
             }}
           </launchForm.Field>

@@ -23,3 +23,13 @@ export const BRAND_LOOKUP_RAW_COST_USD = 0.85;
  * 4-group comparison — via `pnpm billing:brand-lookup --competitors=...`.
  */
 export const BRAND_LOOKUP_COMPETITOR_RAW_COST_USD = 0.2;
+
+/**
+ * One "Search organic results" subdomain discovery: a single DataForSEO Labs
+ * `subdomains` request for the top 1,000 hosts by traffic. Measured live
+ * (Oct 2026) at $0.01212 on deliotx.com, which returned 1 subdomain, via
+ * `pnpm billing:subdomain-discovery`. Billed per request plus per returned
+ * row, so this is the floor: a site with many ranking subdomains costs more,
+ * and the UI quotes it as "from".
+ */
+export const SUBDOMAIN_DISCOVERY_RAW_COST_USD = 0.01212;

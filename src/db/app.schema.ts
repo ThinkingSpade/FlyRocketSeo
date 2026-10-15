@@ -79,6 +79,83 @@ export const projects = sqliteTable(
   ],
 );
 
+// Hosts under a project's apex `domain` that the project also owns.
+//
+// A project still has exactly ONE `domain` (the apex). This table holds the
+// hosts beneath it, so features needing the whole estate can read a list
+// instead of forcing one project per subdomain.
+//
+// A row per host rather than a JSON blob on `projects`: discovery re-runs
+// upsert per host, and an estate of hundreds has to be searchable, sortable by
+// the discovered metrics, and individually toggleable — none of which a blob
+// supports without rewriting the whole value on every edit.
+export const projectSubdomains = sqliteTable(
+  "project_subdomains",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    host: text("host").notNull(),
+    // How the row got here. A re-run refreshes metrics but never downgrades a
+    // `manual` row, so a hand-added host keeps its provenance in the UI.
+    source: text("source", { enum: ["manual", "gsc", "dataforseo"] })
+      .notNull()
+      .default("manual"),
+    // Excluded hosts stay as rows so the next discovery run does not resurrect
+    // a host the user deliberately turned off.
+    isActive: integer("is_active", { mode: "boolean" }).notNull().default(true),
+    // Captured at discovery time so a large estate can be ranked by whichever
+    // signal its source could provide. Null when that source had none: GSC
+    // fills clicks/impressions, DataForSEO fills the organic pair.
+    organicKeywords: integer("organic_keywords"),
+    organicTraffic: integer("organic_traffic"),
+    clicks: integer("clicks"),
+    impressions: integer("impressions"),
+    // Last discovery run that still saw this host. Null for manual rows never
+    // confirmed by a run — which is exactly how the UI flags a host that may
+    // no longer exist.
+    lastSeenAt: text("last_seen_at"),
+    // City-site registration. All null for a host that is not a city site;
+    // `cityMatchStatus` being non-null is what makes a host one. A site with a
+    // subdomain per city (austin.example.com, ...) is ONE property with many
+    // locations, so its cities are rows in this same host list rather than a
+    // project each, and a host found by discovery can become a city site
+    // without being entered twice.
+    //
+    // `locationCode` is the point: it pins the host to the DataForSEO city code
+    // per-city questions are asked with. It stays NULL when the city could not
+    // be resolved ("ambiguous": six US cities are called Dallas; "unmatched":
+    // no seeded city has the name) -- never guessed, the same rule
+    // `projectTargetAreas.confirmedAt` encodes. `cityMatchSource` marks a
+    // human's correction so an automatic re-match never overwrites it.
+    /** The DNS label the city was derived from, e.g. "austin" or "austin.tx". */
+    cityLabel: text("city_label"),
+    cityName: text("city_name"),
+    stateCode: text("state_code"),
+    locationCode: integer("location_code"),
+    parentMetroCode: integer("parent_metro_code"),
+    cityMatchStatus: text("city_match_status", {
+      enum: ["matched", "ambiguous", "unmatched"],
+    }),
+    cityMatchSource: text("city_match_source", { enum: ["auto", "manual"] }),
+    createdAt: text("created_at")
+      .notNull()
+      .default(sql`(current_timestamp)`),
+  },
+  (table) => [
+    uniqueIndex("project_subdomains_project_host_idx").on(
+      table.projectId,
+      table.host,
+    ),
+    // City Sites pages and counts narrow on match status within a project.
+    index("project_subdomains_project_city_status_idx").on(
+      table.projectId,
+      table.cityMatchStatus,
+    ),
+  ],
+);
+
 // User-saved keywords within a project. This is the canonical saved list.
 export const savedKeywords = sqliteTable(
   "saved_keywords",

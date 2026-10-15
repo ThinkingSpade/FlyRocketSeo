@@ -183,6 +183,13 @@
       "when": 1792074506142,
       "tag": "0025_glossy_maginty",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "7",
+      "when": 1792079969179,
+      "tag": "0026_project_subdomains",
+      "breakpoints": true
     }
   ]
 }

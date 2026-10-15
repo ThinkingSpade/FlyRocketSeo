@@ -59,6 +59,7 @@ import { Route as ProjectPProjectIdDomainRouteImport } from './routes/_project/p
 import { Route as ProjectPProjectIdContentRouteImport } from './routes/_project/p/$projectId/content'
 import { Route as ProjectPProjectIdCompetitorsRouteImport } from './routes/_project/p/$projectId/competitors'
 import { Route as ProjectPProjectIdClustersRouteImport } from './routes/_project/p/$projectId/clusters'
+import { Route as ProjectPProjectIdCitySitesRouteImport } from './routes/_project/p/$projectId/city-sites'
 import { Route as ProjectPProjectIdCannibalizationRouteImport } from './routes/_project/p/$projectId/cannibalization'
 import { Route as ProjectPProjectIdBrandLookupRouteImport } from './routes/_project/p/$projectId/brand-lookup'
 import { Route as ProjectPProjectIdBacklinksRouteImport } from './routes/_project/p/$projectId/backlinks'
@@ -329,6 +330,12 @@ const ProjectPProjectIdClustersRoute =
     path: '/clusters',
     getParentRoute: () => ProjectPProjectIdRouteRoute,
   } as any)
+const ProjectPProjectIdCitySitesRoute =
+  ProjectPProjectIdCitySitesRouteImport.update({
+    id: '/city-sites',
+    path: '/city-sites',
+    getParentRoute: () => ProjectPProjectIdRouteRoute,
+  } as any)
 const ProjectPProjectIdCannibalizationRoute =
   ProjectPProjectIdCannibalizationRouteImport.update({
     id: '/cannibalization',
@@ -404,6 +411,7 @@ export interface FileRoutesByFullPath {
   '/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/p/$projectId/cannibalization': typeof ProjectPProjectIdCannibalizationRoute
+  '/p/$projectId/city-sites': typeof ProjectPProjectIdCitySitesRoute
   '/p/$projectId/clusters': typeof ProjectPProjectIdClustersRoute
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
@@ -458,6 +466,7 @@ export interface FileRoutesByTo {
   '/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/p/$projectId/cannibalization': typeof ProjectPProjectIdCannibalizationRoute
+  '/p/$projectId/city-sites': typeof ProjectPProjectIdCitySitesRoute
   '/p/$projectId/clusters': typeof ProjectPProjectIdClustersRoute
   '/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/p/$projectId/content': typeof ProjectPProjectIdContentRoute
@@ -518,6 +527,7 @@ export interface FileRoutesById {
   '/_project/p/$projectId/backlinks': typeof ProjectPProjectIdBacklinksRoute
   '/_project/p/$projectId/brand-lookup': typeof ProjectPProjectIdBrandLookupRoute
   '/_project/p/$projectId/cannibalization': typeof ProjectPProjectIdCannibalizationRoute
+  '/_project/p/$projectId/city-sites': typeof ProjectPProjectIdCitySitesRoute
   '/_project/p/$projectId/clusters': typeof ProjectPProjectIdClustersRoute
   '/_project/p/$projectId/competitors': typeof ProjectPProjectIdCompetitorsRoute
   '/_project/p/$projectId/content': typeof ProjectPProjectIdContentRoute
@@ -576,6 +586,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/cannibalization'
+    | '/p/$projectId/city-sites'
     | '/p/$projectId/clusters'
     | '/p/$projectId/competitors'
     | '/p/$projectId/content'
@@ -630,6 +641,7 @@ export interface FileRouteTypes {
     | '/p/$projectId/backlinks'
     | '/p/$projectId/brand-lookup'
     | '/p/$projectId/cannibalization'
+    | '/p/$projectId/city-sites'
     | '/p/$projectId/clusters'
     | '/p/$projectId/competitors'
     | '/p/$projectId/content'
@@ -689,6 +701,7 @@ export interface FileRouteTypes {
     | '/_project/p/$projectId/backlinks'
     | '/_project/p/$projectId/brand-lookup'
     | '/_project/p/$projectId/cannibalization'
+    | '/_project/p/$projectId/city-sites'
     | '/_project/p/$projectId/clusters'
     | '/_project/p/$projectId/competitors'
     | '/_project/p/$projectId/content'
@@ -1087,6 +1100,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProjectPProjectIdClustersRouteImport
       parentRoute: typeof ProjectPProjectIdRouteRoute
     }
+    '/_project/p/$projectId/city-sites': {
+      id: '/_project/p/$projectId/city-sites'
+      path: '/city-sites'
+      fullPath: '/p/$projectId/city-sites'
+      preLoaderRoute: typeof ProjectPProjectIdCitySitesRouteImport
+      parentRoute: typeof ProjectPProjectIdRouteRoute
+    }
     '/_project/p/$projectId/cannibalization': {
       id: '/_project/p/$projectId/cannibalization'
       path: '/cannibalization'
@@ -1212,6 +1232,7 @@ interface ProjectPProjectIdRouteRouteChildren {
   ProjectPProjectIdBacklinksRoute: typeof ProjectPProjectIdBacklinksRoute
   ProjectPProjectIdBrandLookupRoute: typeof ProjectPProjectIdBrandLookupRoute
   ProjectPProjectIdCannibalizationRoute: typeof ProjectPProjectIdCannibalizationRoute
+  ProjectPProjectIdCitySitesRoute: typeof ProjectPProjectIdCitySitesRoute
   ProjectPProjectIdClustersRoute: typeof ProjectPProjectIdClustersRoute
   ProjectPProjectIdCompetitorsRoute: typeof ProjectPProjectIdCompetitorsRoute
   ProjectPProjectIdContentRoute: typeof ProjectPProjectIdContentRoute
@@ -1243,6 +1264,7 @@ const ProjectPProjectIdRouteRouteChildren: ProjectPProjectIdRouteRouteChildren =
     ProjectPProjectIdBrandLookupRoute: ProjectPProjectIdBrandLookupRoute,
     ProjectPProjectIdCannibalizationRoute:
       ProjectPProjectIdCannibalizationRoute,
+    ProjectPProjectIdCitySitesRoute: ProjectPProjectIdCitySitesRoute,
     ProjectPProjectIdClustersRoute: ProjectPProjectIdClustersRoute,
     ProjectPProjectIdCompetitorsRoute: ProjectPProjectIdCompetitorsRoute,
     ProjectPProjectIdContentRoute: ProjectPProjectIdContentRoute,

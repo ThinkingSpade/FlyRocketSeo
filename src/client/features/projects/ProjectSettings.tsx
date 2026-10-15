@@ -4,6 +4,8 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CaretLeft } from "@phosphor-icons/react";
 import { toast } from "sonner";
 import { SearchConsoleConnectionCard } from "@/client/features/gsc/SearchConsoleConnectionCard";
+import { ProjectSubdomainsSection } from "@/client/features/projects/ProjectSubdomainsSection";
+import { projectSubdomainsQueryKey } from "@/client/features/projects/useProjectSubdomains";
 import { getStandardErrorMessage } from "@/client/lib/error-messages";
 import {
   clearLastProjectId,
@@ -54,6 +56,14 @@ export function ProjectSettings({ projectId }: { projectId: string }) {
       {/* key resets the form's local state when switching between projects */}
       <GeneralSection key={project.id} project={project} />
 
+      {/* Keyed for the same reason, and placed directly under the domain field
+          it depends on: the section reads the project's domain to decide what
+          counts as one of its subdomains. */}
+      <ProjectSubdomainsSection
+        key={`subdomains-${project.id}`}
+        projectId={projectId}
+      />
+
       <section id="search-console" className="space-y-3 scroll-mt-6">
         <h2 className="text-sm font-medium text-base-content/50">
           Search Console
@@ -81,7 +91,14 @@ function GeneralSection({ project }: { project: ProjectSummary }) {
         },
       }),
     onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["projects"] });
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["projects"] }),
+        // Subdomains hang off the domain: setting or changing it is what
+        // unlocks (or re-scopes) the Subdomains section below.
+        queryClient.invalidateQueries({
+          queryKey: projectSubdomainsQueryKey(project.id),
+        }),
+      ]);
       toast.success("Project updated");
     },
     onError: (error) =>

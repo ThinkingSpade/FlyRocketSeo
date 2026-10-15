@@ -5,6 +5,7 @@ import {
 } from "@/server/features/gsc/searchAnalytics";
 import {
   previousPeriod,
+  splitDailyRowsByPeriod,
   sumSearchTotals,
 } from "@/server/features/gsc/searchPerformanceReport";
 import { PortfolioRepository } from "@/server/features/projects/repositories/PortfolioRepository";
@@ -12,6 +13,23 @@ import { listProjectsEnsuringOne } from "@/server/features/projects/services/pro
 
 const GSC_DAILY_ROW_LIMIT = 200;
 const GSC_PROJECT_CONCURRENCY = 4;
+
+/**
+ * Projects enriched per portfolio request.
+ *
+ * This is a SUBREQUEST budget, not a display preference. Each project on the
+ * page costs one Search Console request, and the Cloudflare Free plan this
+ * deployment runs on caps every invocation at 50 subrequests total — a ceiling
+ * the D1 reads on this same path also draw from. Paginating is what makes the
+ * fan-out bounded by construction: with a page this size the GSC calls cannot
+ * reach the ceiling however many projects the organization has.
+ *
+ * Before this, the portfolio loaded EVERY project and issued two requests per
+ * connected one, so an organization crossed the ceiling at roughly 25 connected
+ * projects and the whole page failed rather than degrading.
+ */
+export const PORTFOLIO_PAGE_SIZE_MAX = 25;
+export const PORTFOLIO_PAGE_SIZE_DEFAULT = 25;
 
 type GscConnectionRow = Awaited<
   ReturnType<typeof PortfolioRepository.listGscConnections>
@@ -92,6 +110,17 @@ function selectPrimaryRankConfigs(
   return primaryByProject;
 }
 
+/**
+ * Both periods' totals for one project, from ONE Search Console request.
+ *
+ * The previous period ends the day before the current one begins, so a single
+ * request over the combined span carries every daily row both need;
+ * `splitDailyRowsByPeriod` buckets them afterwards. This was two requests, and
+ * halving it is what keeps a page of projects inside the Workers subrequest
+ * ceiling — on the Free plan that ceiling is 50 per invocation, which two
+ * requests per project reached at roughly 25 connected projects, with the D1
+ * reads on this same path still to pay for.
+ */
 async function loadGscTotals(
   connection: GscConnectionRow,
   range: {
@@ -102,30 +131,27 @@ async function loadGscTotals(
   },
 ) {
   const client = createGscClient({ userId: connection.connectedByUserId });
-  const currentRequest = buildSearchAnalyticsRequest({
-    projectId: connection.projectId,
-    startDate: range.startDate,
-    endDate: range.endDate,
-    dimensions: ["date"],
-    rowLimit: GSC_DAILY_ROW_LIMIT,
-  });
-  const previousRequest = buildSearchAnalyticsRequest({
+  const request = buildSearchAnalyticsRequest({
     projectId: connection.projectId,
     startDate: range.prevStartDate,
-    endDate: range.prevEndDate,
+    endDate: range.endDate,
     dimensions: ["date"],
     rowLimit: GSC_DAILY_ROW_LIMIT,
   });
 
   try {
-    const [current, previous] = await Promise.all([
-      client.querySearchAnalytics(connection.siteUrl, currentRequest),
-      client.querySearchAnalytics(connection.siteUrl, previousRequest),
-    ]);
+    const { rows } = await client.querySearchAnalytics(
+      connection.siteUrl,
+      request,
+    );
+    const split = splitDailyRowsByPeriod(rows, {
+      currentStartDate: range.startDate,
+      previousStartDate: range.prevStartDate,
+    });
     return {
       status: "connected" as const,
-      current: sumSearchTotals(current.rows),
-      previous: sumSearchTotals(previous.rows),
+      current: sumSearchTotals(split.current),
+      previous: sumSearchTotals(split.previous),
     };
   } catch (error) {
     console.warn("[portfolio] Search Console summary unavailable", {
@@ -170,8 +196,25 @@ async function loadGscPortfolio(
   return output;
 }
 
-export async function getPortfolio(organizationId: string) {
-  const projects = await listProjectsEnsuringOne(organizationId);
+export async function getPortfolio(
+  organizationId: string,
+  pagination: { page: number; pageSize: number } = {
+    page: 1,
+    pageSize: PORTFOLIO_PAGE_SIZE_DEFAULT,
+  },
+) {
+  // Still the source of truth for "which projects does this org have", so the
+  // auto-created first project keeps happening; the page is taken from it.
+  const allProjects = await listProjectsEnsuringOne(organizationId);
+  const pageSize = Math.min(
+    Math.max(pagination.pageSize, 1),
+    PORTFOLIO_PAGE_SIZE_MAX,
+  );
+  const totalCount = allProjects.length;
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
+  const page = Math.min(Math.max(pagination.page, 1), totalPages);
+  const projects = allProjects.slice((page - 1) * pageSize, page * pageSize);
+
   const projectIds = projects.map((project) => project.id);
   const currentRange = resolveDateRange({ dateRange: "last_28_days" });
   const previousRange = previousPeriod(
@@ -295,5 +338,5 @@ export async function getPortfolio(organizationId: string) {
     };
   });
 
-  return { range, projects: rows };
+  return { range, projects: rows, page, pageSize, totalCount };
 }

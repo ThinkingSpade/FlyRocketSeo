@@ -25,9 +25,45 @@ page explorer, topic clusters, domain overview, competitors, backlinks, AI
 visibility, prompt explorer, local SEO.
 
 **Your own site** — SEO opportunities (a ranked action plan), Google Search
-Console insights, link opportunities, cannibalization, local rank grid, rank
-tracking, saved keywords, site audit, on-page fixes, and a print-ready client
-report.
+Console insights, link opportunities, cannibalization, local rank grid, city
+sites, rank tracking, saved keywords, site audit, on-page fixes, and a
+print-ready client report.
+
+**City Sites** is for a site that publishes a subdomain per city
+(`austin.example.com`, `dallas.example.com`, ...). Paste the hostnames and each
+one is matched to its DataForSEO city location, so per-city work uses the right
+geography instead of the project's national default. It stays one project — a
+few thousand city subdomains are one property with many locations, not a few
+thousand properties. Importing, browsing and correcting the list is free; a
+hostname whose city is unclear is shown as such rather than pinned to a guess.
+Matching reads the `geo_locations` table, so run **Settings → Seed location
+data** first.
+
+Each city also shows its own Search Console clicks, impressions and average
+position, and the list can be ranked by clicks. That needs **one** connection,
+not one per city: connect a Search Console **domain property**
+(`sc-domain:example.com`), which covers the apex and every subdomain at once,
+so cities launched later report with no extra setup. A URL-prefix property
+(`https://example.com/`) only ever covers that single host. The rollup is one
+free first-party Search Console call — the same class of call the GSC Insights
+tab already makes — and it counts only hosts in the registry, so the main
+site's own traffic never inflates a per-city figure.
+
+Selected cities can also be set up for rank tracking in one action, each
+checked at its own location. Keywords are written once as a template —
+`plumber {city}` becomes `plumber austin` — and the setup screen shows the
+exact cost, from the same estimator the billing guard charges against, before
+anything is created. **This is the only part of City Sites that can spend
+money.** Creating the configs is free; a _scheduled_ config is what recurs, so
+the schedule defaults to manual and a recurring cost is always priced on screen
+first. No check is ever triggered at setup, not even for a scheduled config.
+
+**Site Audit does not cross into subdomains.** A crawl boundary is the exact
+host (plus its `www` form), so auditing `example.com` never wanders into
+`austin.example.com` — which is what keeps one project's audit from becoming a
+crawl of thousands of hosts. The flip side is that city subdomains are not
+covered by the project's own audit; each is its own audit target, started by
+entering that hostname on the Site Audit tab.
 
 Each project maps to one domain. Analyses are recorded per project, so a tab you
 have run before reopens showing that result instead of a blank form.

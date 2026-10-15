@@ -187,6 +187,40 @@ function formatUtcDate(ms: number): string {
   return new Date(ms).toISOString().slice(0, 10);
 }
 
+/**
+ * Splits `dimensions: ["date"]` rows into the current period and the one before
+ * it, so BOTH totals come out of a single Search Console request.
+ *
+ * `previousPeriod` above returns a span ending the day before `currentStartDate`
+ * — the two periods are contiguous — so one request covering the combined span
+ * contains every row both of them need. That matters where a caller fans out
+ * across many projects at once: two requests each is the difference between
+ * fitting inside the Workers subrequest ceiling and not.
+ *
+ * Rows are bucketed by comparing the date key against `currentStartDate`.
+ * ISO-8601 dates sort lexicographically, so a string comparison is a date
+ * comparison here, with no parsing and no timezone to get wrong.
+ *
+ * A row whose date key is missing or falls before the requested span belongs to
+ * neither bucket and is dropped rather than guessed at.
+ */
+export function splitDailyRowsByPeriod(
+  rows: GscSearchAnalyticsRow[],
+  period: { currentStartDate: string; previousStartDate: string },
+): { current: GscSearchAnalyticsRow[]; previous: GscSearchAnalyticsRow[] } {
+  const current: GscSearchAnalyticsRow[] = [];
+  const previous: GscSearchAnalyticsRow[] = [];
+
+  for (const row of rows) {
+    const date = row.keys?.[0];
+    if (!date) continue;
+    if (date >= period.currentStartDate) current.push(row);
+    else if (date >= period.previousStartDate) previous.push(row);
+  }
+
+  return { current, previous };
+}
+
 type CtrOpportunityRow = {
   query: string;
   page: string;

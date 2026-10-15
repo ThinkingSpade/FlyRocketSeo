@@ -47,6 +47,7 @@
     "test:e2e:keywords": "playwright test e2e/keyword-research-navigation.spec.ts",
     "billing:backlinks": "tsx scripts/backlinks-cost-profile.ts",
     "billing:brand-lookup": "tsx scripts/brand-lookup-cost-profile.ts",
+    "billing:subdomain-discovery": "tsx scripts/subdomain-discovery-cost-profile.ts",
     "cleanup:default-projects:d1": "tsx scripts/d1-default-project-cleanup.ts",
     "seed:rank-tracking": "tsx scripts/seed-rank-tracking.ts",
     "seed:backlinks-run": "tsx scripts/seed-backlinks-run.ts",

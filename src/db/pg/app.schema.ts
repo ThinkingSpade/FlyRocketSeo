@@ -90,6 +90,62 @@ export const projects = pgTable(
   ],
 );
 
+// Hosts under a project's apex `domain` (mirrors the SQLite schema).
+export const projectSubdomains = pgTable(
+  "project_subdomains",
+  {
+    id: text("id").primaryKey(),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    host: text("host").notNull(),
+    source: text("source", { enum: ["manual", "gsc", "dataforseo"] })
+      .notNull()
+      .default("manual"),
+    isActive: boolean("is_active").notNull().default(true),
+    organicKeywords: integer("organic_keywords"),
+    organicTraffic: integer("organic_traffic"),
+    clicks: integer("clicks"),
+    impressions: integer("impressions"),
+    lastSeenAt: timestampColumn("last_seen_at"),
+    // City-site registration. All null for a host that is not a city site;
+    // `cityMatchStatus` being non-null is what makes a host one. A site with a
+    // subdomain per city (austin.example.com, ...) is ONE property with many
+    // locations, so its cities are rows in this same host list rather than a
+    // project each, and a host found by discovery can become a city site
+    // without being entered twice.
+    //
+    // `locationCode` is the point: it pins the host to the DataForSEO city code
+    // per-city questions are asked with. It stays NULL when the city could not
+    // be resolved ("ambiguous": six US cities are called Dallas; "unmatched":
+    // no seeded city has the name) -- never guessed, the same rule
+    // `projectTargetAreas.confirmedAt` encodes. `cityMatchSource` marks a
+    // human's correction so an automatic re-match never overwrites it.
+    /** The DNS label the city was derived from, e.g. "austin" or "austin.tx". */
+    cityLabel: text("city_label"),
+    cityName: text("city_name"),
+    stateCode: text("state_code"),
+    locationCode: integer("location_code"),
+    parentMetroCode: integer("parent_metro_code"),
+    cityMatchStatus: text("city_match_status", {
+      enum: ["matched", "ambiguous", "unmatched"],
+    }),
+    cityMatchSource: text("city_match_source", { enum: ["auto", "manual"] }),
+    createdAt: timestampColumn("created_at").notNull().default(isoNow),
+  },
+  (table) => [
+    uniqueIndex("project_subdomains_project_host_idx").on(
+      table.projectId,
+      table.host,
+    ),
+    // City Sites pages and counts narrow on match status within a project.
+    index("project_subdomains_project_city_status_idx").on(
+      table.projectId,
+      table.cityMatchStatus,
+    ),
+  ],
+);
+
 // User-saved keywords within a project. This is the canonical saved list.
 export const savedKeywords = pgTable(
   "saved_keywords",
