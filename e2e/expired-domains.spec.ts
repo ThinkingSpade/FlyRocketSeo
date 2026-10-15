@@ -82,7 +82,11 @@ test.describe("Expired domains panel", () => {
       timeout: 30_000,
     });
 
-    const link = page.getByRole("link", { name: "Expired Domains" });
+    // Specialist research tools sit behind the Research group's "More
+    // research tools" disclosure; the landing page (Overview) does not open it.
+    const nav = page.getByRole("navigation", { name: "Project navigation" });
+    await nav.getByText("More research tools").click();
+    const link = nav.getByRole("link", { name: "Expired Domains" });
     await expect(link).toBeVisible();
     await link.click();
 

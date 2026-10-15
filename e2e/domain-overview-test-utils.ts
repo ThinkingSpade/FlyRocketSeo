@@ -7,8 +7,11 @@ import {
   type TestInfo,
 } from "@playwright/test";
 
-export const PRIMARY_TEST_DOMAIN = "primary.example";
-export const SECONDARY_TEST_DOMAIN = "secondary.example";
+// Must be real public-suffix domains: the search form's validator rejects
+// reserved TLDs such as `.example`, so those never submit. Nothing is fetched
+// for them -- VITE_E2E_DOMAIN_FIXTURES answers with fixtures for any domain.
+export const PRIMARY_TEST_DOMAIN = "primary.com";
+export const SECONDARY_TEST_DOMAIN = "secondary.com";
 const RESPONSIVE_TIMEOUT_MS = 1_500;
 const INPUT_LATENCY_BUDGET_MS = 8_000;
 
@@ -194,14 +197,45 @@ export async function openDomainOverview(page: Page, tab: DomainTab) {
   if (tab === "pages") params.set("tab", "pages");
 
   await page.goto(`/p/${match[1]}/domain?${params.toString()}`);
+  // The route is a lazy chunk; on a cold dev server, and under the perf
+  // spec's 6x CPU throttle, it can take well past the default 10s to mount.
   await expect(
     page.getByRole("heading", { name: "Domain Overview" }),
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 30_000 });
   await dismissSetupModal(page);
+  // The domain param only prefills the form; the overview is a metered run,
+  // so it needs the Search click (free here: VITE_E2E_DOMAIN_FIXTURES).
+  await page.getByRole("button", { name: "Search", exact: true }).click();
   await expect(page.getByRole("button", { name: /Filters/ })).toBeVisible({
     timeout: 30_000,
   });
   await expectPageResponsive(page, "after opening Domain Overview");
+}
+
+/**
+ * Run the overview for the domain already in the URL. After a full page load
+ * the domain param only prefills the form: nothing runs unasked (and e2e
+ * fixture runs are not stored, so there is no restored run either).
+ */
+export async function searchUrlDomain(page: Page) {
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  await expect(page.getByRole("button", { name: /Filters/ })).toBeVisible({
+    timeout: 30_000,
+  });
+}
+
+/**
+ * Change the URL the way an in-app link does, without reloading. A reload
+ * drops the authorized overview, and running it again via Search clears the
+ * URL's filters, so tests about URL filter state must keep the page mounted.
+ */
+export async function navigateWithinApp(page: Page, href: string) {
+  await page.evaluate((target) => {
+    const state: unknown = window.history.state;
+    window.history.pushState(state, "", target);
+    window.dispatchEvent(new PopStateEvent("popstate", { state }));
+  }, href);
+  await expectPageResponsive(page, `after navigating to ${href}`);
 }
 
 async function dismissSetupModal(page: Page) {
@@ -212,13 +246,22 @@ async function dismissSetupModal(page: Page) {
 }
 
 export async function waitForDomainRows(page: Page, label: string) {
-  const marker = label.includes("Pages")
+  const isPages = label.includes("Pages");
+  // Each table is its own metered run, authorized per filter/sort/page
+  // combination, so a combination not yet loaded shows its Load button first.
+  const load = page.getByRole("button", {
+    name: isPages ? "Load pages" : "Load keywords",
+    exact: true,
+  });
+  const marker = isPages
     ? page.getByRole("link", { name: /\/section-a\/page-001/ }).first()
     : page
         .getByRole("row", {
           name: /primary sample query.*\/section-a\/page-001/,
         })
         .first();
+  await expect(marker.or(load).first()).toBeVisible({ timeout: 30_000 });
+  if (await load.isVisible()) await load.click();
   await expect(marker, label).toBeVisible({ timeout: 30_000 });
   await expectPageResponsive(page, `after table rows loaded for ${label}`);
 }

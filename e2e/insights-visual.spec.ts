@@ -61,10 +61,10 @@ const results: RouteResult[] = [];
 
 async function getProjectId(page: Page): Promise<string> {
   await page.goto("/");
-  await page.waitForURL(/\/p\/([^/]+)\/keywords(?:\?.*)?$/, {
+  await page.waitForURL(/\/p\/([^/?]+)\/?(?:\?.*)?$/, {
     timeout: 30_000,
   });
-  const match = page.url().match(/\/p\/([^/]+)\/keywords/);
+  const match = page.url().match(/\/p\/([^/?]+)/);
   if (!match) throw new Error(`Could not read project id from ${page.url()}`);
   return match[1];
 }

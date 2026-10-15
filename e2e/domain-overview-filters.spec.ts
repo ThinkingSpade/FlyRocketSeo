@@ -6,7 +6,9 @@ import {
   openDomainOverview,
   PRIMARY_TEST_DOMAIN,
   SECONDARY_TEST_DOMAIN,
+  navigateWithinApp,
   openFilters,
+  searchUrlDomain,
   switchDomainTab,
   typeIntoDraftInput,
 } from "./domain-overview-test-utils";
@@ -21,6 +23,7 @@ test.describe("Domain Overview filters", () => {
     const secondUrl = new URL(page.url());
     secondUrl.searchParams.set("domain", SECONDARY_TEST_DOMAIN);
     await page.goto(secondUrl.toString());
+    await searchUrlDomain(page);
     await expect(
       page.getByRole("tab", { name: SECONDARY_TEST_DOMAIN }),
     ).toHaveAttribute("aria-selected", "true");
@@ -50,6 +53,7 @@ test.describe("Domain Overview filters", () => {
     const secondUrl = new URL(page.url());
     secondUrl.searchParams.set("domain", SECONDARY_TEST_DOMAIN);
     await page.goto(secondUrl.toString());
+    await searchUrlDomain(page);
     await expect(
       page.getByRole("tab", { name: SECONDARY_TEST_DOMAIN }),
     ).toHaveAttribute("aria-selected", "true");
@@ -162,7 +166,7 @@ test.describe("Domain Overview filters", () => {
 
     const keywordUrl = new URL(page.url());
     keywordUrl.searchParams.delete("tab");
-    await page.goto(keywordUrl.toString());
+    await navigateWithinApp(page, keywordUrl.toString());
     await ensureFiltersOpen(page, "Include Terms");
     await expect(page.getByPlaceholder("Min").nth(0)).toHaveValue("10");
   });
@@ -181,7 +185,7 @@ test.describe("Domain Overview filters", () => {
     );
     await applyFilters(page, "pMinTraffic", "20");
 
-    const domainInput = page.getByPlaceholder("Enter a domain").nth(1);
+    const domainInput = page.getByPlaceholder("Enter a domain");
     await domainInput.click();
     await domainInput.press(
       process.platform === "darwin" ? "Meta+A" : "Control+A",
@@ -217,14 +221,14 @@ test.describe("Domain Overview filters", () => {
 
     const urlWithoutPageFilters = new URL(page.url());
     urlWithoutPageFilters.searchParams.delete("pMinTraffic");
-    await page.goto(urlWithoutPageFilters.toString());
+    await navigateWithinApp(page, urlWithoutPageFilters.toString());
     await ensureFiltersOpen(page, "Include Page Terms");
     await expect(page.getByPlaceholder("Min").nth(0)).toHaveValue("20");
     expect(new URL(page.url()).searchParams.get("pMinTraffic")).toBe(null);
 
     const urlWithExplicitPageFilters = new URL(page.url());
     urlWithExplicitPageFilters.searchParams.set("pMinTraffic", "30");
-    await page.goto(urlWithExplicitPageFilters.toString());
+    await navigateWithinApp(page, urlWithExplicitPageFilters.toString());
     await ensureFiltersOpen(page, "Include Page Terms");
     await expect(page.getByPlaceholder("Min").nth(0)).toHaveValue("30");
   });
