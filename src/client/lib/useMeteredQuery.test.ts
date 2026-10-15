@@ -76,6 +76,19 @@ describe("metered query request multiplication", () => {
     expect(options.staleTime).toBe(Infinity);
   });
 
+  it("never re-runs a FAILED paid query when an observer mounts onto it", () => {
+    // TanStack's retryOnMount defaults to true: a query sitting in error with
+    // no data is fetched again whenever a component (or a key switch) attaches
+    // to it -- e.g. switching back to the search tab whose paid run failed.
+    const options = buildMeteredQueryOptions({
+      authorized: true,
+      queryKey: ["keywordResearch", "p_1", ["seo"]],
+      queryFn: () => Promise.reject(new Error("provider timeout")),
+    });
+
+    expect(options.retryOnMount).toBe(false);
+  });
+
   it("stays disabled until an in-session authorization, so nothing fires on mount", () => {
     const options = buildMeteredQueryOptions({
       queryKey: ["backlinksRows", "example.com"],

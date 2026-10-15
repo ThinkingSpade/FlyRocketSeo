@@ -18,6 +18,7 @@ import type {
   ResultLimit,
 } from "@/client/features/keywords/keywordResearchTypes";
 import { useMeteredQuery } from "@/client/lib/useMeteredQuery";
+import { restoredRunAnswers } from "@/client/features/keywords/state/keywordSessionRuns";
 
 type AddSearchFn = (
   keyword: string,
@@ -136,24 +137,91 @@ type AuthorizedCapture = {
   geo: KeywordResearchGeoBundle | null;
 };
 
+/**
+ * What is on screen for the run the URL names. An earlier run's query stays
+ * disabled: it shows only what the cache holds, its error, or the fetch it
+ * already started (two quick searches: the first is still on its way, and
+ * calling it "not loaded" would invite paying for it twice). With none of
+ * those, nothing is shown -- the tab is not loaded, never empty, and never
+ * filled with another search's rows.
+ */
+function resolveShownRequest(
+  request: KeywordResearchRequest | null,
+  query: {
+    live: boolean;
+    hasData: boolean;
+    isError: boolean;
+    isFetching: boolean;
+  },
+): KeywordResearchRequest | null {
+  if (request === null) return null;
+  return query.live || query.hasData || query.isError || query.isFetching
+    ? request
+    : null;
+}
+
+type ShownLabelsSource = {
+  shown: KeywordResearchRequest | null;
+  data: { source: ResearchSource; usedFallback?: boolean } | undefined;
+  restoredRun: {
+    label: string;
+    result: z.infer<typeof keywordResearchResultSchema>;
+  } | null;
+};
+
+/** The labels for what is on screen: the session result, else the restored run. */
+function describeShownResult({ shown, data, restoredRun }: ShownLabelsSource) {
+  const keyword = shown?.seedKeyword ?? restoredRun?.label ?? "";
+  return {
+    lastResultSource:
+      data?.source ??
+      restoredRun?.result.source ??
+      ("related" as ResearchSource),
+    lastUsedFallback:
+      data?.usedFallback ?? restoredRun?.result.usedFallback ?? false,
+    lastSearchKeyword: keyword,
+    lastSearchLocationCode:
+      shown?.locationCode ??
+      restoredRun?.result.scope?.locationCode ??
+      DEFAULT_LOCATION_CODE,
+    searchedKeyword: keyword,
+  };
+}
+
+/**
+ * The session run that answers the search the URL names (see
+ * keywordSessionRuns.ts), as this hook needs it.
+ */
+type SessionResearchRun = {
+  input: KeywordResearchQueryInput;
+  /** The nonce its query is cached under -- reusing it is what finds it. */
+  nonce: number;
+  /**
+   * Only the run the user just submitted may fetch. Any earlier run is read
+   * from the cache or reported as not loaded, so switching tabs never spends.
+   */
+  live: boolean;
+  capture: AuthorizedCapture;
+};
+
 export function useKeywordResearchData(
   input: KeywordResearchQueryInput,
   addSearch: AddSearchFn,
-  authorizedInput: KeywordResearchQueryInput | null,
-  runNonce: number,
-  authorizedCapture: AuthorizedCapture = { languageCode: null, geo: null },
+  sessionRun: SessionResearchRun | null,
+  /** False once this session has run a search or left for Recent searches. */
+  autoRestoreAllowed: boolean,
 ) {
   const { projectId } = input;
   const request = useMemo<KeywordResearchRequest | null>(
     () =>
-      authorizedInput
+      sessionRun
         ? buildKeywordResearchRequest(
-            authorizedInput,
-            authorizedCapture.languageCode ?? undefined,
-            authorizedCapture.geo ?? undefined,
+            sessionRun.input,
+            sessionRun.capture.languageCode ?? undefined,
+            sessionRun.capture.geo ?? undefined,
           )
         : null,
-    [authorizedInput, authorizedCapture.languageCode, authorizedCapture.geo],
+    [sessionRun],
   );
   const queryKey = useMemo(
     () => buildKeywordResearchQueryKey(request),
@@ -162,8 +230,8 @@ export function useKeywordResearchData(
   const queryKeyString = JSON.stringify(queryKey);
 
   const researchQuery = useMeteredQuery({
-    authorized: authorizedInput != null,
-    runNonce,
+    authorized: sessionRun?.live ?? false,
+    runNonce: sessionRun?.nonce,
     queryKey,
     queryFn: () => {
       if (!request) {
@@ -176,28 +244,43 @@ export function useKeywordResearchData(
     gcTime: KEYWORD_RESEARCH_STALE_TIME_MS,
   });
 
-  const handledSuccessKeyRef = useRef<string | null>(null);
+  const shown = resolveShownRequest(request, {
+    live: sessionRun?.live === true,
+    hasData: researchQuery.data !== undefined,
+    isError: researchQuery.isError,
+    isFetching: researchQuery.isFetching,
+  });
+  // A matched run whose result the cache no longer holds.
+  const matchedButUncached = request !== null && shown === null;
+
+  // A Set, not the last key: switching back to a tab re-presents a success
+  // that was already recorded, and history/analytics must count it once.
+  const handledSuccessKeysRef = useRef(new Set<string>());
   useEffect(() => {
-    if (!request || !researchQuery.isSuccess || !researchQuery.data) return;
-    if (handledSuccessKeyRef.current === queryKeyString) return;
-    handledSuccessKeyRef.current = queryKeyString;
+    if (!shown || !researchQuery.isSuccess || !researchQuery.data) return;
+    // Per RUN, not per search: Search again with the same settings is a new
+    // (paid) run and is recorded as one.
+    const runKey = `${queryKeyString}#${sessionRun?.nonce ?? ""}`;
+    if (handledSuccessKeysRef.current.has(runKey)) return;
+    handledSuccessKeysRef.current.add(runKey);
 
     captureClientEvent("keyword_research:search_complete", {
-      location_code: request.locationCode,
-      search_mode: request.mode,
-      clickstream: request.clickstream,
+      location_code: shown.locationCode,
+      search_mode: shown.mode,
+      clickstream: shown.clickstream,
       result_count: researchQuery.data.rows.length,
     });
 
     addSearch(
-      request.seedKeyword,
-      request.locationCode,
-      LOCATIONS[request.locationCode] || "Unknown",
+      shown.seedKeyword,
+      shown.locationCode,
+      LOCATIONS[shown.locationCode] || "Unknown",
     );
   }, [
     addSearch,
     queryKeyString,
-    request,
+    sessionRun?.nonce,
+    shown,
     researchQuery.data,
     researchQuery.isSuccess,
   ]);
@@ -207,52 +290,65 @@ export function useKeywordResearchData(
   // free: it reads a stored row plus the R2 object that run already paid for,
   // and can never trigger a metered fetch. The SERP-analysis panel stays keyed
   // to a keyword the user clicks, so a restore never fans out into paid calls.
+  //
+  // Automatic only before this session has searched (or left for Recent
+  // searches): after that, an unrelated past run appearing under a tab -- or
+  // over the Recent searches list -- would misreport what is on screen. A run
+  // the user picks from the rail still restores.
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  // A run picked from the rail belongs to the view it was picked in; a new
+  // search in the URL (another tab, Recent searches) drops it.
+  const urlKeyword = input.keywordInput;
+  useEffect(() => {
+    setSelectedRunId(null);
+  }, [urlKeyword]);
+  const restoreEnabled =
+    shown === null &&
+    (selectedRunId !== null || (autoRestoreAllowed && !matchedButUncached));
   const { restored } = useAutoRestoredRun({
     projectId,
     feature: RUN_FEATURES.keywordResearch,
     schema: keywordResearchResultSchema,
-    enabled: request === null,
+    enabled: restoreEnabled,
     runId: selectedRunId,
   });
-  const restoredRun = request === null ? restored : null;
+  // An AUTOMATIC restore never puts another search's stored rows under the
+  // search the URL names. A run the user picked from the rail is shown as
+  // picked (the rail labels it), and is dropped when the search changes.
+  const restoredRun =
+    restoreEnabled &&
+    restored &&
+    (selectedRunId !== null || restoredRunAnswers(urlKeyword, restored.label))
+      ? restored
+      : null;
 
   // A restored run counts as "searched" for the UI's purposes — it has rows to
   // show — but never re-enables the live query, which is gated on `request`.
-  const hasSearched = request !== null || restoredRun != null;
+  const hasSearched = shown !== null || restoredRun != null;
   const rows =
-    request !== null
+    shown !== null
       ? (researchQuery.data?.rows ?? [])
       : (restoredRun?.result.rows ?? []);
   const researchError =
-    request !== null && researchQuery.isError
+    shown !== null && researchQuery.isError
       ? getStandardErrorMessage(researchQuery.error, "Research failed.")
       : null;
 
   return {
     rows,
     hasSearched,
-    lastSearchError: request !== null && researchQuery.isError,
-    lastResultSource:
-      researchQuery.data?.source ??
-      restoredRun?.result.source ??
-      ("related" as ResearchSource),
-    lastUsedFallback:
-      researchQuery.data?.usedFallback ??
-      restoredRun?.result.usedFallback ??
-      false,
-    lastSearchKeyword: request?.seedKeyword ?? restoredRun?.label ?? "",
-    lastSearchLocationCode:
-      request?.locationCode ??
-      restoredRun?.result.scope?.locationCode ??
-      DEFAULT_LOCATION_CODE,
+    lastSearchError: shown !== null && researchQuery.isError,
+    ...describeShownResult({
+      shown,
+      data: researchQuery.data,
+      restoredRun,
+    }),
     researchError,
     researchMutationError: researchQuery.error,
-    searchedKeyword: request?.seedKeyword ?? restoredRun?.label ?? "",
-    // `request !== null`, not `hasSearched`: a disabled query still reports
-    // isPending in react-query v5, so a restored run would otherwise render a
-    // loading skeleton forever.
-    isLoading: request !== null && researchQuery.isPending,
+    // `shown !== null`, not `hasSearched`: a disabled query still reports
+    // isPending in react-query v5, so a restored run (or an earlier run read
+    // from cache) would otherwise render a loading skeleton forever.
+    isLoading: shown !== null && researchQuery.isPending,
     researchQuery,
     retryResearch: researchQuery.refetch,
     restoredRun,

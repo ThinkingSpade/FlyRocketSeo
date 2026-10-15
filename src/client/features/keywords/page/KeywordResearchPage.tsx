@@ -1,9 +1,6 @@
-import { Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo } from "react";
 import { useStore } from "@tanstack/react-form";
-import { WarningCircle, ArrowLeft } from "@phosphor-icons/react";
-import { getErrorCode } from "@/client/lib/error-messages";
-import { BILLING_ROUTE } from "@/shared/billing";
+import { ArrowLeft } from "@phosphor-icons/react";
 import { useKeywordResearchController } from "@/client/features/keywords/state/useKeywordResearchController";
 import type { KeywordResearchControllerInput } from "@/client/features/keywords/state/useKeywordResearchController";
 import type { KeywordControlsValues } from "@/client/features/keywords/hooks/useKeywordControlsForm";
@@ -16,12 +13,8 @@ import type {
 } from "@/client/features/search-tabs/types";
 import { SearchTabStrip } from "@/client/features/search-tabs/SearchTabStrip";
 import { useSearchTabNavigation } from "@/client/features/search-tabs/useSearchTabNavigation";
-import { resolveKeywordResultUsability } from "@/client/features/keywords/keywordResultUsability";
-import { KeywordResearchEmptyState } from "./KeywordResearchEmptyState";
-import { KeywordResearchNoMetricsState } from "./KeywordResearchNoMetricsState";
+import { KeywordResearchContent } from "./KeywordResearchContent";
 import { KeywordSaveDialog } from "./KeywordSaveDialog";
-import { KeywordResearchLoadingState } from "./KeywordResearchLoadingState";
-import { KeywordResearchResults } from "./KeywordResearchResults";
 import { RestoreRail } from "@/client/features/analysis-runs/RestoreRail";
 import { RUN_FEATURES } from "@/shared/analysis-run-features";
 import {
@@ -39,9 +32,8 @@ import {
   writeHandoff,
 } from "@/client/features/insights/handoffStore";
 import { KeywordResearchSearchBar } from "./KeywordResearchSearchBar";
-import type { KeywordResearchControllerState } from "./types";
 import { AppPageShell } from "@/client/components/AppPageShell";
-import { Button, buttonVariants } from "@cloudflare/kumo/components/button";
+import { Button } from "@cloudflare/kumo/components/button";
 
 type Props = Omit<KeywordResearchControllerInput, "onFormSubmit">;
 type KeywordSearchTab = SearchTab & { input: KeywordSearchTabInput };
@@ -169,10 +161,6 @@ export function KeywordResearchPage(input: Props) {
     },
     [navigateToKeywordInput, projectId, searchTabs],
   );
-  const showRecentSearches = useCallback(() => {
-    searchTabs.setActiveTab(null);
-    navigateToKeywordInput(null);
-  }, [navigateToKeywordInput, searchTabs]);
   const getOpenKeywordTabs = useCallback(
     () =>
       searchTabs.tabs.flatMap((tab) =>
@@ -216,6 +204,13 @@ export function KeywordResearchPage(input: Props) {
     { ...controllerInput, onFormSubmit },
     targetAreaScope.area,
   );
+  const { dismissAutoRestore } = controller;
+  const showRecentSearches = useCallback(() => {
+    searchTabs.setActiveTab(null);
+    navigateToKeywordInput(null);
+    // The user asked for the list: don't restore a stored run over it.
+    dismissAutoRestore();
+  }, [dismissAutoRestore, navigateToKeywordInput, searchTabs]);
   useEffect(() => {
     controller.controlsForm.setErrorMap({ onSubmit: undefined });
     controller.controlsForm.setFieldMeta("keyword", (meta) => ({
@@ -334,7 +329,7 @@ export function KeywordResearchPage(input: Props) {
         }}
       />
 
-      {controller.hasSearched ? (
+      {controller.hasSearched || controller.searchNotLoaded ? (
         <div className="flex flex-col gap-2">
           <Button
             type="button"
@@ -361,6 +356,7 @@ export function KeywordResearchPage(input: Props) {
         controller={controller}
         projectId={input.projectId}
         ownDomainRating={ownDomainRating}
+        notLoadedKeyword={activeTab?.input.keyword ?? input.keywordInput}
         onSearchCountry={(keyword, countryCode) => {
           // Re-run THE RESULT'S keyword, not whatever the textarea happens to
           // hold. A restored run leaves the form empty, so submitting the
@@ -383,80 +379,5 @@ export function KeywordResearchPage(input: Props) {
       />
       <KeywordSaveDialog controller={controller} />
     </AppPageShell>
-  );
-}
-
-function KeywordResearchContent({
-  controller,
-  projectId,
-  ownDomainRating,
-  onSearchCountry,
-}: {
-  controller: KeywordResearchControllerState;
-  projectId: string;
-  ownDomainRating: number | null;
-  onSearchCountry: (keyword: string, countryCode: number) => void;
-}) {
-  if (controller.isLoading) {
-    return <KeywordResearchLoadingState />;
-  }
-
-  if (controller.researchError) {
-    const isCreditsError =
-      getErrorCode(controller.researchMutationError) === "INSUFFICIENT_CREDITS";
-
-    return (
-      <div className="flex-1 flex items-center justify-center pt-1">
-        <div className="w-full max-w-xl rounded-xl border border-error/30 bg-error/10 p-5 text-error space-y-3">
-          <div className="flex items-start gap-2">
-            <WarningCircle className="mt-0.5 size-4 shrink-0" />
-            <p className="text-sm">{controller.researchError}</p>
-          </div>
-          {isCreditsError ? (
-            <Link to={BILLING_ROUTE} className={buttonVariants({ size: "sm" })}>
-              Go to Billing
-            </Link>
-          ) : (
-            <Button size="sm" onClick={controller.retrySearch}>
-              Try again
-            </Button>
-          )}
-        </div>
-      </div>
-    );
-  }
-
-  if (controller.rows.length === 0) {
-    return (
-      <KeywordResearchEmptyState
-        controller={controller}
-        projectId={projectId}
-      />
-    );
-  }
-
-  // Rows came back carrying no figures at all — the seed echoed by Google Ads
-  // with everything null, which used to render as a table of dashes. Say what
-  // happened instead, and offer the geography that would actually answer it.
-  const usability = resolveKeywordResultUsability(
-    controller.rows,
-    controller.searchedKeyword,
-  );
-  if (usability.kind === "no-metrics") {
-    return (
-      <KeywordResearchNoMetricsState
-        controller={controller}
-        rowCount={usability.rowCount}
-        onSearchCountry={onSearchCountry}
-      />
-    );
-  }
-
-  return (
-    <KeywordResearchResults
-      projectId={projectId}
-      controller={controller}
-      ownDomainRating={ownDomainRating}
-    />
   );
 }

@@ -25,16 +25,29 @@ async function searchKeyword(page: Page, keyword: string) {
   ).toBeVisible({ timeout: 30_000 });
 }
 
+/**
+ * Every keyword-research request the page sends. Server functions are
+ * addressed by an encoded id, so the research call is recognised by its
+ * payload; it is the only one carrying both of these fields.
+ */
+function watchResearchRequests(page: Page) {
+  const requests: string[] = [];
+  page.on("request", (request) => {
+    const body = request.postData() ?? "";
+    if (
+      request.url().includes("/_serverFn/") &&
+      body.includes('"resultLimit"') &&
+      body.includes('"keywords"')
+    )
+      requests.push(body);
+  });
+  return requests;
+}
+
 test.describe("Keyword Research navigation", () => {
   test("Back to Recent searches clears the active keyword tab query", async ({
     page,
   }) => {
-    // KNOWN APP BUG (found 2026-10-15): results follow the last *submitted*
-    // search (useKeywordResearchData builds its request from the authorized
-    // input only), not the URL. So "Recent searches" clears `q`
-    // but keeps showing the old results instead of the recent-search list.
-    // Remove this line when that is fixed; Playwright flags it if it passes.
-    test.fail();
     const projectId = await getProjectId(page);
 
     await page.goto(
@@ -63,19 +76,15 @@ test.describe("Keyword Research navigation", () => {
   test("clicking keyword tabs keeps the clicked tab and URL in sync", async ({
     page,
   }) => {
-    // KNOWN APP BUG (found 2026-10-15): results follow the last *submitted*
-    // search (useKeywordResearchData builds its request from the authorized
-    // input only), not the URL. So clicking an earlier tab updates the
-    // tab and `q` while the table still shows the last search's rows.
-    // Remove this line when that is fixed; Playwright flags it if it passes.
-    test.fail();
     const projectId = await getProjectId(page);
 
     await page.goto(
       `/p/${projectId}/keywords?q=keyword%20research&loc=2840&kLimit=150&mode=auto`,
     );
+    const research = watchResearchRequests(page);
     await searchKeyword(page, "keyword research");
     await searchKeyword(page, "backlinks");
+    expect(research).toHaveLength(2);
 
     await page.getByRole("tab", { name: /keyword research/i }).click();
     await expect
@@ -92,6 +101,37 @@ test.describe("Keyword Research navigation", () => {
     await expect(
       page.getByRole("row", { name: /backlinks/i }).first(),
     ).toBeVisible();
+    // Each tab showed its own result straight from the cache: switching
+    // tabs must never send another (metered) research request.
+    expect(research).toHaveLength(2);
+  });
+
+  test("a tab not run this session asks before running, and spends nothing until asked", async ({
+    page,
+  }) => {
+    const projectId = await getProjectId(page);
+    await page.goto(`/p/${projectId}/keywords?loc=2840&kLimit=150&mode=auto`);
+    await searchKeyword(page, "ai seo");
+
+    // A reload keeps the tab (stored per project) but not its result.
+    await page.goto(`/p/${projectId}/keywords?loc=2840&kLimit=150&mode=auto`);
+    const research = watchResearchRequests(page);
+    await searchKeyword(page, "backlinks");
+    expect(research).toHaveLength(1);
+
+    await page.getByRole("tab", { name: /^ai seo/i }).click();
+    await expect(
+      page.getByText("Results for “ai seo” are not loaded in this session."),
+    ).toBeVisible();
+    // Not another search's rows, and no request from the click.
+    await expect(page.getByRole("row", { name: /backlinks/i })).toHaveCount(0);
+    expect(research).toHaveLength(1);
+
+    await page.getByRole("button", { name: "Run “ai seo”" }).click();
+    await expect(
+      page.getByRole("row", { name: /ai seo/i }).first(),
+    ).toBeVisible({ timeout: 30_000 });
+    expect(research).toHaveLength(2);
   });
 
   test("closing the active middle keyword tab removes it and selects the next tab", async ({

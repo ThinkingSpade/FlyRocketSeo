@@ -21,6 +21,7 @@ type MeteredQueryOptions<
   | "refetchOnReconnect"
   | "refetchOnWindowFocus"
   | "retry"
+  | "retryOnMount"
   | "staleTime"
 > & {
   authorized?: boolean;
@@ -42,7 +43,10 @@ type MeteredQueryOptions<
  * provider independently -- a failure at or after the provider call is billed
  * every time. `retry` is omitted from the options type so a call site cannot
  * re-open that path; a failed paid query surfaces its error and waits for the
- * user to ask again.
+ * user to ask again. `retryOnMount` is closed for the same reason: by default
+ * TanStack re-runs a query sitting in error with no data whenever an observer
+ * attaches to it -- a remount, or a component switching its key back to that
+ * query (say, returning to the search tab whose paid run failed).
  */
 export function useMeteredQuery<
   TQueryFnData = unknown,
@@ -83,6 +87,7 @@ export function buildMeteredQueryOptions<
     refetchOnReconnect: false,
     refetchOnMount: false,
     retry: 0,
+    retryOnMount: false,
   } as const satisfies UseQueryOptions<TQueryFnData, TError, TData>;
 }
 
