@@ -46,7 +46,7 @@ export function AuthenticatedHome() {
     }
 
     void navigate({
-      to: "/p/$projectId/keywords",
+      to: "/p/$projectId",
       params: { projectId: (target ?? data[0]).id },
     });
   }, [data, navigate]);

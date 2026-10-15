@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal } from "@/client/components/Modal";
 import { useSession } from "@/lib/auth-client";
+import { isHostedClientAuthMode } from "@/lib/auth-mode";
+import { canUseWorkspaceShortcuts } from "@/client/navigation/workspaceShortcuts";
+import { Button } from "@cloudflare/kumo/components/button";
 import { Kbd } from "@/client/components/Kbd";
 
 // Module-level open channel, mirroring CommandPalette: the global keydown
@@ -31,7 +34,10 @@ function isEditableTarget(target: EventTarget | null): boolean {
 export function KeyboardShortcutsHelp() {
   const { data: session } = useSession();
   // Don't mount the listener or overlay on signed-out pages.
-  if (!session?.user) return null;
+  if (
+    !canUseWorkspaceShortcuts(isHostedClientAuthMode(), Boolean(session?.user))
+  )
+    return null;
   return <KeyboardShortcutsHelpImpl />;
 }
 
@@ -108,6 +114,11 @@ function KeyboardShortcutsHelpImpl() {
           </li>
         ))}
       </ul>
+      <div className="mt-5 flex justify-end">
+        <Button type="button" variant="secondary" onClick={close}>
+          Close
+        </Button>
+      </div>
     </Modal>
   );
 }

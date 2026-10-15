@@ -1,3 +1,5 @@
+import { Link } from "@tanstack/react-router";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
 import { useQuery } from "@tanstack/react-query";
 import { getProjects } from "@/serverFunctions/projects";
 import type { ProjectSummary } from "@/client/features/projects/types";
@@ -28,34 +30,38 @@ export function ProjectDashboardPage({ projectId }: { projectId: string }) {
 
   return (
     <AppPageShell>
-      {/* Only the pieces that genuinely need the project record wait for it.
-       *
-       * The whole dashboard used to sit behind `projectsQuery.isPending`, which
-       * cost far more than it looks: a server-function round trip against this
-       * Worker is ~4s of fixed per-invocation overhead (measured 2026-07-31 — a
-       * 404 that runs no handler costs the same), so NOTHING below could even
-       * begin fetching until 4s in. That turned independent queries into a
-       * second wave and roughly doubled time-to-data.
-       *
-       * `projectId` comes from the route params, not from this query, so every
-       * card keyed only on it can start immediately. Each already renders its
-       * own skeleton and degrades independently, which is why removing the
-       * page-level gate does not leave holes. */}
-      {projectsQuery.isPending ? (
-        <div className="flex flex-col gap-1">
-          <div className="skeleton h-8 w-56" />
-          <div className="skeleton h-4 w-40" />
-        </div>
-      ) : (
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {project?.name ?? "Project overview"}
-          </h1>
-          <p className="text-sm text-base-content/70">
-            {domain ?? "No domain set"}
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="mb-1 text-xs font-medium text-base-content/70">
+            {project?.name ?? "Your project"}
           </p>
+          <h1 className="text-2xl font-semibold">Overview</h1>
+          {/* A null domain only means "no website" once projects have loaded;
+              while pending or failed it is unknown, not absent. */}
+          {projectsQuery.isPending ? (
+            <div className="skeleton mt-1 h-4 w-40" />
+          ) : projectsQuery.isSuccess ? (
+            <p className="mt-1 text-sm text-base-content/70">
+              {domain ??
+                "Add your website to build an evidence-backed SEO workflow."}
+            </p>
+          ) : null}
         </div>
-      )}
+        <Link
+          to="/p/$projectId/settings"
+          params={{ projectId }}
+          className="app-touch-target rounded-md border border-base-300 px-3 py-2 text-xs font-medium hover:bg-base-200"
+        >
+          Project settings
+        </Link>
+      </div>
+      {projectsQuery.isError ? (
+        <InlineQueryError
+          message="Project details could not be loaded. Other sources remain available."
+          onRetry={() => void projectsQuery.refetch()}
+          retrying={projectsQuery.isFetching}
+        />
+      ) : null}
 
       <p className="text-sm text-base-content/60">
         Performance and actions · GSC web search, all countries and devices ·

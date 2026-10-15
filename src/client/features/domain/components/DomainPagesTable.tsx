@@ -81,6 +81,18 @@ function DomainPagesTableComponent({
   const table = useAppTable({
     data: rows.slice(0, 100),
     columns,
+    manualSorting: true,
+    state: {
+      sorting: [
+        {
+          id:
+            toPageSortMode(sortMode) === "keywords"
+              ? "keywords"
+              : "organicTraffic",
+          desc: currentSortOrder === "desc",
+        },
+      ],
+    },
   });
   useDomainRenderDebug("DomainPagesTable", {
     rows: rows.length,

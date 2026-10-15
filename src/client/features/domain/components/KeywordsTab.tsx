@@ -7,7 +7,6 @@ import {
   FloppyDisk,
   Table,
 } from "@phosphor-icons/react";
-import { toast } from "sonner";
 import {
   TableBulkActionBar,
   TableBulkActionButton,
@@ -17,6 +16,7 @@ import { DomainKeywordsPagination } from "@/client/features/domain/components/Do
 import { DomainKeywordsTable } from "@/client/features/domain/components/DomainKeywordsTable";
 import { DomainFilterPanel } from "@/client/features/domain/components/DomainFilterPanel";
 import { DomainTableTabSurface } from "@/client/features/domain/components/DomainTableTabSurface";
+import { useKeywordsTabExports } from "@/client/features/domain/components/useKeywordsTabExports";
 import { saveSelectedKeywords } from "@/client/features/domain/domainActions";
 import {
   KEYWORD_FILTER_FIELDS,
@@ -35,11 +35,7 @@ import {
   type KeywordRow,
   type KeywordsFilterValues,
 } from "@/client/features/domain/types";
-import { keywordsToTable } from "@/client/features/domain/utils";
 import type { DomainOverviewRouteState } from "@/client/features/domain/domainRouteState";
-import { buildCsv, downloadCsv } from "@/client/lib/csv";
-import { exportTableToSheets } from "@/client/lib/exportToSheets";
-import { captureClientEvent } from "@/client/lib/posthog";
 import {
   MAX_DATAFORSEO_FILTER_CONDITIONS,
   type DomainSearchParams,
@@ -49,6 +45,8 @@ import {
   useAuthorizedRun,
 } from "@/client/lib/useMeteredQuery";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -181,6 +179,7 @@ export function KeywordsTab({
 
   const saveMutation = useSaveKeywordsMutation({ projectId, queryClient });
   const handleSaveKeywords = useCallback(() => {
+    if (saveMutation.isPending) return;
     saveSelectedKeywords({
       selectedKeywords,
       filteredKeywords: rows,
@@ -195,6 +194,7 @@ export function KeywordsTab({
     routeState.locationCode,
     rows,
     saveMutation.mutate,
+    saveMutation.isPending,
     selectedKeywords,
   ]);
 
@@ -228,66 +228,13 @@ export function KeywordsTab({
   );
 
   const capture = query.data;
-  const exportTable = useMemo(
-    () => keywordsToTable(rows, capture),
-    [rows, capture],
-  );
-  const selectedExportTable = useMemo(
-    () =>
-      keywordsToTable(
-        rows.filter((r) => selectedKeywords.has(r.keyword)),
-        capture,
-      ),
-    [rows, selectedKeywords, capture],
-  );
-
-  const handleCopy = async () => {
-    await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
-    toast.success("Copied data");
-  };
-  const handleExportToSheets = () => {
-    void exportTableToSheets({
-      headers: exportTable.headers,
-      rows: exportTable.rows,
-      feature: "domain_overview",
-      preservePrecision: true,
-    });
-  };
-  const handleDownload = (extension: "csv" | "xls") => {
-    downloadCsv(
-      `${domain}-keywords.${extension}`,
-      buildCsv(exportTable.headers, exportTable.rows, {
-        preservePrecision: true,
-      }),
-    );
-    if (extension === "csv") {
-      captureClientEvent("data:export", {
-        source_feature: "domain_overview",
-        result_count: rows.length,
-      });
-    }
-  };
-  const handleExportSelectionToSheets = () => {
-    void exportTableToSheets({
-      headers: selectedExportTable.headers,
-      rows: selectedExportTable.rows,
-      feature: "domain_overview",
-      preservePrecision: true,
-    });
-  };
-  const handleDownloadSelectionCsv = () => {
-    downloadCsv(
-      `${domain}-selected-keywords.csv`,
-      buildCsv(selectedExportTable.headers, selectedExportTable.rows, {
-        preservePrecision: true,
-      }),
-    );
-    captureClientEvent("data:export", {
-      source_feature: "domain_overview",
-      result_count: selectedKeywords.size,
-      scope: "selection",
-    });
-  };
+  const {
+    handleCopy,
+    handleExportToSheets,
+    handleDownload,
+    handleExportSelectionToSheets,
+    handleDownloadSelectionCsv,
+  } = useKeywordsTabExports({ domain, rows, capture, selectedKeywords });
 
   return (
     <>
@@ -309,6 +256,9 @@ export function KeywordsTab({
           >
             Load keywords
           </Button>
+          <p className="mt-2 text-xs text-base-content/70">
+            Uses research data from your provider. This may incur a charge.
+          </p>
         </div>
       ) : null}
       <TableBulkActionBar
@@ -319,9 +269,9 @@ export function KeywordsTab({
             <TableBulkActionButton
               icon={<FloppyDisk className="size-3.5" />}
               onClick={handleSaveKeywords}
-              disabled={!canSaveKeywords}
+              disabled={!canSaveKeywords || saveMutation.isPending}
             >
-              Save Keywords
+              {saveMutation.isPending ? "Saving…" : "Save keywords"}
             </TableBulkActionButton>
             <TableBulkExportMenu
               actions={[
@@ -350,6 +300,17 @@ export function KeywordsTab({
         fallbackCount={rows.length}
         isLoading={isLoading}
         showTableLoading={showTableLoading}
+        awaitingRun={!run.authorized}
+        error={
+          query.isError ? (
+            <InlineQueryError
+              message={getStandardErrorMessage(query.error)}
+              onRetry={() => run.authorize()}
+              retrying={isLoading}
+              retryLabel="Retry · uses paid data"
+            />
+          ) : undefined
+        }
         exportActions={[
           {
             label: "Export to Sheets",
@@ -389,6 +350,7 @@ export function KeywordsTab({
         }
         pagination={
           <DomainKeywordsPagination
+            rowCount={rows.length}
             page={routeState.page}
             pageSize={routeState.pageSize}
             totalCount={totalCount}

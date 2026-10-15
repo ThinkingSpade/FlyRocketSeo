@@ -45,11 +45,13 @@ export function TablePagination({
   return (
     <div className="flex flex-col gap-3 border-t border-base-300 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
       <div className="flex items-center gap-2 text-sm text-base-content/70 tabular-nums">
-        <span>{formatRange(page, pageSize, totalCount)}</span>
+        <span role="status" aria-live="polite" aria-atomic="true">
+          {formatRange(page, pageSize, totalCount)}
+        </span>
         {isLoading ? <Loader size="sm" /> : null}
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         {/* A single option is not a choice. The Competitors tab passes
             `pageSizes={[pageSize]}` with a no-op handler because its page size
             is fixed by the provider, which rendered a dropdown that looked
@@ -61,7 +63,11 @@ export function TablePagination({
             <select
               className="app-select app-select-sm w-20"
               value={pageSize}
-              onChange={(event) => onPageSizeChange(Number(event.target.value))}
+              disabled={isLoading}
+              onChange={(event) => {
+                const next = Number(event.target.value);
+                if (!isLoading && next !== pageSize) onPageSizeChange(next);
+              }}
             >
               {pageSizes.map((size) => (
                 <option key={size} value={size}>
@@ -80,6 +86,7 @@ export function TablePagination({
           <div className="flex items-center gap-1">
             <Button
               type="button"
+              className="app-touch-target"
               aria-label="Previous page"
               variant="ghost"
               size="sm"
@@ -91,6 +98,7 @@ export function TablePagination({
             </Button>
             <Button
               type="button"
+              className="app-touch-target"
               aria-label="Next page"
               variant="ghost"
               size="sm"

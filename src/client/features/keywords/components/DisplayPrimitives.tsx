@@ -27,12 +27,9 @@ export function HeaderHelpLabel({
   /**
    * Give the trigger its own tab stop.
    *
-   * Off by default because most call sites nest this INSIDE a `<button>`
-   * (SortableHeader, SortHeader), where the button already carries the tab
-   * stop -- React's `onFocus` is `focusin`, which bubbles, so focusing that
-   * button opens this tooltip already. Adding a second focusable there would
-   * mean interactive content inside a button: invalid HTML and an extra tab
-   * stop for no gain.
+   * Off by default when nested inside a sort button. The shared tooltip hook
+   * listens to that button's focus and Escape events and describes it directly;
+   * a second tab stop inside an interactive control would be invalid.
    *
    * Turn it ON when the trigger stands alone in a cell or header with no
    * focusable ancestor. Without it, such a trigger is mouse-hover-only --

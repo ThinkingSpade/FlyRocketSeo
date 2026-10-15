@@ -26,6 +26,7 @@ export function AuthenticatedAppLayout({
 }) {
   const location = useLocation();
   const [drawerOpen, setDrawerOpen] = React.useState(false);
+  const menuTriggerRef = React.useRef<HTMLButtonElement | null>(null);
   // On non-project pages (e.g. /settings) there's no projectId in the URL, so
   // derive one for the nav/switcher: prefer the last-visited project, else the
   // most recent. The whole app tree is client-only (see root ClientOnly), so we
@@ -67,14 +68,36 @@ export function AuthenticatedAppLayout({
   const shouldShowSeoApiWarning =
     !seoApiKeyStatusError && isSeoApiKeyConfigured === false;
 
+  // Route changes and responsive transitions must never leave an invisible
+  // focus trap behind the desktop sidebar.
+  React.useEffect(() => {
+    setDrawerOpen(false);
+  }, [location.pathname]);
+  React.useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 768px)");
+    const closeOnDesktop = () => {
+      if (desktop.matches) setDrawerOpen(false);
+    };
+    desktop.addEventListener("change", closeOnDesktop);
+    return () => desktop.removeEventListener("change", closeOnDesktop);
+  }, []);
+
   return (
-    <div className="flex h-[100dvh] bg-base-200">
+    <div className="app-shell flex h-[100dvh] bg-base-200">
+      <a
+        className="app-skip-link"
+        href="#main-content"
+        onClick={() => document.getElementById("main-content")?.focus()}
+      >
+        Skip to content
+      </a>
       <div className="hidden shrink-0 md:block">
         <Sidebar projectId={sidebarProjectId} />
       </div>
 
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar
+          triggerRef={menuTriggerRef}
           drawerOpen={drawerOpen}
           onOpenDrawer={() => setDrawerOpen(true)}
         />
@@ -91,26 +114,38 @@ export function AuthenticatedAppLayout({
             {banner}
             <RelatedTools projectId={sidebarProjectId} />
 
-            <div className="min-h-0 flex-1 overflow-auto">{children}</div>
+            <main
+              id="main-content"
+              tabIndex={-1}
+              className="app-main min-h-0 min-w-0 flex-1 overflow-auto"
+            >
+              {children}
+            </main>
           </div>
         </div>
       </div>
 
       <MobileSidebarDrawer
         open={drawerOpen}
+        finalFocus={menuTriggerRef}
         projectId={sidebarProjectId}
         onClose={() => setDrawerOpen(false)}
       />
 
-      <GscReEngagementModal projectId={sidebarProjectId} suppressed={false} />
+      <GscReEngagementModal
+        projectId={sidebarProjectId}
+        suppressed={drawerOpen}
+      />
     </div>
   );
 }
 
 function MobileTopBar({
+  triggerRef,
   drawerOpen,
   onOpenDrawer,
 }: {
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
   drawerOpen: boolean;
   onOpenDrawer: () => void;
 }) {
@@ -121,6 +156,10 @@ function MobileTopBar({
         shape="square"
         variant="ghost"
         size="sm"
+        ref={triggerRef}
+        className="app-touch-target"
+        aria-haspopup="dialog"
+        aria-controls={drawerOpen ? "mobile-navigation" : undefined}
         aria-label="Toggle sidebar"
         aria-expanded={drawerOpen}
         onClick={onOpenDrawer}

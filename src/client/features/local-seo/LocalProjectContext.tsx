@@ -134,7 +134,7 @@ export function LocalGscContext({
             params={{ projectId }}
             className="app-link-subtle"
           >
-            Open GSC Insights
+            Open Search Performance
           </Link>
         </p>
       ) : brandedQueries.length === 0 && localPages.length === 0 ? (

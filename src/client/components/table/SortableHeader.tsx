@@ -1,4 +1,4 @@
-import { ArrowDown, ArrowUp } from "@phosphor-icons/react";
+import { ArrowDown, ArrowUp, ArrowsDownUp } from "@phosphor-icons/react";
 import { HeaderHelpLabel } from "@/client/features/keywords/components";
 
 type SortableColumn = {
@@ -21,17 +21,22 @@ export function SortableHeader({
   const content = (
     <button
       type="button"
-      className="inline-flex items-center gap-1 font-medium transition-colors hover:text-base-content"
+      className="inline-flex items-center gap-1.5 rounded-sm font-medium transition-colors duration-150 hover:text-base-content"
       onClick={column.getToggleSortingHandler()}
       aria-label={`Sort by ${label}`}
       aria-pressed={!!sorted}
     >
       {helpText ? <HeaderHelpLabel label={label} helpText={helpText} /> : label}
       {sorted === "asc" ? (
-        <ArrowUp className="size-3 shrink-0" />
+        <ArrowUp aria-hidden="true" className="size-3 shrink-0" />
       ) : sorted === "desc" ? (
-        <ArrowDown className="size-3 shrink-0" />
-      ) : null}
+        <ArrowDown aria-hidden="true" className="size-3 shrink-0" />
+      ) : (
+        <ArrowsDownUp
+          aria-hidden="true"
+          className="size-3 shrink-0 opacity-40"
+        />
+      )}
     </button>
   );
 

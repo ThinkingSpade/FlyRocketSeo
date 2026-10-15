@@ -37,6 +37,8 @@ import {
   useAuthorizedRun,
 } from "@/client/lib/useMeteredQuery";
 import { Button } from "@cloudflare/kumo/components/button";
+import { InlineQueryError } from "@/client/components/InlineQueryError";
+import { getStandardErrorMessage } from "@/client/lib/error-messages";
 
 type SearchUpdate = Partial<DomainSearchParams>;
 
@@ -180,8 +182,14 @@ export function PagesTab({
   );
 
   const handleCopy = async () => {
-    await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
-    toast.success("Copied data");
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(rows, null, 2));
+      toast.success("Copied data");
+    } catch {
+      toast.error(
+        "Could not copy. Allow clipboard access or download CSV instead.",
+      );
+    }
   };
   const handleExportToSheets = () => {
     void exportTableToSheets({
@@ -226,9 +234,14 @@ export function PagesTab({
           >
             Load pages
           </Button>
+          <p className="mt-2 text-xs text-base-content/70">
+            Uses research data from your provider. This may incur a charge.
+          </p>
         </div>
       ) : null}
-      {routeState.page === 1 ? <DomainPagesTreemap rows={rows} /> : null}
+      {run.authorized && !query.isError && routeState.page === 1 ? (
+        <DomainPagesTreemap rows={rows} />
+      ) : null}
       <DomainTableTabSurface
         showFilters={showFilters}
         onToggleFilters={() => setShowFilters((prev) => !prev)}
@@ -238,6 +251,17 @@ export function PagesTab({
         fallbackCount={rows.length}
         isLoading={isLoading}
         showTableLoading={showTableLoading}
+        awaitingRun={!run.authorized}
+        error={
+          query.isError ? (
+            <InlineQueryError
+              message={getStandardErrorMessage(query.error)}
+              onRetry={() => run.authorize()}
+              retrying={isLoading}
+              retryLabel="Retry · uses paid data"
+            />
+          ) : undefined
+        }
         exportActions={[
           {
             label: "Export to Sheets",
@@ -277,6 +301,7 @@ export function PagesTab({
         }
         pagination={
           <DomainKeywordsPagination
+            rowCount={rows.length}
             page={routeState.page}
             pageSize={routeState.pageSize}
             totalCount={totalCount}

@@ -1,3 +1,4 @@
+@import "./quality.css";
 /* Kumo — Cloudflare's component library (MIT), the design reference for this
    app. Two ordering rules from its README, both load-bearing:
 
@@ -227,15 +228,7 @@ body {
   }
 }
 
-/* Touch device optimizations */
-@media (pointer: coarse) {
-  html {
-    touch-action: none;
-  }
-  body {
-    touch-action: pan-x pan-y;
-  }
-}
+/* Native panning and pinch-zoom remain enabled on touch devices. */
 
 /* Tag chip colors — muted background + readable text in both themes.
    Text uses darker shades on light theme for contrast, lighter on dark. */
@@ -529,9 +522,9 @@ html[data-theme="flyrocketseo-dark"] .alert-error {
      almost instantly, and only entrances get a long curve. Marketing-site
      timings (300ms+ on a hover) applied to a dense tool feel sluggish, not
      premium. Hence the wide gap between `fast` and `slow` here. */
-  --motion-duration-fast: 100ms; /* Kumo --default-transition-duration */
-  --motion-duration-base: 200ms; /* ours: sits between the two Kumo anchors */
-  --motion-duration-slow: 500ms; /* Kumo's reveal transform/opacity duration */
+  --motion-duration-fast: 150ms; /* short hover / press feedback */
+  --motion-duration-base: 200ms; /* contextual transitions */
+  --motion-duration-slow: 220ms; /* bounded entrances, not marketing-page reveals */
   /* How far a revealing element travels. Ours — Kumo does not expose a token
      for it. Subtle beats dramatic: past ~24px the eye tracks the movement
      instead of the content, and dashboards want less travel than landing pages. */

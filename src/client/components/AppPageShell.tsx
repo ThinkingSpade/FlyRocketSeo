@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { useReveal } from "@/client/hooks/useReveal";
 
 /**
  * The outer frame every project page sits in.
@@ -43,24 +42,10 @@ export function AppPageShell({
   width?: keyof typeof WIDTHS;
   children: ReactNode;
 }) {
-  // Page entrance, staggered per section. The ref goes on the existing content
-  // wrapper rather than a new element on purpose: these 22 pages hang tables,
-  // charts and grids off this container, and inserting a div between it and
-  // them would reshuffle every one of those layouts.
-  //
-  // `stagger` moves the transition onto this container's children, so each
-  // top-level section arrives after the one above it. That used to require
-  // wrapping every section — the same layout risk — but the delay ladder is
-  // :nth-child in app.css now, so it costs no markup at all.
-  const revealRef = useReveal({ stagger: true });
-
   return (
-    // `pb-24` on small screens clears the mobile bottom nav; the desktop
-    // breakpoint drops back to normal padding.
-    <div className="overflow-auto px-4 py-4 pb-24 md:px-6 md:py-6 md:pb-8">
+    <div data-app-page className="min-w-0 px-4 py-4 md:px-6 md:py-6">
       <div
-        ref={revealRef}
-        className={`mx-auto flex w-full flex-col gap-4 ${WIDTHS[width]}`}
+        className={`mx-auto flex w-full min-w-0 flex-col gap-4 ${WIDTHS[width]}`}
       >
         {children}
       </div>

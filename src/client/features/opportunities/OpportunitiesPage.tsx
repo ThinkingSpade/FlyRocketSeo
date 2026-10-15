@@ -220,7 +220,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Loader size="base" />
           </div>
         ) : !report?.connected ? (
-          <div className="rounded-lg border border-dashed border-base-300 p-6 text-center">
+          <div className="flex flex-col items-center rounded-lg border border-dashed border-base-300 p-6 text-center">
             <p className="text-sm font-medium">Connect Search Console</p>
             <p className="mx-auto max-w-md text-sm text-base-content/60">
               Keyword opportunities are built from your own Search Console data
@@ -319,7 +319,7 @@ export function OpportunitiesPage({ projectId }: { projectId: string }) {
             <Loader size="base" />
           </div>
         ) : technicalState === "not-run" ? (
-          <div className="rounded-lg border border-dashed border-base-300 p-6 text-center">
+          <div className="flex flex-col items-center rounded-lg border border-dashed border-base-300 p-6 text-center">
             <p className="text-sm font-medium">No site audit yet</p>
             <p className="mx-auto max-w-md text-sm text-base-content/60">
               No completed crawl is available. Open Site Audit to check any
