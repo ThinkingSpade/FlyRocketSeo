@@ -456,6 +456,35 @@ export const harvestedDomains = sqliteTable(
 );
 
 /**
+ * Link metrics for a harvested domain, from DataForSEO's bulk endpoints.
+ *
+ * Its own table rather than columns on `harvested_domains` because a row here
+ * means "checked": metrics are fetched once per domain, and a domain DataForSEO
+ * knows nothing about still gets a row (all nulls) so it is never paid for
+ * twice. Each null means "no answer for this metric", never zero -- a real 0
+ * is stored as 0.
+ */
+export const harvestedDomainLinks = sqliteTable(
+  "harvested_domain_links",
+  {
+    harvestedDomainId: text("harvested_domain_id")
+      .primaryKey()
+      .references(() => harvestedDomains.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    backlinks: integer("backlinks"),
+    referringDomains: integer("referring_domains"),
+    /** DataForSEO backlink spam score, 0-100. */
+    spamScore: integer("spam_score"),
+    checkedAt: text("checked_at").notNull(),
+  },
+  (table) => [
+    index("harvested_domain_links_project_id_idx").on(table.projectId),
+  ],
+);
+
+/**
  * One row per (project, feed date) actually processed.
  *
  * Separate from `harvested_domains` because completion cannot be inferred from

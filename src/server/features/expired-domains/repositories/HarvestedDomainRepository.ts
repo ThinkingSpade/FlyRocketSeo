@@ -1,6 +1,20 @@
-import { and, desc, eq, gt, isNotNull, isNull, lte, sql } from "drizzle-orm";
+import {
+  and,
+  desc,
+  eq,
+  getTableColumns,
+  gt,
+  isNotNull,
+  isNull,
+  lte,
+  sql,
+} from "drizzle-orm";
 import { db } from "@/db";
-import { harvestedDomains, harvestRuns } from "@/db/schema";
+import {
+  harvestedDomainLinks,
+  harvestedDomains,
+  harvestRuns,
+} from "@/db/schema";
 import { partitionHarvestRunDates } from "@/server/features/expired-domains/harvestRunDates";
 import { HARVEST_INSERT_ROWS_PER_QUERY } from "@/shared/workerQueryBudget";
 
@@ -75,10 +89,31 @@ async function setAvailability(
 async function listForProject(
   projectId: string,
   limit: number,
-): Promise<HarvestedDomainRow[]> {
+): Promise<
+  Array<
+    HarvestedDomainRow & {
+      backlinks: number | null;
+      referringDomains: number | null;
+      spamScore: number | null;
+      linksCheckedAt: string | null;
+    }
+  >
+> {
   return db
-    .select()
+    .select({
+      ...getTableColumns(harvestedDomains),
+      // Null across the board until the daily link-metrics pass has checked
+      // this domain; linksCheckedAt tells "not checked" from "no answer".
+      backlinks: harvestedDomainLinks.backlinks,
+      referringDomains: harvestedDomainLinks.referringDomains,
+      spamScore: harvestedDomainLinks.spamScore,
+      linksCheckedAt: harvestedDomainLinks.checkedAt,
+    })
     .from(harvestedDomains)
+    .leftJoin(
+      harvestedDomainLinks,
+      eq(harvestedDomainLinks.harvestedDomainId, harvestedDomains.id),
+    )
     .where(eq(harvestedDomains.projectId, projectId))
     .orderBy(
       // NULLS LAST without relying on dialect-specific syntax: graded rows

@@ -90,6 +90,7 @@ describe("scheduled expired-domain work", () => {
           return Promise.resolve();
         },
         draftProfile: () => Promise.resolve(),
+        refreshLinkMetrics: () => Promise.resolve(false),
         grade,
       },
     );
@@ -130,6 +131,7 @@ describe("scheduled expired-domain work", () => {
         },
         harvestProject,
         draftProfile: () => Promise.resolve(),
+        refreshLinkMetrics: () => Promise.resolve(false),
         grade: () => {
           subrequests += MAX_GRADING_SUBREQUESTS;
           return Promise.resolve();
@@ -155,6 +157,7 @@ describe("scheduled expired-domain work", () => {
           listProjectStates: () => Promise.resolve([project("project-a")]),
           harvestProject: () => Promise.reject(new Error("feed failed")),
           draftProfile: () => Promise.resolve(),
+          refreshLinkMetrics: () => Promise.resolve(false),
           grade,
         },
       ),
@@ -192,6 +195,7 @@ describe("scheduled expired-domain work", () => {
             project("new-project", "draft-due"),
           ]),
         harvestProject,
+        refreshLinkMetrics: () => Promise.resolve(false),
         draftProfile: (candidate) => {
           drafted.push(candidate.projectId);
           return Promise.resolve();
@@ -223,6 +227,7 @@ describe("scheduled expired-domain work", () => {
           ]),
         harvestProject: () => Promise.resolve(),
         draftProfile,
+        refreshLinkMetrics: () => Promise.resolve(false),
         grade: () => Promise.resolve(),
       },
     );
@@ -249,6 +254,7 @@ describe("scheduled expired-domain work", () => {
           ]),
         harvestProject: () => Promise.resolve(),
         draftProfile,
+        refreshLinkMetrics: () => Promise.resolve(false),
         grade,
       },
     );
@@ -275,6 +281,7 @@ describe("scheduled expired-domain work", () => {
         listProjectStates,
         harvestProject,
         draftProfile: () => Promise.resolve(),
+        refreshLinkMetrics: () => Promise.resolve(false),
         grade,
       },
     );
@@ -296,5 +303,130 @@ describe("scheduled expired-domain work", () => {
     expect(isGradingReservedTick(Date.parse("2026-08-21T03:45:00.000Z"))).toBe(
       true,
     );
+  });
+});
+
+// Metered work, so its own block: when it may run is the whole contract.
+describe("scheduled link metrics", () => {
+  it("fetches link metrics on the :30 tick once nothing waits to harvest", async () => {
+    const refreshLinkMetrics = vi.fn(() => Promise.resolve(true));
+    const draftProfile = vi.fn(() => Promise.resolve());
+    const grade = vi.fn(() => Promise.resolve());
+
+    const unit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T05:30:00.000Z"),
+      },
+      {
+        listProjectStates: () =>
+          Promise.resolve([
+            { ...project("complete"), completedDates: FULL_WEEK },
+            project("new-project", "draft-due"),
+          ]),
+        harvestProject: () => Promise.resolve(),
+        draftProfile,
+        refreshLinkMetrics,
+        grade,
+      },
+    );
+
+    expect(unit).toBe("links");
+    expect(refreshLinkMetrics).toHaveBeenCalledOnce();
+    expect(draftProfile).not.toHaveBeenCalled();
+    expect(grade).not.toHaveBeenCalled();
+  });
+
+  it("never spends on link metrics outside the :30 tick", async () => {
+    const refreshLinkMetrics = vi.fn(() => Promise.resolve(true));
+
+    for (const minute of ["15", "45"]) {
+      await runScheduledDomainWork(
+        {
+          canHarvest: true,
+          publishedDate: PUBLISHED_DATE,
+          scheduledAtMs: Date.parse(`2026-08-21T05:${minute}:00.000Z`),
+        },
+        {
+          listProjectStates: () =>
+            Promise.resolve([
+              { ...project("complete"), completedDates: FULL_WEEK },
+            ]),
+          harvestProject: () => Promise.resolve(),
+          draftProfile: () => Promise.resolve(),
+          refreshLinkMetrics,
+          grade: () => Promise.resolve(),
+        },
+      );
+    }
+
+    expect(refreshLinkMetrics).not.toHaveBeenCalled();
+  });
+
+  it("harvests before fetching link metrics, and falls through when none are pending", async () => {
+    const refreshLinkMetrics = vi.fn(() => Promise.resolve(false));
+    const grade = vi.fn(() => Promise.resolve());
+
+    const harvestUnit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T05:30:00.000Z"),
+      },
+      {
+        listProjectStates: () => Promise.resolve([project("pending")]),
+        harvestProject: () => Promise.resolve(),
+        draftProfile: () => Promise.resolve(),
+        refreshLinkMetrics,
+        grade,
+      },
+    );
+    expect(harvestUnit).toBe("harvest");
+    expect(refreshLinkMetrics).not.toHaveBeenCalled();
+
+    const idleUnit = await runScheduledDomainWork(
+      {
+        canHarvest: true,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T05:30:00.000Z"),
+      },
+      {
+        listProjectStates: () =>
+          Promise.resolve([
+            { ...project("complete"), completedDates: FULL_WEEK },
+          ]),
+        harvestProject: () => Promise.resolve(),
+        draftProfile: () => Promise.resolve(),
+        refreshLinkMetrics,
+        grade,
+      },
+    );
+    expect(idleUnit).toBe("grade");
+    expect(refreshLinkMetrics).toHaveBeenCalledOnce();
+    expect(grade).toHaveBeenCalledOnce();
+  });
+
+  it("still checks stored rows for link metrics after the feed key is removed", async () => {
+    const refreshLinkMetrics = vi.fn(() => Promise.resolve(true));
+    const listProjectStates = vi.fn(() => Promise.resolve([]));
+
+    const unit = await runScheduledDomainWork(
+      {
+        canHarvest: false,
+        publishedDate: PUBLISHED_DATE,
+        scheduledAtMs: Date.parse("2026-08-21T05:30:00.000Z"),
+      },
+      {
+        listProjectStates,
+        harvestProject: () => Promise.resolve(),
+        draftProfile: () => Promise.resolve(),
+        refreshLinkMetrics,
+        grade: () => Promise.resolve(),
+      },
+    );
+
+    expect(unit).toBe("links");
+    expect(listProjectStates).not.toHaveBeenCalled();
   });
 });

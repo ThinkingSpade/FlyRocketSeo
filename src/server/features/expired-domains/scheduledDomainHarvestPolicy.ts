@@ -37,6 +37,16 @@ export function isGradingReservedTick(scheduledAtMs: number): boolean {
   return new Date(scheduledAtMs).getUTCMinutes() >= 45;
 }
 
+/**
+ * The tick that may spend on DataForSEO link metrics: :30, once nothing is
+ * waiting to harvest. One tick an hour, not every tick, so a DataForSEO outage
+ * or balance problem costs at most 24 failed attempts a day rather than 72.
+ */
+function isLinkMetricsTick(scheduledAtMs: number): boolean {
+  const minutes = new Date(scheduledAtMs).getUTCMinutes();
+  return minutes >= 30 && minutes < 45;
+}
+
 function rotate<T>(candidates: T[], scheduledAtMs: number): T | null {
   if (candidates.length === 0) return null;
   const slot = Math.floor(scheduledAtMs / SCHEDULE_SLOT_MS);
@@ -102,11 +112,15 @@ export async function runScheduledDomainWork(
     listProjectStates(): Promise<ScheduledHarvestProjectState[]>;
     harvestProject(candidate: ScheduledHarvestCandidate): Promise<void>;
     draftProfile(candidate: ScheduledDraftCandidate): Promise<void>;
+    /** Resolves false when no project has unchecked domains. */
+    refreshLinkMetrics(): Promise<boolean>;
     grade(): Promise<void>;
   },
-): Promise<"harvest" | "draft" | "grade"> {
-  if (input.canHarvest && !isGradingReservedTick(input.scheduledAtMs)) {
-    const projects = await dependencies.listProjectStates();
+): Promise<"harvest" | "links" | "draft" | "grade"> {
+  if (!isGradingReservedTick(input.scheduledAtMs)) {
+    const projects = input.canHarvest
+      ? await dependencies.listProjectStates()
+      : [];
     const selected = selectScheduledHarvestCandidate({
       projects,
       publishedDate: input.publishedDate,
@@ -115,6 +129,16 @@ export async function runScheduledDomainWork(
     if (selected) {
       await dependencies.harvestProject(selected);
       return "harvest";
+    }
+
+    // After the day's harvest, so a new day's rows are checked the same
+    // morning. Independent of the feed key: rows already stored still deserve
+    // metrics after the subscription ends.
+    if (
+      isLinkMetricsTick(input.scheduledAtMs) &&
+      (await dependencies.refreshLinkMetrics())
+    ) {
+      return "links";
     }
 
     // Only once nothing is waiting to harvest: a draft is a one-off per new

@@ -176,6 +176,13 @@
       "when": 1792052000530,
       "tag": "0024_harvest_net_and_grading",
       "breakpoints": true
+    },
+    {
+      "idx": 25,
+      "version": "7",
+      "when": 1792074506142,
+      "tag": "0025_glossy_maginty",
+      "breakpoints": true
     }
   ]
 }

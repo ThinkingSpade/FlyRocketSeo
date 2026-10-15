@@ -3,6 +3,7 @@ import { HARVEST_TICKS_PER_HOUR } from "@/shared/cronDispatch";
 import {
   MAX_DOMAIN_RATING_LOOKUPS,
   MAX_GRADING_SUBREQUESTS,
+  MAX_LINK_METRIC_SUBREQUESTS,
   MAX_MATCHES_PER_DAY,
   MAX_SCHEDULED_HARVEST_SUBREQUESTS,
   WORKER_QUERY_BUDGET,
@@ -38,5 +39,12 @@ describe("expired-domain Worker query budget", () => {
     const harvestedPerDay = PROJECTS * MAX_MATCHES_PER_DAY;
 
     expect(harvestedPerDay).toBeLessThanOrEqual(gradedPerDay);
+  });
+
+  it("fits a daily link-metrics batch inside one Free-plan invocation", () => {
+    expect(MAX_LINK_METRIC_SUBREQUESTS).toBe(29);
+    expect(MAX_LINK_METRIC_SUBREQUESTS).toBeLessThanOrEqual(
+      WORKER_QUERY_BUDGET,
+    );
   });
 });

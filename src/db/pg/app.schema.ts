@@ -427,6 +427,26 @@ export const harvestedDomains = pgTable(
   ],
 );
 
+/** Postgres mirror of `harvested_domain_links` -- see the SQLite schema. */
+export const harvestedDomainLinks = pgTable(
+  "harvested_domain_links",
+  {
+    harvestedDomainId: text("harvested_domain_id")
+      .primaryKey()
+      .references(() => harvestedDomains.id, { onDelete: "cascade" }),
+    projectId: text("project_id")
+      .notNull()
+      .references(() => projects.id, { onDelete: "cascade" }),
+    backlinks: integer("backlinks"),
+    referringDomains: integer("referring_domains"),
+    spamScore: integer("spam_score"),
+    checkedAt: timestampColumn("checked_at").notNull(),
+  },
+  (table) => [
+    index("harvested_domain_links_project_id_idx").on(table.projectId),
+  ],
+);
+
 /** Postgres mirror of `harvest_runs` -- see the SQLite schema for why a
  *  zero-match day still has to be recorded. */
 export const harvestRuns = pgTable(

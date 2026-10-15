@@ -65,6 +65,7 @@ export const {
   audits,
   auditPages,
   harvestedDomains,
+  harvestedDomainLinks,
   harvestRuns,
   auditLighthouseResults,
   pageOptimizations,

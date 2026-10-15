@@ -56,6 +56,11 @@ export const getHarvestedDomains = createServerFn({ method: "POST" })
         domainRating: row.domainRating,
         isAvailable: row.isAvailable,
         availabilityCheckedAt: row.availabilityCheckedAt,
+        // All null until the daily link-metrics pass reaches this domain.
+        backlinks: row.backlinks,
+        referringDomains: row.referringDomains,
+        spamScore: row.spamScore,
+        linksCheckedAt: row.linksCheckedAt,
       })),
       harvestedDates: dates.harvestedDates.toSorted().toReversed(),
       skippedDates: dates.skippedDates.toSorted().toReversed(),

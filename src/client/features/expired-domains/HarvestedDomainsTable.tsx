@@ -1,5 +1,6 @@
 import { Table } from "@cloudflare/kumo/components/table";
 import { DomainVetLinks } from "@/client/features/expired-domains/DomainVetLinks";
+import { describeSpamScore } from "@/client/lib/spamScore";
 import { formatHarvestAvailabilityAge } from "@/shared/harvestAvailability";
 
 type HarvestedDomainRow = {
@@ -9,7 +10,19 @@ type HarvestedDomainRow = {
   domainRating: number | null;
   isAvailable: boolean | null;
   availabilityCheckedAt: string | null;
+  backlinks: number | null;
+  referringDomains: number | null;
+  spamScore: number | null;
+  linksCheckedAt: string | null;
 };
+
+const LINKS_PENDING_TITLE =
+  "Link data is fetched daily — this domain has not been reached yet";
+
+/** "—" means not checked yet, or DataForSEO had no answer; a real 0 is 0. */
+function countLabel(value: number | null): string {
+  return value === null ? "—" : value.toLocaleString();
+}
 
 function ratingLabel(rating: number | null): string {
   // null is NOT YET GRADED, not "no authority" -- a real 0 shows as 0.
@@ -43,6 +56,9 @@ export function HarvestedDomainsTable({
           <Table.Row>
             <Table.Head>Domain</Table.Head>
             <Table.Head className="text-right">DR</Table.Head>
+            <Table.Head className="text-right">Ref. domains</Table.Head>
+            <Table.Head className="text-right">Backlinks</Table.Head>
+            <Table.Head className="text-right">Spam</Table.Head>
             <Table.Head>Availability</Table.Head>
             <Table.Head>Matched</Table.Head>
             <Table.Head>Dropped</Table.Head>
@@ -55,6 +71,9 @@ export function HarvestedDomainsTable({
               row.availabilityCheckedAt,
               nowMs,
             );
+            const linksTitle =
+              row.linksCheckedAt === null ? LINKS_PENDING_TITLE : undefined;
+            const spam = describeSpamScore(row.spamScore);
             return (
               <Table.Row key={row.domain}>
                 <Table.Cell className="font-medium">{row.domain}</Table.Cell>
@@ -65,6 +84,24 @@ export function HarvestedDomainsTable({
                   }
                 >
                   {ratingLabel(row.domainRating)}
+                </Table.Cell>
+                <Table.Cell
+                  className="text-right tabular-nums"
+                  title={linksTitle}
+                >
+                  {countLabel(row.referringDomains)}
+                </Table.Cell>
+                <Table.Cell
+                  className="text-right tabular-nums"
+                  title={linksTitle}
+                >
+                  {countLabel(row.backlinks)}
+                </Table.Cell>
+                <Table.Cell
+                  className={`text-right tabular-nums ${spam.className}`}
+                  title={linksTitle ?? spam.label}
+                >
+                  {spam.formatted}
                 </Table.Cell>
                 <Table.Cell>
                   <div className="flex flex-col">

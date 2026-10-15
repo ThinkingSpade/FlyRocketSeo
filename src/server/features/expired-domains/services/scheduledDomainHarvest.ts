@@ -8,6 +8,12 @@ import { streamDroppedDomains } from "@/server/lib/whoisfreaks";
 import { getOptionalEnvValue } from "@/server/lib/runtime-env";
 import { AppError } from "@/server/lib/errors";
 import { harvestReadiness } from "@/server/features/expired-domains/harvestReadiness";
+import { collectLinkMetrics } from "@/server/features/expired-domains/harvestLinkMetrics";
+import { HarvestedDomainLinkRepository } from "@/server/features/expired-domains/repositories/HarvestedDomainLinkRepository";
+import { customerHasPaidPlan } from "@/server/billing/subscription";
+import { createDataforseoClient } from "@/server/lib/dataforseo/client";
+import { isHostedServerAuthMode } from "@/server/lib/runtime-env";
+import { MAX_LINK_METRIC_DOMAINS } from "@/shared/workerQueryBudget";
 import { harvestDroppedDomains } from "@/server/features/expired-domains/domainHarvest";
 import { resolveHarvestVocabulary } from "@/server/features/expired-domains/harvestVocabulary";
 import { gradeStoredDomainRatings } from "@/server/features/expired-domains/services/gradeStoredDomainRatings";
@@ -57,6 +63,7 @@ export async function runScheduledDomainHarvest(
     {
       listProjectStates: () =>
         listHarvestProjectStates(publishedDate, scheduledAt.getTime()),
+      refreshLinkMetrics: () => refreshLinkMetricsForOneProject(scheduledAt),
       draftProfile: async (candidate) => {
         // A new project has no vocabulary until its profile exists, so this is
         // what makes "add a domain" enough for the harvest to start. One crawl
@@ -136,6 +143,84 @@ export async function runScheduledDomainHarvest(
       },
     },
   );
+}
+
+/** Only fresh drops get link metrics; older ones are mostly re-registered. */
+const LINK_METRICS_WINDOW_DAYS = 14;
+const LINK_METRICS_SLOT_MS = 15 * 60 * 1_000;
+
+/**
+ * Backlinks, referring domains and spam score for one project's unchecked
+ * recent domains. Metered (DataForSEO), and automatic by the user's explicit
+ * choice: three bulk requests per batch, about $0.08 for 240 domains.
+ *
+ * Resolves false when there is nothing to check, so the tick moves on to other
+ * work. Any failure is logged and still counts as this tick's unit, which is
+ * what bounds a failing DataForSEO account to one attempt per hour.
+ */
+async function refreshLinkMetricsForOneProject(
+  scheduledAt: Date,
+): Promise<boolean> {
+  if (!(await getOptionalEnvValue("DATAFORSEO_API_KEY"))) return false;
+
+  const cutoff = new Date(
+    scheduledAt.getTime() - LINK_METRICS_WINDOW_DAYS * 86_400_000,
+  )
+    .toISOString()
+    .slice(0, 10);
+  const candidates =
+    await HarvestedDomainLinkRepository.listProjectsNeedingMetrics(cutoff);
+  if (candidates.length === 0) return false;
+  const slot = Math.floor(scheduledAt.getTime() / LINK_METRICS_SLOT_MS);
+  const project = candidates[slot % candidates.length];
+  if (!project) return false;
+
+  try {
+    // Same gate as scheduled rank checks: in hosted mode, an organization
+    // without a paid plan is never billed by a background job.
+    if (
+      (await isHostedServerAuthMode()) &&
+      !(await customerHasPaidPlan(project.organizationId))
+    ) {
+      console.log(`[cron] link-metrics ${project.projectId} skipped=unpaid`);
+      return true;
+    }
+
+    const targets = await HarvestedDomainLinkRepository.listPendingForProject(
+      project.projectId,
+      cutoff,
+      MAX_LINK_METRIC_DOMAINS,
+    );
+    const client = createDataforseoClient({
+      userId: "system",
+      userEmail: "system@flyrocketseo.local",
+      organizationId: project.organizationId,
+      projectId: project.projectId,
+    });
+    const result = await collectLinkMetrics(
+      { projectId: project.projectId, targets, now: () => new Date() },
+      {
+        fetchBacklinks: (domains) =>
+          client.backlinks.bulkBacklinks({ targets: domains }),
+        fetchReferringDomains: (domains) =>
+          client.backlinks.bulkReferringDomains({ targets: domains }),
+        fetchSpamScores: (domains) =>
+          client.backlinks.bulkSpamScores({ targets: domains }),
+        insert: (rows) => HarvestedDomainLinkRepository.insertMetrics(rows),
+      },
+    );
+    console.log(
+      `[cron] link-metrics ${project.projectId}` +
+        ` checked=${result.checked} withLinks=${result.withLinks}`,
+    );
+  } catch (error) {
+    console.error(
+      `expired-domains.link-metrics failed for ${project.projectId}` +
+        ` code=${error instanceof AppError ? error.code : "UNKNOWN"}:`,
+      error,
+    );
+  }
+  return true;
 }
 
 type PreparedHarvest = {

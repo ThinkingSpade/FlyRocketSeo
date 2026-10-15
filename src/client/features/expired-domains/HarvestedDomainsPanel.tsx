@@ -325,7 +325,8 @@ export function HarvestedDomainsPanel({
               {harvestQuery.data?.harvestedDates.length ?? 0} day
               {harvestQuery.data?.harvestedDates.length === 1 ? "" : "s"} ·{" "}
               {visible.length} shown · DR fills in on schedule or when you click
-              Grade now
+              Grade now · link data for drops from the last 14 days is fetched
+              daily from DataForSEO
             </p>
           </>
         )}

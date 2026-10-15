@@ -10,6 +10,23 @@ import { HARVEST_TICKS_PER_HOUR } from "@/shared/cronDispatch";
 export const WORKER_QUERY_BUDGET = 50;
 export const MAX_DOMAIN_RATING_ATTEMPTS = 3;
 
+/**
+ * Link metrics (backlinks, referring domains, spam score) for harvested
+ * domains. One bulk request per metric covers every domain in the batch, so
+ * the batch size moves only the per-row price and the insert count -- never the
+ * request count.
+ */
+export const MAX_LINK_METRIC_DOMAINS = 240;
+/** Six bound values per row keep 16 rows under D1's 100-parameter cap. */
+export const LINK_METRIC_ROWS_PER_QUERY = 16;
+// Two fleet reads; the candidate-project read; the paid-plan check; the
+// pending-rows read; three bulk fetches; and in hosted mode up to two billing
+// round trips per fetch. Then the inserts.
+const LINK_METRIC_NON_INSERT_SUBREQUESTS = 2 + 1 + 1 + 1 + 3 + 3 * 2;
+export const MAX_LINK_METRIC_SUBREQUESTS =
+  LINK_METRIC_NON_INSERT_SUBREQUESTS +
+  Math.ceil(MAX_LINK_METRIC_DOMAINS / LINK_METRIC_ROWS_PER_QUERY);
+
 /** Five inserted values plus the bound attempts default keep 15 rows under 100 params. */
 export const HARVEST_INSERT_ROWS_PER_QUERY = 15;
 
